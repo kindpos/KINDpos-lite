@@ -59,7 +59,7 @@ function buildReceiptPanel(params) {
     'display:flex;justify-content:space-between;align-items:center;',
     'padding:8px 14px;',
     'border-bottom:2px solid ' + T.bgLight + ';',
-    'background:#2e2e2e;',
+    'background:' + T.bg4 + ';',
     'flex-shrink:0;',
   ].join('');
 
@@ -99,7 +99,7 @@ function buildReceiptPanel(params) {
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 60px 90px;',
       'padding:5px 0;',
-      'border-bottom:1px solid #2a2a2a;',
+      'border-bottom:1px solid ' + T.bg3 + ';',
       'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';',
       'align-items:baseline;',
     ].join('');
@@ -171,7 +171,7 @@ function buildPricePanel(params) {
   // Prompt label
   var prompt = document.createElement('div');
   prompt.style.cssText = [
-    'background:#2e2e2e;',
+    'background:' + T.bg4 + ';',
     'border:2px solid ' + T.bgLight + ';',
     'padding:10px 14px;flex-shrink:0;',
     'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',

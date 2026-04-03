@@ -32,7 +32,7 @@ var CARD_H   = SCENE_H - PAD * 2 - 2 * (TAB_H - TAB_OVR);  // 472px
 var GOLD = T.gold;
 var MINT = T.mint;
 var DARK = T.bgDark;
-var BG   = T.bg;
+var BG   = T.darkBtn;
 
 // ── State ─────────────────────────────────────────
 var state = {
@@ -451,18 +451,16 @@ function doScan(targetIp, card) {
       var data = JSON.parse(evt.data);
 
       if (data.type === 'start') {
-        console.log('[SCAN] started — probing', data.total, 'hosts');
+        // scan started
 
       } else if (data.type === 'device') {
         state.scanResults.push(data);
-        console.log('[SCAN] found:', data.ip, data.mac);
         var currentList = card.querySelector('#scan-live-list');
         if (currentList && currentList.isConnected) {
           currentList.appendChild(buildLiveDeviceRow(data, card));
         }
 
       } else if (data.type === 'complete') {
-        console.log('[SCAN] complete — found', state.scanResults.length, 'devices');
         es.close(); state.eventSource = null;
         state.addStep = 'results';
         if (rootEl) renderHWContent(card);
@@ -623,7 +621,7 @@ function buildLiveDeviceRow(dev, card) {
     'display:flex;align-items:center;justify-content:space-between;',
     'padding:8px 12px;',
     'background:' + DARK + ';',
-    'border:2px solid ' + (saved ? GOLD : '#444') + ';',
+    'border:2px solid ' + (saved ? GOLD : T.border) + ';',
     'clip-path:' + chamfer(5) + ';',
     'animation:fadeIn 0.2s ease;',
   ].join('');
@@ -684,7 +682,7 @@ function renderScanResults(card) {
   state.scanResults.forEach(function(dev) {
     var saved = state.savedDevices.some(function(d) { return d.mac === dev.mac; });
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:' + DARK + ';border:2px solid ' + (saved ? GOLD : '#444') + ';clip-path:' + chamfer(5) + ';';
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:' + DARK + ';border:2px solid ' + (saved ? GOLD : T.border) + ';clip-path:' + chamfer(5) + ';';
 
     var info = document.createElement('div');
     info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, '16px'));

@@ -219,7 +219,7 @@ function buildReceiptContent(state) {
   wrap.appendChild(divider());
 
   var footer = document.createElement('div');
-  footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:#555;';
+  footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:' + T.dimText + ';';
   footer.innerHTML = 'Terminal: ' + state.terminalId + '<br>** MANAGER REPORT — CONFIDENTIAL **';
   wrap.appendChild(footer);
 
@@ -231,15 +231,15 @@ function buildReceiptPanel(state) {
   panel.style.cssText = [
     'width:' + RECEIPT_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'background:#c8f0b8;',
-    'border-right:4px solid #a0d898;',
+    'background:' + T.mint + ';',
+    'border-right:4px solid ' + T.mintEdgeD + ';',
     'overflow:hidden;',
   ].join('');
 
   var header = document.createElement('div');
   header.style.cssText = [
     'flex-shrink:0;padding:6px 12px;',
-    'background:#a0d898;',
+    'background:' + T.mintEdgeD + ';',
     'font-family:' + T.fb + ';font-size:11px;color:#1a1a1a;',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
@@ -304,7 +304,7 @@ function buildCardHeader(opts) {
   header.appendChild(accentBar);
 
   var num = document.createElement('div');
-  num.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:#555;flex-shrink:0;width:18px;';
+  num.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.dimText + ';flex-shrink:0;width:18px;';
   num.textContent = String(opts.index).padStart(2, '0');
   header.appendChild(num);
 
@@ -318,7 +318,7 @@ function buildCardHeader(opts) {
 
   if (opts.subtext) {
     var sub = document.createElement('div');
-    sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     sub.textContent = opts.subtext;
     if (opts.subtextColor) sub.style.color = opts.subtextColor;
     titleWrap.appendChild(sub);
@@ -337,11 +337,11 @@ function buildCardHeader(opts) {
   }
 
   var dot = document.createElement('div');
-  dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:' + (opts.statusColor || T.mint) + ';opacity:' + (opts.statusColor ? '1' : '0.4') + ';flex-shrink:0;';
+  dot.style.cssText = 'width:10px;height:10px;clip-path:circle(50%);background:' + (opts.statusColor || T.mint) + ';opacity:' + (opts.statusColor ? '1' : '0.4') + ';flex-shrink:0;';
   rightWrap.appendChild(dot);
 
   var chevron = document.createElement('div');
-  chevron.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:#555;flex-shrink:0;width:14px;';
+  chevron.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.dimText + ';flex-shrink:0;width:14px;';
   chevron.textContent = '›';
   rightWrap.appendChild(chevron);
 
@@ -361,7 +361,7 @@ function bodyRow(label, value, valueColor) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';';
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:13px;color:#888;';
+  lbl.style.cssText = 'font-size:13px;color:' + T.mutedText + ';';
   lbl.textContent = label;
   var val = document.createElement('span');
   val.style.cssText = 'font-size:14px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
@@ -409,7 +409,7 @@ function buildCard01(state) {
   body.appendChild(bodyRow('Tax Collected', fmt(state.taxCollected), T.mint));
 
   var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid #444;background:' + T.bgDark + ';display:flex;flex-direction:column;';
+  wrap.style.cssText = 'border:2px solid ' + T.border + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
   wrap.appendChild(h.el);
   wrap.appendChild(body);
   return wrap;
@@ -438,7 +438,7 @@ function buildCard02(state) {
   body.appendChild(bodyRow('Total Tips (CC)', fmt(state.totalTips)));
 
   var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid #444;background:' + T.bgDark + ';display:flex;flex-direction:column;';
+  wrap.style.cssText = 'border:2px solid ' + T.border + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
   wrap.appendChild(h.el);
   wrap.appendChild(body);
   return wrap;
@@ -464,7 +464,7 @@ function buildCard03(state) {
   });
 
   var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid #444;background:' + T.bgDark + ';display:flex;flex-direction:column;';
+  wrap.style.cssText = 'border:2px solid ' + T.border + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
   wrap.appendChild(h.el);
   wrap.appendChild(body);
   return wrap;
@@ -476,7 +476,7 @@ function buildCard03(state) {
 
 function buildCard04(state) {
   var blocked     = state.openChecks > 0;
-  var borderColor = blocked ? T.red    : '#444';
+  var borderColor = blocked ? T.red    : T.border;
   var bgColor     = blocked ? '#1a0a0a' : T.bgDark;
   var accentColor = blocked ? T.red    : T.mint;
   var subtext     = blocked
@@ -499,7 +499,7 @@ function buildCard04(state) {
   if (blocked) {
     body.appendChild(buildJumpButton(
       '→ Open Checks', T.red, '#fff',
-      function() { console.log('[CLOSE-DAY] Navigate to open checks — stub'); }
+      function() { }
     ));
   }
 
@@ -529,7 +529,7 @@ function buildCard05(state) {
   });
 
   var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid #444;background:' + T.bgDark + ';display:flex;flex-direction:column;';
+  wrap.style.cssText = 'border:2px solid ' + T.border + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
   wrap.appendChild(h.el);
   wrap.appendChild(body);
   return wrap;
@@ -558,7 +558,7 @@ function buildCard06(state) {
   body.appendChild(bodyRow('Server Net Tips', fmt(net), T.gold));
 
   var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid #555;background:' + T.bgDark + ';display:flex;flex-direction:column;';
+  wrap.style.cssText = 'border:2px solid ' + T.dimText + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
   wrap.appendChild(h.el);
   wrap.appendChild(body);
   return wrap;
@@ -593,7 +593,7 @@ function buildCardsColumn(state) {
 
 function buildAlertPanel(state) {
   var panel = document.createElement('div');
-  panel.style.cssText = 'flex:1;border:1px solid #222;background:#111;display:flex;flex-direction:column;overflow:hidden;';
+  panel.style.cssText = 'flex:1;border:1px solid ' + T.bg2 + ';background:' + T.bgDark + ';display:flex;flex-direction:column;overflow:hidden;';
 
   function rebuild() {
     panel.innerHTML = '';
@@ -616,7 +616,7 @@ function buildAlertPanel(state) {
       var item = document.createElement('div');
       item.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:11px;color:' + color + ';';
       var dot = document.createElement('div');
-      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;';
+      dot.style.cssText = 'width:8px;height:8px;clip-path:circle(50%);background:' + color + ';flex-shrink:0;';
       var txt = document.createElement('span');
       txt.textContent = text;
       item.appendChild(dot);
@@ -629,13 +629,13 @@ function buildAlertPanel(state) {
     }
 
     var sep = document.createElement('div');
-    sep.style.cssText = 'border-top:1px solid #222;margin:2px 0;';
+    sep.style.cssText = 'border-top:1px solid ' + T.bg2 + ';margin:2px 0;';
     list.appendChild(sep);
 
     ['Revenue Summary', 'Payment Breakdown', 'Category Sales',
      state.openChecks === 0 ? 'Check Stats ✓' : null,
      'Daypart Summary', 'Tips & Gratuity'].forEach(function(label) {
-      if (label) list.appendChild(alertItem('#444', label + (label.includes('✓') ? '' : ' ✓')));
+      if (label) list.appendChild(alertItem(T.border, label + (label.includes('✓') ? '' : ' ✓')));
     });
 
     panel.appendChild(list);
@@ -732,7 +732,7 @@ function openBatchOverlay(state, onSettled) {
         var row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:13px;';
         var l = document.createElement('span');
-        l.style.color = '#888';
+        l.style.color = T.mutedText;
         l.textContent = label;
         var v = document.createElement('span');
         v.style.cssText = 'font-weight:bold;color:' + T.gold + ';';
@@ -779,7 +779,7 @@ function openBatchOverlay(state, onSettled) {
       progWrap.appendChild(progContainer);
 
       var pctEl = document.createElement('div');
-      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:#888;text-align:right;margin-top:2px;';
+      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';text-align:right;margin-top:2px;';
       pctEl.textContent = '0%';
       progWrap.appendChild(pctEl);
       body.appendChild(progWrap);
@@ -897,12 +897,11 @@ function buildRightColumn(state) {
   printPair.inner.style.color = T.mint;
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
-    console.log('[CLOSE-DAY] Print triggered');
   });
   col.appendChild(printPair.wrap);
 
   // SUBMIT BATCH
-  var batchPair = buildStyledButton(T.bg);
+  var batchPair = buildStyledButton(T.darkBtn);
   batchPair.wrap.style.cssText = 'width:100%;height:' + BTN_H + 'px;flex-shrink:0;';
   batchPair.inner.style.fontFamily = T.fb;
   batchPair.inner.style.fontSize = '17px';
@@ -978,7 +977,7 @@ function doCloseDay(state) {
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:#555;margin-bottom:24px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.dimText + ';margin-bottom:24px;';
       sub.textContent = '[ PIN entry / messenger — stub ]';
       card.appendChild(sub);
 
@@ -991,7 +990,6 @@ function doCloseDay(state) {
         onTap: function() {
           resolveInterrupt(true);
           // TODO: POST /api/v1/day/close
-          console.log('[CLOSE-DAY] Day closed', state);
           pop();
         },
       }));

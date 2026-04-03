@@ -7,7 +7,7 @@ import { T, buildStyledButton } from './tokens.js';
 
 export function buildButton(label, opts) {
   var o = opts || {};
-  var fill     = o.fill     || T.bg;
+  var fill     = o.fill     || T.darkBtn;
   var color    = o.color    || T.mint;
   var fontSize = o.fontSize || T.fsMgmt;
   var width    = o.width;

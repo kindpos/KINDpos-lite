@@ -71,7 +71,7 @@ function buildLeft(params) {
     row.style.cssText = [
       'display:flex;justify-content:space-between;',
       'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';',
-      'padding:3px 0;border-bottom:1px solid #2a2a2a;',
+      'padding:3px 0;border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var nameEl = document.createElement('span');
     nameEl.textContent = (item.qty > 1 ? item.qty + '× ' : '') + item.name;
@@ -198,48 +198,26 @@ function buildCenter(params) {
   ].join('');
 
   presets.forEach(function(val) {
-    var btn = document.createElement('div');
-    btn.style.cssText = [
-      'display:flex;align-items:center;justify-content:center;',
-      'font-family:' + T.fb + ';font-size:26px;font-weight:bold;color:#1a1a1a;',
-      'background:' + T.mint + ';cursor:pointer;',
-      'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);',
-      'box-shadow:3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #e8ffe4,inset -4px -4px 0 #7acc6e;',
-    ].join('');
-    btn.textContent = '$' + val;
-    btn.addEventListener('pointerdown', function() {
-      btn.style.transform = 'translate(3px,4px)';
-      btn.style.boxShadow = 'none';
+    var btn = buildButton('$' + val, {
+      fill: T.mint, color: T.bgDark, fontSize: '26px',
+      onTap: function() { addTendered(val, params); },
     });
-    btn.addEventListener('pointerup', function() {
-      btn.style.transform = '';
-      btn.style.boxShadow = '3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #e8ffe4,inset -4px -4px 0 #7acc6e';
-      addTendered(val, params);
-    });
+    btn.style.flex = '1';
     grid.appendChild(btn);
   });
   col.appendChild(grid);
 
   // Exact button
-  var exact = document.createElement('div');
-  exact.style.cssText = [
-    'height:' + BTN_H + 'px;display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:22px;font-weight:bold;color:#1a1a1a;',
-    'background:' + T.gold + ';cursor:pointer;flex-shrink:0;',
-    'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);',
-    'box-shadow:3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #ffe080,inset -4px -4px 0 #9a7010;',
-  ].join('');
-  exact.textContent = 'Exact';
-  exact.addEventListener('pointerdown', function() {
-    exact.style.transform = 'translate(3px,4px)'; exact.style.boxShadow = 'none';
+  var exact = buildButton('Exact', {
+    fill: T.gold, color: T.bgDark, fontSize: '22px',
+    height: BTN_H,
+    onTap: function() {
+      tendered   = params.cashPrice;
+      numpadStr  = '';
+      updateCashDisplay(params);
+    },
   });
-  exact.addEventListener('pointerup', function() {
-    exact.style.transform = '';
-    exact.style.boxShadow = '3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #ffe080,inset -4px -4px 0 #9a7010';
-    tendered   = params.cashPrice;
-    numpadStr  = '';
-    updateCashDisplay(params);
-  });
+  exact.style.flexShrink = '0';
   col.appendChild(exact);
 
   return col;
@@ -335,24 +313,12 @@ function buildConfirmKey(params) {
 }
 
 function buildConfirmBtn(params, isCard) {
-  // Full-width confirm for card mode
-  var btn = document.createElement('div');
-  btn.style.cssText = [
-    'height:' + BTN_H + 'px;display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:22px;font-weight:bold;color:#fff;',
-    'background:#1db954;cursor:pointer;flex-shrink:0;',
-    'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);',
-    'box-shadow:3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #44dd77,inset -4px -4px 0 #0a7030;',
-  ].join('');
-  btn.textContent = 'CHARGE  $' + params.cardTotal.toFixed(2);
-  btn.addEventListener('pointerdown', function() {
-    btn.style.transform = 'translate(3px,4px)'; btn.style.boxShadow = 'none';
+  var btn = buildButton('CHARGE  $' + params.cardTotal.toFixed(2), {
+    fill: T.gold, color: T.bgDark, fontSize: '22px',
+    height: BTN_H,
+    onTap: function() { handleConfirm(params); },
   });
-  btn.addEventListener('pointerup', function() {
-    btn.style.transform = '';
-    btn.style.boxShadow = '3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #44dd77,inset -4px -4px 0 #0a7030';
-    handleConfirm(params);
-  });
+  btn.style.flexShrink = '0';
   return btn;
 }
 
@@ -405,8 +371,6 @@ async function handleConfirm(params) {
   var isCash = params.paymentMode === 'cash';
   var change = isCash ? Math.max(0, tendered - params.cashPrice) : 0;
   var amount = isCash ? params.cashPrice : params.cardTotal;
-
-  console.log('[KINDpos] handleConfirm orderId:', params.orderId, 'mode:', params.paymentMode);
 
   try {
     if (isCash) {

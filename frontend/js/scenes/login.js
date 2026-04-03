@@ -70,21 +70,21 @@ registerScene('login', {
 center.style.cssText = 'display:flex;flex-direction:column;gap:24px;justify-content:center;padding-left:30px;';
 
     center.appendChild(buildButton('Quick\nService', {
-      fill: T.bg, color: T.mint, fontSize: T.fsQuick,
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsQuick,
       width: COL_CENTER, height: QUICK_H,
       lineHeight: '0.75',
       onTap: function() { handleAction('quick-service'); },
     }));
 
     center.appendChild(buildButton('Quick\nBar', {
-      fill: T.bg, color: T.mint, fontSize: T.fsQuick,
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsQuick,
       width: COL_CENTER, height: QUICK_H,
       lineHeight: '0.75',
       onTap: function() { handleAction('quick-bar'); },
     }));
 
     center.appendChild(buildButton('Quick\nItem', {
-      fill: T.bg, color: T.mint, fontSize: T.fsQuick,
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsQuick,
       width: COL_CENTER, height: QUICK_H,
       lineHeight: '0.75',
       onTap: function() { handleAction('quick-item'); },

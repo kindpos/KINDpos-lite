@@ -9,6 +9,17 @@ export const T = Object.freeze({
   bgDark:   '#1a1a1a',
   bgLight:  '#5a5a5a',
   bgEdge:   '#151515',
+  bg2:      '#222222',
+  bg3:      '#2a2a2a',
+  bg4:      '#2e2e2e',
+  bg5:      '#262626',
+  border:   '#444444',
+  dimText:  '#555555',
+  mutedText:'#888888',
+  subtleText:'#999999',
+  darkBtn:  '#3a3632',
+  darkBtnL: '#564f48',
+  darkBtnD: '#1e1b18',
   mint:     '#C6FFBB',
   mintEdgeL:'#e5ffe0',
   mintEdgeD:'#5a7a52',
@@ -18,11 +29,15 @@ export const T = Object.freeze({
   red:      '#da331c',
   redL:     '#f26858',
   redD:     '#5e160c',
-  gold:     '#ffc344',
-  goldL:    '#ffdb8a',
+  gold:     '#fcbe40',
+  goldL:    '#fdd67a',
   goldD:    '#7a5a18',
   cyan:     '#33ffff',
+  cyanL:    '#88ffff',
+  cyanD:    '#197a7a',
   lavender: '#b48efa',
+  lavenderL:'#d0b8ff',
+  lavenderD:'#5a3f7a',
   yellow:   '#ffff00',
   fh:   'Alien Encounters Solid Bold, monospace',
   fb:   'Sevastopol Interface, monospace',
@@ -36,7 +51,7 @@ export const T = Object.freeze({
   headerH:  52,
   scenePad: 20,
   colGap:   20,
-  bevel:    4,
+  bevel:    7,
   chamfer:  8,
   shadowX:  3,
   shadowY:  4,
@@ -48,16 +63,27 @@ export function chamfer(s) {
 }
 
 export function bevelEdges(fillColor) {
-  if (fillColor === T.bg)      return { light: T.bgLight,  dark: T.bgEdge   };
-  if (fillColor === T.mint)    return { light: T.mintEdgeL, dark: T.mintEdgeD };
-  if (fillColor === T.goGreen) return { light: T.greenL,   dark: T.greenD   };
-  if (fillColor === T.gold)    return { light: T.goldL,    dark: T.goldD    };
-  if (fillColor === T.red)     return { light: T.redL,     dark: T.redD     };
+  if (fillColor === T.bg)      return { light: T.bgLight,    dark: T.bgEdge    };
+  if (fillColor === T.darkBtn) return { light: T.darkBtnL,   dark: T.darkBtnD  };
+  if (fillColor === T.mint)    return { light: T.mintEdgeL,   dark: T.mintEdgeD };
+  if (fillColor === T.goGreen) return { light: T.greenL,      dark: T.greenD   };
+  if (fillColor === T.gold)    return { light: T.goldL,       dark: T.goldD    };
+  if (fillColor === T.red)     return { light: T.redL,        dark: T.redD     };
+  if (fillColor === T.cyan)    return { light: T.cyanL,       dark: T.cyanD    };
+  if (fillColor === T.lavender)return { light: T.lavenderL,   dark: T.lavenderD};
   return { light: T.bgLight, dark: T.bgEdge };
 }
 
 export function shadowColor(fillColor) {
-  return fillColor === T.bg ? 'rgba(198,255,187,0.55)' : 'rgba(10,10,10,0.8)';
+  if (fillColor === T.bg)       return 'rgba(20, 20, 20, 0.8)';
+  if (fillColor === T.darkBtn)  return 'rgba(15, 13, 10, 0.8)';
+  if (fillColor === T.mint)     return 'rgba(60, 100, 50, 0.8)';
+  if (fillColor === T.goGreen)  return 'rgba(30, 55, 15, 0.8)';
+  if (fillColor === T.gold)     return 'rgba(100, 70, 15, 0.8)';
+  if (fillColor === T.red)      return 'rgba(80, 15, 10, 0.8)';
+  if (fillColor === T.cyan)     return 'rgba(15, 70, 70, 0.8)';
+  if (fillColor === T.lavender) return 'rgba(50, 25, 70, 0.8)';
+  return 'rgba(10, 10, 10, 0.8)';
 }
 
 // ═══════════════════════════════════════════════════
@@ -67,7 +93,7 @@ export function shadowColor(fillColor) {
 // ═══════════════════════════════════════════════════
 
 export function buildStyledButton(fillColor) {
-  var fill = fillColor || T.bg;
+  var fill = fillColor || T.darkBtn;
   var edges = bevelEdges(fill);
   var shadow = shadowColor(fill);
   var b = T.bevel;

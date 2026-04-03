@@ -52,9 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sceneContainer:     document.getElementById('scene-container'),
     overlayContainer:   document.getElementById('overlay-container'),
     interruptContainer: document.getElementById('interrupt-container'),
-    onDiagnostic: (evt) => {
-      console.log(`[DIAG] ${evt.type}`, evt);
-    },
+    onDiagnostic: null,
   });
 
   push('login');

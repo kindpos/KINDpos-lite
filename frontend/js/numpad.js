@@ -39,7 +39,7 @@ export function buildNumpad(opts) {
   var displayShadow = document.createElement('div');
   displayShadow.style.width = '100%';
   displayShadow.style.height = PAD.displayH + 'px';
-  displayShadow.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(198,255,187,0.55))';
+  displayShadow.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadowColor(T.darkBtn) + ')';
 
   var display = document.createElement('div');
   display.style.width = '100%';
@@ -61,7 +61,7 @@ export function buildNumpad(opts) {
   var cardWrap = document.createElement('div');
   cardWrap.style.width = '100%';
   cardWrap.style.height = PAD.cardH + 'px';
-  cardWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(10,10,10,0.8))';
+  cardWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadowColor(T.mint) + ')';
 
   var card = document.createElement('div');
   card.style.width = '100%';
@@ -100,7 +100,7 @@ export function buildNumpad(opts) {
     } else if (key.type === 'submit') {
       fill = T.goGreen; textColor = '#ffffff'; fontSize = T.fsClr;
     } else {
-      fill = T.bg; textColor = T.mint; fontSize = T.fsNumpad;
+      fill = T.darkBtn; textColor = T.mint; fontSize = T.fsNumpad;
     }
 
     var pair = buildStyledButton(fill);

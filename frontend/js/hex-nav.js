@@ -150,7 +150,7 @@ export function HexNav(container, opts) {
       text.setAttribute('y', h.y + offset);
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'central');
-      text.setAttribute('font-family', 'Sevastopol Interface, Courier New, monospace');
+      text.setAttribute('font-family', 'Sevastopol Interface, monospace');
       text.setAttribute('font-size', fontSize);
       text.setAttribute('font-weight', 'bold');
       text.setAttribute('fill', h.locked ? h.textColor : h.color);

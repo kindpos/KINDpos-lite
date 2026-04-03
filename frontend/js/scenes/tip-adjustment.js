@@ -100,7 +100,7 @@ function renderTable() {
       if (c.adjusted) {
         // Adjusted: #333 bg, gold text, visible border
         td.style.background = T.bg;
-        td.style.border = '2px solid #555';
+        td.style.border = '2px solid ' + T.dimText;
         td.style.color = T.gold;
       } else {
         // Unadjusted: transparent bg (mint shows through), no border
@@ -130,7 +130,7 @@ function renderTable() {
       if (cell.cls === 'cyan-cell') {
         td.style.color = T.cyan;
         td.style.background = T.bg;
-        td.style.border = '2px solid #555';
+        td.style.border = '2px solid ' + T.dimText;
       }
 
       tr.appendChild(td);
@@ -309,7 +309,7 @@ function buildScene(el, params) {
 
   // ── Batch zero button ──
   batchBar = buildButton('Set all unadjusted tips to $0?', {
-    fill: T.bg, color: T.cyan, fontSize: '16px',
+    fill: T.darkBtn, color: T.cyan, fontSize: '16px',
     height: 40,
     onTap: function() { doBatchZero(); },
   });
@@ -329,7 +329,7 @@ function buildScene(el, params) {
   }));
 
   bottomBar.appendChild(buildButton('//Print//', {
-    fill: T.bg, color: '#999', fontSize: '22px',
+    fill: T.darkBtn, color: T.subtleText, fontSize: '22px',
     width: 140, height: 48,
     onTap: function() { doPrint(); },
   }));
@@ -388,7 +388,7 @@ function buildScene(el, params) {
 
   // Summary card
   var summaryCard = document.createElement('div');
-  summaryCard.style.cssText = 'background:' + T.bg + ';border:2px solid #555;padding:14px 16px;display:flex;flex-direction:column;gap:8px;';
+  summaryCard.style.cssText = 'background:' + T.bg + ';border:2px solid ' + T.dimText + ';padding:14px 16px;display:flex;flex-direction:column;gap:8px;';
   summaryCard.style.clipPath = chamfer(6);
 
   function addSummaryLine(label, valueKey, valueColor) {
@@ -493,7 +493,7 @@ function doBatchZero() {
       }));
 
       btns.appendChild(buildButton('Cancel', {
-        fill: T.bg, color: T.mint, fontSize: '20px',
+        fill: T.darkBtn, color: T.mint, fontSize: '20px',
         width: 120, height: 44,
         onTap: function() { cancelInterrupt(); },
       }));
@@ -541,7 +541,7 @@ function doCheckout(params) {
         }));
 
         btns.appendChild(buildButton('Go Back', {
-          fill: T.bg, color: T.mint, fontSize: '18px',
+          fill: T.darkBtn, color: T.mint, fontSize: '18px',
           width: 130, height: 44,
           onTap: function() { cancelInterrupt(); },
         }));
@@ -559,7 +559,6 @@ function doCheckout(params) {
 
 function doPrint() {
   // TODO: POST to print endpoint
-  console.log('[TIP-ADJ] Print tip adjustment report', checks);
 }
 
 // ═══════════════════════════════════════════════════

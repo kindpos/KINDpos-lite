@@ -64,6 +64,7 @@ var MENU_DATA = [
 
 var MOD_DATA = [
   {
+    // FIXME: gold violates semantic rules (gold = money ALWAYS) — needs palette decision
     id: 'proteins', label: 'PROTEINS', color: '#fcbe40', textColor: '#1a1000',
     subcats: [
       { id: 'meat',  label: 'Meat',  items: ['Bacon', 'Chicken', 'Beef', 'Shrimp', 'Egg'] },
@@ -78,6 +79,7 @@ var MOD_DATA = [
     ]
   },
   {
+    // FIXME: cyan violates semantic rules (cyan = today/healthy ALWAYS) — needs palette decision
     id: 'sauces', label: 'SAUCES', color: '#33ffff', textColor: '#001a1a',
     subcats: [
       { id: 'hot',  label: 'Hot',  items: ['Sriracha', 'Chipotle', 'Habanero', 'Buffalo'] },
@@ -214,7 +216,7 @@ function buildTicket(parentEl) {
 
 function buildSummaryRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:18px;color:#666;line-height:1.6;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:18px;color:' + T.dimText + ';line-height:1.6;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
@@ -249,7 +251,7 @@ function buildPrefixCard() {
 
   // Label
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:#555;flex-shrink:0;margin-right:2px;';
+  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.dimText + ';flex-shrink:0;margin-right:2px;';
   lbl.textContent = 'PREFIX:';
   card.appendChild(lbl);
 
@@ -302,7 +304,7 @@ function buildMain(parentEl, params) {
   var canvas = document.createElement('div');
   canvas.id = 'hex-canvas';
   canvas.style.cssText = [
-    'flex:1;background:#262626;',
+    'flex:1;background:' + T.bg5 + ';',
     'border:2px solid ' + T.mint + ';',
     'margin-bottom:0;padding-bottom:' + OVERLAP + 'px;',
     'position:relative;overflow:hidden;',
@@ -567,7 +569,7 @@ function renderTicket() {
 // ── SEPARATOR + MOD ROW helpers ───────────────────
 function buildSeparator() {
   var sep = document.createElement('div');
-  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:9px;color:#7ab870;letter-spacing:2px;';
+  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:9px;color:' + T.mintEdgeD + ';letter-spacing:2px;';
   sep.textContent = '- - - - - - - - - - - - - - - - - -';
   return sep;
 }
@@ -790,7 +792,7 @@ function handleRecall() {
 
       // Header
       var hdr = document.createElement('div');
-      hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #2a2a2a;flex-shrink:0;';
+      hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;';
       var title = document.createElement('span');
       title.style.cssText = 'font-family:' + T.fb + ';font-size:14px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
       title.textContent = '// RECALL //';
