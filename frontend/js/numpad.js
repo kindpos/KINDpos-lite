@@ -1,0 +1,157 @@
+// ═══════════════════════════════════════════════════
+//  KINDpos Terminal — Numpad Component
+//  Reusable: login PIN, payment amounts, any numeric input
+//  Nice. Dependable. Yours.
+// ═══════════════════════════════════════════════════
+
+import { T, chamfer, buildStyledButton, applySunkenStyle, applyRaisedStyle, shadowColor } from './tokens.js';
+
+var PAD = {
+  width:    332,
+  displayH: 75,
+  gap:      20,
+  cardPad:  20,
+  keyW:     88,
+  keyH:     80,
+  keyGap:   14,
+};
+PAD.cardW = PAD.keyW * 3 + PAD.keyGap * 2 + PAD.cardPad * 2;
+PAD.cardH = PAD.keyH * 4 + PAD.keyGap * 3 + PAD.cardPad * 2;
+
+export function buildNumpad(opts) {
+  var o = opts || {};
+  var maxDigits    = o.maxDigits    || 6;
+  var masked       = o.masked       !== false;
+  var onSubmit     = o.onSubmit     || function(){};
+  var onChange     = o.onChange     || null;   // fires(digits) on every digit/clear
+  var displayFormat = o.displayFormat || null; // function(digits) => display string
+
+  var pin = '';
+
+  // ── Container ──
+  var container = document.createElement('div');
+  container.style.width = PAD.width + 'px';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = PAD.gap + 'px';
+
+  // ── Digit Display (mint shadow wrap + sunken inner) ──
+  var displayShadow = document.createElement('div');
+  displayShadow.style.width = '100%';
+  displayShadow.style.height = PAD.displayH + 'px';
+  displayShadow.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(198,255,187,0.55))';
+
+  var display = document.createElement('div');
+  display.style.width = '100%';
+  display.style.height = '100%';
+  display.style.background = T.bg;
+  display.style.display = 'flex';
+  display.style.alignItems = 'center';
+  display.style.justifyContent = 'center';
+  display.style.fontFamily = T.fb;
+  display.style.fontSize = '60px';
+  display.style.color = T.mint;
+  display.style.letterSpacing = '5px';
+  applySunkenStyle(display);
+
+  displayShadow.appendChild(display);
+  container.appendChild(displayShadow);
+
+  // ── Numpad Card (mint fill, raised with depth) ──
+  var cardWrap = document.createElement('div');
+  cardWrap.style.width = '100%';
+  cardWrap.style.height = PAD.cardH + 'px';
+  cardWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(10,10,10,0.8))';
+
+  var card = document.createElement('div');
+  card.style.width = '100%';
+  card.style.height = '100%';
+  card.style.padding = PAD.cardPad + 'px';
+  card.style.display = 'grid';
+  card.style.gridTemplateColumns = 'repeat(3, ' + PAD.keyW + 'px)';
+  card.style.gridTemplateRows = 'repeat(4, ' + PAD.keyH + 'px)';
+  card.style.gap = PAD.keyGap + 'px';
+  card.style.boxSizing = 'border-box';
+  applyRaisedStyle(card, T.mint);
+
+  cardWrap.appendChild(card);
+  container.appendChild(cardWrap);
+
+  // ── Keys ──
+  var layout = [
+    { label: '1', type: 'digit' },
+    { label: '2', type: 'digit' },
+    { label: '3', type: 'digit' },
+    { label: '4', type: 'digit' },
+    { label: '5', type: 'digit' },
+    { label: '6', type: 'digit' },
+    { label: '7', type: 'digit' },
+    { label: '8', type: 'digit' },
+    { label: '9', type: 'digit' },
+    { label: 'clr', type: 'clear' },
+    { label: '0', type: 'digit' },
+    { label: '>>>', type: 'submit' },
+  ];
+
+  layout.forEach(function(key) {
+    var fill, textColor, fontSize;
+    if (key.type === 'clear') {
+      fill = T.red; textColor = '#ffffff'; fontSize = T.fsClr;
+    } else if (key.type === 'submit') {
+      fill = T.goGreen; textColor = '#ffffff'; fontSize = T.fsClr;
+    } else {
+      fill = T.bg; textColor = T.mint; fontSize = T.fsNumpad;
+    }
+
+    var pair = buildStyledButton(fill);
+    pair.wrap.style.width = PAD.keyW + 'px';
+    pair.wrap.style.height = PAD.keyH + 'px';
+    pair.inner.style.fontFamily = T.fb;
+    pair.inner.style.fontSize = fontSize;
+    pair.inner.style.color = textColor;
+    pair.inner.style.lineHeight = '1';
+    pair.inner.textContent = key.label;
+
+    pair.wrap.addEventListener('pointerup', function() {
+      if (key.type === 'digit') {
+        if (pin.length < maxDigits) {
+          pin += key.label;
+          render();
+          if (onChange) onChange(pin);
+        }
+      } else if (key.type === 'clear') {
+        pin = '';
+        render();
+        if (onChange) onChange(pin);
+      } else if (key.type === 'submit') {
+        if (pin.length > 0) onSubmit(pin);
+      }
+    });
+
+    card.appendChild(pair.wrap);
+  });
+
+  function render() {
+    if (displayFormat) {
+      display.textContent = displayFormat(pin);
+    } else if (masked) {
+      display.textContent = Array(pin.length + 1).join('\u25CF ').trim();
+    } else {
+      display.textContent = pin;
+    }
+  }
+
+  container.clear = function() { pin = ''; render(); };
+  container.getPin = function() { return pin; };
+  container.setError = function(msg) {
+    display.textContent = msg || '';
+    display.style.color = T.red;
+    setTimeout(function() {
+      display.style.color = T.mint;
+      pin = ''; render();
+    }, 1200);
+  };
+
+  render();
+  return container;
+}
