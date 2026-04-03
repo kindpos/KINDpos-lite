@@ -1,11 +1,14 @@
 """
-KINDpos Printer Discovery API Tests
-====================================
-Tests for the /api/v1/printers/* endpoints:
-    - GET  /scan   — network scan for port 9100
-    - POST /test   — send test print
-    - POST /save   — persist printer config
-    - GET  /saved  — list saved printers
+KINDpos Hardware Discovery API Tests
+=====================================
+Tests for the /api/v1/hardware/* endpoints:
+    - GET  /scan          — network scan for devices
+    - POST /test          — test connectivity by MAC
+    - POST /test-print    — send test print by IP
+    - POST /devices       — persist device config
+    - GET  /devices       — list saved devices
+    - DELETE /devices/:mac — remove a saved device
+    - GET  /status        — hardware subsystem status
 """
 
 import os
@@ -35,11 +38,16 @@ async def ledger():
 async def client(ledger):
     """AsyncClient wired to the real FastAPI app with a test ledger."""
     from app.main import app
+    from app.api.routes.hardware import HARDWARE_DB_PATH
 
     async def _override_ledger():
         return ledger
 
     app.dependency_overrides[deps.get_ledger] = _override_ledger
+
+    # Clean hardware DB for test isolation
+    if os.path.exists(HARDWARE_DB_PATH):
+        os.remove(HARDWARE_DB_PATH)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -47,174 +55,224 @@ async def client(ledger):
 
     app.dependency_overrides.clear()
 
+    if os.path.exists(HARDWARE_DB_PATH):
+        os.remove(HARDWARE_DB_PATH)
 
-# ── GET /api/v1/printers/scan ──────────────────────────
+
+# ── GET /api/v1/hardware/scan ─────────────────────────
 
 
-class TestPrinterScan:
-    """Tests for GET /api/v1/printers/scan"""
+class TestHardwareScan:
+    """Tests for GET /api/v1/hardware/scan"""
 
-    async def test_scan_returns_valid_structure(self, client):
-        """Response has subnet, printers list, scan_time_ms, timestamp."""
-        resp = await client.get("/api/v1/printers/scan")
+    async def test_scan_returns_list(self, client):
+        """Response is a JSON array of discovered devices."""
+        resp = await client.get("/api/v1/hardware/scan")
         assert resp.status_code == 200
         data = resp.json()
-        assert "subnet" in data
-        assert "printers" in data
-        assert isinstance(data["printers"], list)
-        assert "scan_time_ms" in data
-        assert "timestamp" in data
+        assert isinstance(data, list)
 
-    async def test_scan_handles_no_printers_found(self, client):
-        """Returns empty printers list, not an error."""
-        resp = await client.get("/api/v1/printers/scan")
+    async def test_scan_handles_no_devices_found(self, client):
+        """Returns empty list in test environment (no real LAN)."""
+        resp = await client.get("/api/v1/hardware/scan")
         assert resp.status_code == 200
         data = resp.json()
-        # In test environment, unlikely to find real printers
-        assert isinstance(data["printers"], list)
+        assert isinstance(data, list)
 
-    async def test_scan_completes_in_reasonable_time(self, client):
-        """Scan completes and returns a scan_time_ms value."""
-        resp = await client.get("/api/v1/printers/scan", timeout=60.0)
+    async def test_scan_single_ip(self, client):
+        """Scan with ?ip= targets a single host."""
+        # Use RFC 5737 TEST-NET address — unreachable, but exercises the path
+        resp = await client.get("/api/v1/hardware/scan", params={"ip": "192.0.2.1"})
         assert resp.status_code == 200
         data = resp.json()
-        assert isinstance(data["scan_time_ms"], int)
+        assert isinstance(data, list)
 
 
-# ── POST /api/v1/printers/test ─────────────────────────
+# ── POST /api/v1/hardware/test ────────────────────────
 
 
-class TestPrinterTest:
-    """Tests for POST /api/v1/printers/test"""
+class TestHardwareTest:
+    """Tests for POST /api/v1/hardware/test (by MAC)"""
 
-    async def test_test_requires_ip(self, client):
-        """Returns 422 without ip field."""
-        resp = await client.post("/api/v1/printers/test", json={})
+    async def test_test_requires_mac(self, client):
+        """Returns 422 without mac field."""
+        resp = await client.post("/api/v1/hardware/test", json={})
         assert resp.status_code == 422
 
-    async def test_test_returns_success_structure(self, client):
-        """Response has success, ip, and response_ms fields."""
-        # Use a known-unreachable IP (RFC 5737 TEST-NET)
-        resp = await client.post("/api/v1/printers/test", json={
-            "ip": "192.0.2.1", "port": 9100
+    async def test_test_unknown_mac_returns_not_saved(self, client):
+        """Returns success=false when MAC isn't in the device DB."""
+        resp = await client.post("/api/v1/hardware/test", json={
+            "mac": "00:11:22:33:44:55"
         })
         assert resp.status_code == 200
         data = resp.json()
-        assert "success" in data
-        assert "ip" in data
-        assert data["ip"] == "192.0.2.1"
+        assert data["success"] is False
+        assert "not saved" in data["message"].lower()
 
-    async def test_test_handles_unreachable_printer(self, client):
+    async def test_test_saved_device_unreachable(self, client):
+        """After saving a device, test returns success=false if unreachable."""
+        # Save a device first
+        await client.post("/api/v1/hardware/devices", json={
+            "mac": "AA:BB:CC:DD:EE:FF",
+            "ip": "192.0.2.1",
+            "type": "printer",
+            "name": "Test Printer",
+            "port": 9100,
+        })
+        # Test it — unreachable IP
+        resp = await client.post("/api/v1/hardware/test", json={
+            "mac": "AA:BB:CC:DD:EE:FF"
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert data["mac"] == "AA:BB:CC:DD:EE:FF"
+
+
+# ── POST /api/v1/hardware/test-print ─────────────────
+
+
+class TestHardwareTestPrint:
+    """Tests for POST /api/v1/hardware/test-print (by IP)"""
+
+    async def test_test_print_requires_ip(self, client):
+        """Returns 422 without ip field."""
+        resp = await client.post("/api/v1/hardware/test-print", json={})
+        assert resp.status_code == 422
+
+    async def test_test_print_unreachable(self, client):
         """Returns success=false for unreachable IP."""
-        resp = await client.post("/api/v1/printers/test", json={
+        resp = await client.post("/api/v1/hardware/test-print", json={
             "ip": "192.0.2.1", "port": 9100
         })
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is False
-        assert "error" in data
 
 
-# ── POST /api/v1/printers/save ─────────────────────────
+# ── POST /api/v1/hardware/devices ─────────────────────
 
 
-class TestPrinterSave:
-    """Tests for POST /api/v1/printers/save"""
+class TestDeviceSave:
+    """Tests for POST /api/v1/hardware/devices"""
 
-    async def test_save_requires_name_and_ip(self, client):
+    async def test_save_requires_fields(self, client):
         """Returns 422 without required fields."""
-        resp = await client.post("/api/v1/printers/save", json={})
+        resp = await client.post("/api/v1/hardware/devices", json={})
         assert resp.status_code == 422
 
-    async def test_save_returns_printer_id(self, client):
-        """Response has success=true and printer_id."""
-        resp = await client.post("/api/v1/printers/save", json={
+    async def test_save_returns_device(self, client):
+        """Response echoes back the saved device with uppercase MAC."""
+        resp = await client.post("/api/v1/hardware/devices", json={
+            "mac": "aa:bb:cc:dd:ee:ff",
+            "ip": "192.168.1.100",
+            "type": "printer",
             "name": "Kitchen",
-            "ip": "192.168.1.100",
             "port": 9100,
-            "role": "kitchen",
         })
         assert resp.status_code == 200
         data = resp.json()
-        assert data["success"] is True
-        assert "printer_id" in data
-        assert data["printer_id"].startswith("printer_")
+        assert data["mac"] == "AA:BB:CC:DD:EE:FF"
+        assert data["name"] == "Kitchen"
+        assert "saved_at" in data
 
-    async def test_save_validates_role(self, client):
-        """Only accepts valid roles: kitchen, bar, receipt, backup."""
-        resp = await client.post("/api/v1/printers/save", json={
-            "name": "Test",
-            "ip": "192.168.1.100",
-            "role": "invalid_role",
-        })
-        assert resp.status_code == 422
-
-    async def test_save_validates_ip(self, client):
-        """Rejects malformed IP addresses."""
-        resp = await client.post("/api/v1/printers/save", json={
-            "name": "Test",
-            "ip": "not-an-ip",
-            "role": "kitchen",
-        })
-        assert resp.status_code == 422
-
-    async def test_save_persists_to_ledger(self, client):
-        """After save, GET /saved returns the printer."""
-        # Save a printer
-        save_resp = await client.post("/api/v1/printers/save", json={
-            "name": "Bar Printer",
-            "ip": "192.168.1.101",
-            "port": 9100,
-            "role": "bar",
-        })
-        assert save_resp.status_code == 200
-        printer_id = save_resp.json()["printer_id"]
-
-        # Verify it appears in saved list
-        saved_resp = await client.get("/api/v1/printers/saved")
-        assert saved_resp.status_code == 200
-        printers = saved_resp.json()["printers"]
-        assert any(p["id"] == printer_id for p in printers)
-
-
-# ── GET /api/v1/printers/saved ─────────────────────────
-
-
-class TestPrinterSaved:
-    """Tests for GET /api/v1/printers/saved"""
-
-    async def test_saved_returns_list(self, client):
-        """Response has printers array."""
-        resp = await client.get("/api/v1/printers/saved")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "printers" in data
-        assert isinstance(data["printers"], list)
-
-    async def test_saved_empty_when_none_configured(self, client):
-        """Returns empty list when no printers saved."""
-        resp = await client.get("/api/v1/printers/saved")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["printers"] == []
-
-    async def test_saved_printers_have_required_fields(self, client):
-        """Each saved printer has id, name, ip, port, role, online."""
-        # Save a printer first
-        await client.post("/api/v1/printers/save", json={
-            "name": "Receipt",
+    async def test_save_upserts_by_mac(self, client):
+        """Saving same MAC twice updates rather than duplicating."""
+        payload = {
+            "mac": "11:22:33:44:55:66",
             "ip": "192.168.1.50",
-            "role": "receipt",
+            "type": "printer",
+            "name": "Bar Printer",
+            "port": 9100,
+        }
+        await client.post("/api/v1/hardware/devices", json=payload)
+
+        # Update name
+        payload["name"] = "Bar Printer (updated)"
+        await client.post("/api/v1/hardware/devices", json=payload)
+
+        # Should have exactly 1 device
+        resp = await client.get("/api/v1/hardware/devices")
+        devices = resp.json()
+        assert len(devices) == 1
+        assert devices[0]["name"] == "Bar Printer (updated)"
+
+
+# ── GET /api/v1/hardware/devices ──────────────────────
+
+
+class TestDeviceList:
+    """Tests for GET /api/v1/hardware/devices"""
+
+    async def test_devices_returns_list(self, client):
+        """Response is a JSON array."""
+        resp = await client.get("/api/v1/hardware/devices")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+
+    async def test_devices_empty_when_none_saved(self, client):
+        """Returns empty list when no devices saved."""
+        resp = await client.get("/api/v1/hardware/devices")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    async def test_saved_devices_have_required_fields(self, client):
+        """Each saved device has mac, ip, type, name, port, saved_at."""
+        await client.post("/api/v1/hardware/devices", json={
+            "mac": "AA:BB:CC:DD:EE:FF",
+            "ip": "192.168.1.50",
+            "type": "receipt",
+            "name": "Receipt Printer",
+            "port": 9100,
         })
 
-        resp = await client.get("/api/v1/printers/saved")
+        resp = await client.get("/api/v1/hardware/devices")
         data = resp.json()
-        assert len(data["printers"]) == 1
+        assert len(data) == 1
 
-        p = data["printers"][0]
-        assert "id" in p
-        assert p["name"] == "Receipt"
-        assert p["ip"] == "192.168.1.50"
-        assert p["port"] == 9100
-        assert p["role"] == "receipt"
-        assert "online" in p
+        d = data[0]
+        assert d["mac"] == "AA:BB:CC:DD:EE:FF"
+        assert d["name"] == "Receipt Printer"
+        assert d["ip"] == "192.168.1.50"
+        assert d["port"] == 9100
+        assert d["type"] == "receipt"
+        assert "saved_at" in d
+
+
+# ── DELETE /api/v1/hardware/devices/:mac ──────────────
+
+
+class TestDeviceDelete:
+    """Tests for DELETE /api/v1/hardware/devices/:mac"""
+
+    async def test_delete_removes_device(self, client):
+        """After delete, device no longer appears in list."""
+        await client.post("/api/v1/hardware/devices", json={
+            "mac": "DE:AD:BE:EF:00:01",
+            "ip": "192.168.1.200",
+            "type": "printer",
+            "name": "Old Printer",
+            "port": 9100,
+        })
+        resp = await client.delete("/api/v1/hardware/devices/DE:AD:BE:EF:00:01")
+        assert resp.status_code == 200
+        assert resp.json()["deleted"] == "DE:AD:BE:EF:00:01"
+
+        devices = (await client.get("/api/v1/hardware/devices")).json()
+        assert len(devices) == 0
+
+
+# ── GET /api/v1/hardware/status ───────────────────────
+
+
+class TestHardwareStatus:
+    """Tests for GET /api/v1/hardware/status"""
+
+    async def test_status_returns_online(self, client):
+        """Status endpoint returns status and subnet info."""
+        resp = await client.get("/api/v1/hardware/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "online"
+        assert "default_subnet" in data
