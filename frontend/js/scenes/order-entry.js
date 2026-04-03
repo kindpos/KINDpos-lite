@@ -18,7 +18,7 @@ var BTN_H    = 50;
 var OVERLAP  = 18;
 
 // ── Pricing constants ─────────────────────────────
-var TAX_RATE      = 0.06;   // 6% — matches demo_seed.json
+var TAX_RATE      = 0.07;   // 7% — matches backend settings.tax_rate
 var CASH_DISCOUNT = 0.04;   // 4% dual-pricing discount
 var STUB_PRICE    = 10.00;  // TODO: replace with real menu item prices
 

@@ -49,7 +49,7 @@ var state = {
   softwareVer:  'Vz1.0',
   ipAddress:    '—',
   wifiSSID:     '—',
-  taxRate:      '6.0',
+  taxRate:      '7.0',
   cashDiscount: '4.0',
 };
 

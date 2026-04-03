@@ -82,6 +82,9 @@ class Order:
     # Printing history
     print_history: list[dict] = field(default_factory=list)
 
+    # Tax rate — read from settings by default, overridable via project_order()
+    _tax_rate: float = None
+
     @property
     def subtotal(self) -> float:
         """Sum of all items."""
@@ -94,8 +97,10 @@ class Order:
 
     @property
     def tax_rate(self) -> float:
-        """Tax rate — matches demo_seed.json (6%)."""
-        return 0.06
+        if self._tax_rate is not None:
+            return self._tax_rate
+        from app.config import settings
+        return settings.tax_rate
 
     @property
     def tax(self) -> float:
@@ -124,12 +129,15 @@ class Order:
         return self.amount_paid >= self.total
 
 
-def project_order(events: list[Event]) -> Optional[Order]:
+def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order]:
     """
     Rebuild an Order from a list of events.
 
     This is the core projection logic. Given all events for an order,
     replay them in sequence to compute current state.
+
+    Args:
+        tax_rate: Override the default tax rate (0.06) for this projection.
     """
     if not events:
         return None
@@ -154,6 +162,8 @@ def project_order(events: list[Event]) -> Optional[Order]:
                 guest_count=payload.get("guest_count", 1),
                 created_at=event.timestamp,
             )
+            if tax_rate is not None:
+                order._tax_rate = tax_rate
 
         elif event.event_type == EventType.ORDER_CLOSED:
             if order:
