@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import uuid
+import aiosqlite
+import os
 
 # Correcting relative imports for app.api.routes
 from ..dependencies import get_ledger
@@ -10,6 +12,7 @@ from ...core.adapters.payment_manager import PaymentManager
 from ...core.adapters.payment_validator import PaymentValidator
 from ...core.adapters.base_payment import TransactionRequest, TransactionResult, ValidationStatus, ValidationResult, PaymentDeviceConfig, PaymentDeviceType
 from ...core.adapters.mock_payment import MockPaymentDevice
+from ...core.adapters.dejavoo_spin import DejavooSPInAdapter
 from ...core.events import (
     payment_initiated, payment_confirmed, order_closed, tip_adjusted,
     create_event, EventType,
@@ -22,29 +25,65 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 _manager: Optional[PaymentManager] = None
 _validator: Optional[PaymentValidator] = None
 
-_mock_initialized = False
+_devices_initialized = False
 
-async def _ensure_mock_device(manager: PaymentManager):
-    """Register a MockPaymentDevice if no devices are mapped."""
-    global _mock_initialized
-    if _mock_initialized:
+HARDWARE_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'hardware_config.db')
+
+
+async def _ensure_devices(manager: PaymentManager):
+    """Load saved card readers as SPIn adapters, fall back to mock."""
+    global _devices_initialized
+    if _devices_initialized:
         return
-    _mock_initialized = True
-    mock = MockPaymentDevice()
-    config = PaymentDeviceConfig(
-        device_id="mock_001",
-        name="Mock Payment Device",
-        device_type=PaymentDeviceType.SMART_TERMINAL,
-        ip_address="127.0.0.1",
-        mac_address="00:00:00:00:00:00",
-        port=8443,
-        protocol="mock",
-        processor_id="mock_processor",
-    )
-    await mock.connect(config)
-    manager.register_device(mock)
-    manager.map_terminal_to_device(settings.terminal_id, "mock_001")
-    manager.map_terminal_to_device("T-01", "mock_001")  # frontend default terminal ID
+    _devices_initialized = True
+
+    # Try to load a real card reader from hardware_config.db
+    reader_found = False
+    if os.path.exists(HARDWARE_DB_PATH):
+        try:
+            async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
+                db.row_factory = aiosqlite.Row
+                async with db.execute("SELECT * FROM devices WHERE type = 'card_reader' LIMIT 1") as cur:
+                    row = await cur.fetchone()
+                    if row:
+                        device = dict(row)
+                        adapter = DejavooSPInAdapter()
+                        config = PaymentDeviceConfig(
+                            device_id=device['mac'],
+                            name=device.get('name', 'Dejavoo'),
+                            device_type=PaymentDeviceType.SMART_TERMINAL,
+                            ip_address=device['ip'],
+                            mac_address=device['mac'],
+                            port=device.get('port', 8443),
+                            protocol="spin",
+                            processor_id="dejavoo",
+                        )
+                        connected = await adapter.connect(config)
+                        if connected:
+                            manager.register_device(adapter)
+                            manager.map_terminal_to_device(settings.terminal_id, device['mac'])
+                            manager.map_terminal_to_device("T-001", device['mac'])
+                            reader_found = True
+        except Exception:
+            pass
+
+    # Fall back to mock if no real device found
+    if not reader_found:
+        mock = MockPaymentDevice()
+        config = PaymentDeviceConfig(
+            device_id="mock_001",
+            name="Mock Payment Device",
+            device_type=PaymentDeviceType.SMART_TERMINAL,
+            ip_address="127.0.0.1",
+            mac_address="00:00:00:00:00:00",
+            port=8443,
+            protocol="mock",
+            processor_id="mock_processor",
+        )
+        await mock.connect(config)
+        manager.register_device(mock)
+        manager.map_terminal_to_device(settings.terminal_id, "mock_001")
+        manager.map_terminal_to_device("T-001", "mock_001")
 
 def get_payment_manager(ledger: EventLedger = Depends(get_ledger)) -> PaymentManager:
     global _manager
@@ -65,7 +104,7 @@ async def process_sale(
     validator: PaymentValidator = Depends(get_payment_validator)
 ):
     """Initiate sale. Returns ValidationResult or TransactionResult."""
-    await _ensure_mock_device(manager)
+    await _ensure_devices(manager)
     # 1. Resolve Device
     device_id = manager._terminal_device_map.get(request.terminal_id)
     device = manager._devices.get(device_id) if device_id else None
