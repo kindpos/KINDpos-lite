@@ -39,6 +39,12 @@ export const T = Object.freeze({
   lavenderL:'#d0b8ff',
   lavenderD:'#5a3f7a',
   yellow:   '#ffff00',
+  catProteins:  '#ff4757',
+  catVegetables:'#C6FFBB',   // alias T.mint
+  catBeverages: '#70a1ff',
+  catSauces:    '#ffa502',
+  catDesserts:  '#b48efa',   // alias T.lavender
+  catStarches:  '#7bed9f',
   fh:   'Alien Encounters Solid Bold, monospace',
   fb:   'Sevastopol Interface, monospace',
   fsQuick:  '70px',

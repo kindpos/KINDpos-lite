@@ -42,7 +42,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'drinks', label: 'DRINKS', color: '#33ffff', textColor: '#001a1a',
+    id: 'drinks', label: 'DRINKS', color: T.catBeverages, textColor: '#001a1a',
     subcats: [
       { id: 'sodas',     label: 'Sodas',     items: ['Coke', 'Sprite', 'Diet', 'Root Beer', 'Lemonade', 'Iced Tea'] },
       { id: 'beer',      label: 'Beer',      items: ['Lager', 'IPA', 'Stout', 'Ale', 'Sour', 'Wheat', 'Pilsner'] },
@@ -52,7 +52,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'desserts', label: 'DESSERTS', color: '#b48efa', textColor: '#1a0030',
+    id: 'desserts', label: 'DESSERTS', color: T.catDesserts, textColor: '#1a0030',
     subcats: [
       { id: 'cakes',  label: 'Cakes',  items: ['Chocolate', 'Vanilla', 'Carrot', 'Red Velvet', 'Lemon', 'Cheesecake'] },
       { id: 'frozen', label: 'Frozen', items: ['Ice Cream', 'Sorbet', 'Gelato', 'Shake', 'Float', 'Sundae'] },
@@ -64,8 +64,7 @@ var MENU_DATA = [
 
 var MOD_DATA = [
   {
-    // FIXME: gold violates semantic rules (gold = money ALWAYS) — needs palette decision
-    id: 'proteins', label: 'PROTEINS', color: '#fcbe40', textColor: '#1a1000',
+    id: 'proteins', label: 'PROTEINS', color: T.catProteins, textColor: '#1a1000',
     subcats: [
       { id: 'meat',  label: 'Meat',  items: ['Bacon', 'Chicken', 'Beef', 'Shrimp', 'Egg'] },
       { id: 'other', label: 'Other', items: ['Tofu', 'Tempeh', 'Anchovy'] },
@@ -79,8 +78,7 @@ var MOD_DATA = [
     ]
   },
   {
-    // FIXME: cyan violates semantic rules (cyan = today/healthy ALWAYS) — needs palette decision
-    id: 'sauces', label: 'SAUCES', color: '#33ffff', textColor: '#001a1a',
+    id: 'sauces', label: 'SAUCES', color: T.catSauces, textColor: '#001a1a',
     subcats: [
       { id: 'hot',  label: 'Hot',  items: ['Sriracha', 'Chipotle', 'Habanero', 'Buffalo'] },
       { id: 'mild', label: 'Mild', items: ['Ranch', 'Mayo', 'Mustard', 'Ketchup', 'BBQ', 'Aioli'] },
