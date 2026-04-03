@@ -94,8 +94,8 @@ class Order:
 
     @property
     def tax_rate(self) -> float:
-        """Tax rate - TODO: make configurable."""
-        return 0.08
+        """Tax rate — matches demo_seed.json (6%)."""
+        return 0.06
 
     @property
     def tax(self) -> float:

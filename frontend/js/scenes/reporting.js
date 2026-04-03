@@ -9,14 +9,20 @@ import { buildButton, buildGap } from '../components.js';
 import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
-// ── Stats — fresh-day zeros ──────────────────────
-function getStats(role) {
-  return {
-    unadjustedTips: 0,
-    totalTips: 0,
-    netSales: 0,
-    totalChecks: 0,
-  };
+// ── Stats — fetched from day-summary API ─────────
+function getStats(role, employeeId) {
+  var url = '/api/v1/orders/day-summary';
+  if (role !== 'manager' && employeeId) url += '?server_id=' + encodeURIComponent(employeeId);
+  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    return {
+      unadjustedTips: d.unadjusted_tips || 0,
+      totalTips: d.total_tips || 0,
+      netSales: d.net_sales || 0,
+      totalChecks: d.total_checks || 0,
+    };
+  }).catch(function() {
+    return { unadjustedTips: 0, totalTips: 0, netSales: 0, totalChecks: 0 };
+  });
 }
 
 function fmt(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -96,7 +102,6 @@ function buildCard(opts) {
 
 function buildScene(el, params) {
   var role = params.role || 'server';
-  var stats = getStats(role);
 
   el.style.display = 'grid';
   el.style.gridTemplateColumns = '1fr 1fr';
@@ -106,72 +111,74 @@ function buildScene(el, params) {
   el.style.height = '100%';
   el.style.boxSizing = 'border-box';
 
-  // ── TOP LEFT: Tip Adjustment (mint) ──
-  var tipInfoLines = [
-    { text: 'Unadjusted: ' + stats.unadjustedTips, color: T.cyan },
-    { text: 'Total Tips: ' + fmt(stats.totalTips),  color: T.gold },
-  ];
-  if (role === 'manager') {
-    tipInfoLines[0].text = 'Unadjusted: ' + stats.unadjustedTips + ' (all servers)';
-  }
+  getStats(role, params.employeeId).then(function(stats) {
+    // ── TOP LEFT: Tip Adjustment (mint) ──
+    var tipInfoLines = [
+      { text: 'Unadjusted: ' + stats.unadjustedTips, color: T.cyan },
+      { text: 'Total Tips: ' + fmt(stats.totalTips),  color: T.gold },
+    ];
+    if (role === 'manager') {
+      tipInfoLines[0].text = 'Unadjusted: ' + stats.unadjustedTips + ' (all servers)';
+    }
 
-  el.appendChild(buildCard({
-    borderColor: T.mint,
-    title: 'Tip\nAdjustment',
-    titleColor: T.mint,
-    infoLines: tipInfoLines,
-    onTap: function() {
-      push('tip-adjustment', {
-        employeeId: params.employeeId,
-        employeeName: params.employeeName,
-        role: role,
-      });
-    },
-  }));
-
-  // ── TOP RIGHT: Checkout (server) / Close Day (manager) ──
-  if (role === 'manager') {
     el.appendChild(buildCard({
-      borderColor: T.red,
-      title: 'Close Day',
+      borderColor: T.mint,
+      title: 'Tip\nAdjustment',
       titleColor: T.mint,
-      infoLines: [],
+      infoLines: tipInfoLines,
       onTap: function() {
-        push('close-day', { pin: params.pin });
-      },
-    }));
-  } else {
-    el.appendChild(buildCard({
-      borderColor: T.red,
-      title: 'Checkout',
-      titleColor: T.mint,
-      infoLines: [],
-      onTap: function() {
-        push('server-checkout', {
+        push('tip-adjustment', {
           employeeId: params.employeeId,
           employeeName: params.employeeName,
+          role: role,
         });
       },
     }));
-  }
 
-  // ── BOTTOM LEFT: Sales Summary (mint) ──
-  el.appendChild(buildCard({
-    borderColor: T.mint,
-    title: 'Sales\nSummary',
-    titleColor: T.mint,
-    infoLines: [
-      { text: 'Net Sales: ' + fmt(stats.netSales),  color: T.gold },
-      { text: 'Checks: ' + stats.totalChecks,       color: T.cyan },
-    ],
-    onTap: function() {
-      push('sales-summary', { role: role });
-    },
-  }));
+    // ── TOP RIGHT: Checkout (server) / Close Day (manager) ──
+    if (role === 'manager') {
+      el.appendChild(buildCard({
+        borderColor: T.red,
+        title: 'Close Day',
+        titleColor: T.mint,
+        infoLines: [],
+        onTap: function() {
+          push('close-day', { pin: params.pin, managerName: params.employeeName });
+        },
+      }));
+    } else {
+      el.appendChild(buildCard({
+        borderColor: T.red,
+        title: 'Checkout',
+        titleColor: T.mint,
+        infoLines: [],
+        onTap: function() {
+          push('server-checkout', {
+            employeeId: params.employeeId,
+            employeeName: params.employeeName,
+          });
+        },
+      }));
+    }
 
-  // ── BOTTOM RIGHT: empty (batch settlement lives in Close Day) ──
-  var empty = document.createElement('div');
-  el.appendChild(empty);
+    // ── BOTTOM LEFT: Sales Summary (mint) ──
+    el.appendChild(buildCard({
+      borderColor: T.mint,
+      title: 'Sales\nSummary',
+      titleColor: T.mint,
+      infoLines: [
+        { text: 'Net Sales: ' + fmt(stats.netSales),  color: T.gold },
+        { text: 'Checks: ' + stats.totalChecks,       color: T.cyan },
+      ],
+      onTap: function() {
+        push('sales-summary', { role: role });
+      },
+    }));
+
+    // ── BOTTOM RIGHT: empty (batch settlement lives in Close Day) ──
+    var empty = document.createElement('div');
+    el.appendChild(empty);
+  });
 }
 
 // ═══════════════════════════════════════════════════

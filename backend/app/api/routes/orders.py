@@ -307,56 +307,132 @@ async def list_open_orders(
 
 
 @router.get("/day-summary")
-async def get_day_summary(ledger: EventLedger = Depends(get_ledger)):
-    """Get current day summary without closing anything."""
+async def get_day_summary(
+    server_id: str = None,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Full day aggregation for all reporting scenes.
+
+    Optional ?server_id= filter for server checkout view.
+    """
     all_events = await get_current_day_events(ledger)
     all_orders = project_orders(all_events)
 
+    # Collect TIP_ADJUSTED events keyed by payment_id (last wins)
+    tip_map = {}
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            tip_map[e.payload.get("payment_id")] = e.payload.get("tip_amount", 0.0)
+
+    # Filter orders by server if requested
+    orders = all_orders.values()
+    if server_id:
+        orders = [o for o in orders if o.server_id == server_id]
+
     open_count = 0
     closed_count = 0
-    total_sales = 0.0
-    total_tips = 0.0
+    voided_count = 0
+    gross_sales = 0.0
+    void_total = 0.0
+    discount_total = 0.0
+    tax_total = 0.0
     cash_total = 0.0
     card_total = 0.0
+    cash_count = 0
+    card_count = 0
+    total_tips = 0.0
+    card_tips = 0.0
+    categories = {}
     payments_list = []
+    checks_list = []
 
-    for order in all_orders.values():
+    for order in orders:
+        if order.status == "voided":
+            voided_count += 1
+            void_total += order.subtotal
+            continue
         if order.status == "open":
             open_count += 1
         elif order.status in ("closed", "paid"):
             closed_count += 1
-            total_sales += order.total
-            for p in order.payments:
-                if p.status == "confirmed":
-                    payments_list.append({
-                        "order_id": order.order_id,
-                        "payment_id": p.payment_id,
-                        "amount": p.amount,
-                        "method": p.method,
-                        "tip": p.tip_amount,
-                    })
-                    if p.method == "cash":
-                        cash_total += p.amount
-                    else:
-                        card_total += p.amount
 
-    for e in all_events:
-        if e.event_type == EventType.TIP_ADJUSTED:
-            tip_amt = e.payload.get("tip_amount", 0.0)
-            total_tips += tip_amt
-            pid = e.payload.get("payment_id")
-            for pm in payments_list:
-                if pm["payment_id"] == pid:
-                    pm["tip"] = tip_amt
+        gross_sales += order.subtotal
+        discount_total += order.discount_total
+        tax_total += order.tax
+
+        # Category breakdown from items
+        for item in order.items:
+            cat = item.category or "Uncategorized"
+            if cat not in categories:
+                categories[cat] = {"name": cat, "total": 0.0, "count": 0}
+            categories[cat]["total"] += item.subtotal
+            categories[cat]["count"] += 1
+
+        # Payment breakdown
+        order_tip = 0.0
+        for p in order.payments:
+            if p.status != "confirmed":
+                continue
+            tip = tip_map.get(p.payment_id, p.tip_amount)
+            payments_list.append({
+                "order_id": order.order_id,
+                "payment_id": p.payment_id,
+                "amount": p.amount,
+                "method": p.method,
+                "tip": tip,
+            })
+            total_tips += tip
+            order_tip += tip
+            if p.method == "cash":
+                cash_total += p.amount
+                cash_count += 1
+            else:
+                card_total += p.amount
+                card_count += 1
+                card_tips += tip
+
+        # Build check entry for tip-adjustment view
+        if order.status in ("closed", "paid"):
+            has_card = any(p.method != "cash" and p.status == "confirmed" for p in order.payments)
+            if has_card:
+                checks_list.append({
+                    "checkId": order.order_id,
+                    "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
+                    "amount": round(order.total, 2),
+                    "tip": round(order_tip, 2),
+                    "adjusted": any(tip_map.get(p.payment_id) is not None for p in order.payments),
+                    "method": "card",
+                })
+
+    net_sales = round(gross_sales - void_total - discount_total, 2)
+    total_checks = closed_count + open_count
+    avg_check = round(net_sales / total_checks, 2) if total_checks > 0 else 0.0
+    unadjusted = sum(1 for c in checks_list if not c["adjusted"])
 
     return {
+        "date": __import__("datetime").date.today().isoformat(),
         "open_orders": open_count,
         "closed_orders": closed_count,
-        "total_sales": round(total_sales, 2),
-        "total_tips": round(total_tips, 2),
+        "voided_orders": voided_count,
+        "gross_sales": round(gross_sales, 2),
+        "void_total": round(void_total, 2),
+        "void_count": voided_count,
+        "discount_total": round(discount_total, 2),
+        "net_sales": net_sales,
+        "tax_total": round(tax_total, 2),
         "cash_total": round(cash_total, 2),
+        "cash_count": cash_count,
         "card_total": round(card_total, 2),
+        "card_count": card_count,
+        "total_sales": round(net_sales + tax_total, 2),
+        "total_tips": round(total_tips, 2),
+        "card_tips": round(card_tips, 2),
+        "total_checks": total_checks,
+        "avg_check": avg_check,
+        "unadjusted_tips": unadjusted,
+        "categories": list(categories.values()),
         "payments": payments_list,
+        "checks": checks_list,
     }
 
 

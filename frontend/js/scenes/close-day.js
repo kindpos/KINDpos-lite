@@ -44,47 +44,53 @@ function isBlocked(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  FRESH STATE — zero-data day start
+//  FETCH STATE from day-summary API
 // ─────────────────────────────────────────────────
 
-function buildFreshState(params) {
-  return {
-    date: (function() {
-      var d = new Date();
-      return (d.getMonth()+1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(2);
-    })(),
-    terminalId: 'T-001',
-    printedBy:  params.managerName || 'Manager',
+function fetchDayState(params) {
+  return fetch('/api/v1/orders/day-summary').then(function(r) { return r.json(); }).then(function(d) {
+    var today = new Date();
+    return {
+      date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
+      terminalId: 'T-001',
+      printedBy:  params.managerName || 'Manager',
 
-    // Revenue
-    grossSales:    0, voidsTotal: 0, voidsCount: 0,
-    compsTotal:    0, compsCount: 0,
-    discTotal:     0, discCount:  0,
-    netSales:      0, taxCollected: 0,
+      // Revenue
+      grossSales:    d.gross_sales   || 0,
+      voidsTotal:    d.void_total    || 0,  voidsCount: d.void_count || 0,
+      compsTotal:    0,                     compsCount: 0,
+      discTotal:     d.discount_total || 0, discCount:  0,
+      netSales:      d.net_sales     || 0,
+      taxCollected:  d.tax_total     || 0,
 
-    // Payments
-    cashSales: 0, cashCount: 0,
-    cardSales: 0, cardCount: 0,
-    totalPayments: 0, totalTips: 0,
+      // Payments
+      cashSales:     d.cash_total  || 0, cashCount: d.cash_count || 0,
+      cardSales:     d.card_total  || 0, cardCount: d.card_count || 0,
+      totalPayments: (d.cash_total || 0) + (d.card_total || 0),
+      totalTips:     d.total_tips  || 0,
 
-    // Categories
-    categories: [],
+      // Categories
+      categories:    d.categories || [],
 
-    // Check stats
-    totalChecks: 0, avgCheck: 0, covers: 0,
+      // Check stats
+      totalChecks:   d.total_checks || 0,
+      avgCheck:      d.avg_check    || 0,
+      covers:        0,
 
-    // Dayparts
-    dayparts: [],
+      // Dayparts
+      dayparts:      [],
 
-    // Tips
-    totalTipOut: 0,
+      // Tips
+      totalTipOut:   0,
 
-    // Batch
-    batchTransactions: 0, batchTotal: 0,
+      // Batch
+      batchTransactions: (d.cash_count || 0) + (d.card_count || 0),
+      batchTotal:    (d.cash_total || 0) + (d.card_total || 0),
 
-    // Blocker
-    openChecks: 0,
-  };
+      // Blocker
+      openChecks:    d.open_orders || 0,
+    };
+  });
 }
 
 // ─────────────────────────────────────────────────
@@ -985,7 +991,6 @@ function doCloseDay(state) {
 // ─────────────────────────────────────────────────
 
 function buildScene(el, params) {
-  _state = buildFreshState(params);
   _batchSettled = false;
   collapseOpenCard();
 
@@ -996,10 +1001,13 @@ function buildScene(el, params) {
     'box-sizing:border-box;overflow:hidden;',
   ].join('');
 
-  el.appendChild(buildReceiptPanel(_state));
-  _cardsCol = buildCardsColumn(_state);
-  el.appendChild(_cardsCol);
-  el.appendChild(buildRightColumn(_state));
+  fetchDayState(params).then(function(state) {
+    _state = state;
+    el.appendChild(buildReceiptPanel(_state));
+    _cardsCol = buildCardsColumn(_state);
+    el.appendChild(_cardsCol);
+    el.appendChild(buildRightColumn(_state));
+  });
 }
 
 // ─────────────────────────────────────────────────

@@ -61,36 +61,37 @@ function recalcTipOut(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  FRESH STATE — zero-data day start
+//  FETCH STATE from day-summary API (filtered by server)
 // ─────────────────────────────────────────────────
 
-function buildFreshState(params) {
-  var state = {
-    employeeId:    params.employeeId   || '',
-    employeeName:  params.employeeName || '',
-    date: (function() {
-      var d = new Date();
-      return (d.getMonth()+1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(2);
-    })(),
-    netSales:      0,
-    liquorSales:   0,
-    cashSales:     0,
-    cardSales:     0,
-    totalChecks:   0,
-    avgCheck:      0,
-    openChecks:    0,
-    cardTips:      0,
-    unadjustedTips: 0,
-    tipOutRoles:   [],
-    oneTimeRole:   null,
-    tipOutTotal:   0,
-    takeHome:      0,
-    cashReceived:  0,
-    cashExpected:  0,
-  };
-
-  recalcTipOut(state);
-  return state;
+function fetchServerState(params) {
+  var url = '/api/v1/orders/day-summary';
+  if (params.employeeId) url += '?server_id=' + encodeURIComponent(params.employeeId);
+  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    var today = new Date();
+    var state = {
+      employeeId:    params.employeeId   || '',
+      employeeName:  params.employeeName || '',
+      date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
+      netSales:      d.net_sales    || 0,
+      liquorSales:   0,
+      cashSales:     d.cash_total   || 0,
+      cardSales:     d.card_total   || 0,
+      totalChecks:   d.total_checks || 0,
+      avgCheck:      d.avg_check    || 0,
+      openChecks:    d.open_orders  || 0,
+      cardTips:      d.card_tips    || 0,
+      unadjustedTips: d.unadjusted_tips || 0,
+      tipOutRoles:   [],
+      oneTimeRole:   null,
+      tipOutTotal:   0,
+      takeHome:      d.card_tips    || 0,
+      cashReceived:  d.cash_total   || 0,
+      cashExpected:  (d.cash_total || 0) - (d.card_tips || 0),
+    };
+    recalcTipOut(state);
+    return state;
+  });
 }
 
 // ─────────────────────────────────────────────────
@@ -1141,7 +1142,6 @@ function doFinalize(state) {
 // ─────────────────────────────────────────────────
 
 function buildScene(el, params) {
-  _state = buildFreshState(params);
   collapseOpenCard();
 
   el.style.cssText = [
@@ -1152,12 +1152,13 @@ function buildScene(el, params) {
     'overflow:hidden;',
   ].join('');
 
-  el.appendChild(buildReceiptPanel(_state));
-
-  _cardsCol = buildCardsColumn(_state, el);
-  el.appendChild(_cardsCol);
-
-  el.appendChild(buildRightColumn(_state));
+  fetchServerState(params).then(function(state) {
+    _state = state;
+    el.appendChild(buildReceiptPanel(_state));
+    _cardsCol = buildCardsColumn(_state, el);
+    el.appendChild(_cardsCol);
+    el.appendChild(buildRightColumn(_state));
+  });
 }
 
 // ─────────────────────────────────────────────────

@@ -28,11 +28,15 @@ var numpadAmount  = null;
 var summaryEls    = {};
 
 // ═══════════════════════════════════════════════════
-//  CHECK DATA — empty on fresh day
+//  CHECK DATA — fetched from day-summary API
 // ═══════════════════════════════════════════════════
 
-function getChecks() {
-  return [];
+function fetchChecks(employeeId) {
+  var url = '/api/v1/orders/day-summary';
+  if (employeeId) url += '?server_id=' + encodeURIComponent(employeeId);
+  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    return d.checks || [];
+  }).catch(function() { return []; });
 }
 
 // ═══════════════════════════════════════════════════
@@ -250,7 +254,6 @@ function numpadSubmit() {
 // ═══════════════════════════════════════════════════
 
 function buildScene(el, params) {
-  checks = getChecks(); // TODO: fetch from API with params.employeeId
   filter = 'all';
   editingIndex = -1;
   cents = 0;
@@ -440,9 +443,12 @@ function buildScene(el, params) {
 
   el.appendChild(rightEdit);
 
-  // ── Initial render ──
-  renderTable();
-  updateSummary();
+  // ── Fetch checks and render ──
+  fetchChecks(params.employeeId).then(function(data) {
+    checks = data;
+    renderTable();
+    updateSummary();
+  });
 }
 
 // ═══════════════════════════════════════════════════
