@@ -31,33 +31,55 @@ var currentOrderId = null;
 // ── Menu data ─────────────────────────────────────
 var MENU_DATA = [
   {
-    id: 'food', label: 'FOOD', color: T.catColor('FOOD'), textColor: '#1a2a1a',
+    id: 'smoked-meats', label: 'SMOKED MEATS', color: T.catColor('SMOKED MEATS'), textColor: '#1a0a0a',
     subcats: [
-      { id: 'burgers', label: 'Burgers', items: ['Classic', 'Cheese', 'Bacon', 'Mushroom', 'Veggie', 'BBQ', 'Double', 'Smash'] },
-      { id: 'chicken', label: 'Chicken', items: ['Fried', 'Grilled', 'Tenders', 'Wings', 'Sandwich', 'Nuggets'] },
-      { id: 'sides',   label: 'Sides',   items: ['Fries', 'Rings', 'Slaw', 'Salad', 'Mac', 'Tots', 'Corn'] },
-      { id: 'apps',    label: 'Apps',    items: ['Nachos', 'Soup', 'Bread', 'Dip', 'Sliders', 'Pretzel'] },
-      { id: 'tacos',   label: 'Tacos',   items: ['Fish', 'Beef', 'Chicken', 'Shrimp', 'Veggie'] },
-      { id: 'pizza',   label: 'Pizza',   items: ['Cheese', 'Pepperoni', 'Veggie', 'BBQ Chkn', 'Margherita'] },
+      { id: 'brisket',  label: 'Brisket',  items: ['Sliced', 'Chopped', 'Burnt Ends', 'Lean', 'Moist'] },
+      { id: 'ribs',     label: 'Ribs',     items: ['St. Louis', 'Baby Back', 'Beef Rib', 'Half Rack', 'Full Rack'] },
+      { id: 'pork',     label: 'Pork',     items: ['Pulled Pork', 'Pork Belly', 'Pork Chop', 'Sausage Link'] },
+      { id: 'poultry',  label: 'Poultry',  items: ['Smoked Chicken', 'Turkey Breast', 'Smoked Wings', 'Half Bird'] },
+    ]
+  },
+  {
+    id: 'sandwiches', label: 'SANDWICHES', color: T.catColor('SANDWICHES'), textColor: '#1a2a1a',
+    subcats: [
+      { id: 'classics', label: 'Classics', items: ['Brisket', 'Pulled Pork', 'Sausage', 'Turkey', 'Combo'] },
+      { id: 'specials', label: 'Specials', items: ['The KIND', 'Burnt Ends', 'Rib Tips', 'Veggie BBQ'] },
+    ]
+  },
+  {
+    id: 'combos', label: 'COMBOS', color: T.catColor('COMBOS'), textColor: '#1a1a00',
+    subcats: [
+      { id: 'plates',  label: 'Plates',  items: ['1 Meat', '2 Meat', '3 Meat', 'Family Pack', 'Party Tray'] },
+      { id: 'baskets', label: 'Baskets', items: ['Sandwich Combo', 'Wing Combo', 'Tender Combo', 'Kids Combo'] },
+    ]
+  },
+  {
+    id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: '#001a1a',
+    subcats: [
+      { id: 'hot-sides',  label: 'Hot',  items: ['Mac & Cheese', 'Baked Beans', 'Collards', 'Corn Bread', 'Fried Okra'] },
+      { id: 'cold-sides', label: 'Cold', items: ['Slaw', 'Potato Salad', 'Pickles', 'White Bread', 'Side Salad'] },
     ]
   },
   {
     id: 'drinks', label: 'DRINKS', color: T.catColor('DRINKS'), textColor: '#001a1a',
     subcats: [
-      { id: 'sodas',     label: 'Sodas',     items: ['Coke', 'Sprite', 'Diet', 'Root Beer', 'Lemonade', 'Iced Tea'] },
-      { id: 'beer',      label: 'Beer',      items: ['Lager', 'IPA', 'Stout', 'Ale', 'Sour', 'Wheat', 'Pilsner'] },
-      { id: 'cocktails', label: 'Cocktails', items: ['Margarita', 'Mojito', 'Martini', 'Negroni', 'Old Fashioned', 'Spritz'] },
-      { id: 'na',        label: 'Non-Alc',   items: ['Water', 'Juice', 'Tea', 'Coffee', 'Sparkling', 'Kombucha'] },
-      { id: 'shots',     label: 'Shots',     items: ['Well', 'Premium', 'Bomb', 'Espresso', 'Fireball'] },
+      { id: 'sodas',   label: 'Sodas',   items: ['Coke', 'Sprite', 'Diet', 'Root Beer', 'Lemonade', 'Iced Tea'] },
+      { id: 'beer',    label: 'Beer',    items: ['Lager', 'IPA', 'Stout', 'Ale', 'Sour', 'Wheat', 'Pilsner'] },
+      { id: 'na',      label: 'Non-Alc', items: ['Water', 'Juice', 'Tea', 'Coffee', 'Sparkling', 'Kombucha'] },
     ]
   },
   {
     id: 'desserts', label: 'DESSERTS', color: T.catColor('DESSERTS'), textColor: '#1a0030',
     subcats: [
-      { id: 'cakes',  label: 'Cakes',  items: ['Chocolate', 'Vanilla', 'Carrot', 'Red Velvet', 'Lemon', 'Cheesecake'] },
-      { id: 'frozen', label: 'Frozen', items: ['Ice Cream', 'Sorbet', 'Gelato', 'Shake', 'Float', 'Sundae'] },
-      { id: 'baked',  label: 'Baked',  items: ['Cookie', 'Brownie', 'Pie', 'Donut', 'Muffin'] },
-      { id: 'candy',  label: 'Candy',  items: ['Chocolate', 'Gummies', 'Hard Candy', 'Taffy'] },
+      { id: 'house',  label: 'House',  items: ['Banana Pudding', 'Peach Cobbler', 'Pecan Pie', 'Bread Pudding'] },
+      { id: 'frozen', label: 'Frozen', items: ['Ice Cream', 'Shake', 'Float', 'Sundae'] },
+    ]
+  },
+  {
+    id: 'extras', label: 'EXTRAS', color: T.catColor('EXTRAS'), textColor: '#1a2a1a',
+    subcats: [
+      { id: 'sauces',    label: 'Sauces',    items: ['Original', 'Spicy', 'Vinegar', 'Mustard', 'White'] },
+      { id: 'add-meats', label: 'Add Meats', items: ['Extra Brisket', 'Extra Pork', 'Extra Sausage', 'Extra Rib'] },
     ]
   },
 ];
