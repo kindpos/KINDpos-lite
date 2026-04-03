@@ -40,11 +40,19 @@ export const T = {
   lavenderD:'#5a3f7a',
   yellow:   '#ffff00',
   catProteins:  '#ff4757',
+  catProteinsL: '#ff7a87',
+  catProteinsD: '#7a1f28',
   catVegetables:'#C6FFBB',   // alias T.mint
   catBeverages: '#70a1ff',
+  catBeveragesL:'#a0c4ff',
+  catBeveragesD:'#354d7a',
   catSauces:    '#ffa502',
+  catSaucesL:   '#ffc04d',
+  catSaucesD:   '#7a5001',
   catDesserts:  '#b48efa',   // alias T.lavender
   catStarches:  '#7bed9f',
+  catStarchesL: '#aff4c4',
+  catStarchesD: '#3a7a4d',
   fh:   'Alien Encounters Solid Bold, monospace',
   fb:   'Sevastopol Interface, monospace',
   fsQuick:  '70px',
@@ -91,6 +99,10 @@ export function bevelEdges(fillColor) {
   if (fillColor === T.red)     return { light: T.redL,        dark: T.redD     };
   if (fillColor === T.cyan)    return { light: T.cyanL,       dark: T.cyanD    };
   if (fillColor === T.lavender)return { light: T.lavenderL,   dark: T.lavenderD};
+  if (fillColor === T.catProteins) return { light: T.catProteinsL, dark: T.catProteinsD };
+  if (fillColor === T.catBeverages)return { light: T.catBeveragesL,dark: T.catBeveragesD};
+  if (fillColor === T.catSauces)   return { light: T.catSaucesL,   dark: T.catSaucesD  };
+  if (fillColor === T.catStarches) return { light: T.catStarchesL, dark: T.catStarchesD};
   return { light: T.bgLight, dark: T.bgEdge };
 }
 
@@ -103,6 +115,10 @@ export function shadowColor(fillColor) {
   if (fillColor === T.red)      return 'rgba(80, 15, 10, 0.8)';
   if (fillColor === T.cyan)     return 'rgba(15, 70, 70, 0.8)';
   if (fillColor === T.lavender) return 'rgba(50, 25, 70, 0.8)';
+  if (fillColor === T.catProteins) return 'rgba(100, 20, 30, 0.8)';
+  if (fillColor === T.catBeverages)return 'rgba(25, 40, 80, 0.8)';
+  if (fillColor === T.catSauces)   return 'rgba(100, 55, 0, 0.8)';
+  if (fillColor === T.catStarches) return 'rgba(35, 80, 50, 0.8)';
   return 'rgba(10, 10, 10, 0.8)';
 }
 

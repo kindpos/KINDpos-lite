@@ -133,7 +133,7 @@ async def validate_financial_reconciliation(
 
     # Get all events and project orders
     all_events = await ledger.get_events_since(0, limit=100000)
-    all_orders = project_orders(all_events, tax_rate=float(TAX_RATE))
+    all_orders = project_orders(all_events)
 
     # Calculate from raw projections (mirrors day-summary endpoint logic)
     proj_gross_sales = Decimal("0.00")
@@ -473,7 +473,7 @@ async def validate_close_day(ledger: EventLedger) -> dict:
     })
 
     # All checks closed before close-day?
-    all_orders = project_orders(all_events, tax_rate=float(TAX_RATE))
+    all_orders = project_orders(all_events)
     open_orders = [o for o in all_orders.values() if o.status == "open"]
     results["checks"].append({
         "name": "No open orders after close day",
