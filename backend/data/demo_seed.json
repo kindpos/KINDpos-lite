@@ -1,0 +1,33 @@
+{
+  "employees": [
+    {
+      "employee_id": "emp-001",
+      "name": "Alex",
+      "role": "manager",
+      "pin": "1234"
+    },
+    {
+      "employee_id": "emp-002",
+      "name": "Jordan",
+      "role": "server",
+      "pin": "5678"
+    },
+    {
+      "employee_id": "emp-003",
+      "name": "Sam",
+      "role": "server",
+      "pin": "9012"
+    },
+    {
+      "employee_id": "emp-004",
+      "name": "Casey",
+      "role": "server",
+      "pin": "3456"
+    }
+  ],
+  "restaurant": {
+    "name": "KIND BBQ",
+    "tax_rate": 0.06,
+    "timezone": "America/New_York"
+  }
+}

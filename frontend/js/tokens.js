@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-export const T = Object.freeze({
+export const T = {
   bg:       '#333333',
   bgDark:   '#1a1a1a',
   bgLight:  '#5a5a5a',
@@ -61,7 +61,21 @@ export const T = Object.freeze({
   chamfer:  8,
   shadowX:  3,
   shadowY:  4,
-});
+};
+
+// Default palette: Terminal Glow
+// This will become operator-configurable via Overseer settings
+T.categoryPalette = {
+  'SMOKED MEATS': '#ff4757',
+  'SANDWICHES':   '#C6FFBB',
+  'COMBOS':       '#ffd93d',
+  'SIDES':        '#70a1ff',
+  'DRINKS':       '#ffa502',
+  'DESSERTS':     '#b48efa',
+  'EXTRAS':       '#7bed9f',
+};
+
+T.catColor = (category) => T.categoryPalette[category] || T.mint;
 
 export function chamfer(s) {
   var c = s || T.chamfer;

@@ -31,7 +31,7 @@ var currentOrderId = null;
 // ── Menu data ─────────────────────────────────────
 var MENU_DATA = [
   {
-    id: 'food', label: 'FOOD', color: '#7ac943', textColor: '#1a2a1a',
+    id: 'food', label: 'FOOD', color: T.catColor('FOOD'), textColor: '#1a2a1a',
     subcats: [
       { id: 'burgers', label: 'Burgers', items: ['Classic', 'Cheese', 'Bacon', 'Mushroom', 'Veggie', 'BBQ', 'Double', 'Smash'] },
       { id: 'chicken', label: 'Chicken', items: ['Fried', 'Grilled', 'Tenders', 'Wings', 'Sandwich', 'Nuggets'] },
@@ -42,7 +42,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'drinks', label: 'DRINKS', color: T.catBeverages, textColor: '#001a1a',
+    id: 'drinks', label: 'DRINKS', color: T.catColor('DRINKS'), textColor: '#001a1a',
     subcats: [
       { id: 'sodas',     label: 'Sodas',     items: ['Coke', 'Sprite', 'Diet', 'Root Beer', 'Lemonade', 'Iced Tea'] },
       { id: 'beer',      label: 'Beer',      items: ['Lager', 'IPA', 'Stout', 'Ale', 'Sour', 'Wheat', 'Pilsner'] },
@@ -52,7 +52,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'desserts', label: 'DESSERTS', color: T.catDesserts, textColor: '#1a0030',
+    id: 'desserts', label: 'DESSERTS', color: T.catColor('DESSERTS'), textColor: '#1a0030',
     subcats: [
       { id: 'cakes',  label: 'Cakes',  items: ['Chocolate', 'Vanilla', 'Carrot', 'Red Velvet', 'Lemon', 'Cheesecake'] },
       { id: 'frozen', label: 'Frozen', items: ['Ice Cream', 'Sorbet', 'Gelato', 'Shake', 'Float', 'Sundae'] },
@@ -64,28 +64,28 @@ var MENU_DATA = [
 
 var MOD_DATA = [
   {
-    id: 'proteins', label: 'PROTEINS', color: T.catProteins, textColor: '#1a1000',
+    id: 'proteins', label: 'PROTEINS', color: T.catColor('PROTEINS'), textColor: '#1a1000',
     subcats: [
       { id: 'meat',  label: 'Meat',  items: ['Bacon', 'Chicken', 'Beef', 'Shrimp', 'Egg'] },
       { id: 'other', label: 'Other', items: ['Tofu', 'Tempeh', 'Anchovy'] },
     ]
   },
   {
-    id: 'toppings', label: 'TOPPINGS', color: '#7ac943', textColor: '#1a2a1a',
+    id: 'toppings', label: 'TOPPINGS', color: T.catColor('TOPPINGS'), textColor: '#1a2a1a',
     subcats: [
       { id: 'veggies', label: 'Veggies', items: ['Lettuce', 'Tomato', 'Onion', 'Jalapeño', 'Avocado', 'Pickle'] },
       { id: 'cheese',  label: 'Cheese',  items: ['Cheddar', 'Swiss', 'Gouda', 'Brie', 'Parm', 'Blue'] },
     ]
   },
   {
-    id: 'sauces', label: 'SAUCES', color: T.catSauces, textColor: '#001a1a',
+    id: 'sauces', label: 'SAUCES', color: T.catColor('SAUCES'), textColor: '#001a1a',
     subcats: [
       { id: 'hot',  label: 'Hot',  items: ['Sriracha', 'Chipotle', 'Habanero', 'Buffalo'] },
       { id: 'mild', label: 'Mild', items: ['Ranch', 'Mayo', 'Mustard', 'Ketchup', 'BBQ', 'Aioli'] },
     ]
   },
   {
-    id: 'prep', label: 'PREP', color: '#b48efa', textColor: '#1a0030',
+    id: 'prep', label: 'PREP', color: T.catColor('PREP'), textColor: '#1a0030',
     subcats: [
       { id: 'temp',  label: 'Temp',  items: ['Rare', 'Med Rare', 'Medium', 'Well Done'] },
       { id: 'style', label: 'Style', items: ['Fried', 'Grilled', 'Baked', 'Steamed', 'Raw'] },

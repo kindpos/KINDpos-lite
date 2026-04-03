@@ -2,6 +2,7 @@ venv/
 __pycache__/
 *.pyc
 **/data/
+!backend/data/demo_seed.json
 hardware_config.db
 *.db
 .env

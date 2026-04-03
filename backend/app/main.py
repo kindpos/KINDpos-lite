@@ -15,6 +15,7 @@ from app.api.routes.printing import print_queue
 from app.printing.print_dispatcher import PrintDispatcher
 from app.config import settings
 from app.api.dependencies import init_ledger, close_ledger
+from app.services.demo_seeder import seed_demo_data_if_empty
 from app.api.routes import orders
 from app.api.routes import system
 from app.api.routes import menu
@@ -37,8 +38,10 @@ async def lifespan(app: FastAPI):
     print("Terminal ID: " + settings.terminal_id)
     print("Database: " + settings.database_path)
 
-    await init_ledger()
+    ledger = await init_ledger()
     print("Event Ledger initialized")
+
+    await seed_demo_data_if_empty(ledger)
 
     await print_queue.connect()
     print("Print Queue initialized")
