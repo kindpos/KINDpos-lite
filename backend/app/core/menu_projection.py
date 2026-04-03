@@ -64,7 +64,24 @@ def project_menu(events: List[Event]) -> MenuState:
             items = payload.get('items', [])
             for item in items:
                 items_map[item['item_id']] = item
-                
+
+        # Enum-based batch events (from bombard / bulk config)
+        elif event.event_type == EventType.RESTAURANT_CONFIGURED:
+            state.restaurant = {k: v for k, v in payload.items() if k != 'import_id'}
+
+        elif event.event_type == EventType.TAX_RULES_BATCH_CREATED:
+            state.tax_rules = payload.get('tax_rules', [])
+
+        elif event.event_type == EventType.CATEGORIES_BATCH_CREATED:
+            cats = payload.get('categories', [])
+            for cat in cats:
+                categories_map[cat['category_id']] = cat
+
+        elif event.event_type == EventType.ITEMS_BATCH_CREATED:
+            items = payload.get('items', [])
+            for item in items:
+                items_map[item['item_id']] = item
+
         # Modern granular events (from core/backend)
         elif event.event_type == EventType.MENU_CATEGORY_CREATED:
             cat_id = payload.get('category_id')
