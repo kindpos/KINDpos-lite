@@ -28,19 +28,11 @@ var numpadAmount  = null;
 var summaryEls    = {};
 
 // ═══════════════════════════════════════════════════
-//  MOCK DATA — replace with API call
+//  CHECK DATA — empty on fresh day
 // ═══════════════════════════════════════════════════
 
-function getMockChecks() {
-  return [
-    { checkId: 'C-001', time: '10:42am', amount: 47.50, tip: 9.50,  adjusted: true,  method: 'card' },
-    { checkId: 'C-002', time: '10:58am', amount: 23.00, tip: 4.00,  adjusted: true,  method: 'card' },
-    { checkId: 'C-003', time: '11:15am', amount: 62.00, tip: 0,     adjusted: false, method: 'card' },
-    { checkId: 'C-004', time: '11:32am', amount: 18.75, tip: 3.00,  adjusted: true,  method: 'card' },
-    { checkId: 'C-005', time: '11:50am', amount: 91.00, tip: 18.00, adjusted: true,  method: 'card' },
-    { checkId: 'C-006', time: '12:05pm', amount: 34.25, tip: 0,     adjusted: false, method: 'card' },
-    { checkId: 'C-007', time: '12:22pm', amount: 55.50, tip: 11.00, adjusted: true,  method: 'card' },
-  ];
+function getChecks() {
+  return [];
 }
 
 // ═══════════════════════════════════════════════════
@@ -258,7 +250,7 @@ function numpadSubmit() {
 // ═══════════════════════════════════════════════════
 
 function buildScene(el, params) {
-  checks = getMockChecks(); // TODO: fetch from API with params.employeeId
+  checks = getChecks(); // TODO: fetch from API with params.employeeId
   filter = 'all';
   editingIndex = -1;
   cents = 0;

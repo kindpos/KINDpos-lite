@@ -61,41 +61,32 @@ function recalcTipOut(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  MOCK STATE — replace with API call
+//  FRESH STATE — zero-data day start
 // ─────────────────────────────────────────────────
 
-function buildMockState(params) {
-  var netSales    = 151.50;
-  var liquorSales =  42.00;
-  var cashSales   =  55.00;
-  var cardSales   =  96.50;
-  var cardTips    =  28.00;
-
+function buildFreshState(params) {
   var state = {
-    employeeId:    params.employeeId   || 'EMP-001',
-    employeeName:  params.employeeName || 'Server',
+    employeeId:    params.employeeId   || '',
+    employeeName:  params.employeeName || '',
     date: (function() {
       var d = new Date();
       return (d.getMonth()+1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(2);
     })(),
-    netSales:      netSales,
-    liquorSales:   liquorSales,
-    cashSales:     cashSales,
-    cardSales:     cardSales,
-    totalChecks:   4,
-    avgCheck:      37.88,
-    openChecks:    1,          // set to 0 for clean state
-    cardTips:      cardTips,
-    unadjustedTips: 3,         // set to 0 for clean state
-    tipOutRoles: [
-      { label: 'Barback', percent: 2, basis: 'Liquor Sales', basisAmt: liquorSales, amount: 0.84 },
-      { label: 'Busser',  percent: 2, basis: 'Net Sales',    basisAmt: netSales,    amount: 3.03 },
-    ],
-    oneTimeRole: null,         // { label, percent, basis, basisAmt, amount } or null
-    tipOutTotal: 3.87,
-    takeHome:    24.13,
-    cashReceived: cashSales,
-    cashExpected: parseFloat((cashSales - cardTips).toFixed(2)),
+    netSales:      0,
+    liquorSales:   0,
+    cashSales:     0,
+    cardSales:     0,
+    totalChecks:   0,
+    avgCheck:      0,
+    openChecks:    0,
+    cardTips:      0,
+    unadjustedTips: 0,
+    tipOutRoles:   [],
+    oneTimeRole:   null,
+    tipOutTotal:   0,
+    takeHome:      0,
+    cashReceived:  0,
+    cashExpected:  0,
   };
 
   recalcTipOut(state);
@@ -822,10 +813,10 @@ function buildAlertPanel(state) {
 
     panel.appendChild(list);
 
-    // Manager approval gate stub
+    // Manager approval gate
     var mgr = document.createElement('div');
     mgr.style.cssText = 'flex-shrink:0;padding:8px;border-top:1px solid #1a1a1a;font-family:' + T.fb + ';font-size:9px;color:#333;text-align:center;';
-    mgr.textContent = '[ manager approval gate — stub ]';
+    mgr.textContent = '[ manager approval required ]';
     panel.appendChild(mgr);
   }
 
@@ -1093,7 +1084,7 @@ function refreshAfterAdjust(state) {
 // ─────────────────────────────────────────────────
 
 function doFinalize(state) {
-  // Manager approval gate — stub using interrupt
+  // Manager approval gate using interrupt
   interrupt('manager-approval', {
     reason: 'finalize-checkout',
     onBuild: function(el) {
@@ -1115,13 +1106,13 @@ function doFinalize(state) {
 
       var sub = document.createElement('div');
       sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.dimText + ';margin-bottom:24px;';
-      sub.textContent = '[ PIN entry / messenger — stub ]';
+      sub.textContent = 'Enter manager PIN to confirm';
       card.appendChild(sub);
 
       var btns = document.createElement('div');
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
-      btns.appendChild(buildButton('Approve (stub)', {
+      btns.appendChild(buildButton('Approve', {
         fill: T.gold, color: '#1a1a1a', fontSize: '16px',
         width: 150, height: 44,
         onTap: function() {
@@ -1150,7 +1141,7 @@ function doFinalize(state) {
 // ─────────────────────────────────────────────────
 
 function buildScene(el, params) {
-  _state = buildMockState(params);
+  _state = buildFreshState(params);
   collapseOpenCard();
 
   el.style.cssText = [

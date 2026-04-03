@@ -45,11 +45,11 @@ var state = {
   foundDevice:  null,
   eventSource:  null,   // active EventSource — prevent double-open
   terminalId:   'T-001',
-  terminalName: 'Food Truck 1',
+  terminalName: 'KIND BBQ',
   softwareVer:  'Vz1.0',
   ipAddress:    '—',
   wifiSSID:     '—',
-  taxRate:      '8.0',
+  taxRate:      '6.0',
   cashDiscount: '4.0',
 };
 

@@ -18,7 +18,7 @@ var BTN_H    = 50;
 var OVERLAP  = 18;
 
 // ── Pricing constants ─────────────────────────────
-var TAX_RATE      = 0.08;   // 8% — replace with config value
+var TAX_RATE      = 0.06;   // 6% — matches demo_seed.json
 var CASH_DISCOUNT = 0.04;   // 4% dual-pricing discount
 var STUB_PRICE    = 10.00;  // TODO: replace with real menu item prices
 
@@ -671,7 +671,7 @@ function showVoidReasons(targets) {
 }
 
 // ── PIN OVERLAY ───────────────────────────────────
-var MANAGER_PIN = '0000'; // TODO: load from employee config
+var MANAGER_PIN = '1234'; // demo seed manager PIN
 
 function buildPinOverlay(el, cb) {
   // Child panel — never override el positioning styles

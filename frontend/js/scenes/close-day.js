@@ -44,22 +44,10 @@ function isBlocked(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  MOCK STATE — replace with API call
+//  FRESH STATE — zero-data day start
 // ─────────────────────────────────────────────────
 
-function buildMockState(params) {
-  var grossSales  = 4812.00;
-  var voidsTotal  = 135.00;  var voidsCount  = 3;
-  var compsTotal  =  57.00;  var compsCount  = 2;
-  var discTotal   =  12.00;  var discCount   = 1;
-  var netSales    = parseFloat((grossSales - voidsTotal - compsTotal - discTotal).toFixed(2));
-  var taxRate     = 0.07;
-  var taxCollected = parseFloat((netSales * taxRate).toFixed(2));
-  var cashSales   = 1240.00; var cashCount   = 18;
-  var cardSales   = 3368.00; var cardCount   = 29;
-  var totalTips   = 487.25;
-  var totalTipOut =  97.45;
-
+function buildFreshState(params) {
   return {
     date: (function() {
       var d = new Date();
@@ -69,47 +57,33 @@ function buildMockState(params) {
     printedBy:  params.managerName || 'Manager',
 
     // Revenue
-    grossSales:    grossSales,
-    voidsTotal:    voidsTotal,  voidsCount:  voidsCount,
-    compsTotal:    compsTotal,  compsCount:  compsCount,
-    discTotal:     discTotal,   discCount:   discCount,
-    netSales:      netSales,
-    taxCollected:  taxCollected,
+    grossSales:    0, voidsTotal: 0, voidsCount: 0,
+    compsTotal:    0, compsCount: 0,
+    discTotal:     0, discCount:  0,
+    netSales:      0, taxCollected: 0,
 
     // Payments
-    cashSales:     cashSales,  cashCount:  cashCount,
-    cardSales:     cardSales,  cardCount:  cardCount,
-    totalPayments: parseFloat((cashSales + cardSales).toFixed(2)),
-    totalTips:     totalTips,
+    cashSales: 0, cashCount: 0,
+    cardSales: 0, cardCount: 0,
+    totalPayments: 0, totalTips: 0,
 
     // Categories
-    categories: [
-      { name: 'Food',     total: 2840.00, count: 31 },
-      { name: 'Beverage', total: 1100.00, count: 28 },
-      { name: 'Alcohol',  total:  668.00, count: 17 },
-    ],
+    categories: [],
 
     // Check stats
-    totalChecks: 47,
-    avgCheck:    parseFloat((netSales / 47).toFixed(2)),
-    covers:      124,
+    totalChecks: 0, avgCheck: 0, covers: 0,
 
     // Dayparts
-    dayparts: [
-      { name: 'Lunch',      sales: 1240.00, checks: 14 },
-      { name: 'Happy Hour', sales:  890.00, checks: 11 },
-      { name: 'Dinner',     sales: 2478.00, checks: 22 },
-    ],
+    dayparts: [],
 
     // Tips
-    totalTipOut:  totalTipOut,
+    totalTipOut: 0,
 
     // Batch
-    batchTransactions: cashCount + cardCount,
-    batchTotal:  parseFloat((cashSales + cardSales).toFixed(2)),
+    batchTransactions: 0, batchTotal: 0,
 
     // Blocker
-    openChecks: 1,  // set to 0 for clean state
+    openChecks: 0,
   };
 }
 
@@ -642,7 +616,7 @@ function buildAlertPanel(state) {
 
     var mgr = document.createElement('div');
     mgr.style.cssText = 'flex-shrink:0;padding:8px;border-top:1px solid #1a1a1a;font-family:' + T.fb + ';font-size:9px;color:#333;text-align:center;';
-    mgr.textContent = '[ manager approval gate — stub ]';
+    mgr.textContent = '[ manager approval required ]';
     panel.appendChild(mgr);
   }
 
@@ -978,13 +952,13 @@ function doCloseDay(state) {
 
       var sub = document.createElement('div');
       sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.dimText + ';margin-bottom:24px;';
-      sub.textContent = '[ PIN entry / messenger — stub ]';
+      sub.textContent = 'Enter manager PIN to confirm';
       card.appendChild(sub);
 
       var btns = document.createElement('div');
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
-      btns.appendChild(buildButton('Approve (stub)', {
+      btns.appendChild(buildButton('Approve', {
         fill: T.gold, color: '#1a1a1a', fontSize: '16px',
         width: 160, height: 44,
         onTap: function() {
@@ -1011,7 +985,7 @@ function doCloseDay(state) {
 // ─────────────────────────────────────────────────
 
 function buildScene(el, params) {
-  _state = buildMockState(params);
+  _state = buildFreshState(params);
   _batchSettled = false;
   collapseOpenCard();
 

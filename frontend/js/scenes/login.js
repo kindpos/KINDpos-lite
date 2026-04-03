@@ -20,12 +20,16 @@ var MGMT_H     = 80;
 var CLOCK_H    = 128;
 
 var selectedAction = null;
+var employees = [];  // loaded from /api/v1/servers on scene enter
 
 registerScene('login', {
   onEnter: function(el, params) {
      setSceneName(null);
     setHeaderBack(false);
     selectedAction = null;
+    fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
+      employees = data.servers || [];
+    }).catch(function() { employees = []; });
     el.style.cssText = 'width:100%;height:100%;display:grid;grid-template-columns:' + COL_LEFT + 'px ' + COL_CENTER + 'px ' + COL_RIGHT + 'px;gap:' + COL_GAP + 'px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
 
     // ── LEFT COLUMN — all buttons grouped, centered vertically ──
@@ -112,14 +116,23 @@ function handleAction(action) {
 }
 
 function handlePinSubmit(pin) {
+  var emp = employees.find(function(e) { return e.pin === pin; });
+  if (!emp) return;  // invalid PIN — ignore
+
   var action = selectedAction || 'quick-service';
+  var role = emp.role || 'server';
+  var base = { pin: pin, employeeId: emp.id, employeeName: emp.name, role: role };
+
   switch (action) {
-    case 'quick-service': push('order-entry', { mode: 'service', pin: pin }); break;
-    case 'quick-bar': push('order-entry', { mode: 'bar', pin: pin }); break;
+    case 'quick-service': push('order-entry', { mode: 'service', pin: pin, employeeId: emp.id, employeeName: emp.name }); break;
+    case 'quick-bar': push('order-entry', { mode: 'bar', pin: pin, employeeId: emp.id, employeeName: emp.name }); break;
     case 'quick-item':    break;
     case 'clock':         break;
-    case 'reporting':     push('reporting', { pin: pin, role: 'server', employeeId: 'EMP-001', employeeName: 'Alex' }); break;
-    case 'close-day':     push('close-day', { pin: pin }); break;
-    case 'configuration': push('settings', { pin: pin }); break;
+    case 'reporting':     push('reporting', base); break;
+    case 'close-day':     push('close-day', { pin: pin, managerName: emp.name }); break;
+    case 'configuration':
+      if (role !== 'manager') return;  // only managers can access config
+      push('settings', { pin: pin });
+      break;
   }
 }

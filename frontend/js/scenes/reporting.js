@@ -9,21 +9,13 @@ import { buildButton, buildGap } from '../components.js';
 import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
-// ── Mock stats — replace with API calls ──────────
+// ── Stats — fresh-day zeros ──────────────────────
 function getStats(role) {
-  if (role === 'manager') {
-    return {
-      unadjustedTips: 11,
-      totalTips: 487.25,
-      netSales: 4812.00,
-      totalChecks: 47,
-    };
-  }
   return {
-    unadjustedTips: 4,
-    totalTips: 145.50,
-    netSales: 1247.50,
-    totalChecks: 16,
+    unadjustedTips: 0,
+    totalTips: 0,
+    netSales: 0,
+    totalChecks: 0,
   };
 }
 
@@ -130,8 +122,8 @@ function buildScene(el, params) {
     infoLines: tipInfoLines,
     onTap: function() {
       push('tip-adjustment', {
-        employeeId: params.employeeId || 'EMP-001',
-        employeeName: params.employeeName || 'Server',
+        employeeId: params.employeeId,
+        employeeName: params.employeeName,
         role: role,
       });
     },
