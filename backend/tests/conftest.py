@@ -117,3 +117,15 @@ async def manager(ledger):
     await mgr.register_printer(bar)
 
     yield mgr
+
+@pytest_asyncio.fixture
+async def collector(tmp_path):
+    """
+    Provide a fresh DiagnosticCollector connected to a temporary test database.
+    """
+    from app.services.diagnostic_collector import DiagnosticCollector
+    db_path = str(tmp_path / "test_diagnostic.db")
+    collector = DiagnosticCollector(db_path, terminal_id="terminal-test-01")
+    await collector.connect()
+    yield collector
+    await collector.close()
