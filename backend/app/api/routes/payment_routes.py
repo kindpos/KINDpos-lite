@@ -179,7 +179,7 @@ async def process_cash_payment(
             terminal_id=settings.terminal_id,
             order_id=request.order_id,
             payment_id=payment_id,
-            tip_amount=request.tip,
+            tip_amount=round(request.tip, 2),
         )
         await ledger.append(tip_evt)
 

@@ -353,4 +353,32 @@ async def hardware_status():
         "status": "online",
         "db_path": HARDWARE_DB_PATH,
         "default_subnet": "10.0.0",
+        "endpoints": [
+            "/api/v1/hardware/scan",
+            "/api/v1/hardware/devices",
+            "/api/v1/hardware/test",
+            "/api/v1/hardware/test-print",
+            "/api/v1/hardware/test-connection",
+            "/api/v1/hardware/status",
+        ],
     }
+
+
+class TestConnectionRequest(BaseModel):
+    ip: str
+    port: int
+    timeout: float = 2.0
+
+
+@router.post("/test-connection")
+async def test_connection(req: TestConnectionRequest):
+    """Test raw TCP connectivity to an IP:port."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(req.timeout)
+        s.connect((req.ip, req.port))
+        s.close()
+        status = "online"
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        status = "unreachable"
+    return {"ip": req.ip, "port": req.port, "status": status}
