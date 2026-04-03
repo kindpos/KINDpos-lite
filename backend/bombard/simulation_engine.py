@@ -379,7 +379,7 @@ class SimulationEngine:
         # Use DISCOUNT_APPROVED to record a comp
         # Pick a random item's price as the comp amount
         events = await self.ledger.get_events_by_correlation(check.order_id)
-        order = project_order(events, tax_rate=float(TAX_RATE))
+        order = project_order(events)
         if not order or not order.items:
             return
         comped_item = random.choice(order.items)
@@ -420,14 +420,14 @@ class SimulationEngine:
 
         # Track void amount
         events = await self.ledger.get_events_by_correlation(check.order_id)
-        order = project_order(events, tax_rate=float(TAX_RATE))
+        order = project_order(events)
         if order:
             self.total_voids += self._d(order.total)
 
     async def pay_and_close(self, check: CheckRecord, method_override: str = None):
         """Pay and close a check. Handles card, cash, and split tender."""
         events = await self.ledger.get_events_by_correlation(check.order_id)
-        order = project_order(events, tax_rate=float(TAX_RATE))
+        order = project_order(events)
         if not order or order.status == "voided":
             return
 
@@ -501,7 +501,7 @@ class SimulationEngine:
         # Close the order
         # Re-project to get final total
         events = await self.ledger.get_events_by_correlation(check.order_id)
-        order = project_order(events, tax_rate=float(TAX_RATE))
+        order = project_order(events)
         if order:
             evt = order_closed(
                 terminal_id=TERMINAL_ID,
@@ -721,7 +721,7 @@ class SimulationEngine:
         # Build day summary from all events
         all_events = await self.ledger.get_events_since(0, limit=100000)
         from app.core.projections import project_orders
-        all_orders = project_orders(all_events, tax_rate=float(TAX_RATE))
+        all_orders = project_orders(all_events)
 
         total_sales = 0.0
         total_tips_from_events = 0.0

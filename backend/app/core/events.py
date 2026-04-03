@@ -170,6 +170,12 @@ class EventType(str, Enum):
     MODIFIER_GROUP_UPDATED = "MODIFIER_GROUP_UPDATED"
     MODIFIER_GROUP_DELETED = "MODIFIER_GROUP_DELETED"
 
+    # Bombard / Batch setup
+    RESTAURANT_CONFIGURED = "restaurant.configured"
+    TAX_RULES_BATCH_CREATED = "tax_rules.batch_created"
+    CATEGORIES_BATCH_CREATED = "categories.batch_created"
+    ITEMS_BATCH_CREATED = "items.batch_created"
+
     # Floor Plan (NEW)
     FLOORPLAN_SECTION_CREATED = "floorplan.section_created"
     FLOORPLAN_SECTION_UPDATED = "floorplan.section_updated"
