@@ -92,9 +92,13 @@ class Order:
         """Sum of all discounts."""
         return sum(d.get("amount", 0) for d in self.discounts)
 
+    _tax_rate_override: Optional[float] = field(default=None, repr=False)
+
     @property
     def tax_rate(self) -> float:
-        """Tax rate - TODO: make configurable."""
+        """Tax rate - configurable via projection."""
+        if self._tax_rate_override is not None:
+            return self._tax_rate_override
         return 0.08
 
     @property
@@ -124,7 +128,7 @@ class Order:
         return self.amount_paid >= self.total
 
 
-def project_order(events: list[Event]) -> Optional[Order]:
+def project_order(events: list[Event], tax_rate: Optional[float] = None) -> Optional[Order]:
     """
     Rebuild an Order from a list of events.
 
@@ -153,6 +157,7 @@ def project_order(events: list[Event]) -> Optional[Order]:
                 order_type=payload.get("order_type", "dine_in"),
                 guest_count=payload.get("guest_count", 1),
                 created_at=event.timestamp,
+                _tax_rate_override=tax_rate,
             )
 
         elif event.event_type == EventType.ORDER_CLOSED:
@@ -303,7 +308,7 @@ def project_order(events: list[Event]) -> Optional[Order]:
     return order
 
 
-def project_orders(events: list[Event]) -> dict[str, Order]:
+def project_orders(events: list[Event], tax_rate: Optional[float] = None) -> dict[str, Order]:
     """
     Project multiple orders from a list of events.
 
@@ -322,7 +327,7 @@ def project_orders(events: list[Event]) -> dict[str, Order]:
     # Project each order
     orders = {}
     for order_id, order_events in events_by_order.items():
-        order = project_order(order_events)
+        order = project_order(order_events, tax_rate=tax_rate)
         if order:
             orders[order_id] = order
 

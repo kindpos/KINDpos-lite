@@ -189,6 +189,12 @@ class EventType(str, Enum):
     REPORTING_CUSTOM_REPORT_SAVED = "reporting.custom_report_saved"
     REPORTING_ACCOUNTS_MAPPING_UPDATED = "reporting.accounts_mapping_updated"
 
+    # Batch Setup (used by bombard simulation and bulk config)
+    RESTAURANT_CONFIGURED = "setup.restaurant_configured"
+    TAX_RULES_BATCH_CREATED = "setup.tax_rules_batch_created"
+    CATEGORIES_BATCH_CREATED = "setup.categories_batch_created"
+    ITEMS_BATCH_CREATED = "setup.items_batch_created"
+
     # System
     USER_LOGGED_IN = "USER_LOGGED_IN"
     USER_LOGGED_OUT = "USER_LOGGED_OUT"
