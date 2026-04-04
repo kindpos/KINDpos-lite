@@ -792,36 +792,27 @@ function handleSave() {
   var seq = ++saveSeq;
   var checkNum = 'CHECK-' + String(seq).padStart(3, '0');
   var snap = deepCopyTicket(ticket);   // deep copy — no shared references
+  var finishSave = function(label) {
+    savedTabs.push({
+      id:       seq,
+      checkNum: checkNum,
+      label:    label || '',
+      ticket:   snap,
+    });
+    if (saveBtn) {
+      saveBtn.style.background = T.goGreen;
+      saveBtn.querySelector && (function() {
+        var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
+        if (inner) inner.style.color = T.bg;
+      })();
+    }
+  };
   showKeyboard({
     placeholder: 'Name this tab (optional)',
     initialValue: '',
     maxLength: 20,
-    onDone: function(label) {
-      savedTabs.push({
-        id:       seq,
-        checkNum: checkNum,
-        name:     label ? checkNum + ' ' + label.toUpperCase() : checkNum,
-        ticket:   snap,
-      });
-      if (saveBtn) {
-        saveBtn.style.background = T.goGreen;
-        saveBtn.querySelector && (function() {
-          var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
-          if (inner) inner.style.color = T.bg;
-        })();
-      }
-    },
-    onDismiss: function() {
-      // Backdrop dismiss — save with default name
-      savedTabs.push({ id: seq, checkNum: checkNum, name: checkNum, ticket: snap });
-      if (saveBtn) {
-        saveBtn.style.background = T.goGreen;
-        saveBtn.querySelector && (function() {
-          var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
-          if (inner) inner.style.color = T.bg;
-        })();
-      }
-    },
+    onDone: function(val) { finishSave(val ? val.toUpperCase() : ''); },
+    onDismiss: function() { finishSave(''); },
     dismissOnDone: true,
   });
 }
@@ -865,7 +856,10 @@ function handleRecall() {
             return s + i.unitPrice + i.mods.reduce(function(ms, m) { return ms + m.price; }, 0);
           }, 0);
 
-          var card = buildButton(tab.name + '\n$' + total.toFixed(2), {
+          var cardLabel = tab.label
+            ? tab.label + '\n' + tab.checkNum + '  $' + total.toFixed(2)
+            : tab.checkNum + '\n$' + total.toFixed(2);
+          var card = buildButton(cardLabel, {
             fill: '#333333', color: T.mint, fontSize: '20px', height: 76,
             onTap: function() { recallTabInterrupt(tab, grid, panel); },
           });
@@ -904,10 +898,16 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       var panel = document.createElement('div');
       panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:360px;background:#1a1a1a;border:4px solid ' + T.mint + ';padding:20px;';
 
-      var lbl = document.createElement('div');
-      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;font-weight:bold;color:' + T.mint + ';letter-spacing:1px;margin-bottom:6px;';
-      lbl.textContent = tab.name;
-      panel.appendChild(lbl);
+      if (tab.label) {
+        var nameLbl = document.createElement('div');
+        nameLbl.style.cssText = 'font-family:' + T.fb + ';font-size:22px;font-weight:bold;color:' + T.mint + ';letter-spacing:1px;';
+        nameLbl.textContent = tab.label;
+        panel.appendChild(nameLbl);
+      }
+      var checkLbl = document.createElement('div');
+      checkLbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + (tab.label ? '16px' : '20px') + ';color:' + (tab.label ? T.mutedText : T.mint) + ';letter-spacing:1px;margin-bottom:6px;';
+      checkLbl.textContent = tab.checkNum;
+      panel.appendChild(checkLbl);
 
       var recallBtn = buildButton('//RECALL//', {
         fill: T.goGreen, color: T.bg, fontSize: '26px', height: 50,
