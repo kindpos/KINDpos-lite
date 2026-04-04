@@ -56,6 +56,12 @@ html, body {
   z-index: 10;
 }
 
+#header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 #scene-container {
   width: 100%;
   height: calc(100% - 52px);

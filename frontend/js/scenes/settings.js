@@ -215,7 +215,7 @@ function buildHWNav(cardTop) {
       'position:absolute;left:' + PAD + 'px;top:' + (cardTop + 20 + i * 72) + 'px;',
       'width:' + NAV_W + 'px;height:52px;',
       'display:flex;align-items:center;justify-content:center;text-align:center;',
-      'font-family:' + T.fb + ';font-size:' + (nav.id === 'add' ? '16px' : '20px') + ';font-weight:bold;',
+      'font-family:' + T.fb + ';font-size:20px;font-weight:bold;',
       isActive
         ? 'background:' + GOLD + ';color:' + DARK + ';'
         : 'background:' + BG + ';color:' + GOLD + ';border:' + BORDER_W + 'px solid ' + GOLD + ';',
@@ -323,7 +323,7 @@ function renderScanning(card) {
 
   var statusCol = document.createElement('div');
   var scanLbl = makeLabel('Scanning network...', GOLD, '22px');
-  var subLbl   = makeLabel('Probing 254 hosts on ports 9100 · 443 · 8080', T.bgLight, '13px');
+  var subLbl   = makeLabel('Probing 254 hosts on ports 9100 · 443 · 8080', T.bgLight, '20px');
   statusCol.appendChild(scanLbl);
   statusCol.appendChild(subLbl);
 
@@ -531,7 +531,7 @@ function renderManualAdd(ip, card) {
   hdr.style.padding = '16px 20px 4px';
   inner.appendChild(hdr);
 
-  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.bgLight, '14px');
+  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.bgLight, '20px');
   sub.style.padding = '4px 20px 16px';
   inner.appendChild(sub);
 
@@ -539,7 +539,7 @@ function renderManualAdd(ip, card) {
   form.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:0 20px;flex:1;';
 
   // Type selector
-  form.appendChild(makeLabel('Device Type', GOLD, '15px'));
+  form.appendChild(makeLabel('Device Type', GOLD, '20px'));
   var typeRow = document.createElement('div');
   typeRow.style.cssText = 'display:flex;gap:8px;';
   var TYPES = [
@@ -569,7 +569,7 @@ function renderManualAdd(ip, card) {
   });
   form.appendChild(typeRow);
 
-  form.appendChild(makeLabel('Device Name', GOLD, '15px'));
+  form.appendChild(makeLabel('Device Name', GOLD, '20px'));
   var nameDisplay = document.createElement('div');
   nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
@@ -635,12 +635,12 @@ function buildLiveDeviceRow(dev, card) {
   }
 
   var info = document.createElement('div');
-  info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, '15px'));
-  info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '11px'));
+  info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, '20px'));
+  info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '20px'));
   row.appendChild(info);
 
   if (saved) {
-    row.appendChild(makeLabel('Saved ✓', GOLD, '12px'));
+    row.appendChild(makeLabel('Saved ✓', GOLD, '20px'));
   } else {
     // We keep a reference to card via closure — but card may have been replaced.
     // Use a dataset attribute so the confirm step can find the device.
@@ -671,10 +671,10 @@ function renderScanResults(card) {
   list.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:8px 16px;overflow-y:auto;flex:1;';
 
   if (state.scanResults.length === 0) {
-    var empty = makeLabel('No devices responded on ports 9100, 443, 8080.', T.bgLight, '14px');
+    var empty = makeLabel('No devices responded on ports 9100, 443, 8080.', T.bgLight, '20px');
     empty.style.padding = '8px 0';
     list.appendChild(empty);
-    var tip = makeLabel('Try "Enter IP" to probe a specific address directly.', T.bgLight, '13px');
+    var tip = makeLabel('Try "Enter IP" to probe a specific address directly.', T.bgLight, '20px');
     tip.style.opacity = '0.6';
     list.appendChild(tip);
   }
@@ -685,12 +685,12 @@ function renderScanResults(card) {
     row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:' + DARK + ';border:2px solid ' + (saved ? GOLD : T.border) + ';clip-path:' + chamfer(5) + ';';
 
     var info = document.createElement('div');
-    info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, '16px'));
-    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '12px'));
+    info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, '20px'));
+    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '20px'));
     row.appendChild(info);
 
     if (saved) {
-      row.appendChild(makeLabel('Saved ✓', GOLD, '13px'));
+      row.appendChild(makeLabel('Saved ✓', GOLD, '20px'));
     } else {
       row.appendChild(buildButton('+ Add', {
         fill: GOLD, color: DARK, fontSize: '20px', width: 80, height: 36,
@@ -718,7 +718,7 @@ function renderConfirmDevice(card) {
   var hdr = makeLabel('Configure Device', GOLD, '22px');
   hdr.style.padding = '16px 20px 2px';
   inner.appendChild(hdr);
-  var sub = makeLabel(dev.ip + '  ·  ' + dev.mac, T.bgLight, '13px');
+  var sub = makeLabel(dev.ip + '  ·  ' + dev.mac, T.bgLight, '20px');
   sub.style.padding = '0 20px 12px';
   inner.appendChild(sub);
 
@@ -726,7 +726,7 @@ function renderConfirmDevice(card) {
   form.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:0 20px;flex:1;overflow:hidden;';
 
   // Type selector
-  form.appendChild(makeLabel('Device Type', GOLD, '15px'));
+  form.appendChild(makeLabel('Device Type', GOLD, '20px'));
   var typeRow = document.createElement('div');
   typeRow.style.cssText = 'display:flex;gap:8px;';
 
@@ -762,7 +762,7 @@ function renderConfirmDevice(card) {
   form.appendChild(typeRow);
 
   // Name
-  form.appendChild(makeLabel('Device Name', GOLD, '15px'));
+  form.appendChild(makeLabel('Device Name', GOLD, '20px'));
   var nameDisplay = document.createElement('div');
   nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
@@ -820,7 +820,7 @@ function renderDeviceList(card, type) {
 
   if (filtered.length === 0) {
     var emptyWrap = centeredWrap(card);
-    emptyWrap.appendChild(makeLabel('No devices saved', T.bgLight, '18px'));
+    emptyWrap.appendChild(makeLabel('No devices saved', T.bgLight, '20px'));
     return;
   }
 
@@ -833,9 +833,9 @@ function renderDeviceList(card, type) {
 
     var info = document.createElement('div');
     info.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
-    info.appendChild(makeLabel(dev.name, GOLD, '18px'));
-    info.appendChild(makeLabel(typeLabel(dev.type), T.bgLight, '13px'));
-    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '12px'));
+    info.appendChild(makeLabel(dev.name, GOLD, '20px'));
+    info.appendChild(makeLabel(typeLabel(dev.type), T.bgLight, '20px'));
+    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '20px'));
     row.appendChild(info);
 
     var actions = document.createElement('div');
@@ -912,7 +912,7 @@ function renderTermContent(card) {
     pair.inner.style.gap = '4px';
     pair.inner.style.padding = '10px';
 
-    var lbl = makeLabel(item.label, item.key ? GOLD : DARK, '16px');
+    var lbl = makeLabel(item.label, item.key ? GOLD : DARK, '20px');
     lbl.style.opacity = '0.8';
     var val = makeLabel(item.value, item.key ? MINT : DARK, '28px');
     pair.inner.appendChild(lbl);

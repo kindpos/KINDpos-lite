@@ -3,7 +3,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { init, push, pop } from './scene-manager.js';
+import { init, push, pop, replace } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
 
 // Import scenes (self-registering)
@@ -28,21 +28,43 @@ export function setSceneName(name) {
 }
 
 export function setHeaderBack(show) {
-  const el = document.getElementById('header-info');
-  if (!el) return;
-  el.innerHTML = '';
+  const nav = document.getElementById('header-nav');
+  const info = document.getElementById('header-info');
+  if (nav) nav.innerHTML = '';
+  if (info) info.innerHTML = '';
+
   if (show) {
-    const pair = buildStyledButton(T.red);
-    pair.wrap.style.height = '44px';
-    pair.wrap.style.width = '80px';
-    pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize = '32px';
-    pair.inner.style.color = '#fff';
-    pair.inner.textContent = '<<<';
-    pair.wrap.addEventListener('pointerup', () => pop());
-    el.appendChild(pair.wrap);
+    if (nav) {
+      nav.style.display = 'flex';
+      nav.style.gap = '8px';
+      nav.style.alignItems = 'center';
+
+      // <<<  back button
+      const backPair = buildStyledButton(T.red);
+      backPair.wrap.style.height = '44px';
+      backPair.wrap.style.width = '80px';
+      backPair.inner.style.fontFamily = T.fb;
+      backPair.inner.style.fontSize = '32px';
+      backPair.inner.style.color = '#fff';
+      backPair.inner.textContent = '<<<';
+      backPair.wrap.addEventListener('pointerup', () => pop());
+      nav.appendChild(backPair.wrap);
+
+      // X  logout / reset button
+      const logoutPair = buildStyledButton(T.red);
+      logoutPair.wrap.style.height = '44px';
+      logoutPair.wrap.style.width = '52px';
+      logoutPair.inner.style.fontFamily = T.fb;
+      logoutPair.inner.style.fontSize = '32px';
+      logoutPair.inner.style.color = '#fff';
+      logoutPair.inner.textContent = 'X';
+      logoutPair.wrap.addEventListener('pointerup', () => replace('login'));
+      nav.appendChild(logoutPair.wrap);
+    }
+    if (info) info.textContent = 'KINDpos/lite <> Vz1.0';
   } else {
-    el.textContent = 'KINDpos/lite <> Vz1.0';
+    if (nav) nav.style.display = 'none';
+    if (info) info.textContent = 'KINDpos/lite <> Vz1.0';
   }
 }
 
