@@ -45,6 +45,13 @@ class PaymentManager:
     def map_terminal_to_device(self, terminal_id: str, device_id: str):
         self._terminal_device_map[terminal_id] = device_id
 
+    def get_device_for_terminal(self, terminal_id: str):
+        """Return the payment device mapped to a terminal, or None."""
+        device_id = self._terminal_device_map.get(terminal_id)
+        if device_id and device_id in self._devices:
+            return self._devices[device_id]
+        return None
+
     async def initiate_sale(self, request: TransactionRequest) -> TransactionResult:
         """Core sale entry point with idempotency and event emission."""
         

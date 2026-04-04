@@ -128,6 +128,28 @@ class DejavooSPInAdapter(BasePaymentDevice):
             pass
         return False
 
+    async def adjust_tip(self, transaction_id: str, tip_amount: Decimal) -> TransactionResult:
+        """Send TipAdjust to Dejavoo so tip is included in batch settlement."""
+        xml = self._build_xml("TipAdjust", {
+            "InvNum": transaction_id,
+            "TipAmount": f"{tip_amount:.2f}",
+        })
+        try:
+            response = await self._send_request(xml)
+            return self._parse_response(response, transaction_id)
+        except Exception as e:
+            logger.error(f"Tip adjust failed: {e}")
+            return TransactionResult(
+                transaction_id=transaction_id,
+                status=TransactionStatus.ERROR,
+                error=PaymentError(
+                    category=PaymentErrorCategory.DEVICE,
+                    error_code="TIP_ADJ_ERR",
+                    message=str(e),
+                    source="DejavooSPInAdapter",
+                ),
+            )
+
     async def close_batch(self) -> BatchResult:
         xml = self._build_xml("BatchClose")
         try:

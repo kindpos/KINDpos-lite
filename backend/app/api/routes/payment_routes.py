@@ -276,12 +276,26 @@ async def adjust_tip(
     )
     await ledger.append(evt)
 
+    # Send tip adjust to payment device so it's included in batch settlement
+    device_adjusted = False
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+    device = manager.get_device_for_terminal(settings.terminal_id)
+    if device and hasattr(device, 'adjust_tip') and device.config and device.config.protocol != "mock":
+        try:
+            from decimal import Decimal
+            result = await device.adjust_tip(target.payment_id, Decimal(str(tip_amt)))
+            device_adjusted = result.status.value == "APPROVED"
+        except Exception:
+            pass
+
     return {
         "success": True,
         "order_id": request.order_id,
         "payment_id": request.payment_id,
         "tip_amount": tip_amt,
         "previous_tip": previous_tip,
+        "device_adjusted": device_adjusted,
     }
 
 
