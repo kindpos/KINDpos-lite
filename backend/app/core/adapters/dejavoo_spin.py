@@ -1,10 +1,12 @@
-import httpx
+import asyncio
 import xml.etree.ElementTree as ET
 import logging
 import urllib.parse
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
+
+import httpx
 
 from .base_payment import (
     BasePaymentDevice,
@@ -23,28 +25,22 @@ from .base_payment import (
 
 logger = logging.getLogger("kindpos.payment.dejavoo")
 
-# SPIn endpoint paths per transaction type
-SPIN_ENDPOINTS = {
-    "Sale":       "/spin/sale.html",
-    "Return":     "/spin/return.html",
-    "Void":       "/spin/void.html",
-    "TipAdjust":  "/spin/tipadjust.html",
-    "BatchClose": "/spin/settlement.html",
-    "GetStatus":  "/spin/status.html",
-    "Cancel":     "/spin/cancel.html",
-}
-
 
 class DejavooSPInAdapter(BasePaymentDevice):
     """
-    Real hardware adapter for Dejavoo SPIn (LAN mode).
-    Sends form-encoded XML to the device over HTTP on the local network.
+    Dejavoo SPIn adapter — plain HTTP GET over LAN.
+
+    Protocol:
+        GET http://{ip}:{port}/spin/cgi.html?TerminalTransaction={url_encoded_xml}
+
+    The XML includes RegisterId, AuthKey, and TPN inside the body.
+    Response is XML wrapped in <xmp> tags.
     """
 
     def __init__(self):
         self._status = PaymentDeviceStatus.OFFLINE
         self._config: Optional[PaymentDeviceConfig] = None
-        self._client = httpx.AsyncClient(timeout=95.0)
+        self._client = httpx.AsyncClient(timeout=90.0)
 
     @property
     def status(self) -> PaymentDeviceStatus:
@@ -64,22 +60,24 @@ class DejavooSPInAdapter(BasePaymentDevice):
         self._status = PaymentDeviceStatus.OFFLINE
         return True
 
+    # ── Transactions ──────────────────────────────────────────────────────────
+
     async def check_status(self) -> PaymentDeviceStatus:
         if self.in_sacred_state:
             return self._status
 
         try:
             xml = self._build_xml("GetStatus")
-            response = await self._send_request("GetStatus", xml)
-            if response:
-                root = ET.fromstring(response)
-                resp_msg = root.findtext("RespMSG")
-                if resp_msg == "Ready":
+            response = await self._send(xml, timeout=5.0)
+            if response is not None:
+                resp_msg = response.findtext("RespMSG") or ""
+                if "Approved" in resp_msg or resp_msg == "Ready":
                     self._status = PaymentDeviceStatus.IDLE
-                elif resp_msg == "Busy":
+                elif "Busy" in resp_msg:
                     if not self.in_sacred_state:
                         self._status = PaymentDeviceStatus.PROCESSING
                 else:
+                    # Any XML response means the device is reachable
                     self._status = PaymentDeviceStatus.ONLINE
             else:
                 self._status = PaymentDeviceStatus.OFFLINE
@@ -92,13 +90,13 @@ class DejavooSPInAdapter(BasePaymentDevice):
     async def initiate_sale(self, request: TransactionRequest) -> TransactionResult:
         xml = self._build_xml("Sale", {
             "Amount": f"{request.amount:.2f}",
-            "InvNum": request.transaction_id[:10],  # SPIn max 10 chars
+            "InvNum": request.transaction_id[:10],
         })
 
         self._status = PaymentDeviceStatus.AWAITING_CARD
         try:
-            response = await self._send_request("Sale", xml)
-            return self._parse_response(response, request.transaction_id)
+            root = await self._send(xml)
+            return self._parse_response(root, request.transaction_id)
         finally:
             self._status = PaymentDeviceStatus.IDLE
 
@@ -108,8 +106,8 @@ class DejavooSPInAdapter(BasePaymentDevice):
             "InvNum": request.transaction_id[:10],
         })
         try:
-            response = await self._send_request("Return", xml)
-            return self._parse_response(response, request.transaction_id)
+            root = await self._send(xml)
+            return self._parse_response(root, request.transaction_id)
         finally:
             self._status = PaymentDeviceStatus.IDLE
 
@@ -118,31 +116,30 @@ class DejavooSPInAdapter(BasePaymentDevice):
             "InvNum": request.transaction_id[:10],
         })
         try:
-            response = await self._send_request("Void", xml)
-            return self._parse_response(response, request.transaction_id)
+            root = await self._send(xml)
+            return self._parse_response(root, request.transaction_id)
         finally:
             self._status = PaymentDeviceStatus.IDLE
 
     async def cancel_transaction(self) -> bool:
         xml = self._build_xml("Cancel")
         try:
-            response = await self._send_request("Cancel", xml)
-            if response:
-                root = ET.fromstring(response)
-                return root.findtext("RespMSG") == "Cancelled"
-        except:
+            root = await self._send(xml, timeout=10.0)
+            if root is not None:
+                msg = root.findtext("Message") or root.findtext("RespMSG") or ""
+                return "Cancel" in msg
+        except Exception:
             pass
         return False
 
     async def adjust_tip(self, transaction_id: str, tip_amount: Decimal) -> TransactionResult:
-        """Send TipAdjust to Dejavoo so tip is included in batch settlement."""
         xml = self._build_xml("TipAdjust", {
             "InvNum": transaction_id[:10],
             "TipAmount": f"{tip_amount:.2f}",
         })
         try:
-            response = await self._send_request("TipAdjust", xml)
-            return self._parse_response(response, transaction_id)
+            root = await self._send(xml)
+            return self._parse_response(root, transaction_id)
         except Exception as e:
             logger.error(f"Tip adjust failed: {e}")
             return TransactionResult(
@@ -159,86 +156,109 @@ class DejavooSPInAdapter(BasePaymentDevice):
     async def close_batch(self) -> BatchResult:
         xml = self._build_xml("BatchClose")
         try:
-            response = await self._send_request("BatchClose", xml)
-            if response:
-                root = ET.fromstring(response)
-                success = root.findtext("RespMSG") == "Approved"
+            root = await self._send(xml)
+            if root is not None:
+                resp_msg = root.findtext("RespMSG") or ""
+                success = "Approved" in resp_msg
                 return BatchResult(
-                    batch_id=root.findtext("BatchID", "UNKNOWN"),
-                    transaction_count=int(root.findtext("BatchCount", "0")),
-                    total_amount=Decimal(root.findtext("BatchAmount", "0.00")),
+                    batch_id=root.findtext("BatchID") or "UNKNOWN",
+                    transaction_count=int(root.findtext("BatchCount") or "0"),
+                    total_amount=Decimal(root.findtext("BatchAmount") or "0.00"),
                     status=BatchStatus.SUCCESS if success else BatchStatus.FAILED,
                     timestamp=datetime.now()
                 )
         except Exception as e:
-            return BatchResult(
-                batch_id="ERROR",
-                transaction_count=0,
-                total_amount=Decimal("0.00"),
-                status=BatchStatus.FAILED,
-                error=PaymentError(
-                    category=PaymentErrorCategory.SYSTEM,
-                    error_code="BATCH_ERR",
-                    message=str(e),
-                    source="DejavooSPInAdapter"
-                )
+            pass
+        return BatchResult(
+            batch_id="ERROR",
+            transaction_count=0,
+            total_amount=Decimal("0.00"),
+            status=BatchStatus.FAILED,
+            error=PaymentError(
+                category=PaymentErrorCategory.SYSTEM,
+                error_code="BATCH_ERR",
+                message="Batch close failed",
+                source="DejavooSPInAdapter"
             )
+        )
 
     async def get_device_info(self) -> Dict[str, Any]:
         return {
             "adapter": "DejavooSPInAdapter",
-            "protocol": "SPIn (LAN)",
+            "protocol": "SPIn HTTP GET (LAN)",
             "config": self._config.dict() if self._config else None
         }
 
     async def get_capabilities(self) -> List[PaymentType]:
         return [PaymentType.SALE, PaymentType.REFUND, PaymentType.VOID]
 
-    # ── SPIn protocol helpers ─────────────────────────────────────────────────
+    # ── Protocol layer ────────────────────────────────────────────────────────
 
     def _build_xml(self, function: str, params: Dict[str, str] = None) -> str:
-        """Build SPIn XML with RegisterId included."""
-        root = ET.Element("request")
-        func = ET.SubElement(root, "function")
-        func.text = function
+        """Build SPIn XML with auth fields inside the body."""
+        parts = [f"<request><function>{function}</function>"]
 
-        reg = ET.SubElement(root, "RegisterId")
-        reg.text = (self._config.register_id or '') if self._config else ''
+        if self._config:
+            if self._config.register_id:
+                parts.append(f"<RegisterId>{self._config.register_id}</RegisterId>")
+            auth_key = getattr(self._config, 'auth_key', None) or ''
+            if auth_key:
+                parts.append(f"<AuthKey>{auth_key}</AuthKey>")
 
         if params:
             for k, v in params.items():
-                child = ET.SubElement(root, k)
-                child.text = v
+                parts.append(f"<{k}>{v}</{k}>")
 
-        return ET.tostring(root, encoding="unicode")
+        parts.append("</request>")
+        return "".join(parts)
 
-    async def _send_request(self, function: str, xml_body: str) -> Optional[str]:
-        """Send form-encoded SPIn request: POST param=<xml> to /spin/<endpoint>.html"""
+    async def _send(self, xml_body: str, timeout: float = None) -> Optional[ET.Element]:
+        """
+        Send SPIn request as HTTP GET:
+        GET http://{ip}:{port}/spin/cgi.html?TerminalTransaction={url_encoded_xml}
+
+        Returns parsed XML Element (the <response> inside <xmp>), or None.
+        """
         if not self._config:
             return None
 
-        endpoint = SPIN_ENDPOINTS.get(function, "/spin/sale.html")
-        url = f"http://{self._config.ip_address}:{self._config.port}{endpoint}"
+        encoded = urllib.parse.quote(xml_body, safe='')
+        url = f"http://{self._config.ip_address}:{self._config.port}/spin/cgi.html?TerminalTransaction={encoded}"
 
         try:
-            logger.debug(f"SPIn → {url}: {xml_body}")
-            print(f"  SPIn → {function} @ {self._config.ip_address}:{self._config.port}")
-            response = await self._client.post(
-                url,
-                data={"param": xml_body},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-            response.raise_for_status()
-            logger.debug(f"SPIn ← {response.text}")
-            print(f"  SPIn ← {response.status_code} ({len(response.text)} bytes)")
-            return response.text
+            logger.debug(f"SPIn → GET {self._config.ip_address}:{self._config.port} : {xml_body}")
+            print(f"  SPIn → {self._config.ip_address}:{self._config.port}")
+
+            client_timeout = timeout or self._client.timeout.read
+            resp = await self._client.get(url, timeout=client_timeout)
+            resp.raise_for_status()
+
+            body = resp.text.strip()
+            logger.debug(f"SPIn ← {body}")
+            print(f"  SPIn ← {resp.status_code} ({len(body)} bytes)")
+
+            # Strip <xmp>...</xmp> wrapper if present
+            if body.startswith("<xmp>"):
+                body = body[5:]
+            if body.endswith("</xmp>"):
+                body = body[:-6]
+
+            body = body.strip()
+            if not body:
+                return None
+
+            # URL-decode any encoded chars in the response
+            body = urllib.parse.unquote(body)
+
+            return ET.fromstring(body)
+
         except httpx.RequestError as e:
             logger.error(f"SPIn request failed: {type(e).__name__}: {e}")
             print(f"  SPIn request failed: {type(e).__name__}: {e}")
             return None
 
-    def _parse_response(self, response: Optional[str], expected_inv: str) -> TransactionResult:
-        if not response:
+    def _parse_response(self, root: Optional[ET.Element], expected_inv: str) -> TransactionResult:
+        if root is None:
             return TransactionResult(
                 transaction_id=expected_inv,
                 status=TransactionStatus.ERROR,
@@ -251,23 +271,23 @@ class DejavooSPInAdapter(BasePaymentDevice):
             )
 
         try:
-            root = ET.fromstring(response)
             resp_msg = root.findtext("RespMSG") or root.findtext("Message") or ""
+            # URL-decode response message
+            resp_msg = urllib.parse.unquote(resp_msg)
 
             status = TransactionStatus.ERROR
             if "Approved" in resp_msg:
                 status = TransactionStatus.APPROVED
             elif "Declined" in resp_msg:
                 status = TransactionStatus.DECLINED
-            elif "Cancelled" in resp_msg:
+            elif "Cancel" in resp_msg:
                 status = TransactionStatus.CANCELLED
 
-            # Map entry mode
             entry_map = {
                 "Swipe": EntryMethod.SWIPE,
                 "Chip": EntryMethod.CHIP,
                 "Contactless": EntryMethod.TAP,
-                "Manual": EntryMethod.MANUAL
+                "Manual": EntryMethod.MANUAL,
             }
             entry_mode = entry_map.get(root.findtext("EntryMode") or "", EntryMethod.TAP)
 

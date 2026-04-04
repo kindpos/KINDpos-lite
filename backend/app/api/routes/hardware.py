@@ -7,6 +7,7 @@ MAC-as-identity: IPs change, MACs don't.
 import asyncio
 import os
 import socket
+import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional
@@ -47,6 +48,7 @@ async def _ensure_db():
                 name        TEXT NOT NULL,
                 port        INTEGER NOT NULL DEFAULT 9100,
                 register_id TEXT NOT NULL DEFAULT '',
+                auth_key    TEXT NOT NULL DEFAULT '',
                 saved_at    TEXT NOT NULL
             )
         """)
@@ -55,6 +57,8 @@ async def _ensure_db():
             cols = [row[1] async for row in cur]
         if 'register_id' not in cols:
             await db.execute("ALTER TABLE devices ADD COLUMN register_id TEXT NOT NULL DEFAULT ''")
+        if 'auth_key' not in cols:
+            await db.execute("ALTER TABLE devices ADD COLUMN auth_key TEXT NOT NULL DEFAULT ''")
         await db.commit()
 
 # ── Models ────────────────────────────────────────────────────────────────────
@@ -66,6 +70,7 @@ class DeviceRecord(BaseModel):
     name: str
     port: int = 9100
     register_id: str = ''  # SPIn Register ID for card readers
+    auth_key: str = ''     # SPIn Auth Key for card readers
 
 class TestRequest(BaseModel):
     mac: str
@@ -233,23 +238,24 @@ def _get_mac(ip: str) -> Optional[str]:
 
 
 async def _probe_spin(ip: str, port: int) -> dict:
-    """Probe a Dejavoo device via SPIn GetStatus to auto-detect RegisterId and name."""
+    """Probe a Dejavoo device via SPIn GET to auto-detect RegisterId and serial."""
     xml = "<request><function>GetStatus</function><RegisterId></RegisterId></request>"
-    url = f"http://{ip}:{port}/spin/status.html"
+    encoded = urllib.parse.quote(xml, safe='')
+    url = f"http://{ip}:{port}/spin/cgi.html?TerminalTransaction={encoded}"
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            resp = await client.post(
-                url,
-                data={"param": xml},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
             if resp.status_code == 200 and resp.text.strip():
-                root = ET.fromstring(resp.text)
+                body = resp.text.strip()
+                if body.startswith("<xmp>"): body = body[5:]
+                if body.endswith("</xmp>"): body = body[:-6]
+                body = urllib.parse.unquote(body.strip())
+                root = ET.fromstring(body)
                 return {
                     "register_id": root.findtext("RegisterId") or root.findtext("TerminalId") or "",
-                    "serial":      root.findtext("SerialNo") or "",
+                    "serial":      root.findtext("SN") or root.findtext("SerialNo") or "",
                     "model":       root.findtext("Model") or "",
-                    "status":      root.findtext("RespMSG") or "",
+                    "status":      root.findtext("RespMSG") or root.findtext("Message") or "",
                 }
     except Exception:
         pass
@@ -277,17 +283,18 @@ async def save_device(device: DeviceRecord):
     now = datetime.utcnow().isoformat()
     async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
         await db.execute("""
-            INSERT INTO devices (mac, ip, type, name, port, register_id, saved_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO devices (mac, ip, type, name, port, register_id, auth_key, saved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(mac) DO UPDATE SET
                 ip          = excluded.ip,
                 type        = excluded.type,
                 name        = excluded.name,
                 port        = excluded.port,
                 register_id = excluded.register_id,
+                auth_key    = excluded.auth_key,
                 saved_at    = excluded.saved_at
         """, (device.mac.upper(), device.ip, device.type,
-              device.name, device.port, device.register_id, now))
+              device.name, device.port, device.register_id, device.auth_key, now))
         await db.commit()
     return {**device.dict(), 'mac': device.mac.upper(), 'saved_at': now}
 

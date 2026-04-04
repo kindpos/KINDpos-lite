@@ -58,6 +58,7 @@ async def _ensure_devices(manager: PaymentManager):
                             protocol="spin",
                             processor_id="dejavoo",
                             register_id=device.get('register_id', ''),
+                            auth_key=device.get('auth_key', ''),
                         )
                         connected = await adapter.connect(config)
                         if connected:
