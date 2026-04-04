@@ -26,6 +26,7 @@ from app.core.events import (
     payment_failed,
     order_closed,
     order_voided,
+    cash_refund_due,
     ticket_printed,
     batch_submitted,
     day_closed,
@@ -350,6 +351,7 @@ async def get_day_summary(
     card_count = 0
     total_tips = _ZERO
     card_tips = _ZERO
+    cash_tips = _ZERO
     categories = {}
     payments_list = []
     checks_list = []
@@ -396,6 +398,7 @@ async def get_day_summary(
             if p.method == "cash":
                 cash_total += Decimal(str(p.amount))
                 cash_count += 1
+                cash_tips += tip
             else:
                 card_total += Decimal(str(p.amount))
                 card_count += 1
@@ -443,6 +446,7 @@ async def get_day_summary(
         "total_sales": money_round(net_sales + float(tax_total)),
         "total_tips": money_round(float(total_tips)),
         "card_tips": money_round(float(card_tips)),
+        "cash_tips": money_round(float(cash_tips)),
         "total_checks": total_checks,
         "avg_check": avg_check,
         "unadjusted_tips": unadjusted,
@@ -777,6 +781,18 @@ async def void_order(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Cannot void order — card reversal failed: {'; '.join(device_void_errors)}",
         )
+
+    # Emit refund-due events for any confirmed cash payments
+    for p in order.payments:
+        if p.status == "confirmed" and p.method == "cash":
+            refund_evt = cash_refund_due(
+                terminal_id=settings.terminal_id,
+                order_id=order_id,
+                payment_id=p.payment_id,
+                amount=p.amount,
+                reason=request.reason or "Order voided after cash payment",
+            )
+            await ledger.append(refund_evt)
 
     event = order_voided(
         terminal_id=settings.terminal_id,

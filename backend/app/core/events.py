@@ -1335,6 +1335,30 @@ def tip_adjusted(
     )
 
 
+def cash_refund_due(
+        terminal_id: str,
+        order_id: str,
+        payment_id: str,
+        amount: float,
+        reason: str = "Order voided after cash payment",
+        **kwargs
+) -> Event:
+    """Create a PAYMENT_REFUNDED event for cash that must be returned."""
+    return create_event(
+        event_type=EventType.PAYMENT_REFUNDED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "payment_id": payment_id,
+            "amount": money_round(amount),
+            "method": "cash",
+            "reason": reason,
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
 def drawer_open_failed(
         terminal_id: str,
         printer_id: str,

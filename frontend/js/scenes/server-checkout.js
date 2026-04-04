@@ -81,13 +81,14 @@ function fetchServerState(params) {
       avgCheck:      d.avg_check    || 0,
       openChecks:    d.open_orders  || 0,
       cardTips:      d.card_tips    || 0,
+      cashTips:      d.cash_tips    || 0,
       unadjustedTips: d.unadjusted_tips || 0,
       tipOutRoles:   [],
       oneTimeRole:   null,
       tipOutTotal:   0,
       takeHome:      d.card_tips    || 0,
-      cashReceived:  d.cash_total   || 0,
-      cashExpected:  parseFloat(((d.cash_total || 0) - (d.card_tips || 0)).toFixed(2)),
+      cashReceived:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
+      cashExpected:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0) - (d.card_tips || 0)).toFixed(2)),
       closedOrders:  d.closed_order_ids || [],
     };
     recalcTipOut(state);

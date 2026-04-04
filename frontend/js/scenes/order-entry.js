@@ -18,10 +18,16 @@ var TICKET_W = 280;
 var BTN_H    = 50;
 var OVERLAP  = 18;
 
-// ── Pricing constants ─────────────────────────────
-var TAX_RATE      = 0.07;   // 7% — matches backend settings.tax_rate
-var CASH_DISCOUNT = 0.04;   // 4% dual-pricing discount
+// ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
+var TAX_RATE      = 0.07;
+var CASH_DISCOUNT = 0.04;
 var STUB_PRICE    = 10.00;  // TODO: replace with real menu item prices
+
+// Fetch canonical rates from backend so FE/BE always agree
+fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
+  if (d.tax_rate != null)           TAX_RATE      = d.tax_rate;
+  if (d.cash_discount_rate != null) CASH_DISCOUNT = d.cash_discount_rate;
+}).catch(function() { /* keep defaults on network error */ });
 
 // ── API ───────────────────────────────────────────
 var API = '/api/v1';
