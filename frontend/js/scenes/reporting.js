@@ -323,34 +323,28 @@ function buildManagerSalesPanels(sales) {
     body.appendChild(svg);
   });
 
-  // TOTAL CHECKS — pareto chart: grouped by shift
+  // TOTAL CHECKS — stacked area: today vs last week, 12hr labels
   var p2 = buildChartPanel('TOTAL CHECKS', s.total_checks || '--', function(body) {
     var svg = createSVG(400, 160);
-    // Group hourly data into shifts
-    var shifts = { 'Open': 0, 'Lunch': 0, 'Midday': 0, 'Close': 0 };
+    var data = [];
     for (var i = 0; i < hourly.length; i++) {
       var hr = parseInt(hourly[i].hour);
-      if (hr < 12) shifts['Open'] += hourly[i].checks;
-      else if (hr < 14) shifts['Lunch'] += hourly[i].checks;
-      else if (hr < 16) shifts['Midday'] += hourly[i].checks;
-      else shifts['Close'] += hourly[i].checks;
+      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
+      data.push({ label: label, value: hourly[i].checks, compareValue: cmp });
     }
-    var data = [];
-    for (var key in shifts) data.push({ label: key, value: shifts[key] });
-    drawParetoChart(svg, data, { barColor: CHART.sky, lineColor: CHART.pink, width: 400, height: 160 });
+    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: 400, height: 160, calloutFmt: function(v) { return v; }, legend: ['Today', 'Last Wk'] });
     body.appendChild(svg);
   });
 
-  // CHECK AVG — trend line with shading: daily avg (gold) vs house avg (teal dashed)
+  // CHECK AVG — pareto: which days are most profitable, sorted descending
   var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
     var svg = createSVG(400, 160);
     var data = [];
-    var compare = [];
     for (var i = 0; i < dailyAvg.length; i++) {
       data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
-      compare.push({ label: dailyAvg[i].day, value: dailyAvg[i].house_avg });
     }
-    drawTrendLine(svg, data, { color: CHART.gold, compareData: compare, compareColor: CHART.teal, width: 400, height: 160, shaded: true });
+    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: 400, height: 160 });
     body.appendChild(svg);
   });
 

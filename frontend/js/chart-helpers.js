@@ -27,6 +27,12 @@ export var CHART = {
   teal:        '#00cca3',
   pink:        '#ff6b9d',
   sky:         '#66ccff',
+  hotPink:     '#ff2a6d',
+  electricBlue:'#05d9e8',
+  neonYellow:  '#d1f700',
+  neonPurple:  '#bf40ff',
+  limeGreen:   '#39ff14',
+  neonOrange:  '#ff6e27',
   panelBg:     T.bgDark,
   headerBg:    T.bg3,
 };
