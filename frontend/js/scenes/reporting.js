@@ -145,7 +145,7 @@ function buildLeftCard(params, sales, labor) {
     closeDayBtn.wrap.style.cssText = 'align-self:stretch;';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      console.log('Close Day tapped');
+      push('close-day', params);
     });
     btnArea.appendChild(closeDayBtn.wrap);
 
@@ -180,7 +180,7 @@ function buildLeftCard(params, sales, labor) {
     checkoutBtn.wrap.style.cssText = 'margin-top:auto;align-self:stretch;';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      console.log('Checkout tapped');
+      push('server-checkout', params);
     });
     card.appendChild(checkoutBtn.wrap);
   }
