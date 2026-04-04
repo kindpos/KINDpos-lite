@@ -27,7 +27,7 @@ var ROW3 = [
 var ROW4 = [
   { label: 'CLR', key: 'CLR', type: 'action', flex: 1.5 },
   { label: 'SPACE', key: 'SPACE', type: 'regular', flex: 5 },
-  { label: 'DONE', key: 'DONE', type: 'action', flex: 1.5 },
+  { label: '>>>', key: 'DONE', type: 'action', flex: 1.5 },
 ];
 
 // ── Module State (singleton) ──
@@ -127,7 +127,7 @@ function _buildKeyboard() {
   panel.style.left = '0';
   panel.style.width = '100%';
   panel.style.padding = KB.inputGap + 'px ' + KB.padX + 'px';
-  panel.style.background = T.bg2;
+  panel.style.background = T.mint;
   panel.style.display = 'flex';
   panel.style.flexDirection = 'column';
   panel.style.gap = KB.rowGap + 'px';
@@ -153,13 +153,13 @@ function _buildKeyboard() {
 
   _inputText = document.createElement('span');
   _inputText.style.fontFamily = T.fb;
-  _inputText.style.fontSize = '28px';
+  _inputText.style.fontSize = '31px';
   _inputText.style.color = T.mint;
   _inputText.style.whiteSpace = 'nowrap';
 
   _cursor = document.createElement('span');
   _cursor.style.fontFamily = T.fb;
-  _cursor.style.fontSize = '28px';
+  _cursor.style.fontSize = '31px';
   _cursor.style.color = T.gold;
   _cursor.textContent = '|';
 
@@ -200,7 +200,7 @@ function _buildRow(keys) {
     pair.wrap.style.height = KB.keyH + 'px';
     pair.wrap.style.minWidth = '0';
     pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize = '28px';
+    pair.inner.style.fontSize = '31px';
     pair.inner.style.color = color;
     pair.inner.textContent = def.label;
 
