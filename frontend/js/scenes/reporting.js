@@ -309,15 +309,17 @@ function buildManagerSalesPanels(sales) {
   var lastWeek = s.last_week_hourly || [];
   var dailyAvg = s.daily_check_avg || [];
 
-  // NET SALES — stacked area chart: today (teal) vs last week (orange dashed)
+  // NET SALES — side-by-side bar chart: today (teal) vs last week (orange)
   var p1 = buildChartPanel('NET SALES', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
     var svg = createSVG(400, 160);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
+      var hr = parseInt(hourly[i].hour);
+      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
-      data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].net, compareValue: cmp });
+      data.push({ label: label, value: hourly[i].net, compareValue: cmp });
     }
-    drawStackedArea(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: 400, height: 160, calloutFmt: function(v) { return '$' + v; }, legend: ['Today', 'Last Wk'], yLabel: 'Revenue ($)' });
+    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: 400, height: 160, showLabels: true, showValueAbove: true });
     body.appendChild(svg);
   });
 

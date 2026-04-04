@@ -11,7 +11,7 @@ import { T, applySunkenStyle } from './tokens.js';
 // ═══════════════════════════════════════════════════
 
 export var CHART = {
-  axisFill:    '#aaaaaa',
+  axisFill:    T.mintB,
   axisStroke:  '#666666',
   gridStroke:  '#444444',
   axisFont:    '10px Courier New',
