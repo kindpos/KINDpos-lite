@@ -25,6 +25,7 @@ from app.core.events import (
     payment_confirmed,
     payment_failed,
     order_closed,
+    order_reopened,
     order_voided,
     cash_refund_due,
     ticket_printed,
@@ -421,7 +422,19 @@ async def get_day_summary(
                     "tip": float(order_tip),
                     "adjusted": any(tip_map.get(p.payment_id) is not None for p in order.payments),
                     "method": "card",
+                    "status": "closed",
                 })
+        elif order.status == "open":
+            checks_list.append({
+                "checkId": order.order_id,
+                "paymentId": None,
+                "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
+                "amount": money_round(order.subtotal),
+                "tip": 0,
+                "adjusted": False,
+                "method": None,
+                "status": "open",
+            })
 
     net_sales = float(gross_sales - void_total - discount_total)
     total_checks = closed_count + open_count
@@ -721,6 +734,36 @@ async def close_order(
         terminal_id=settings.terminal_id,
         order_id=order_id,
         total=order.total,
+    )
+    await ledger.append(event)
+
+    order = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(order)
+
+
+@router.post("/{order_id}/reopen", response_model=OrderResponse)
+async def reopen_order(
+        order_id: str,
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Reopen a closed order."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status == "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order is already open"
+        )
+
+    if order.status == "voided":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reopen a voided order"
+        )
+
+    event = order_reopened(
+        terminal_id=settings.terminal_id,
+        order_id=order_id,
     )
     await ledger.append(event)
 

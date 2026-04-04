@@ -172,6 +172,11 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                 order.status = "closed"
                 order.closed_at = event.timestamp
 
+        elif event.event_type == EventType.ORDER_REOPENED:
+            if order:
+                order.status = "open"
+                order.closed_at = None
+
         elif event.event_type == EventType.ORDER_VOIDED:
             if order:
                 order.status = "voided"

@@ -32,6 +32,7 @@ class EventType(str, Enum):
     # Order lifecycle
     ORDER_CREATED = "ORDER_CREATED"
     ORDER_CLOSED = "ORDER_CLOSED"
+    ORDER_REOPENED = "ORDER_REOPENED"
     ORDER_VOIDED = "ORDER_VOIDED"
     ORDER_TYPE_CHANGED = "ORDER_TYPE_CHANGED"
 
@@ -529,6 +530,23 @@ def order_closed(
         payload={
             "order_id": order_id,
             "total": total,
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
+def order_reopened(
+        terminal_id: str,
+        order_id: str,
+        **kwargs
+) -> Event:
+    """Create an ORDER_REOPENED event."""
+    return create_event(
+        event_type=EventType.ORDER_REOPENED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
         },
         correlation_id=order_id,
         **kwargs

@@ -13,6 +13,7 @@ import { buildNumpad } from '../numpad.js';
 // ── State ─────────────────────────────────────────
 var checks = [];
 var filter = 'all';         // 'all' | 'unadjusted'
+var statusFilter = 'all';  // 'all' | 'open' | 'closed'
 var editingIndex = -1;      // index into checks[]
 var cents = 0;
 
@@ -22,6 +23,8 @@ var rightEdit     = null;
 var batchBar      = null;
 var bottomBar     = null;
 var btnUnadj      = null;
+var btnOpen       = null;
+var btnClosed     = null;
 var numpadRef     = null;   // buildNumpad component instance
 var numpadCheckId = null;
 var numpadAmount  = null;
@@ -74,26 +77,46 @@ function renderTable() {
   checks.forEach(function(c, i) {
     // Filter logic
     if (filter === 'unadjusted' && c.adjusted) return;
+    var checkStatus = c.status || 'closed';
+    if (statusFilter === 'open' && checkStatus !== 'open') return;
+    if (statusFilter === 'closed' && checkStatus !== 'closed') return;
 
+    var isOpen = checkStatus === 'open';
     var tr = document.createElement('tr');
     tr.dataset.idx = i;
 
     var total = c.adjusted ? c.amount + c.tip : 0;
 
     // Cell data
-    var cells = [
-      { text: c.checkId, cls: '' },
-      { text: c.time,    cls: '' },
-      { text: fmt(c.amount), cls: '' },
-      { text: c.adjusted ? fmt(c.tip) : '$0.00', cls: c.adjusted ? '' : 'tip-cell' },
-      { text: c.adjusted ? fmt(total) : '$0.00', cls: c.adjusted ? '' : 'cyan-cell' },
-    ];
+    var cells;
+    if (isOpen) {
+      cells = [
+        { text: c.checkId, cls: '' },
+        { text: c.time,    cls: '' },
+        { text: fmt(c.amount), cls: '' },
+        { text: '—',       cls: '' },
+        { text: '—',       cls: '' },
+      ];
+    } else {
+      cells = [
+        { text: c.checkId, cls: '' },
+        { text: c.time,    cls: '' },
+        { text: fmt(c.amount), cls: '' },
+        { text: c.adjusted ? fmt(c.tip) : '$0.00', cls: c.adjusted ? '' : 'tip-cell' },
+        { text: c.adjusted ? fmt(total) : '$0.00', cls: c.adjusted ? '' : 'cyan-cell' },
+      ];
+    }
 
     cells.forEach(function(cell) {
       var td = document.createElement('td');
       td.textContent = cell.text;
 
-      if (c.adjusted) {
+      if (isOpen) {
+        // Open: distinct style — dark bg, mint text, dashed border
+        td.style.background = T.bgDark;
+        td.style.border = '2px dashed ' + T.mint;
+        td.style.color = T.mint;
+      } else if (c.adjusted) {
         // Adjusted: #333 bg, gold text, visible border
         td.style.background = T.bg;
         td.style.border = '2px solid ' + T.dimText;
@@ -110,7 +133,7 @@ function renderTable() {
       td.style.padding = '10px 8px';
       td.style.textAlign = 'center';
 
-      // Tip cell button for unadjusted rows
+      // Tip cell button for unadjusted rows (closed checks only)
       if (cell.cls === 'tip-cell') {
         td.style.color = T.cyan;
         td.style.background = T.bg;
@@ -136,6 +159,16 @@ function renderTable() {
     if (c.syncError) {
       tr.style.outline = '2px solid #ff4444';
       tr.title = 'Tip failed to save — tap tip cell to retry';
+    }
+
+    // Closed check row tap → reopen option (only when not editing)
+    if (!isOpen && editingIndex < 0) {
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('pointerup', function(ev) {
+        // Don't trigger if the tip-cell button was tapped
+        if (ev.target.style.clipPath) return;
+        doReopen(c);
+      });
     }
 
     // Dimming in edit mode
@@ -294,6 +327,7 @@ function numpadSubmit() {
 
 function buildScene(el, params) {
   filter = 'all';
+  statusFilter = 'all';
   editingIndex = -1;
   cents = 0;
 
@@ -419,6 +453,49 @@ function buildScene(el, params) {
   btnUnadjWrap.querySelector('div').style.borderColor = T.cyan;
   btnUnadj = btnUnadjWrap.querySelector('div'); // ref for text updates
   rightDefault.appendChild(btnUnadjWrap);
+
+  // ── Status filter (Open / Closed) ──
+  var statusSpacer = document.createElement('div');
+  statusSpacer.style.height = '16px';
+  rightDefault.appendChild(statusSpacer);
+
+  var btnOpenWrap = buildButton('Open', {
+    fill: T.bgDark, color: T.gold, fontSize: '20px',
+    width: 200, height: 44,
+    onTap: function() {
+      statusFilter = statusFilter === 'open' ? 'all' : 'open';
+      updateStatusButtons();
+      renderTable();
+    },
+  });
+  btnOpenWrap.querySelector('div').style.borderColor = T.gold;
+  btnOpen = btnOpenWrap.querySelector('div');
+  rightDefault.appendChild(btnOpenWrap);
+
+  var btnClosedWrap = buildButton('Closed', {
+    fill: T.bgDark, color: T.gold, fontSize: '20px',
+    width: 200, height: 44,
+    onTap: function() {
+      statusFilter = statusFilter === 'closed' ? 'all' : 'closed';
+      updateStatusButtons();
+      renderTable();
+    },
+  });
+  btnClosedWrap.style.marginTop = '8px';
+  btnClosedWrap.querySelector('div').style.borderColor = T.gold;
+  btnClosed = btnClosedWrap.querySelector('div');
+  rightDefault.appendChild(btnClosedWrap);
+
+  function updateStatusButtons() {
+    if (btnOpen) {
+      btnOpen.style.background = statusFilter === 'open' ? T.gold : T.bgDark;
+      btnOpen.style.color = statusFilter === 'open' ? T.bgDark : T.gold;
+    }
+    if (btnClosed) {
+      btnClosed.style.background = statusFilter === 'closed' ? T.gold : T.bgDark;
+      btnClosed.style.color = statusFilter === 'closed' ? T.bgDark : T.gold;
+    }
+  }
 
   // Spacer
   var spacer = document.createElement('div');
@@ -599,6 +676,64 @@ function doCheckout(params) {
   push('server-checkout', { employeeId: params.employeeId });
 }
 
+function doReopen(c) {
+  interrupt('confirm-reopen', {
+    reason: 'reopen-check',
+    onBuild: function(el) {
+      el.style.flexDirection = 'column';
+      el.style.gap = '16px';
+
+      var card = document.createElement('div');
+      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:24px 32px;text-align:center;max-width:400px;';
+      card.style.clipPath = chamfer(10);
+
+      var msg = document.createElement('div');
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:20px;';
+      msg.textContent = 'Reopen check ' + c.checkId + '?';
+      card.appendChild(msg);
+
+      var btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+
+      btns.appendChild(buildButton('Reopen', {
+        fill: T.gold, color: T.bgDark, fontSize: '20px',
+        width: 120, height: 44,
+        onTap: function() {
+          fetch('/api/v1/orders/' + c.checkId + '/reopen', { method: 'POST' })
+            .then(function(res) {
+              if (res.ok) {
+                c.status = 'open';
+                resolveInterrupt(true);
+                renderTable();
+                updateSummary();
+              } else {
+                res.json().then(function(d) {
+                  console.error('[KINDpos] Reopen failed:', d.detail || res.status);
+                }).catch(function() {
+                  console.error('[KINDpos] Reopen failed:', res.status);
+                });
+                cancelInterrupt();
+              }
+            })
+            .catch(function(err) {
+              console.error('[KINDpos] Reopen failed:', err);
+              cancelInterrupt();
+            });
+        },
+      }));
+
+      btns.appendChild(buildButton('Cancel', {
+        fill: T.darkBtn, color: T.mint, fontSize: '20px',
+        width: 120, height: 44,
+        onTap: function() { cancelInterrupt(); },
+      }));
+
+      card.appendChild(btns);
+      el.appendChild(card);
+    },
+  });
+}
+
 function doPrint() {
   checks.forEach(function(c) {
     fetch('/api/v1/print/receipt/' + c.checkId + '?copy_type=merchant', { method: 'POST' })
@@ -624,6 +759,8 @@ registerScene('tip-adjustment', {
     batchBar      = null;
     bottomBar     = null;
     btnUnadj      = null;
+    btnOpen       = null;
+    btnClosed     = null;
     numpadRef     = null;
     numpadCheckId = null;
     numpadAmount  = null;
@@ -632,6 +769,7 @@ registerScene('tip-adjustment', {
     editingIndex = -1;
     cents = 0;
     filter = 'all';
+    statusFilter = 'all';
   },
   cache: false,
   timeoutMs: 0,
