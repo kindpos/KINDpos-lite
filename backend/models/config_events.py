@@ -2,14 +2,14 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 
 class StoreInfo(BaseModel):
-    restaurant_name: str
+    restaurant_name: str = "KINDpos"
     legal_entity_name: Optional[str] = None
-    address_line_1: str
+    address_line_1: str = ""
     address_line_2: Optional[str] = None
-    city: str
-    state: str
-    zip: str
-    phone: str
+    city: str = ""
+    state: str = ""
+    zip: str = ""
+    phone: str = ""
     email: Optional[str] = None
     website: Optional[str] = None
 
