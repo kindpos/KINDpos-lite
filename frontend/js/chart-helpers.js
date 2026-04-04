@@ -85,12 +85,12 @@ export function drawBarChart(svg, data, options) {
   // Gradient defs for bar shading
   var defs = svgEl('defs', {});
   var grad1 = svgEl('linearGradient', { id: 'barGrad1', x1: '0', y1: '0', x2: '0', y2: '1' });
-  grad1.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '1' }));
-  grad1.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.5' }));
+  grad1.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color }));
+  grad1.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.7' }));
   defs.appendChild(grad1);
   var grad2 = svgEl('linearGradient', { id: 'barGrad2', x1: '0', y1: '0', x2: '0', y2: '1' });
-  grad2.appendChild(svgEl('stop', { offset: '0%', 'stop-color': compareColor, 'stop-opacity': '1' }));
-  grad2.appendChild(svgEl('stop', { offset: '100%', 'stop-color': compareColor, 'stop-opacity': '0.5' }));
+  grad2.appendChild(svgEl('stop', { offset: '0%', 'stop-color': compareColor }));
+  grad2.appendChild(svgEl('stop', { offset: '100%', 'stop-color': compareColor, 'stop-opacity': '0.7' }));
   defs.appendChild(grad2);
   svg.appendChild(defs);
 
@@ -162,12 +162,12 @@ export function drawStackedArea(svg, data, options) {
   // Gradient defs
   var defs = svgEl('defs', {});
   var g1 = svgEl('linearGradient', { id: 'areaGrad1', x1: '0', y1: '0', x2: '0', y2: '1' });
-  g1.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.5' }));
-  g1.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.05' }));
+  g1.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.7' }));
+  g1.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.1' }));
   defs.appendChild(g1);
   var g2 = svgEl('linearGradient', { id: 'areaGrad2', x1: '0', y1: '0', x2: '0', y2: '1' });
-  g2.appendChild(svgEl('stop', { offset: '0%', 'stop-color': compareColor, 'stop-opacity': '0.4' }));
-  g2.appendChild(svgEl('stop', { offset: '100%', 'stop-color': compareColor, 'stop-opacity': '0.05' }));
+  g2.appendChild(svgEl('stop', { offset: '0%', 'stop-color': compareColor, 'stop-opacity': '0.6' }));
+  g2.appendChild(svgEl('stop', { offset: '100%', 'stop-color': compareColor, 'stop-opacity': '0.1' }));
   defs.appendChild(g2);
   svg.appendChild(defs);
 
@@ -188,10 +188,14 @@ export function drawStackedArea(svg, data, options) {
     for (var i = 0; i < n; i++) cPath += ' L' + toX(i) + ',' + toY(data[i].compareValue || 0);
     cPath += ' L' + toX(n - 1) + ',' + baseline + ' Z';
     svg.appendChild(svgEl('path', { d: cPath, fill: 'url(#areaGrad2)' }));
-    // Compare line
+    // Compare line — thicker, more visible
     var cPts = [];
     for (var i = 0; i < n; i++) cPts.push(toX(i) + ',' + toY(data[i].compareValue || 0));
-    svg.appendChild(svgEl('polyline', { points: cPts.join(' '), fill: 'none', stroke: compareColor, 'stroke-width': 1.5, 'stroke-dasharray': '4,3' }));
+    svg.appendChild(svgEl('polyline', { points: cPts.join(' '), fill: 'none', stroke: compareColor, 'stroke-width': 2.5, 'stroke-dasharray': '6,3' }));
+    // Compare data points
+    for (var i = 0; i < n; i++) {
+      svg.appendChild(svgEl('rect', { x: toX(i) - 3, y: toY(data[i].compareValue || 0) - 3, width: 6, height: 6, fill: compareColor }));
+    }
   }
 
   // Primary area
@@ -199,18 +203,53 @@ export function drawStackedArea(svg, data, options) {
   for (var i = 0; i < n; i++) pPath += ' L' + toX(i) + ',' + toY(data[i].value);
   pPath += ' L' + toX(n - 1) + ',' + baseline + ' Z';
   svg.appendChild(svgEl('path', { d: pPath, fill: 'url(#areaGrad1)' }));
-  // Primary line
+  // Primary line — thick
   var pPts = [];
   for (var i = 0; i < n; i++) pPts.push(toX(i) + ',' + toY(data[i].value));
-  svg.appendChild(svgEl('polyline', { points: pPts.join(' '), fill: 'none', stroke: color, 'stroke-width': 2 }));
+  svg.appendChild(svgEl('polyline', { points: pPts.join(' '), fill: 'none', stroke: color, 'stroke-width': 3 }));
   // Data points
   for (var i = 0; i < n; i++) {
-    svg.appendChild(svgEl('rect', { x: toX(i) - 3, y: toY(data[i].value) - 3, width: 6, height: 6, fill: color }));
+    svg.appendChild(svgEl('rect', { x: toX(i) - 4, y: toY(data[i].value) - 4, width: 8, height: 8, fill: color }));
+  }
+
+  // Data callouts on peak values (highest primary + highest compare)
+  var peakIdx = 0;
+  for (var i = 1; i < n; i++) { if (data[i].value > data[peakIdx].value) peakIdx = i; }
+  var calloutFmt = options.calloutFmt || function(v) { return v; };
+  svg.appendChild(svgEl('text', { x: toX(peakIdx), y: toY(data[peakIdx].value) - 8, fill: color, 'font-size': '10', 'font-family': 'Courier New', 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = calloutFmt(data[peakIdx].value);
+
+  if (hasCompare) {
+    var cPeakIdx = 0;
+    for (var i = 1; i < n; i++) { if ((data[i].compareValue || 0) > (data[cPeakIdx].compareValue || 0)) cPeakIdx = i; }
+    // Only show compare callout if it doesn't overlap primary peak
+    if (cPeakIdx !== peakIdx) {
+      svg.appendChild(svgEl('text', { x: toX(cPeakIdx), y: toY(data[cPeakIdx].compareValue) - 8, fill: compareColor, 'font-size': '9', 'font-family': 'Courier New', 'text-anchor': 'middle' })).textContent = calloutFmt(data[cPeakIdx].compareValue);
+    }
   }
 
   // X labels
   for (var i = 0; i < n; i++) {
     svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': '10', 'font-family': 'Courier New', 'text-anchor': 'middle' })).textContent = data[i].label;
+  }
+
+  // Axis labels
+  if (options.xLabel) {
+    svg.appendChild(svgEl('text', { x: padLeft + chartW / 2, y: h, fill: CHART.axisFill, 'font-size': '9', 'font-family': 'Courier New', 'text-anchor': 'middle' })).textContent = options.xLabel;
+  }
+  if (options.yLabel) {
+    var yt = svgEl('text', { x: 8, y: padTop + chartH / 2, fill: CHART.axisFill, 'font-size': '9', 'font-family': 'Courier New', 'text-anchor': 'middle', transform: 'rotate(-90, 8, ' + (padTop + chartH / 2) + ')' });
+    yt.textContent = options.yLabel;
+    svg.appendChild(yt);
+  }
+
+  // Legend
+  if (hasCompare && options.legend) {
+    var lx = padLeft + 4;
+    var ly = padTop + 4;
+    svg.appendChild(svgEl('rect', { x: lx, y: ly, width: 8, height: 8, fill: color }));
+    svg.appendChild(svgEl('text', { x: lx + 12, y: ly + 8, fill: color, 'font-size': '9', 'font-family': 'Courier New' })).textContent = options.legend[0] || 'Today';
+    svg.appendChild(svgEl('rect', { x: lx + 60, y: ly, width: 8, height: 8, fill: compareColor }));
+    svg.appendChild(svgEl('text', { x: lx + 72, y: ly + 8, fill: compareColor, 'font-size': '9', 'font-family': 'Courier New' })).textContent = options.legend[1] || 'Last Wk';
   }
 }
 
@@ -245,8 +284,8 @@ export function drawParetoChart(svg, data, options) {
   // Gradient for bars
   var defs = svgEl('defs', {});
   var grad = svgEl('linearGradient', { id: 'paretoGrad', x1: '0', y1: '0', x2: '0', y2: '1' });
-  grad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': barColor, 'stop-opacity': '1' }));
-  grad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': barColor, 'stop-opacity': '0.4' }));
+  grad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': barColor }));
+  grad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': barColor, 'stop-opacity': '0.7' }));
   defs.appendChild(grad);
   svg.appendChild(defs);
 
@@ -259,12 +298,16 @@ export function drawParetoChart(svg, data, options) {
 
   // Bars + cumulative line
   var cumPts = [];
+  var cumPcts = [];
   var cumul = 0;
   for (var i = 0; i < n; i++) {
     var x = padLeft + i * groupW;
     var barH = (sorted[i].value / maxVal) * chartH;
     var barY = padTop + chartH - barH;
     svg.appendChild(svgEl('rect', { x: x + (groupW - barW) / 2, y: barY, width: barW, height: barH, fill: 'url(#paretoGrad)' }));
+
+    // Value callout above each bar
+    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: barY - 4, fill: barColor, 'font-size': '9', 'font-family': 'Courier New', 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = sorted[i].value;
 
     // X label
     svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': '10', 'font-family': 'Courier New', 'text-anchor': 'middle' })).textContent = sorted[i].label;
@@ -274,10 +317,11 @@ export function drawParetoChart(svg, data, options) {
     var cumPct = cumul / total;
     var cy = padTop + chartH - cumPct * chartH;
     cumPts.push((x + groupW / 2) + ',' + cy);
+    cumPcts.push(Math.round(cumPct * 100));
   }
 
   // Cumulative line
-  svg.appendChild(svgEl('polyline', { points: cumPts.join(' '), fill: 'none', stroke: lineColor, 'stroke-width': 2 }));
+  svg.appendChild(svgEl('polyline', { points: cumPts.join(' '), fill: 'none', stroke: lineColor, 'stroke-width': 2.5 }));
   for (var i = 0; i < cumPts.length; i++) {
     var parts = cumPts[i].split(',');
     svg.appendChild(svgEl('rect', { x: parseFloat(parts[0]) - 3, y: parseFloat(parts[1]) - 3, width: 6, height: 6, fill: lineColor }));
@@ -322,7 +366,7 @@ export function drawHorizontalBars(svg, data, options) {
 
     svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: CHART.mint, 'font-size': '11', 'font-family': 'Courier New', 'text-anchor': 'end' })).textContent = data[i].label;
     // Bar with slight opacity gradient
-    svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barWidth, height: barH, fill: barColor, opacity: options.opacity ? (1 - i * 0.15) : 1 }));
+    svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barWidth, height: barH, fill: barColor }));
 
     if (data[i].sublabel) {
       svg.appendChild(svgEl('text', { x: padLeft + barWidth + 4, y: y + rowH / 2 + 4, fill: '#cccccc', 'font-size': '10', 'font-family': 'Courier New', 'text-anchor': 'start' })).textContent = data[i].sublabel;
@@ -379,13 +423,13 @@ export function drawTrendLine(svg, data, options) {
   if (shaded) {
     var defs = svgEl('defs', {});
     var tg1 = svgEl('linearGradient', { id: 'trendGrad1', x1: '0', y1: '0', x2: '0', y2: '1' });
-    tg1.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.35' }));
-    tg1.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.02' }));
+    tg1.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.6' }));
+    tg1.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.05' }));
     defs.appendChild(tg1);
     if (compareData) {
       var tg2 = svgEl('linearGradient', { id: 'trendGrad2', x1: '0', y1: '0', x2: '0', y2: '1' });
-      tg2.appendChild(svgEl('stop', { offset: '0%', 'stop-color': compareColor, 'stop-opacity': '0.25' }));
-      tg2.appendChild(svgEl('stop', { offset: '100%', 'stop-color': compareColor, 'stop-opacity': '0.02' }));
+      tg2.appendChild(svgEl('stop', { offset: '0%', 'stop-color': compareColor, 'stop-opacity': '0.5' }));
+      tg2.appendChild(svgEl('stop', { offset: '100%', 'stop-color': compareColor, 'stop-opacity': '0.05' }));
       defs.appendChild(tg2);
     }
     svg.appendChild(defs);

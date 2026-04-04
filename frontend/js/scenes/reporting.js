@@ -123,8 +123,8 @@ function buildLeftCard(params, sales, labor) {
           '<span>Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></span>' +
         '</div>' +
         '<div style="display:flex;height:20px;background:' + T.bg + ';">' +
-          '<div style="width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.45;"></div>' +
-          '<div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.45;"></div>' +
+          '<div style="width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.8;"></div>' +
+          '<div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.8;"></div>' +
         '</div>';
       card.appendChild(breakdown);
     } else {
@@ -317,7 +317,7 @@ function buildManagerSalesPanels(sales) {
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
       data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].net, compareValue: cmp });
     }
-    drawStackedArea(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: 400, height: 160 });
+    drawStackedArea(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: 400, height: 160, calloutFmt: function(v) { return '$' + v; }, legend: ['Today', 'Last Wk'], yLabel: 'Revenue ($)' });
     body.appendChild(svg);
   });
 
