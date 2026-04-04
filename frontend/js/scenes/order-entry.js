@@ -860,10 +860,10 @@ function handleRecall() {
           }, 0);
 
           var cardLabel = tab.label
-            ? tab.label + '\n' + tab.checkNum + '  $' + total.toFixed(2)
+            ? tab.label + '\n' + tab.checkNum + '\n$' + total.toFixed(2)
             : tab.checkNum + '\n$' + total.toFixed(2);
           var card = buildButton(cardLabel, {
-            fill: '#333333', color: T.mint, fontSize: '20px', height: 76,
+            fill: '#333333', color: T.mint, fontSize: '20px', height: 90,
             onTap: function() { recallTabInterrupt(tab, grid, panel); },
           });
           grid.appendChild(card);
