@@ -9,6 +9,7 @@ import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { buildNumpad } from '../numpad.js';
 import { registerScene, pop, overlay, dismissOverlay } from '../scene-manager.js';
+import { showKeyboard } from '../keyboard.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 // ── API ───────────────────────────────────────────
@@ -601,11 +602,12 @@ function renderManualAdd(ip, card) {
   var registerId = '';
   regIdDisplay.textContent = 'Tap to enter';
   regIdDisplay.addEventListener('pointerup', function() {
-    overlay('numpad', {
-      title: 'SPIn Register ID',
-      value: registerId,
-      mode: 'text',
-      onConfirm: function(val) { registerId = val; regIdDisplay.textContent = val || 'Tap to enter'; dismissOverlay(); },
+    showKeyboard({
+      placeholder: 'SPIn Register ID',
+      initialValue: registerId,
+      maxLength: 20,
+      onDone: function(val) { registerId = val; regIdDisplay.textContent = val || 'Tap to enter'; },
+      dismissOnDone: true,
     });
   });
   form.appendChild(regIdLabel);
@@ -834,11 +836,12 @@ function renderConfirmDevice(card) {
   var registerId2 = dev.register_id || '';
   regInput2.textContent = registerId2 || 'Tap to enter';
   regInput2.addEventListener('pointerup', function() {
-    overlay('numpad', {
-      title: 'SPIn Register ID',
-      value: registerId2,
-      mode: 'text',
-      onConfirm: function(val) { registerId2 = val; regInput2.textContent = val || 'Tap to enter'; dismissOverlay(); },
+    showKeyboard({
+      placeholder: 'SPIn Register ID',
+      initialValue: registerId2,
+      maxLength: 20,
+      onDone: function(val) { registerId2 = val; regInput2.textContent = val || 'Tap to enter'; },
+      dismissOnDone: true,
     });
   });
   form.appendChild(regLabel2);
