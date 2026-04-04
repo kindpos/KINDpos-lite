@@ -424,6 +424,18 @@ async def get_day_summary(
                     "method": "card",
                     "status": "closed",
                 })
+            else:
+                # Cash-only closed orders — no tip adjustment needed
+                checks_list.append({
+                    "checkId": order.order_id,
+                    "paymentId": None,
+                    "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
+                    "amount": money_round(order.total),
+                    "tip": 0,
+                    "adjusted": True,
+                    "method": "cash",
+                    "status": "closed",
+                })
         elif order.status == "open":
             checks_list.append({
                 "checkId": order.order_id,
