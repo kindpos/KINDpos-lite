@@ -27,7 +27,10 @@ class GuestReceiptTemplate(BaseTemplate):
             commands.append({'type': 'text', 'content': f"Table: {context.get('table')} | Server: {context.get('server_name', 'N/A')}"})
         else:
             commands.append({'type': 'text', 'content': f"Server: {context.get('server_name', 'N/A')}"})
-            
+
+        if context.get('customer_name'):
+            commands.append({'type': 'text', 'content': f"Name: {context['customer_name']}", 'bold': True})
+
         closed_at = self._format_datetime(context.get('closed_at'))
         opened_at = self._format_datetime(context.get('opened_at'))
         commands.append({'type': 'text', 'content': f"Date: {closed_at if closed_at != 'N/A' else opened_at}"})

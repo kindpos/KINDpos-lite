@@ -124,9 +124,10 @@ var ticket       = [];    // [{ id, name, unitPrice, mods:[{name,price,charged}]
 var ticketSeq    = 0;     // monotonic ID counter
 var sceneParams  = {};
 var prefixCard   = null;  // DOM ref for show/hide
-var savedTabs    = [];    // [{ id, name, ticket }] — in-memory for pilot
+var savedTabs    = [];    // [{ id, checkNum, label, ticket }] — in-memory for pilot
 var saveSeq      = 0;     // saved tab ID counter
 var saveBtn      = null;  // DOM ref for SAVE button state
+var customerName = '';    // current tab's customer name (from save/recall)
 
 // ── Prefix definitions ────────────────────────────
 var PREFIXES = [
@@ -149,6 +150,7 @@ registerScene('order-entry', {
     prefixCard     = null;
     saveBtn        = null;
     currentOrderId = null;   // soft reset — ID assigned on first SEND
+    customerName   = '';     // reset tab name
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -725,6 +727,7 @@ async function handleSend() {
         body: JSON.stringify({
           order_type:  'quick_service',
           guest_count: 1,
+          customer_name: customerName || null,
         }),
       });
       if (!createRes.ok) throw new Error('Order create failed: ' + createRes.status);
@@ -879,6 +882,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
     savedTabs = savedTabs.filter(function(t) { return t.id !== tab.id; });
     ticketSeq = ticket.reduce(function(mx, i) { return Math.max(mx, i.id); }, 0);
     currentOrderId = null;
+    customerName = tab.label || '';
     dismissOverlay();
     renderTicket();
     updateBottomBar();

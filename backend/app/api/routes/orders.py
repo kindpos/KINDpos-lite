@@ -59,6 +59,7 @@ class CreateOrderRequest(BaseModel):
     server_name: Optional[str] = None
     order_type: str = "dine_in"
     guest_count: int = 1
+    customer_name: Optional[str] = None
 
 
 class AddItemRequest(BaseModel):
@@ -140,6 +141,7 @@ class OrderResponse(BaseModel):
     table: Optional[str]
     server_id: Optional[str]
     server_name: Optional[str]
+    customer_name: Optional[str] = None
     order_type: str
     guest_count: int
     status: str
@@ -161,6 +163,7 @@ class OrderResponse(BaseModel):
             table=order.table,
             server_id=order.server_id,
             server_name=order.server_name,
+            customer_name=order.customer_name,
             order_type=order.order_type,
             guest_count=order.guest_count,
             status=order.status,
@@ -240,6 +243,7 @@ async def create_order(
         server_name=request.server_name,
         order_type=request.order_type,
         guest_count=request.guest_count,
+        customer_name=request.customer_name,
     )
     # Set correlation_id for ORDER_CREATED
     event = event.model_copy(update={"correlation_id": order_id})

@@ -66,6 +66,7 @@ class Order:
     table: Optional[str] = None
     server_id: Optional[str] = None
     server_name: Optional[str] = None
+    customer_name: Optional[str] = None
     order_type: str = "dine_in"
     guest_count: int = 1
     status: str = "open"  # open, paid, closed, voided
@@ -158,6 +159,7 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                 table=payload.get("table"),
                 server_id=payload.get("server_id"),
                 server_name=payload.get("server_name"),
+                customer_name=payload.get("customer_name"),
                 order_type=payload.get("order_type", "dine_in"),
                 guest_count=payload.get("guest_count", 1),
                 created_at=event.timestamp,
