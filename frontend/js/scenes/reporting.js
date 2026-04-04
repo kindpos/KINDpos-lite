@@ -526,24 +526,209 @@ function buildPanelGrid(params, sales, labor) {
   var grid = document.createElement('div');
   grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;flex:1;min-height:0;';
 
-  var panelNames = getPanelNames(params, expandedCard);
+  var panels;
+  if (params.role === 'manager' && expandedCard === 'left') {
+    panels = buildManagerSalesPanels(sales);
+  } else if (params.role === 'manager' && expandedCard === 'right') {
+    panels = buildManagerLaborPanels(labor);
+  } else if (params.role === 'server' && expandedCard === 'left') {
+    panels = buildServerShiftPanels(sales);
+  } else {
+    panels = buildServerHoursPanels(sales, labor);
+  }
 
-  for (var i = 0; i < 4; i++) {
-    var panel = document.createElement('div');
-    panel.style.cssText = 'background:' + T.bgDark + ';display:flex;align-items:center;justify-content:center;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';';
-    applySunkenStyle(panel);
-    panel.textContent = 'Chart: ' + panelNames[i];
-    grid.appendChild(panel);
+  for (var i = 0; i < panels.length; i++) {
+    grid.appendChild(panels[i]);
   }
 
   return grid;
 }
 
-function getPanelNames(params, side) {
-  if (params.role === 'manager' && side === 'left')  return ['NET SALES', 'TOTAL CHECKS', 'CHECK AVG', 'CASH / CARD'];
-  if (params.role === 'manager' && side === 'right') return ['TOTAL HRS', 'TIP POOL', 'COB %', 'OT ALERT'];
-  if (params.role === 'server'  && side === 'left')  return ['TOTAL GUESTS', 'TOTAL TABLES', 'CHECK AVG', 'TIPS / TIPOUT'];
-  return ['TODAY\'S SHIFT', 'WEEKLY HOURS', 'TOTAL HRS', 'OT ALERT'];
+// ═══════════════════════════════════════════════════
+//  MANAGER SALES PANELS
+// ═══════════════════════════════════════════════════
+
+function buildManagerSalesPanels(sales) {
+  var s = sales || {};
+  var hourly = s.hourly_sales || [];
+  var lastWeek = s.last_week_hourly || [];
+  var dailyAvg = s.daily_check_avg || [];
+
+  // NET SALES — bar chart: hourly_sales (cyan) + last_week_hourly (lavender)
+  var p1 = buildChartPanel('NET SALES', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
+    var svg = createSVG(400, 160);
+    var data = [];
+    for (var i = 0; i < hourly.length; i++) {
+      var cmp = lastWeek[i] ? lastWeek[i].net : 0;
+      data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].net, compareValue: cmp });
+    }
+    drawBarChart(svg, data, { color: CHART.cyan, compareColor: CHART.lavender, width: 400, height: 160, showLabels: true });
+    body.appendChild(svg);
+  });
+
+  // TOTAL CHECKS — bar chart: hourly checks (cyan) + last week checks (lavender)
+  var p2 = buildChartPanel('TOTAL CHECKS', s.total_checks || '--', function(body) {
+    var svg = createSVG(400, 160);
+    var data = [];
+    for (var i = 0; i < hourly.length; i++) {
+      var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
+      data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].checks, compareValue: cmp });
+    }
+    drawBarChart(svg, data, { color: CHART.cyan, compareColor: CHART.lavender, width: 400, height: 160, showLabels: true });
+    body.appendChild(svg);
+  });
+
+  // CHECK AVG — trend line: daily avg (cyan solid) vs house avg (lavender dashed)
+  var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
+    var svg = createSVG(400, 160);
+    var data = [];
+    var compare = [];
+    for (var i = 0; i < dailyAvg.length; i++) {
+      data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
+      compare.push({ label: dailyAvg[i].day, value: dailyAvg[i].house_avg });
+    }
+    drawTrendLine(svg, data, { color: CHART.cyan, compareData: compare, compareColor: CHART.lavender, width: 400, height: 160 });
+    body.appendChild(svg);
+  });
+
+  // CASH / CARD — horizontal bars
+  var p4 = buildChartPanel('CASH / CARD', s.cash_total ? fmt(s.cash_total + s.card_total) : '--', function(body) {
+    var svg = createSVG(400, 160);
+    var total = (s.cash_total || 0) + (s.card_total || 0);
+    var cashPct = total > 0 ? Math.round((s.cash_total || 0) / total * 100) : 0;
+    var cardPct = total > 0 ? 100 - cashPct : 0;
+    drawHorizontalBars(svg, [
+      { label: 'Cash', value: s.cash_total || 0, sublabel: fmt(s.cash_total || 0) + ' (' + cashPct + '%)', color: CHART.gold },
+      { label: 'Card', value: s.card_total || 0, sublabel: fmt(s.card_total || 0) + ' (' + cardPct + '%)', color: CHART.cyan },
+    ], { width: 400, height: 160, labelWidth: 50 });
+    body.appendChild(svg);
+  });
+
+  return [p1, p2, p3, p4];
+}
+
+// ═══════════════════════════════════════════════════
+//  MANAGER LABOR PANELS
+// ═══════════════════════════════════════════════════
+
+function buildManagerLaborPanels(labor) {
+  var l = labor || {};
+  var employees = l.employees || [];
+  var cobTrend = l.cob_trend || [];
+  var otAlerts = l.ot_alerts || [];
+
+  // TOTAL HRS — horizontal bars: employees by hours
+  var p1 = buildChartPanel('TOTAL HRS', l.total_hours ? l.total_hours + 'h' : '--', function(body) {
+    var svg = createSVG(400, 160);
+    var data = [];
+    for (var i = 0; i < employees.length; i++) {
+      var emp = employees[i];
+      data.push({ label: emp.name, value: emp.hours, sublabel: emp.hours + 'h (' + emp.clock_in + '-' + emp.clock_out + ')', color: CHART.cyan });
+    }
+    drawHorizontalBars(svg, data, { width: 400, height: 160, labelWidth: 55 });
+    body.appendChild(svg);
+  });
+
+  // TIP POOL — horizontal bars: employees by tips
+  var p2 = buildChartPanel('TIP POOL', l.tip_pool ? fmt(l.tip_pool) : '--', function(body) {
+    var svg = createSVG(400, 120);
+    var data = [];
+    for (var i = 0; i < employees.length; i++) {
+      data.push({ label: employees[i].name, value: employees[i].tips, sublabel: fmt(employees[i].tips), color: CHART.gold });
+    }
+    drawHorizontalBars(svg, data, { width: 400, height: 120, labelWidth: 55 });
+    body.appendChild(svg);
+
+    // Text breakdown below chart
+    var info = document.createElement('div');
+    info.style.cssText = 'padding:4px 8px;font-family:Courier New,monospace;font-size:20px;color:' + CHART.mint + ';';
+    info.innerHTML =
+      'Card Tips: <span style="color:' + CHART.gold + '">' + fmt(l.card_tips_total || 0) + '</span> ' +
+      '- Tipout: <span style="color:' + CHART.red + '">' + fmt(l.tipout_deducted || 0) + '</span> ' +
+      '= Pool: <span style="color:' + CHART.gold + '">' + fmt(l.tip_pool || 0) + '</span>';
+    body.appendChild(info);
+  });
+
+  // COB % — trend line with thresholds
+  var p3 = buildChartPanel('COB %', l.cob_percent ? l.cob_percent + '%' : '--', function(body) {
+    var svg = createSVG(400, 160);
+    var data = [];
+    for (var i = 0; i < cobTrend.length; i++) {
+      data.push({ label: cobTrend[i].day, value: cobTrend[i].percent });
+    }
+    drawTrendLine(svg, data, {
+      color: CHART.cyan, width: 400, height: 160,
+      thresholds: [
+        { value: 35, color: CHART.yellow },
+        { value: 45, color: CHART.red },
+      ],
+    });
+    body.appendChild(svg);
+  });
+
+  // OT ALERT — horizontal bars colored by status
+  var otStatus = otAlerts.length > 0 ? 'Warning' : 'All clear';
+  var otColor = otAlerts.length > 0 ? CHART.yellow : CHART.cyan;
+  var p4 = buildChartPanel('OT ALERT', otStatus, function(body) {
+    var svg = createSVG(400, 160);
+    var data = [];
+    for (var i = 0; i < employees.length; i++) {
+      var wh = employees[i].weekly_hours;
+      var barColor = CHART.cyan;
+      if (wh > 40) barColor = CHART.red;
+      else if (wh >= 35) barColor = CHART.yellow;
+      data.push({ label: employees[i].name, value: wh, sublabel: wh + 'h', color: barColor });
+    }
+    drawHorizontalBars(svg, data, { width: 400, height: 160, labelWidth: 55 });
+    // 40h threshold line
+    if (employees.length > 0) {
+      var maxH = 0;
+      for (var i = 0; i < employees.length; i++) {
+        if (employees[i].weekly_hours > maxH) maxH = employees[i].weekly_hours;
+      }
+      if (maxH > 0) {
+        var lineX = 55 + (40 / Math.max(maxH, 40)) * (400 - 55 - 10);
+        svg.appendChild(svgEl('line', { x1: lineX, y1: 0, x2: lineX, y2: 160, stroke: CHART.yellow, 'stroke-width': 2, 'stroke-dasharray': '4,3' }));
+      }
+    }
+    body.appendChild(svg);
+
+    // Status text
+    var statusEl = document.createElement('div');
+    statusEl.style.cssText = 'position:absolute;top:4px;right:8px;font-family:Courier New,monospace;font-size:20px;color:' + otColor + ';font-weight:bold;';
+    statusEl.textContent = otStatus;
+    body.appendChild(statusEl);
+  });
+
+  return [p1, p2, p3, p4];
+}
+
+// ═══════════════════════════════════════════════════
+//  SERVER SHIFT PANELS (placeholder — Step 8)
+// ═══════════════════════════════════════════════════
+
+function buildServerShiftPanels(sales) {
+  var names = ['TOTAL GUESTS', 'TOTAL TABLES', 'CHECK AVG', 'TIPS / TIPOUT'];
+  return names.map(function(name) {
+    return buildChartPanel(name, '--', function(body) {
+      var placeholder = document.createElement('div');
+      placeholder.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';';
+      placeholder.textContent = 'Chart: ' + name;
+      body.appendChild(placeholder);
+    });
+  });
+}
+
+function buildServerHoursPanels(sales, labor) {
+  var names = ['TODAY\'S SHIFT', 'WEEKLY HOURS', 'TOTAL HRS', 'OT ALERT'];
+  return names.map(function(name) {
+    return buildChartPanel(name, '--', function(body) {
+      var placeholder = document.createElement('div');
+      placeholder.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';';
+      placeholder.textContent = 'Chart: ' + name;
+      body.appendChild(placeholder);
+    });
+  });
 }
 
 // ═══════════════════════════════════════════════════
