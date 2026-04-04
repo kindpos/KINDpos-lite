@@ -9,6 +9,7 @@ import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, buildGap } from '../components.js';
 import { registerScene, push, pop, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { buildNumpad } from '../numpad.js';
 
 // ── Layout ────────────────────────────────────────
 var RECEIPT_W   = 290;
@@ -1092,6 +1093,116 @@ function refreshAfterAdjust(state) {
 //  FINALIZE ACTION
 // ─────────────────────────────────────────────────
 
+function completeFinalizeAfterTips(state) {
+  fetch('/api/v1/orders/close-batch', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      console.log('[KINDpos] Server checkout finalized:', data);
+      pop();
+    })
+    .catch(function(err) {
+      console.error('[KINDpos] Finalize failed:', err);
+      pop();
+    });
+}
+
+function showCashTipDeclaration(state) {
+  var tipValue = '';
+
+  interrupt('cash-tip-declare', {
+    reason: 'declare-cash-tips',
+    onBuild: function(el) {
+      el.style.flexDirection = 'column';
+      el.style.gap = '16px';
+      el.style.alignItems = 'center';
+
+      var card = document.createElement('div');
+      card.style.cssText = [
+        'background:' + T.bg + ';',
+        'border:3px solid ' + T.gold + ';',
+        'padding:28px 36px;text-align:center;max-width:420px;',
+        'clip-path:' + chamfer(10) + ';',
+      ].join('');
+
+      var msg = document.createElement('div');
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:4px;';
+      msg.textContent = 'Declare Cash Tips';
+      card.appendChild(msg);
+
+      var sub = document.createElement('div');
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + T.mutedText + ';margin-bottom:16px;';
+      sub.textContent = 'Enter cash tips received (optional)';
+      card.appendChild(sub);
+
+      // Amount display
+      var display = document.createElement('div');
+      display.style.cssText = [
+        'font-family:' + T.fb + ';font-size:32px;color:' + T.mint + ';',
+        'background:' + T.darkBtn + ';padding:12px 24px;margin-bottom:16px;',
+        'clip-path:' + chamfer(6) + ';min-width:180px;',
+      ].join('');
+      display.textContent = '$0.00';
+      card.appendChild(display);
+
+      // Numpad
+      var padWrap = document.createElement('div');
+      padWrap.style.cssText = 'margin-bottom:16px;';
+      var pad = buildNumpad({
+        width: 240,
+        onInput: function(val) {
+          tipValue = val;
+          var cents = parseInt(val, 10) || 0;
+          display.textContent = '$' + (cents / 100).toFixed(2);
+        },
+      });
+      padWrap.appendChild(pad);
+      card.appendChild(padWrap);
+
+      // Buttons
+      var btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+
+      btns.appendChild(buildButton('Submit', {
+        fill: T.gold, color: '#1a1a1a', fontSize: '18px',
+        width: 130, height: 44,
+        onTap: function() {
+          var cents = parseInt(tipValue, 10) || 0;
+          var amount = cents / 100;
+          resolveInterrupt(amount);
+        },
+      }));
+
+      btns.appendChild(buildButton('Skip', {
+        fill: T.darkBtn, color: T.mutedText, fontSize: '18px',
+        width: 100, height: 44,
+        onTap: function() {
+          resolveInterrupt(null);
+        },
+      }));
+
+      card.appendChild(btns);
+      el.appendChild(card);
+    },
+  }).then(function(amount) {
+    if (amount != null && amount > 0) {
+      fetch('/api/v1/servers/declare-cash-tips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ server_id: state.employeeId, amount: amount }),
+      }).then(function() {
+        completeFinalizeAfterTips(state);
+      }).catch(function() {
+        completeFinalizeAfterTips(state);
+      });
+    } else {
+      completeFinalizeAfterTips(state);
+    }
+  }).catch(function() {
+    // Cancelled — still finalize (tips are optional)
+    completeFinalizeAfterTips(state);
+  });
+}
+
 function doFinalize(state) {
   // Manager approval gate using interrupt
   interrupt('manager-approval', {
@@ -1126,17 +1237,7 @@ function doFinalize(state) {
         width: 150, height: 44,
         onTap: function() {
           resolveInterrupt(true);
-          // Close out remaining open orders for this server
-          fetch('/api/v1/orders/close-batch', { method: 'POST' })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              console.log('[KINDpos] Server checkout finalized:', data);
-              pop(); // Return to reporting / login
-            })
-            .catch(function(err) {
-              console.error('[KINDpos] Finalize failed:', err);
-              pop();
-            });
+          showCashTipDeclaration(state);
         },
       }));
 

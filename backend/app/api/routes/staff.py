@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.api.dependencies import get_ledger
 from app.core.event_ledger import EventLedger
-from app.core.events import user_logged_in, user_logged_out, EventType
+from app.core.events import user_logged_in, user_logged_out, cash_tips_declared, EventType
 from app.config import settings
 from app.services.overseer_config_service import OverseerConfigService
 
@@ -104,3 +104,31 @@ async def get_clocked_in(ledger: EventLedger = Depends(get_ledger)):
             del clocked_in[eid]
 
     return {"staff": list(clocked_in.values())}
+
+
+# =============================================================================
+# CASH TIPS DECLARATION
+# =============================================================================
+
+class DeclareCashTipsRequest(BaseModel):
+    server_id: str
+    amount: float
+
+
+@router.post("/declare-cash-tips")
+async def declare_cash_tips(
+    request: DeclareCashTipsRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Record a server's self-reported cash tips at checkout (optional)."""
+    event = cash_tips_declared(
+        terminal_id=settings.terminal_id,
+        server_id=request.server_id,
+        amount=request.amount,
+    )
+    await ledger.append(event)
+    return {
+        "success": True,
+        "server_id": request.server_id,
+        "amount": event.payload["amount"],
+    }

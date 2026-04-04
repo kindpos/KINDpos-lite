@@ -118,6 +118,7 @@ class EventType(str, Enum):
     TIP_ADJUST_CONFIRMED = "TIP_ADJUST_CONFIRMED"
     TIP_ADJUST_FAILED = "TIP_ADJUST_FAILED"
     TIP_ADJUSTED = "payment.tip_adjusted"
+    CASH_TIPS_DECLARED = "payment.cash_tips_declared"
 
     # Batch / Day
     BATCH_CLOSED = "batch.closed"
@@ -1373,6 +1374,24 @@ def cash_refund_due(
             "reason": reason,
         },
         correlation_id=order_id,
+        **kwargs
+    )
+
+
+def cash_tips_declared(
+        terminal_id: str,
+        server_id: str,
+        amount: float,
+        **kwargs
+) -> Event:
+    """Record a server's declared cash tips at checkout (optional, self-reported)."""
+    return create_event(
+        event_type=EventType.CASH_TIPS_DECLARED,
+        terminal_id=terminal_id,
+        payload={
+            "server_id": server_id,
+            "amount": money_round(amount),
+        },
         **kwargs
     )
 
