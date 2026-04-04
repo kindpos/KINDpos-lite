@@ -1,0 +1,16 @@
+# Add these lines to the existing kindpos.service [Unit] section:
+#
+# [Unit]
+# Requires=kindnostic.service
+# After=kindnostic.service
+#
+# If kindnostic.service exits non-zero (any CRITICAL probe failed),
+# systemd will not start kindpos.service.
+#
+# To manually override after a blocked boot:
+#   sudo systemctl start kindpos.service
+#
+# Installation:
+#   sudo cp systemd/kindnostic.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable kindnostic.service
