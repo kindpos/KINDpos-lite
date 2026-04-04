@@ -39,14 +39,20 @@ async def _ensure_db():
     async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS devices (
-                mac      TEXT PRIMARY KEY,
-                ip       TEXT NOT NULL,
-                type     TEXT NOT NULL,
-                name     TEXT NOT NULL,
-                port     INTEGER NOT NULL DEFAULT 9100,
-                saved_at TEXT NOT NULL
+                mac         TEXT PRIMARY KEY,
+                ip          TEXT NOT NULL,
+                type        TEXT NOT NULL,
+                name        TEXT NOT NULL,
+                port        INTEGER NOT NULL DEFAULT 9100,
+                register_id TEXT NOT NULL DEFAULT '',
+                saved_at    TEXT NOT NULL
             )
         """)
+        # Migrate: add register_id column if missing (existing DBs)
+        async with db.execute("PRAGMA table_info(devices)") as cur:
+            cols = [row[1] async for row in cur]
+        if 'register_id' not in cols:
+            await db.execute("ALTER TABLE devices ADD COLUMN register_id TEXT NOT NULL DEFAULT ''")
         await db.commit()
 
 # ── Models ────────────────────────────────────────────────────────────────────
@@ -57,6 +63,7 @@ class DeviceRecord(BaseModel):
     type: str        # 'kitchen' | 'receipt' | 'card_reader'
     name: str
     port: int = 9100
+    register_id: str = ''  # SPIn Register ID for card readers
 
 class TestRequest(BaseModel):
     mac: str
@@ -233,16 +240,17 @@ async def save_device(device: DeviceRecord):
     now = datetime.utcnow().isoformat()
     async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
         await db.execute("""
-            INSERT INTO devices (mac, ip, type, name, port, saved_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO devices (mac, ip, type, name, port, register_id, saved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(mac) DO UPDATE SET
-                ip       = excluded.ip,
-                type     = excluded.type,
-                name     = excluded.name,
-                port     = excluded.port,
-                saved_at = excluded.saved_at
+                ip          = excluded.ip,
+                type        = excluded.type,
+                name        = excluded.name,
+                port        = excluded.port,
+                register_id = excluded.register_id,
+                saved_at    = excluded.saved_at
         """, (device.mac.upper(), device.ip, device.type,
-              device.name, device.port, now))
+              device.name, device.port, device.register_id, now))
         await db.commit()
     return {**device.dict(), 'mac': device.mac.upper(), 'saved_at': now}
 

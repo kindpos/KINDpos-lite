@@ -592,6 +592,36 @@ function renderManualAdd(ip, card) {
     }));
   });
   form.appendChild(presetRow);
+
+  // Register ID field (card readers only)
+  var regIdLabel = makeLabel('SPIn Register ID', GOLD, '22px');
+  var regIdDisplay = document.createElement('div');
+  regIdDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  applySunkenStyle(regIdDisplay);
+  var registerId = '';
+  regIdDisplay.textContent = 'Tap to enter';
+  regIdDisplay.addEventListener('pointerup', function() {
+    overlay('numpad', {
+      title: 'SPIn Register ID',
+      value: registerId,
+      mode: 'text',
+      onConfirm: function(val) { registerId = val; regIdDisplay.textContent = val || 'Tap to enter'; dismissOverlay(); },
+    });
+  });
+  form.appendChild(regIdLabel);
+  form.appendChild(regIdDisplay);
+
+  // Show/hide register ID based on type selection
+  function refreshRegIdVisibility() {
+    var show = selectedType === 'card_reader';
+    regIdLabel.style.display = show ? '' : 'none';
+    regIdDisplay.style.display = show ? '' : 'none';
+  }
+  // Patch type button taps to also toggle register ID visibility
+  var origRefresh = refreshTypeBtns;
+  refreshTypeBtns = function() { origRefresh(); refreshRegIdVisibility(); };
+  refreshRegIdVisibility();
+
   inner.appendChild(form);
 
   var footer = document.createElement('div');
@@ -605,7 +635,8 @@ function renderManualAdd(ip, card) {
         ip:   ip,
         type: selectedType,
         name: deviceName || selectedType,
-        port: selectedType === 'card_reader' ? 8443 : 9100,
+        port: selectedType === 'card_reader' ? 9000 : 9100,
+        register_id: selectedType === 'card_reader' ? registerId : '',
       });
       state.addStep = 'choose';
       render();
@@ -753,6 +784,7 @@ function renderConfirmDevice(card) {
       }
     });
     refreshPresets();
+    if (typeof refreshRegId2 === 'function') refreshRegId2();
   }
 
   TYPES.forEach(function(t) {
@@ -793,6 +825,31 @@ function renderConfirmDevice(card) {
   }
   refreshPresets();
   form.appendChild(presetRow);
+
+  // Register ID field (card readers only)
+  var regLabel2 = makeLabel('SPIn Register ID', GOLD, '22px');
+  var regInput2 = document.createElement('div');
+  regInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  applySunkenStyle(regInput2);
+  var registerId2 = dev.register_id || '';
+  regInput2.textContent = registerId2 || 'Tap to enter';
+  regInput2.addEventListener('pointerup', function() {
+    overlay('numpad', {
+      title: 'SPIn Register ID',
+      value: registerId2,
+      mode: 'text',
+      onConfirm: function(val) { registerId2 = val; regInput2.textContent = val || 'Tap to enter'; dismissOverlay(); },
+    });
+  });
+  form.appendChild(regLabel2);
+  form.appendChild(regInput2);
+  function refreshRegId2() {
+    var show = selectedType === 'card_reader';
+    regLabel2.style.display = show ? '' : 'none';
+    regInput2.style.display = show ? '' : 'none';
+  }
+  refreshRegId2();
+
   inner.appendChild(form);
 
   var footer = document.createElement('div');
@@ -800,7 +857,12 @@ function renderConfirmDevice(card) {
   footer.appendChild(buildButton('//SAVE//', {
     fill: GOLD, color: DARK, fontSize: '22px', height: 48,
     onTap: async function() {
-      await saveDevice({ mac: dev.mac, ip: dev.ip, type: selectedType, name: deviceName || selectedType, port: dev.port || 9100 });
+      await saveDevice({
+        mac: dev.mac, ip: dev.ip, type: selectedType,
+        name: deviceName || selectedType,
+        port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
+        register_id: selectedType === 'card_reader' ? registerId2 : '',
+      });
       state.addStep = 'choose'; state.foundDevice = null; render();
     },
   }));

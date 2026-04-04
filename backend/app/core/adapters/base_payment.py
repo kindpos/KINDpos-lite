@@ -34,6 +34,7 @@ class PaymentDeviceConfig(BaseModel):
     location_notes: Optional[str] = None
     enabled: bool = True
     processor_id: str
+    register_id: Optional[str] = None  # SPIn Register ID for Dejavoo devices
 
 # 1.4 TransactionRequest
 class PaymentType(str, Enum):

@@ -54,9 +54,10 @@ async def _ensure_devices(manager: PaymentManager):
                             device_type=PaymentDeviceType.SMART_TERMINAL,
                             ip_address=device['ip'],
                             mac_address=device['mac'],
-                            port=device.get('port', 8443),
+                            port=device.get('port', 9000),
                             protocol="spin",
                             processor_id="dejavoo",
+                            register_id=device.get('register_id', ''),
                         )
                         connected = await adapter.connect(config)
                         if connected:
