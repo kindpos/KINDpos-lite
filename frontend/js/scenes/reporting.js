@@ -88,34 +88,34 @@ function buildLeftCard(params, sales, labor) {
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Net: <span style="color:' + g + '">' + (s ? fmt(s.net_sales) : '--') + '</span></div>' +
       '<div>Total Checks: <span style="color:' + g + '">' + (s ? s.total_checks : '--') + '</span></div>' +
       '<div>Check Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>';
     card.appendChild(kpis);
 
-    // Cash / Card breakdown with percentage bars
+    // Cash / Card breakdown — single combined bar
     if (s) {
       var total = s.cash_total + s.card_total;
-      var cashPct = total > 0 ? Math.round(s.cash_total / total * 100) : 0;
-      var cardPct = total > 0 ? 100 - cashPct : 0;
+      var cashPct = total > 0 ? (s.cash_total / total * 100).toFixed(0) : 0;
+      var cardPct = total > 0 ? (s.card_total / total * 100).toFixed(0) : 0;
       var breakdown = document.createElement('div');
-      breakdown.style.cssText = 'display:flex;gap:12px;margin-top:12px;font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';';
-      var barH = '32px';
+      breakdown.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';';
+      // Labels above bar
       breakdown.innerHTML =
-        '<div style="flex:1;position:relative;height:' + barH + ';background:' + T.bg + ';">' +
-          '<div style="position:absolute;top:0;left:0;width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.3;"></div>' +
-          '<div style="position:relative;padding:0 8px;line-height:' + barH + ';white-space:nowrap;">Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+          '<span>Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></span>' +
+          '<span>Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></span>' +
         '</div>' +
-        '<div style="flex:1;position:relative;height:' + barH + ';background:' + T.bg + ';">' +
-          '<div style="position:absolute;top:0;left:0;width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.3;"></div>' +
-          '<div style="position:relative;padding:0 8px;line-height:' + barH + ';white-space:nowrap;">Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></div>' +
+        '<div style="display:flex;height:20px;background:' + T.bg + ';">' +
+          '<div style="width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.45;"></div>' +
+          '<div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.45;"></div>' +
         '</div>';
       card.appendChild(breakdown);
     } else {
       var fallback = document.createElement('div');
-      fallback.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';';
+      fallback.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';';
       fallback.textContent = 'Cash: --   Card: --';
       card.appendChild(fallback);
     }
@@ -128,7 +128,7 @@ function buildLeftCard(params, sales, labor) {
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Guests: <span style="color:' + g + '">' + (s ? (s.total_guests || '--') : '--') + '</span></div>' +
       '<div>Tables: <span style="color:' + g + '">' + (s ? (s.total_tables || '--') : '--') + '</span></div>' +
@@ -166,7 +166,7 @@ function buildRightCard(params, sales, labor) {
     card.appendChild(buildVerticalRail('LABOR', lc));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l && l.ot_alerts && l.ot_alerts.length > 0) {
@@ -179,7 +179,7 @@ function buildRightCard(params, sales, labor) {
       '<div>Total Hrs: <span style="color:' + lc + '">' + (l ? l.total_hours : '--') + '</span></div>' +
       '<div>Tip Pool: <span style="color:' + T.gold + '">' + (l ? fmt(l.tip_pool) : '--') + '</span></div>' +
       '<div>COB: <span style="color:' + lc + '">' + (l ? l.cob_percent + '%' : '--') + '</span></div>' +
-      '<div style="margin-top:8px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:8px;font-size:24px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   } else {
     // HOURS card — numbers in cyan (title color), money in gold
@@ -187,7 +187,7 @@ function buildRightCard(params, sales, labor) {
     card.appendChild(buildVerticalRail('HOURS', hc));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l) {
@@ -201,7 +201,7 @@ function buildRightCard(params, sales, labor) {
       '<div>Out: <span style="color:' + hc + '">' + (l ? (l.clock_out || 'active') : '--') + '</span></div>' +
       '<div>Today: <span style="color:' + hc + '">' + (l ? l.today_hours + 'h' : '--') + '</span></div>' +
       '<div>Week: <span style="color:' + hc + '">' + (l ? l.weekly_hours + 'h' : '--') + '</span></div>' +
-      '<div style="margin-top:8px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:8px;font-size:24px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   }
 
