@@ -8,7 +8,7 @@ import { T, chamfer, buildStyledButton, applySunkenStyle, bevelEdges, shadowColo
 import { buildButton, buildGap } from '../components.js';
 import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-import { CHART, createSVG, svgEl, drawBarChart, drawHorizontalBars, drawTrendLine, drawProgressBar, buildChartPanel } from '../chart-helpers.js';
+import { CHART, createSVG, svgEl, drawBarChart, drawStackedArea, drawParetoChart, drawHorizontalBars, drawTrendLine, drawProgressBar, buildChartPanel } from '../chart-helpers.js';
 
 // ── Module state ────────────────────────────────────
 var expandedCard = null;
@@ -309,7 +309,7 @@ function buildManagerSalesPanels(sales) {
   var lastWeek = s.last_week_hourly || [];
   var dailyAvg = s.daily_check_avg || [];
 
-  // NET SALES — bar chart: hourly_sales (cyan) + last_week_hourly (lavender)
+  // NET SALES — stacked area chart: today (teal) vs last week (orange dashed)
   var p1 = buildChartPanel('NET SALES', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
     var svg = createSVG(400, 160);
     var data = [];
@@ -317,23 +317,22 @@ function buildManagerSalesPanels(sales) {
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
       data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].net, compareValue: cmp });
     }
-    drawBarChart(svg, data, { color: CHART.cyan, compareColor: CHART.lavender, width: 400, height: 160, showLabels: true });
+    drawStackedArea(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: 400, height: 160 });
     body.appendChild(svg);
   });
 
-  // TOTAL CHECKS — bar chart: hourly checks (cyan) + last week checks (lavender)
+  // TOTAL CHECKS — pareto chart: hourly checks sorted descending with cumulative line
   var p2 = buildChartPanel('TOTAL CHECKS', s.total_checks || '--', function(body) {
     var svg = createSVG(400, 160);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
-      var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
-      data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].checks, compareValue: cmp });
+      data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].checks });
     }
-    drawBarChart(svg, data, { color: CHART.cyan, compareColor: CHART.lavender, width: 400, height: 160, showLabels: true });
+    drawParetoChart(svg, data, { barColor: CHART.sky, lineColor: CHART.pink, width: 400, height: 160 });
     body.appendChild(svg);
   });
 
-  // CHECK AVG — trend line: daily avg (cyan solid) vs house avg (lavender dashed)
+  // CHECK AVG — trend line with shading: daily avg (gold) vs house avg (teal dashed)
   var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
     var svg = createSVG(400, 160);
     var data = [];
@@ -342,19 +341,19 @@ function buildManagerSalesPanels(sales) {
       data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
       compare.push({ label: dailyAvg[i].day, value: dailyAvg[i].house_avg });
     }
-    drawTrendLine(svg, data, { color: CHART.cyan, compareData: compare, compareColor: CHART.lavender, width: 400, height: 160 });
+    drawTrendLine(svg, data, { color: CHART.gold, compareData: compare, compareColor: CHART.teal, width: 400, height: 160, shaded: true });
     body.appendChild(svg);
   });
 
-  // CASH / CARD — horizontal bars
-  var p4 = buildChartPanel('CASH / CARD', s.cash_total ? fmt(s.cash_total + s.card_total) : '--', function(body) {
+  // CASH / CARD — horizontal bars with percentage labels
+  var p4 = buildChartPanel('CASH / CARD', s.cash_total ? fmt((s.cash_total || 0) + (s.card_total || 0)) : '--', function(body) {
     var svg = createSVG(400, 160);
     var total = (s.cash_total || 0) + (s.card_total || 0);
     var cashPct = total > 0 ? Math.round((s.cash_total || 0) / total * 100) : 0;
     var cardPct = total > 0 ? 100 - cashPct : 0;
     drawHorizontalBars(svg, [
       { label: 'Cash', value: s.cash_total || 0, sublabel: fmt(s.cash_total || 0) + ' (' + cashPct + '%)', color: CHART.gold },
-      { label: 'Card', value: s.card_total || 0, sublabel: fmt(s.card_total || 0) + ' (' + cardPct + '%)', color: CHART.cyan },
+      { label: 'Card', value: s.card_total || 0, sublabel: fmt(s.card_total || 0) + ' (' + cardPct + '%)', color: CHART.sky },
     ], { width: 400, height: 160, labelWidth: 50 });
     body.appendChild(svg);
   });
