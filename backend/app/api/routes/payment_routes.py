@@ -64,8 +64,11 @@ async def _ensure_devices(manager: PaymentManager):
                             manager.map_terminal_to_device(settings.terminal_id, device['mac'])
                             manager.map_terminal_to_device("T-001", device['mac'])
                             reader_found = True
-        except Exception:
-            pass
+                            print(f"  Card reader loaded: {device.get('name', device['mac'])} @ {device['ip']}:{device.get('port', 8443)}")
+                        else:
+                            print(f"  Card reader saved but unreachable: {device['ip']}:{device.get('port', 8443)}")
+        except Exception as e:
+            print(f"  Warning: could not load card reader: {e}")
 
     # Fall back to mock if no real device found
     if not reader_found:
@@ -84,6 +87,23 @@ async def _ensure_devices(manager: PaymentManager):
         manager.register_device(mock)
         manager.map_terminal_to_device(settings.terminal_id, "mock_001")
         manager.map_terminal_to_device("T-001", "mock_001")
+        print("  Mock payment device registered (no card reader found)")
+
+
+@router.post("/reload-devices")
+async def reload_devices(ledger: EventLedger = Depends(get_ledger)):
+    """Hot-reload card reader from hardware_config.db without server restart."""
+    global _devices_initialized, _manager
+    _devices_initialized = False
+    _manager = PaymentManager(ledger, settings.terminal_id)
+    await _ensure_devices(_manager)
+    # Report what's active
+    device_ids = list(_manager._devices.keys()) if hasattr(_manager, '_devices') else []
+    return {
+        "reloaded": True,
+        "active_devices": device_ids,
+        "using_mock": any("mock" in d for d in device_ids),
+    }
 
 def get_payment_manager(ledger: EventLedger = Depends(get_ledger)) -> PaymentManager:
     global _manager

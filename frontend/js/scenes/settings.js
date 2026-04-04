@@ -118,6 +118,11 @@ async function saveDevice(device) {
       var idx = state.savedDevices.findIndex(function(d) { return d.mac === device.mac; });
       if (idx >= 0) state.savedDevices[idx] = saved;
       else state.savedDevices.push(saved);
+      // Hot-reload payment + printer managers so new devices are live immediately
+      fetch(API + '/payments/reload-devices', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { console.log('[KINDpos] Devices reloaded:', d); })
+        .catch(function() {});
       return true;
     }
   } catch (e) {}
