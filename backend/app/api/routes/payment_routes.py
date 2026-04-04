@@ -18,6 +18,7 @@ from ...core.events import (
     create_event, EventType,
 )
 from ...core.projections import project_order
+from ...core.money import money_round
 from ...config import settings
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -218,7 +219,7 @@ async def process_cash_payment(
         raise HTTPException(status_code=400, detail=f"Cannot pay on {order.status} order")
 
     # Apply cash dual-pricing discount if paying less than order total
-    cash_discount = round(order.total - request.amount, 2)
+    cash_discount = money_round(order.total - request.amount)
     if cash_discount > 0 and request.payment_method == "cash":
         discount_evt = create_event(
             event_type=EventType.DISCOUNT_APPROVED,
@@ -237,14 +238,14 @@ async def process_cash_payment(
         order = project_order(events)
 
     payment_id = f"pay_{uuid.uuid4().hex[:8]}"
-    total_with_tip = round(request.amount + request.tip, 2)
+    sale_amount = money_round(request.amount)
 
-    # Emit PAYMENT_INITIATED
+    # Emit PAYMENT_INITIATED (sale amount only — tip tracked via TIP_ADJUSTED)
     init_evt = payment_initiated(
         terminal_id=settings.terminal_id,
         order_id=request.order_id,
         payment_id=payment_id,
-        amount=total_with_tip,
+        amount=sale_amount,
         method="cash",
     )
     await ledger.append(init_evt)
@@ -255,7 +256,7 @@ async def process_cash_payment(
         order_id=request.order_id,
         payment_id=payment_id,
         transaction_id=f"cash_{uuid.uuid4().hex[:8]}",
-        amount=total_with_tip,
+        amount=sale_amount,
     )
     await ledger.append(confirm_evt)
 
@@ -265,7 +266,7 @@ async def process_cash_payment(
             terminal_id=settings.terminal_id,
             order_id=request.order_id,
             payment_id=payment_id,
-            tip_amount=round(request.tip, 2),
+            tip_amount=money_round(request.tip),
         )
         await ledger.append(tip_evt)
 
@@ -286,7 +287,7 @@ async def process_cash_payment(
         "success": True,
         "payment_id": payment_id,
         "order_id": request.order_id,
-        "amount": total_with_tip,
+        "amount": sale_amount,
         "tip": request.tip,
     }
 
@@ -332,7 +333,7 @@ async def adjust_tip(
                 and e.payload.get("payment_id") == request.payment_id):
             previous_tip = e.payload.get("tip_amount", 0.0)
 
-    tip_amt = round(request.tip_amount, 2)
+    tip_amt = money_round(request.tip_amount)
     evt = tip_adjusted(
         terminal_id=settings.terminal_id,
         order_id=request.order_id,

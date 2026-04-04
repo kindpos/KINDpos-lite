@@ -33,6 +33,10 @@ from app.core.events import (
     EventType,
 )
 from app.core.projections import project_order, project_orders, Order
+from decimal import Decimal
+from app.core.money import money_round
+
+_ZERO = Decimal('0')
 from app.core.event_ledger import get_open_orders
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -336,16 +340,16 @@ async def get_day_summary(
     open_count = 0
     closed_count = 0
     voided_count = 0
-    gross_sales = 0.0
-    void_total = 0.0
-    discount_total = 0.0
-    tax_total = 0.0
-    cash_total = 0.0
-    card_total = 0.0
+    gross_sales = _ZERO
+    void_total = _ZERO
+    discount_total = _ZERO
+    tax_total = _ZERO
+    cash_total = _ZERO
+    card_total = _ZERO
     cash_count = 0
     card_count = 0
-    total_tips = 0.0
-    card_tips = 0.0
+    total_tips = _ZERO
+    card_tips = _ZERO
     categories = {}
     payments_list = []
     checks_list = []
@@ -354,7 +358,7 @@ async def get_day_summary(
     for order in orders:
         if order.status == "voided":
             voided_count += 1
-            void_total += order.subtotal
+            void_total += Decimal(str(order.subtotal))
             continue
         if order.status == "open":
             open_count += 1
@@ -362,38 +366,38 @@ async def get_day_summary(
             closed_count += 1
             closed_order_ids.append(order.order_id)
 
-        gross_sales += order.subtotal
-        discount_total += order.discount_total
-        tax_total += order.tax
+        gross_sales += Decimal(str(order.subtotal))
+        discount_total += Decimal(str(order.discount_total))
+        tax_total += Decimal(str(order.tax))
 
         # Category breakdown from items
         for item in order.items:
             cat = item.category or "Uncategorized"
             if cat not in categories:
-                categories[cat] = {"name": cat, "total": 0.0, "count": 0}
-            categories[cat]["total"] += item.subtotal
+                categories[cat] = {"name": cat, "total": _ZERO, "count": 0}
+            categories[cat]["total"] += Decimal(str(item.subtotal))
             categories[cat]["count"] += 1
 
         # Payment breakdown
-        order_tip = 0.0
+        order_tip = _ZERO
         for p in order.payments:
             if p.status != "confirmed":
                 continue
-            tip = tip_map.get(p.payment_id, p.tip_amount)
+            tip = Decimal(str(tip_map.get(p.payment_id, p.tip_amount)))
             payments_list.append({
                 "order_id": order.order_id,
                 "payment_id": p.payment_id,
                 "amount": p.amount,
                 "method": p.method,
-                "tip": tip,
+                "tip": float(tip),
             })
             total_tips += tip
             order_tip += tip
             if p.method == "cash":
-                cash_total += p.amount
+                cash_total += Decimal(str(p.amount))
                 cash_count += 1
             else:
-                card_total += p.amount
+                card_total += Decimal(str(p.amount))
                 card_count += 1
                 card_tips += tip
 
@@ -410,15 +414,15 @@ async def get_day_summary(
                     "checkId": order.order_id,
                     "paymentId": card_payment.payment_id if card_payment else None,
                     "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
-                    "amount": round(order.total, 2),
-                    "tip": round(order_tip, 2),
+                    "amount": money_round(order.total),
+                    "tip": float(order_tip),
                     "adjusted": any(tip_map.get(p.payment_id) is not None for p in order.payments),
                     "method": "card",
                 })
 
-    net_sales = round(gross_sales - void_total - discount_total, 2)
+    net_sales = float(gross_sales - void_total - discount_total)
     total_checks = closed_count + open_count
-    avg_check = round(net_sales / total_checks, 2) if total_checks > 0 else 0.0
+    avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
     unadjusted = sum(1 for c in checks_list if not c["adjusted"])
 
     return {
@@ -426,23 +430,25 @@ async def get_day_summary(
         "open_orders": open_count,
         "closed_orders": closed_count,
         "voided_orders": voided_count,
-        "gross_sales": round(gross_sales, 2),
-        "void_total": round(void_total, 2),
+        "gross_sales": money_round(float(gross_sales)),
+        "void_total": money_round(float(void_total)),
         "void_count": voided_count,
-        "discount_total": round(discount_total, 2),
-        "net_sales": net_sales,
-        "tax_total": round(tax_total, 2),
-        "cash_total": round(cash_total, 2),
+        "discount_total": money_round(float(discount_total)),
+        "net_sales": money_round(net_sales),
+        "tax_total": money_round(float(tax_total)),
+        "cash_total": money_round(float(cash_total)),
         "cash_count": cash_count,
-        "card_total": round(card_total, 2),
+        "card_total": money_round(float(card_total)),
         "card_count": card_count,
-        "total_sales": round(net_sales + tax_total, 2),
-        "total_tips": round(total_tips, 2),
-        "card_tips": round(card_tips, 2),
+        "total_sales": money_round(net_sales + float(tax_total)),
+        "total_tips": money_round(float(total_tips)),
+        "card_tips": money_round(float(card_tips)),
         "total_checks": total_checks,
         "avg_check": avg_check,
         "unadjusted_tips": unadjusted,
-        "categories": list(categories.values()),
+        "categories": [
+            {**c, "total": money_round(float(c["total"]))} for c in categories.values()
+        ],
         "payments": payments_list,
         "checks": checks_list,
         "closed_order_ids": closed_order_ids,
@@ -884,28 +890,33 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     day_events = await get_current_day_events(ledger)
     all_orders = project_orders(day_events)
 
-    batch_total = 0.0
-    batch_cash = 0.0
-    batch_card = 0.0
+    batch_total = _ZERO
+    batch_cash = _ZERO
+    batch_card = _ZERO
     all_order_ids = []
     for order in all_orders.values():
         if order.status in ("closed", "paid"):
-            batch_total += order.total
+            batch_total += Decimal(str(order.total))
             all_order_ids.append(order.order_id)
             for p in order.payments:
                 if p.status == "confirmed":
                     if p.method == "cash":
-                        batch_cash += p.amount
+                        batch_cash += Decimal(str(p.amount))
                     else:
-                        batch_card += p.amount
+                        batch_card += Decimal(str(p.amount))
+
+    # Convert to float for event factories
+    batch_total_f = money_round(float(batch_total))
+    batch_cash_f = money_round(float(batch_cash))
+    batch_card_f = money_round(float(batch_card))
 
     # Emit BATCH_SUBMITTED with full settlement record
     submit_evt = batch_submitted(
         terminal_id=settings.terminal_id,
         order_count=len(all_order_ids),
-        total_amount=batch_total,
-        cash_total=batch_cash,
-        card_total=batch_card,
+        total_amount=batch_total_f,
+        cash_total=batch_cash_f,
+        card_total=batch_card_f,
         order_ids=all_order_ids,
     )
     await ledger.append(submit_evt)
@@ -921,9 +932,9 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     return {
         "success": True,
         "orders_closed_now": closed_count,
-        "batch_total": round(batch_total, 2),
-        "cash_total": round(batch_cash, 2),
-        "card_total": round(batch_card, 2),
+        "batch_total": batch_total_f,
+        "cash_total": batch_cash_f,
+        "card_total": batch_card_f,
         "order_count": len(all_order_ids),
     }
 
@@ -968,24 +979,24 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
     all_orders = project_orders(all_events)
 
     total_orders = len(all_orders)
-    total_sales = 0.0
-    total_tips = 0.0
-    cash_total = 0.0
-    card_total = 0.0
+    total_sales = _ZERO
+    total_tips = _ZERO
+    cash_total = _ZERO
+    card_total = _ZERO
     order_ids = []
     payment_count = 0
 
     for order in all_orders.values():
         if order.status in ("closed", "paid"):
-            total_sales += order.total
+            total_sales += Decimal(str(order.total))
             order_ids.append(order.order_id)
             for p in order.payments:
                 if p.status == "confirmed":
                     payment_count += 1
                     if p.method == "cash":
-                        cash_total += p.amount
+                        cash_total += Decimal(str(p.amount))
                     else:
-                        card_total += p.amount
+                        card_total += Decimal(str(p.amount))
 
     # Use last-write-wins per payment_id (same logic as day-summary)
     # to avoid double-counting when a tip is re-adjusted
@@ -993,18 +1004,24 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
     for e in all_events:
         if e.event_type == EventType.TIP_ADJUSTED:
             tip_map[e.payload.get("payment_id", "")] = e.payload.get("tip_amount", 0.0)
-    total_tips = sum(tip_map.values())
+    total_tips = sum((Decimal(str(v)) for v in tip_map.values()), _ZERO)
 
     # First event timestamp = when the day started
     opened_at = all_events[0].timestamp.isoformat() if all_events else None
+
+    # Convert Decimal accumulators to float for event factories and output
+    total_sales_f = money_round(float(total_sales))
+    total_tips_f = money_round(float(total_tips))
+    cash_total_f = money_round(float(cash_total))
+    card_total_f = money_round(float(card_total))
 
     # Emit BATCH_SUBMITTED (settlement record)
     submit_evt = batch_submitted(
         terminal_id=settings.terminal_id,
         order_count=total_orders,
-        total_amount=total_sales,
-        cash_total=cash_total,
-        card_total=card_total,
+        total_amount=total_sales_f,
+        cash_total=cash_total_f,
+        card_total=card_total_f,
         order_ids=order_ids,
     )
     await ledger.append(submit_evt)
@@ -1015,10 +1032,10 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         terminal_id=settings.terminal_id,
         date=today,
         total_orders=total_orders,
-        total_sales=total_sales,
-        total_tips=total_tips,
-        cash_total=cash_total,
-        card_total=card_total,
+        total_sales=total_sales_f,
+        total_tips=total_tips_f,
+        cash_total=cash_total_f,
+        card_total=card_total_f,
         order_ids=order_ids,
         payment_count=payment_count,
         opened_at=opened_at,
@@ -1029,10 +1046,10 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         "date": today,
         "total_orders": total_orders,
         "orders_closed_now": closed_count,
-        "total_sales": round(total_sales, 2),
-        "total_tips": round(total_tips, 2),
-        "cash_total": round(cash_total, 2),
-        "card_total": round(card_total, 2),
+        "total_sales": total_sales_f,
+        "total_tips": total_tips_f,
+        "cash_total": cash_total_f,
+        "card_total": card_total_f,
         "order_ids": order_ids,
         "payment_count": payment_count,
         "opened_at": opened_at,

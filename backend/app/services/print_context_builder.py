@@ -5,6 +5,10 @@ from typing import Dict, Any, Optional
 from ..core.event_ledger import EventLedger
 from ..core.projections import project_order
 from ..core.events import EventType
+from decimal import Decimal
+from ..core.money import money_round
+
+_ZERO = Decimal('0')
 from ..config import settings
 
 logger = logging.getLogger("kindpos.printing.context_builder")
@@ -232,13 +236,13 @@ class PrintContextBuilder:
 
         # ── Project each order ────────────────────────────────────────────────
         checks_closed = 0
-        gross_sales = 0.0
-        voids_total = 0.0
-        comps_total = 0.0
-        discounts_total = 0.0
-        tax_collected = 0.0
-        cash_sales = 0.0
-        card_sales = 0.0
+        gross_sales = _ZERO
+        voids_total = _ZERO
+        comps_total = _ZERO
+        discounts_total = _ZERO
+        tax_collected = _ZERO
+        cash_sales = _ZERO
+        card_sales = _ZERO
         cc_transactions = []
         open_tip_count = 0
 
@@ -258,9 +262,8 @@ class PrintContextBuilder:
 
             checks_closed += 1
 
-            order_subtotal = float(order.subtotal or 0)
-            order_tax = float(order.tax or 0)
-            order_total = float(order.total or 0)
+            order_subtotal = Decimal(str(order.subtotal or 0))
+            order_tax = Decimal(str(order.tax or 0))
             gross_sales += order_subtotal
             tax_collected += order_tax
 
@@ -268,17 +271,17 @@ class PrintContextBuilder:
             for e in order_events:
                 payload = e.payload or {}
                 if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += float(payload.get("amount", 0))
+                    voids_total += Decimal(str(payload.get("amount", 0)))
                 elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += float(payload.get("amount", 0))
+                    comps_total += Decimal(str(payload.get("amount", 0)))
                 elif e.event_type == EventType.DISCOUNT_APPLIED:
-                    discounts_total += float(payload.get("amount", 0))
+                    discounts_total += Decimal(str(payload.get("amount", 0)))
 
             # ── Payment details ───────────────────────────────────────────────
             for p in (order.payments or []):
                 if p.status != "confirmed":
                     continue
-                amount = float(getattr(p, "amount", 0) or 0)
+                amount = Decimal(str(getattr(p, "amount", 0) or 0))
                 tip = float(getattr(p, "tip_amount", 0) or 0)
 
                 if p.method == "cash":
@@ -299,12 +302,12 @@ class PrintContextBuilder:
                     cc_transactions.append({
                         "check_number": ticket_num,
                         "card_last_four": last4 or "****",
-                        "total": amount,
+                        "total": float(amount),
                         "tip": tip,
                         "tip_open": tip_open,
                     })
 
-        net_sales = gross_sales - voids_total - comps_total - discounts_total
+        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
         cc_tips_total = sum(t["tip"] for t in cc_transactions)
         gross_tips = cc_tips_total + (declared_cash_tips or 0.0)
 
@@ -357,7 +360,7 @@ class PrintContextBuilder:
             else:
                 base_amount = net_sales
 
-            calculated = round(base_amount * (pct / 100), 2)
+            calculated = money_round(base_amount * (pct / 100))
 
             # Apply manager override if present
             adjusted = False
@@ -369,7 +372,7 @@ class PrintContextBuilder:
                     calculated = 0.0
                 else:
                     adjusted = (override_val != calculated)
-                    calculated = round(float(override_val), 2)
+                    calculated = money_round(float(override_val))
 
             tip_outs.append({
                 "role": role,
@@ -405,24 +408,24 @@ class PrintContextBuilder:
             "clock_out": clock_out,
             "shift_duration": shift_duration,
             "checks_closed": checks_closed,
-            "gross_sales": round(gross_sales, 2),
-            "voids_total": round(voids_total, 2),
-            "comps_total": round(comps_total, 2),
-            "discounts_total": round(discounts_total, 2),
-            "net_sales": round(net_sales, 2),
-            "tax_collected": round(tax_collected, 2),
-            "cash_sales": round(cash_sales, 2),
-            "card_sales": round(card_sales, 2),
+            "gross_sales": money_round(float(gross_sales)),
+            "voids_total": money_round(float(voids_total)),
+            "comps_total": money_round(float(comps_total)),
+            "discounts_total": money_round(float(discounts_total)),
+            "net_sales": money_round(net_sales),
+            "tax_collected": money_round(float(tax_collected)),
+            "cash_sales": money_round(float(cash_sales)),
+            "card_sales": money_round(float(card_sales)),
             "show_cc_detail": getattr(settings, "show_cc_detail", True),
             "cc_transactions": cc_transactions,
-            "cc_tips_total": round(cc_tips_total, 2),
+            "cc_tips_total": money_round(cc_tips_total),
             "declared_cash_tips": declared_cash_tips,
-            "gross_tips": round(gross_tips, 2),
+            "gross_tips": money_round(gross_tips),
             "tip_pool": tip_pool,
             "tip_outs": tip_outs,
-            "total_tip_out": round(total_tip_out, 2),
-            "net_tips": round(net_tips, 2),
-            "cash_collected": round(cash_collected, 2),
+            "total_tip_out": money_round(total_tip_out),
+            "net_tips": money_round(net_tips),
+            "cash_collected": money_round(float(cash_sales)),
             "cc_tips_payout": getattr(settings, "cc_tips_payout", "cash"),
             "open_tip_count": open_tip_count,
             "require_manager_sign": getattr(settings, "require_manager_sign", True),
@@ -459,19 +462,19 @@ class PrintContextBuilder:
 
         # ── Aggregate across all orders ───────────────────────────────────────
         total_checks = 0
-        gross_sales = 0.0
-        voids_total = 0.0
+        gross_sales = _ZERO
+        voids_total = _ZERO
         voids_count = 0
-        comps_total = 0.0
+        comps_total = _ZERO
         comps_count = 0
-        discounts_total = 0.0
+        discounts_total = _ZERO
         discounts_count = 0
-        tax_collected = 0.0
-        cash_sales = 0.0
+        tax_collected = _ZERO
+        cash_sales = _ZERO
         cash_count = 0
-        card_sales = 0.0
+        card_sales = _ZERO
         card_count = 0
-        total_tips = 0.0
+        total_tips = _ZERO
         covers = 0
         category_totals = {}  # {category_name: {"total": float, "count": int}}
 
@@ -490,8 +493,8 @@ class PrintContextBuilder:
                 continue
 
             total_checks += 1
-            order_subtotal = float(order.subtotal or 0)
-            order_tax = float(order.tax or 0)
+            order_subtotal = Decimal(str(order.subtotal or 0))
+            order_tax = Decimal(str(order.tax or 0))
             gross_sales += order_subtotal
             tax_collected += order_tax
 
@@ -503,9 +506,9 @@ class PrintContextBuilder:
                     seats.add(seat)
                 # Category aggregation
                 cat = getattr(item, "category", None) or "Uncategorized"
-                item_total = float(item.quantity * item.price)
+                item_total = Decimal(str(item.quantity * item.price))
                 if cat not in category_totals:
-                    category_totals[cat] = {"total": 0.0, "count": 0}
+                    category_totals[cat] = {"total": _ZERO, "count": 0}
                 category_totals[cat]["total"] += item_total
                 category_totals[cat]["count"] += item.quantity
 
@@ -515,21 +518,21 @@ class PrintContextBuilder:
             for e in order_events:
                 payload = e.payload or {}
                 if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += float(payload.get("amount", 0))
+                    voids_total += Decimal(str(payload.get("amount", 0)))
                     voids_count += 1
                 elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += float(payload.get("amount", 0))
+                    comps_total += Decimal(str(payload.get("amount", 0)))
                     comps_count += 1
                 elif e.event_type == EventType.DISCOUNT_APPLIED:
-                    discounts_total += float(payload.get("amount", 0))
+                    discounts_total += Decimal(str(payload.get("amount", 0)))
                     discounts_count += 1
 
             # Payments
             for p in (order.payments or []):
                 if p.status != "confirmed":
                     continue
-                amount = float(getattr(p, "amount", 0) or 0)
-                tip = float(getattr(p, "tip_amount", 0) or 0)
+                amount = Decimal(str(getattr(p, "amount", 0) or 0))
+                tip = Decimal(str(getattr(p, "tip_amount", 0) or 0))
                 total_tips += tip
 
                 if p.method == "cash":
@@ -539,15 +542,15 @@ class PrintContextBuilder:
                     card_sales += amount
                     card_count += 1
 
-        net_sales = gross_sales - voids_total - comps_total - discounts_total
-        total_payments = cash_sales + card_sales
-        avg_check = round(net_sales / total_checks, 2) if total_checks > 0 else 0.0
-        per_person_avg = round(net_sales / covers, 2) if covers > 0 else 0.0
+        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
+        total_payments = float(cash_sales + card_sales)
+        avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
+        per_person_avg = money_round(net_sales / covers) if covers > 0 else 0.0
 
         # ── Category sales (sorted by total descending) ───────────────────────
         category_sales = sorted(
             [
-                {"name": name, "total": round(data["total"], 2), "count": data["count"]}
+                {"name": name, "total": money_round(float(data["total"])), "count": data["count"]}
                 for name, data in category_totals.items()
             ],
             key=lambda c: c["total"],
@@ -555,7 +558,7 @@ class PrintContextBuilder:
         )
 
         # ── Tax lines ─────────────────────────────────────────────────────────
-        tax_lines = [{"label": "Tax", "amount": round(tax_collected, 2)}]
+        tax_lines = [{"label": "Tax", "amount": money_round(float(tax_collected))}]
 
         # ── Daypart breakdown ─────────────────────────────────────────────────
         # TODO: Implement daypart bucketing once order timestamps are available
@@ -577,23 +580,23 @@ class PrintContextBuilder:
             "date_to": "",
             "printed_by": printed_by,
             "printed_at": datetime.now(timezone.utc).isoformat(),
-            "gross_sales": round(gross_sales, 2),
-            "voids_total": round(voids_total, 2),
+            "gross_sales": money_round(float(gross_sales)),
+            "voids_total": money_round(float(voids_total)),
             "voids_count": voids_count,
-            "comps_total": round(comps_total, 2),
+            "comps_total": money_round(float(comps_total)),
             "comps_count": comps_count,
-            "discounts_total": round(discounts_total, 2),
+            "discounts_total": money_round(float(discounts_total)),
             "discounts_count": discounts_count,
-            "net_sales": round(net_sales, 2),
-            "tax_collected": round(tax_collected, 2),
+            "net_sales": money_round(net_sales),
+            "tax_collected": money_round(float(tax_collected)),
             "tax_lines": tax_lines,
-            "cash_sales": round(cash_sales, 2),
+            "cash_sales": money_round(float(cash_sales)),
             "cash_count": cash_count,
-            "card_sales": round(card_sales, 2),
+            "card_sales": money_round(float(card_sales)),
             "card_count": card_count,
             "other_payments": [],
-            "total_payments": round(total_payments, 2),
-            "total_tips": round(total_tips, 2),
+            "total_payments": money_round(total_payments),
+            "total_tips": money_round(float(total_tips)),
             "category_sales": category_sales,
             "total_checks": total_checks,
             "avg_check": avg_check,
