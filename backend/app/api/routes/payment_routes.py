@@ -10,7 +10,7 @@ from ..dependencies import get_ledger
 from ...core.event_ledger import EventLedger
 from ...core.adapters.payment_manager import PaymentManager
 from ...core.adapters.payment_validator import PaymentValidator
-from ...core.adapters.base_payment import TransactionRequest, TransactionResult, ValidationStatus, ValidationResult, PaymentDeviceConfig, PaymentDeviceType
+from ...core.adapters.base_payment import TransactionRequest, TransactionResult, TransactionStatus, ValidationStatus, ValidationResult, PaymentDeviceConfig, PaymentDeviceType
 from ...core.adapters.mock_payment import MockPaymentDevice
 from ...core.adapters.dejavoo_spin import DejavooSPInAdapter
 from ...core.events import (
@@ -175,6 +175,17 @@ async def process_sale(
 
     # 3. Process
     result = await manager.initiate_sale(request)
+
+    # Return HTTP error if the transaction was not approved
+    if hasattr(result, 'status'):
+        if result.status == TransactionStatus.DECLINED:
+            raise HTTPException(status_code=402, detail=result.processor_message or "Declined")
+        if result.status == TransactionStatus.CANCELLED:
+            raise HTTPException(status_code=400, detail=result.processor_message or "Cancelled")
+        if result.status == TransactionStatus.ERROR:
+            msg = result.error.message if result.error else "Transaction error"
+            raise HTTPException(status_code=502, detail=msg)
+
     return result
 
 
