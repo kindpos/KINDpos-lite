@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Payment Scene
-//  Cash: preset grid + numpad | Card: await tap
+//  Left-to-right flow: Summary → Input → Result
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
@@ -20,17 +20,21 @@ var tendered   = 0;
 var numpadStr  = '';
 var sceneEl    = null;
 var sceneData  = {};
+var rightCol   = null;   // reference to step-3 column
+var returnTimer = null;
 
 registerScene('payment', {
   onEnter: function(el, params) {
     setSceneName(params.checkId || 'ORDER');
-    setHeaderBack(false);   // no back mid-payment
+    setHeaderBack(false);
 
     sceneEl          = el;
     sceneData        = params;
     tendered         = 0;
     numpadStr        = '';
     confirmProcessing = false;
+    rightCol         = null;
+    returnTimer      = null;
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -41,11 +45,18 @@ registerScene('payment', {
 
     el.appendChild(buildLeft(params));
     el.appendChild(buildCenter(params));
-    el.appendChild(buildRight(params));
+    rightCol = buildRight(params);
+    el.appendChild(rightCol);
+  },
+  onExit: function() {
+    if (returnTimer) { clearTimeout(returnTimer); returnTimer = null; }
   },
 });
 
-// ── LEFT — totals summary ─────────────────────────
+// ═══════════════════════════════════════════════════
+//  STEP 1 — LEFT: Order summary + totals
+// ═══════════════════════════════════════════════════
+
 function buildLeft(params) {
   var panel = document.createElement('div');
   panel.style.cssText = [
@@ -155,7 +166,10 @@ function buildTotalsRow(label, value, big, color, id) {
   return row;
 }
 
-// ── CENTER — presets (cash) or spacer (card) ──────
+// ═══════════════════════════════════════════════════
+//  STEP 2 — CENTER: Payment input
+// ═══════════════════════════════════════════════════
+
 function buildCenter(params) {
   var col = document.createElement('div');
   col.style.cssText = [
@@ -164,7 +178,7 @@ function buildCenter(params) {
   ].join('');
 
   if (params.paymentMode !== 'cash') {
-    // Card — just a waiting panel
+    // Card — waiting panel
     var waitCard = document.createElement('div');
     waitCard.style.cssText = [
       'flex:1;display:flex;flex-direction:column;',
@@ -183,7 +197,7 @@ function buildCenter(params) {
     waitCard.appendChild(waitText);
     col.appendChild(waitCard);
 
-    // Confirm for card (fires payment)
+    // Confirm for card
     col.appendChild(buildConfirmBtn(params, true));
     return col;
   }
@@ -209,13 +223,14 @@ function buildCenter(params) {
   col.appendChild(grid);
 
   // Exact button
-  var exact = buildButton('Exact', {
-    fill: T.gold, color: T.bgDark, fontSize: '22px',
+  var exact = buildButton('EXACT $' + params.cashPrice.toFixed(2), {
+    fill: T.gold, color: T.bgDark, fontSize: '20px',
     height: BTN_H,
     onTap: function() {
-      tendered   = params.cashPrice;
-      numpadStr  = '';
+      tendered  = params.cashPrice;
+      numpadStr = '';
       updateCashDisplay(params);
+      handleConfirm(params);
     },
   });
   exact.style.flexShrink = '0';
@@ -224,13 +239,16 @@ function buildCenter(params) {
   return col;
 }
 
-// ── RIGHT — display + numpad ───────────────────────
+// ═══════════════════════════════════════════════════
+//  STEP 3 — RIGHT: Result (starts as waiting state)
+// ═══════════════════════════════════════════════════
+
 function buildRight(params) {
   var col = document.createElement('div');
   col.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;';
 
   if (params.paymentMode !== 'cash') {
-    // Card — transaction status panel
+    // Card — reader status panel
     var panel = document.createElement('div');
     panel.style.cssText = [
       'flex:1;background:' + T.bgDark + ';',
@@ -241,7 +259,6 @@ function buildRight(params) {
       'padding:24px;',
     ].join('');
 
-    // Terminal icon
     var icon = document.createElement('div');
     icon.style.cssText = [
       'width:80px;height:80px;',
@@ -253,13 +270,11 @@ function buildRight(params) {
     icon.textContent = '◈';
     panel.appendChild(icon);
 
-    // Status heading
     var heading = document.createElement('div');
     heading.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';letter-spacing:0.1em;text-align:center;';
     heading.textContent = 'CARD READER ACTIVE';
     panel.appendChild(heading);
 
-    // Animated dots
     var dotsEl = document.createElement('div');
     dotsEl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';letter-spacing:0.3em;height:30px;';
     dotsEl.textContent = '●○○';
@@ -270,15 +285,13 @@ function buildRight(params) {
       dotFrame = (dotFrame + 1) % dotPatterns.length;
       dotsEl.textContent = dotPatterns[dotFrame];
     }, 400);
+    panel._dotTimer = dotTimer;
 
-    // Status message
     var statusEl = document.createElement('div');
-    statusEl.id = 'card-status-msg';
     statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;line-height:1.6;letter-spacing:0.05em;';
     statusEl.textContent = 'Present card on terminal\nTap, insert, or swipe';
     panel.appendChild(statusEl);
 
-    // Amount display
     var amtEl = document.createElement('div');
     amtEl.style.cssText = [
       'margin-top:12px;padding:12px 24px;',
@@ -290,22 +303,11 @@ function buildRight(params) {
     amtEl.textContent = '$' + params.cardTotal.toFixed(2);
     panel.appendChild(amtEl);
 
-    // Device info
-    var devInfo = document.createElement('div');
-    devInfo.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.12em;margin-top:8px;';
-    devInfo.textContent = '— DEJAVOO SPIn TERMINAL —';
-    panel.appendChild(devInfo);
-
-    // Clean up timer on scene exit
-    panel.addEventListener('remove', function() { clearInterval(dotTimer); });
-    // Also store timer for cleanup
-    panel._dotTimer = dotTimer;
-
     col.appendChild(panel);
     return col;
   }
 
-  // Cash — numpad component with dollar display + live change-due strip
+  // Cash — numpad
   var changeStrip = document.createElement('div');
   changeStrip.id = 'pay-display-change';
   changeStrip.style.cssText = [
@@ -336,43 +338,123 @@ function buildRight(params) {
   return col;
 }
 
-function buildNumKey(digit, params) {
-  var btn = document.createElement('div');
-  btn.style.cssText = numKeyStyle('#333', T.mint);
-  btn.textContent = digit;
-  btn.addEventListener('pointerdown', function() { applyPress(btn, true); });
-  btn.addEventListener('pointerup',   function() {
-    applyPress(btn, false);
-    numPress(digit, params);
+// ═══════════════════════════════════════════════════
+//  STEP 3 ACTIVATION — Replace right col with result
+// ═══════════════════════════════════════════════════
+
+function activateResult(params, change) {
+  if (!rightCol) return;
+
+  // Stop any dot timers in old content
+  var oldPanel = rightCol.querySelector('div');
+  if (oldPanel && oldPanel._dotTimer) clearInterval(oldPanel._dotTimer);
+
+  // Clear and rebuild right column as the result panel
+  rightCol.innerHTML = '';
+
+  var isCash    = params.paymentMode === 'cash';
+  var hasChange = isCash && change > 0;
+  var amount    = isCash ? params.cashPrice : params.cardTotal;
+
+  var panel = document.createElement('div');
+  panel.style.cssText = [
+    'flex:1;background:' + T.bgDark + ';',
+    'border:2px solid ' + T.mint + ';',
+    'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',
+    'display:flex;flex-direction:column;',
+    'align-items:center;justify-content:center;gap:16px;',
+    'padding:24px;',
+    'animation:fadeIn 0.3s ease;',
+  ].join('');
+
+  // Status icon
+  var icon = document.createElement('div');
+  icon.style.cssText = 'font-size:56px;';
+  icon.textContent = hasChange ? '$' : '✓';
+  panel.appendChild(icon);
+
+  // Main heading
+  var heading = document.createElement('div');
+  heading.style.cssText = 'font-family:' + T.fb + ';font-size:28px;font-weight:bold;color:' + T.mint + ';letter-spacing:0.1em;text-align:center;';
+  if (hasChange) {
+    heading.textContent = 'CHANGE DUE';
+  } else if (isCash) {
+    heading.textContent = 'EXACT CHANGE';
+  } else {
+    heading.textContent = 'APPROVED';
+  }
+  panel.appendChild(heading);
+
+  // Amount
+  if (hasChange) {
+    var changeEl = document.createElement('div');
+    changeEl.style.cssText = 'font-family:' + T.fb + ';font-size:72px;font-weight:bold;color:' + T.cyan + ';line-height:1;letter-spacing:0.02em;';
+    changeEl.textContent = '$' + change.toFixed(2);
+    panel.appendChild(changeEl);
+  }
+
+  // Charged line
+  var chargedLine = document.createElement('div');
+  chargedLine.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';letter-spacing:0.06em;';
+  chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + amount.toFixed(2);
+  panel.appendChild(chargedLine);
+
+  // Receipt printing indicator
+  var printLine = document.createElement('div');
+  printLine.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.1em;margin-top:12px;';
+  printLine.textContent = 'RECEIPT PRINTING...';
+  panel.appendChild(printLine);
+
+  // Progress bar — auto-return countdown
+  var AUTO_MS = 4000;
+
+  var progressTrack = document.createElement('div');
+  progressTrack.style.cssText = [
+    'width:80%;height:4px;margin-top:8px;',
+    'background:' + T.bgLight + ';',
+    'box-shadow:inset 1px 1px 0 #151515;',
+  ].join('');
+  var progressFill = document.createElement('div');
+  progressFill.style.cssText = [
+    'height:100%;width:0%;',
+    'background:' + T.mint + ';',
+    'transition:width ' + AUTO_MS + 'ms linear;',
+  ].join('');
+  progressTrack.appendChild(progressFill);
+  panel.appendChild(progressTrack);
+
+  // Tap hint
+  var hint = document.createElement('div');
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.08em;margin-top:4px;';
+  hint.textContent = 'tap to continue';
+  panel.appendChild(hint);
+
+  rightCol.appendChild(panel);
+
+  // Tap panel to dismiss early
+  panel.addEventListener('pointerup', function() {
+    doReturn(params.returnScene);
   });
-  return btn;
+
+  // Kick progress bar
+  requestAnimationFrame(function() {
+    progressFill.style.width = '100%';
+  });
+
+  // Auto-return
+  returnTimer = setTimeout(function() {
+    doReturn(params.returnScene);
+  }, AUTO_MS);
 }
 
-function buildActionKey(label, bg, color, onTap) {
-  var btn = document.createElement('div');
-  btn.style.cssText = numKeyStyle(bg, color);
-  btn.textContent = label;
-  btn.addEventListener('pointerdown', function() { applyPress(btn, true); });
-  btn.addEventListener('pointerup',   function() { applyPress(btn, false); onTap(); });
-  return btn;
+function doReturn(returnScene) {
+  if (returnTimer) { clearTimeout(returnTimer); returnTimer = null; }
+  replace(returnScene || 'order-entry', {});
 }
 
-function buildConfirmKey(params) {
-  var btn = document.createElement('div');
-  btn.id = 'pay-confirm';
-  btn.style.cssText = numKeyStyle('#1a3a1a', '#2a4a2a');  // starts disabled
-  btn.textContent = '▶▶▶';
-  btn.addEventListener('pointerdown', function() {
-    if (tendered < params.cashPrice) return;
-    applyPress(btn, true);
-  });
-  btn.addEventListener('pointerup', function() {
-    if (tendered < params.cashPrice) return;
-    applyPress(btn, false);
-    handleConfirm(params);
-  });
-  return btn;
-}
+// ═══════════════════════════════════════════════════
+//  CONFIRM BUTTON
+// ═══════════════════════════════════════════════════
 
 function buildConfirmBtn(params, isCard) {
   var btn = buildButton('CHARGE  $' + params.cardTotal.toFixed(2), {
@@ -384,13 +466,9 @@ function buildConfirmBtn(params, isCard) {
   return btn;
 }
 
-// ── NUMPAD LOGIC ──────────────────────────────────
-function numPress(digit, params) {
-  if (numpadStr.length >= 7) return;
-  numpadStr += digit;
-  tendered = parseInt(numpadStr, 10) / 100;
-  updateCashDisplay(params);
-}
+// ═══════════════════════════════════════════════════
+//  CASH HELPERS
+// ═══════════════════════════════════════════════════
 
 function addTendered(val, params) {
   tendered  += val;
@@ -425,14 +503,14 @@ function updateCashDisplay(params) {
   }
 }
 
-// ── API ───────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+//  API + CONFIRM
+// ═══════════════════════════════════════════════════
 var API = '/api/v1';
-
-// ── CONFIRM ───────────────────────────────────────
 var confirmProcessing = false;
 
 async function handleConfirm(params) {
-  if (confirmProcessing) return;       // debounce — prevent double-charge
+  if (confirmProcessing) return;
   confirmProcessing = true;
 
   var isCash = params.paymentMode === 'cash';
@@ -454,11 +532,11 @@ async function handleConfirm(params) {
       if (!res.ok) {
         var err = await res.json().catch(function() { return {}; });
         console.error('[KINDpos] Cash payment failed:', err);
-        return;  // stay on screen, let operator retry
+        confirmProcessing = false;
+        return;
       }
     }
     if (!isCash) {
-      // Card payment — route through PaymentManager → SPIn adapter
       var res = await fetch(API + '/payments/sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -471,55 +549,28 @@ async function handleConfirm(params) {
       if (!res.ok) {
         var err = await res.json().catch(function() { return {}; });
         console.error('[KINDpos] Card payment failed:', err);
-        return;  // stay on screen, let operator retry
+        confirmProcessing = false;
+        return;
       }
     }
 
-    // ── Receipt printing ──────────────────────────────────────────────────
-    // Config flags — will be driven by settings scene once wired
-    var PRINT_ITEMIZED = false;   // TODO: read from terminal config
-
+    // ── Receipt printing ──────────────────────────
     function queueReceipt(copyType) {
       fetch(API + '/print/receipt/' + params.orderId + '?copy_type=' + copyType, { method: 'POST' })
         .catch(function(err) { console.warn('[KINDpos] Receipt print failed (' + copyType + '):', err); });
     }
 
-    // Customer copy — always
     queueReceipt('customer');
-
-    // Merchant copy — card only (per spec 1A)
     if (!isCash) queueReceipt('merchant');
-
-    // Itemized copy — configurable (default off until settings scene wired)
-    if (PRINT_ITEMIZED) queueReceipt('itemized');
 
   } catch (err) {
     console.error('[KINDpos] Confirm error:', err);
-    confirmProcessing = false;           // allow retry after error
+    confirmProcessing = false;
     return;
   }
 
   confirmProcessing = false;
-  replace('change-due', {
-    change:      change,
-    paymentMode: params.paymentMode,
-    total:       amount,
-    returnScene: params.returnScene,
-  });
-}
 
-// ── HELPERS ───────────────────────────────────────
-function numKeyStyle(bg, color) {
-  return [
-    'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:22px;font-weight:bold;',
-    'color:' + color + ';background:' + bg + ';cursor:pointer;',
-    'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);',
-    'box-shadow:3px 4px 0 rgba(198,255,187,0.45),inset 4px 4px 0 #5a5a5a,inset -4px -4px 0 #151515;',
-  ].join('');
-}
-
-function applyPress(el, down) {
-  el.style.transform  = down ? 'translate(3px,4px)' : '';
-  el.style.boxShadow  = down ? 'none' : '';
+  // ── Activate step 3: show result in right column ──
+  activateResult(params, change);
 }
