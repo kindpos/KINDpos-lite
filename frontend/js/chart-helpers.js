@@ -143,7 +143,7 @@ export function drawBarChart(svg, data, options) {
       var vX = x + groupW / 2;
       var vY = barY + vTh + 4;
       if (vY > padTop + chartH - 2) vY = barY + vTh;
-      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: '#444444' }));
+      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: '#111111' }));
       svg.appendChild(svgEl('text', { x: vX, y: vY - 1, fill: color, 'font-size': '' + vFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valStr;
     }
 
@@ -256,7 +256,7 @@ export function drawStackedArea(svg, data, options) {
       if (cy > baseline - 4) cy = toY(data[i].value) - 4;
       var tw = cText.length * coFs * 0.6 + 10;
       var th = coFs + 4;
-      svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 2, width: tw, height: th, fill: '#444444' }));
+      svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 2, width: tw, height: th, fill: '#111111' }));
       svg.appendChild(svgEl('text', { x: cx, y: cy - 1, fill: color, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = cText;
     }
 
@@ -268,7 +268,7 @@ export function drawStackedArea(svg, data, options) {
         var ccy = toY(data[i].compareValue) + coFs + 6;
         if (ccy > baseline - 4) ccy = toY(data[i].compareValue) - 4;
         var ctw = ccText.length * coFs * 0.6 + 10;
-        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 2, width: ctw, height: th, fill: '#444444' }));
+        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 2, width: ctw, height: th, fill: '#111111' }));
         svg.appendChild(svgEl('text', { x: ccx, y: ccy - 1, fill: compareColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle' })).textContent = ccText;
       }
     }
@@ -363,7 +363,7 @@ export function drawParetoChart(svg, data, options) {
       var vth = coFs + 4;
       var vcy = barY + vth + 4;
       if (vcy > padTop + chartH - 2) vcy = barY + vth;
-      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 2, width: vtw, height: vth, fill: '#444444' }));
+      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 2, width: vtw, height: vth, fill: '#111111' }));
       svg.appendChild(svgEl('text', { x: x + groupW / 2, y: vcy - 1, fill: barColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valText;
     }
 
