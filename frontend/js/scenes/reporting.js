@@ -53,9 +53,9 @@ function buildCollapsedView(el, params, sales, labor) {
   var rightCard = buildRightCard(params, sales, labor);
 
   leftCard.style.flex = '1';
-  leftCard.style.border = '8px solid ' + T.mint;
+  leftCard.style.border = '20px solid ' + T.mint;
   rightCard.style.flex = '1';
-  rightCard.style.border = '8px solid ' + T.mint;
+  rightCard.style.border = '20px solid ' + T.mint;
 
   leftCard.addEventListener('pointerup', function() {
     expandedCard = 'left';
@@ -136,7 +136,7 @@ function buildRightCard(params, sales, labor) {
 
   if (params.role === 'manager') {
     // LABOR card — vertical cyan rail + KPIs
-    card.appendChild(buildVerticalRail('LABOR', T.cyan));
+    card.appendChild(buildVerticalRail('LABOR', '#33ff99'));
 
     var kpis = document.createElement('div');
     kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;flex:1;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';justify-content:center;';
