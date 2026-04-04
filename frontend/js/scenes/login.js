@@ -342,18 +342,16 @@ function doClockIn(emp, roleName, statusEl) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ employee_id: emp.id, employee_name: emp.name }),
-  }).then(function(r) { return r.json(); }).then(function(data) {
-    if (data.success) {
-      statusEl.textContent = 'Clocked in!';
-      statusEl.style.color = T.goGreen;
-      printClockHours(emp, roleName, 'CLOCK IN');
-      setTimeout(function() { dismissOverlay(); }, 1200);
-    } else {
-      statusEl.textContent = 'Failed to clock in';
-      statusEl.style.color = T.red;
-    }
-  }).catch(function() {
-    statusEl.textContent = 'Network error';
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(err) { throw new Error(err.detail || 'Failed'); });
+    return r.json();
+  }).then(function(data) {
+    statusEl.textContent = 'Clocked in!';
+    statusEl.style.color = T.goGreen;
+    printClockHours(emp, roleName, 'CLOCK IN');
+    setTimeout(function() { dismissOverlay(); }, 1200);
+  }).catch(function(e) {
+    statusEl.textContent = e.message || 'Network error';
     statusEl.style.color = T.red;
   });
 }
@@ -363,18 +361,16 @@ function doClockOut(emp, roleName, statusEl) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ employee_id: emp.id, employee_name: emp.name }),
-  }).then(function(r) { return r.json(); }).then(function(data) {
-    if (data.success) {
-      statusEl.textContent = 'Clocked out!';
-      statusEl.style.color = T.gold;
-      printClockHours(emp, roleName, 'CLOCK OUT');
-      setTimeout(function() { dismissOverlay(); }, 1200);
-    } else {
-      statusEl.textContent = 'Failed to clock out';
-      statusEl.style.color = T.red;
-    }
-  }).catch(function() {
-    statusEl.textContent = 'Network error';
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(err) { throw new Error(err.detail || 'Failed'); });
+    return r.json();
+  }).then(function(data) {
+    statusEl.textContent = 'Clocked out!';
+    statusEl.style.color = T.gold;
+    printClockHours(emp, roleName, 'CLOCK OUT');
+    setTimeout(function() { dismissOverlay(); }, 1200);
+  }).catch(function(e) {
+    statusEl.textContent = e.message || 'Network error';
     statusEl.style.color = T.red;
   });
 }
