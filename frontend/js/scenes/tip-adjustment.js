@@ -132,6 +132,12 @@ function renderTable() {
       tr.appendChild(td);
     });
 
+    // Sync error indicator — tip failed to save to backend
+    if (c.syncError) {
+      tr.style.outline = '2px solid #ff4444';
+      tr.title = 'Tip failed to save — tap tip cell to retry';
+    }
+
     // Dimming in edit mode
     if (editingIndex >= 0) {
       if (i === editingIndex) {
@@ -219,8 +225,9 @@ function numpadClear() {
   updateNumpadDisplay();
 }
 
-function persistTip(c) {
+function persistTip(c, attempt) {
   if (!c.paymentId) return;
+  attempt = attempt || 1;
   fetch('/api/v1/payments/tip-adjust', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -229,7 +236,25 @@ function persistTip(c) {
       payment_id: c.paymentId,
       tip_amount:  c.tip,
     }),
-  }).catch(function(err) { console.warn('[KINDpos] Tip adjust failed:', err); });
+  }).then(function(res) {
+    if (res.ok) {
+      c.syncError = false;
+    } else if (!res.ok && attempt < 3) {
+      setTimeout(function() { persistTip(c, attempt + 1); }, 1000 * attempt);
+    } else if (!res.ok) {
+      console.error('[KINDpos] Tip adjust failed after retries:', res.status);
+      c.syncError = true;
+      renderTable();
+    }
+  }).catch(function(err) {
+    if (attempt < 3) {
+      setTimeout(function() { persistTip(c, attempt + 1); }, 1000 * attempt);
+    } else {
+      console.error('[KINDpos] Tip adjust failed after retries:', err);
+      c.syncError = true;
+      renderTable();
+    }
+  });
 }
 
 function numpadSubmit() {

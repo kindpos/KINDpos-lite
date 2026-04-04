@@ -735,6 +735,39 @@ async def void_order(
             detail="Cannot void a closed order"
         )
 
+    # Reverse confirmed card payments on the payment device
+    from .payment_routes import get_payment_manager, _ensure_devices
+    from app.core.adapters.base_payment import TransactionRequest as TxReq
+    device_void_errors = []
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+    for p in order.payments:
+        if p.status == "confirmed" and p.method != "cash" and p.transaction_id:
+            device = manager.get_device_for_terminal(settings.terminal_id)
+            if device and hasattr(device, 'initiate_void'):
+                try:
+                    void_req = TxReq(
+                        order_id=order_id,
+                        amount=p.amount,
+                        terminal_id=settings.terminal_id,
+                        transaction_id=p.transaction_id,
+                    )
+                    result = await device.initiate_void(void_req)
+                    if result.status.value != "APPROVED":
+                        device_void_errors.append(
+                            f"Device void failed for payment {p.payment_id}: {result.status.value}"
+                        )
+                except Exception as e:
+                    device_void_errors.append(
+                        f"Device void error for payment {p.payment_id}: {str(e)}"
+                    )
+
+    if device_void_errors:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Cannot void order — card reversal failed: {'; '.join(device_void_errors)}",
+        )
+
     event = order_voided(
         terminal_id=settings.terminal_id,
         order_id=order_id,
@@ -817,18 +850,31 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     closed_count = 0
     closed_order_ids = []
 
+    voided_at_close = 0
     for oid in open_ids:
         events = await ledger.get_events_by_correlation(oid)
         order = project_order(events)
         if order and order.status == "open":
-            evt = order_closed(
-                terminal_id=settings.terminal_id,
-                order_id=oid,
-                total=order.total,
-            )
-            await ledger.append(evt)
-            closed_count += 1
-            closed_order_ids.append(oid)
+            if order.is_fully_paid:
+                # Fully paid — safe to close
+                evt = order_closed(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    total=order.total,
+                )
+                await ledger.append(evt)
+                closed_count += 1
+                closed_order_ids.append(oid)
+            else:
+                # Unpaid or underpaid — void instead of closing
+                evt = order_voided(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    reason="Auto-voided at batch close (unpaid)",
+                    approved_by="system",
+                )
+                await ledger.append(evt)
+                voided_at_close += 1
 
     # Compute batch totals from current-day orders
     day_events = await get_current_day_events(ledger)
@@ -896,13 +942,22 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         events = await ledger.get_events_by_correlation(oid)
         order = project_order(events)
         if order and order.status in ("open", "paid"):
-            evt = order_closed(
-                terminal_id=settings.terminal_id,
-                order_id=oid,
-                total=order.total,
-            )
-            await ledger.append(evt)
-            closed_count += 1
+            if order.is_fully_paid:
+                evt = order_closed(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    total=order.total,
+                )
+                await ledger.append(evt)
+                closed_count += 1
+            else:
+                evt = order_voided(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    reason="Auto-voided at day close (unpaid)",
+                    approved_by="system",
+                )
+                await ledger.append(evt)
 
     # Build day summary BEFORE emitting boundary events
     all_events = await get_current_day_events(ledger)
@@ -928,9 +983,13 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
                     else:
                         card_total += p.amount
 
+    # Use last-write-wins per payment_id (same logic as day-summary)
+    # to avoid double-counting when a tip is re-adjusted
+    tip_map: dict[str, float] = {}
     for e in all_events:
         if e.event_type == EventType.TIP_ADJUSTED:
-            total_tips += e.payload.get("tip_amount", 0.0)
+            tip_map[e.payload.get("payment_id", "")] = e.payload.get("tip_amount", 0.0)
+    total_tips = sum(tip_map.values())
 
     # First event timestamp = when the day started
     opened_at = all_events[0].timestamp.isoformat() if all_events else None

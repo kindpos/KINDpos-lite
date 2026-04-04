@@ -170,6 +170,25 @@ async def process_cash_payment(
     if order.status in ("closed", "voided"):
         raise HTTPException(status_code=400, detail=f"Cannot pay on {order.status} order")
 
+    # Apply cash dual-pricing discount if paying less than order total
+    cash_discount = round(order.total - request.amount, 2)
+    if cash_discount > 0 and request.payment_method == "cash":
+        discount_evt = create_event(
+            event_type=EventType.DISCOUNT_APPROVED,
+            terminal_id=settings.terminal_id,
+            payload={
+                "order_id": request.order_id,
+                "discount_type": "cash_dual_pricing",
+                "amount": cash_discount,
+                "reason": "Cash dual-pricing discount",
+            },
+            correlation_id=request.order_id,
+        )
+        await ledger.append(discount_evt)
+        # Re-project so order.total reflects the discount
+        events = await ledger.get_events_by_correlation(request.order_id)
+        order = project_order(events)
+
     payment_id = f"pay_{uuid.uuid4().hex[:8]}"
     total_with_tip = round(request.amount + request.tip, 2)
 
@@ -278,6 +297,7 @@ async def adjust_tip(
 
     # Send tip adjust to payment device so it's included in batch settlement
     device_adjusted = False
+    device_error = None
     manager = get_payment_manager(ledger)
     await _ensure_devices(manager)
     device = manager.get_device_for_terminal(settings.terminal_id)
@@ -286,8 +306,15 @@ async def adjust_tip(
             from decimal import Decimal
             result = await device.adjust_tip(target.payment_id, Decimal(str(tip_amt)))
             device_adjusted = result.status.value == "APPROVED"
-        except Exception:
-            pass
+            if not device_adjusted:
+                device_error = f"Device tip adjust returned {result.status.value}"
+        except Exception as e:
+            device_error = f"Device tip adjust exception: {e}"
+    if device_error:
+        import logging
+        logging.getLogger("kindpos.payment").warning(
+            f"Tip adjust for {request.payment_id} saved to ledger but device sync failed: {device_error}"
+        )
 
     return {
         "success": True,
@@ -296,6 +323,7 @@ async def adjust_tip(
         "tip_amount": tip_amt,
         "previous_tip": previous_tip,
         "device_adjusted": device_adjusted,
+        "device_warning": device_error,
     }
 
 

@@ -88,12 +88,12 @@ class Order:
     @property
     def subtotal(self) -> float:
         """Sum of all items."""
-        return sum(item.subtotal for item in self.items)
+        return round(sum(item.subtotal for item in self.items), 2)
 
     @property
     def discount_total(self) -> float:
         """Sum of all discounts."""
-        return sum(d.get("amount", 0) for d in self.discounts)
+        return round(sum(d.get("amount", 0) for d in self.discounts), 2)
 
     @property
     def tax_rate(self) -> float:
@@ -116,7 +116,7 @@ class Order:
     @property
     def amount_paid(self) -> float:
         """Sum of confirmed payments."""
-        return sum(p.amount for p in self.payments if p.status == "confirmed")
+        return round(sum(p.amount for p in self.payments if p.status == "confirmed"), 2)
 
     @property
     def balance_due(self) -> float:

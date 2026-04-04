@@ -26,10 +26,11 @@ registerScene('payment', {
     setSceneName(params.checkId || 'QS-001');
     setHeaderBack(false);   // no back mid-payment
 
-    sceneEl   = el;
-    sceneData = params;
-    tendered  = 0;
-    numpadStr = '';
+    sceneEl          = el;
+    sceneData        = params;
+    tendered         = 0;
+    numpadStr        = '';
+    confirmProcessing = false;
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -428,7 +429,12 @@ function updateCashDisplay(params) {
 var API = '/api/v1';
 
 // ── CONFIRM ───────────────────────────────────────
+var confirmProcessing = false;
+
 async function handleConfirm(params) {
+  if (confirmProcessing) return;       // debounce — prevent double-charge
+  confirmProcessing = true;
+
   var isCash = params.paymentMode === 'cash';
   var change = isCash ? Math.max(0, tendered - params.cashPrice) : 0;
   var amount = isCash ? params.cashPrice : params.cardTotal;
@@ -489,9 +495,11 @@ async function handleConfirm(params) {
 
   } catch (err) {
     console.error('[KINDpos] Confirm error:', err);
+    confirmProcessing = false;           // allow retry after error
     return;
   }
 
+  confirmProcessing = false;
   replace('change-due', {
     change:      change,
     paymentMode: params.paymentMode,
