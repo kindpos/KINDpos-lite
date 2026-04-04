@@ -345,6 +345,7 @@ async def get_day_summary(
     categories = {}
     payments_list = []
     checks_list = []
+    closed_order_ids = []
 
     for order in orders:
         if order.status == "voided":
@@ -355,6 +356,7 @@ async def get_day_summary(
             open_count += 1
         elif order.status in ("closed", "paid"):
             closed_count += 1
+            closed_order_ids.append(order.order_id)
 
         gross_sales += order.subtotal
         discount_total += order.discount_total
@@ -395,8 +397,14 @@ async def get_day_summary(
         if order.status in ("closed", "paid"):
             has_card = any(p.method != "cash" and p.status == "confirmed" for p in order.payments)
             if has_card:
+                # Find the first confirmed card payment for tip-adjust
+                card_payment = next(
+                    (p for p in order.payments if p.method != "cash" and p.status == "confirmed"),
+                    None,
+                )
                 checks_list.append({
                     "checkId": order.order_id,
+                    "paymentId": card_payment.payment_id if card_payment else None,
                     "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
                     "amount": round(order.total, 2),
                     "tip": round(order_tip, 2),
@@ -433,6 +441,7 @@ async def get_day_summary(
         "categories": list(categories.values()),
         "payments": payments_list,
         "checks": checks_list,
+        "closed_order_ids": closed_order_ids,
     }
 
 

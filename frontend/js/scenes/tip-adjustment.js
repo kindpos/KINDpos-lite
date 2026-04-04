@@ -219,6 +219,19 @@ function numpadClear() {
   updateNumpadDisplay();
 }
 
+function persistTip(c) {
+  if (!c.paymentId) return;
+  fetch('/api/v1/payments/tip-adjust', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      order_id:   c.checkId,
+      payment_id: c.paymentId,
+      tip_amount:  c.tip,
+    }),
+  }).catch(function(err) { console.warn('[KINDpos] Tip adjust failed:', err); });
+}
+
 function numpadSubmit() {
   if (editingIndex < 0) return;
 
@@ -226,6 +239,7 @@ function numpadSubmit() {
   var c = checks[editingIndex];
   c.tip = cents / 100;
   c.adjusted = true;
+  persistTip(c);
 
   // Find next unadjusted
   var next = -1;
@@ -528,7 +542,7 @@ function doCheckout(params) {
           width: 130, height: 44,
           onTap: function() {
             checks.forEach(function(c) {
-              if (!c.adjusted) { c.tip = 0; c.adjusted = true; }
+              if (!c.adjusted) { c.tip = 0; c.adjusted = true; persistTip(c); }
             });
             resolveInterrupt(true);
             renderTable();
@@ -556,7 +570,10 @@ function doCheckout(params) {
 }
 
 function doPrint() {
-  // TODO: POST to print endpoint
+  checks.forEach(function(c) {
+    fetch('/api/v1/print/receipt/' + c.checkId + '?copy_type=merchant', { method: 'POST' })
+      .catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
+  });
 }
 
 // ═══════════════════════════════════════════════════

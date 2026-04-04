@@ -89,6 +89,9 @@ function fetchDayState(params) {
 
       // Blocker
       openChecks:    d.open_orders || 0,
+
+      // Order IDs for printing
+      closedOrders:  d.closed_order_ids || [],
     };
   });
 }
@@ -834,14 +837,27 @@ function openBatchOverlay(state, onSettled) {
 
           if (currentSeg >= TOTAL_SEGS) {
             clearInterval(animTimer);
-            running = false;
-            _batchSettled = true;
-            statusEl.textContent = '✓  Batch settled. ' + fmt(state.batchTotal) + ' submitted.';
-            statusEl.style.color = T.mint;
-            pctEl.textContent = '100%';
-            titleBar.style.background = 'linear-gradient(to right,#1a3a1a,#2a5a2a)';
-            titleText.textContent = 'Batch Settlement — Complete';
-            okPair.wrap.style.display = '';
+            // POST batch close to backend
+            fetch('/api/v1/orders/close-batch', { method: 'POST' })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                running = false;
+                _batchSettled = true;
+                var total = data.batch_total || state.batchTotal || 0;
+                statusEl.textContent = '✓  Batch settled. ' + fmt(total) + ' submitted.';
+                statusEl.style.color = T.mint;
+                pctEl.textContent = '100%';
+                titleBar.style.background = 'linear-gradient(to right,#1a3a1a,#2a5a2a)';
+                titleText.textContent = 'Batch Settlement — Complete';
+                okPair.wrap.style.display = '';
+              })
+              .catch(function(err) {
+                running = false;
+                statusEl.textContent = '✗  Settlement failed: ' + (err.message || 'unknown error');
+                statusEl.style.color = T.red;
+                submitPair.wrap.style.display = '';
+                cancelPair.wrap.style.display = '';
+              });
           }
         }, 80);
       });
@@ -877,6 +893,13 @@ function buildRightColumn(state) {
   printPair.inner.style.color = T.mint;
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
+    // Print end-of-day summary receipts for all closed orders
+    if (state.closedOrders && state.closedOrders.length) {
+      state.closedOrders.forEach(function(oid) {
+        fetch('/api/v1/print/receipt/' + oid + '?copy_type=itemized', { method: 'POST' })
+          .catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
+      });
+    }
   });
   col.appendChild(printPair.wrap);
 
@@ -969,8 +992,16 @@ function doCloseDay(state) {
         width: 160, height: 44,
         onTap: function() {
           resolveInterrupt(true);
-          // TODO: POST /api/v1/day/close
-          pop();
+          fetch('/api/v1/orders/close-day', { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              console.log('[KINDpos] Day closed:', data);
+              pop();
+            })
+            .catch(function(err) {
+              console.error('[KINDpos] Close day failed:', err);
+              pop();
+            });
         },
       }));
 

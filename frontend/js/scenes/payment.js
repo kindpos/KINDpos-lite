@@ -390,8 +390,23 @@ async function handleConfirm(params) {
         return;  // stay on screen, let operator retry
       }
     }
-    // Card payments confirmed by device — no fetch needed here,
-    // the PaymentManager handles it via the SPIN adapter
+    if (!isCash) {
+      // Card payment — route through PaymentManager → SPIn adapter
+      var res = await fetch(API + '/payments/sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id:    params.orderId,
+          amount:      amount,
+          terminal_id: 'terminal_01',
+        }),
+      });
+      if (!res.ok) {
+        var err = await res.json().catch(function() { return {}; });
+        console.error('[KINDpos] Card payment failed:', err);
+        return;  // stay on screen, let operator retry
+      }
+    }
 
     // ── Receipt printing ──────────────────────────────────────────────────
     // Config flags — will be driven by settings scene once wired

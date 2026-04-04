@@ -88,6 +88,7 @@ function fetchServerState(params) {
       takeHome:      d.card_tips    || 0,
       cashReceived:  d.cash_total   || 0,
       cashExpected:  (d.cash_total || 0) - (d.card_tips || 0),
+      closedOrders:  d.closed_order_ids || [],
     };
     recalcTipOut(state);
     return state;
@@ -851,7 +852,13 @@ function buildRightColumn(state) {
   printPair.inner.style.color = T.mint;
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
-    // TODO: POST /api/v1/checkout/print
+    // Print server checkout receipts for all closed orders
+    if (state.closedOrders && state.closedOrders.length) {
+      state.closedOrders.forEach(function(oid) {
+        fetch('/api/v1/print/receipt/' + oid + '?copy_type=itemized', { method: 'POST' })
+          .catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
+      });
+    }
   });
   col.appendChild(printPair.wrap);
 
@@ -1118,8 +1125,17 @@ function doFinalize(state) {
         width: 150, height: 44,
         onTap: function() {
           resolveInterrupt(true);
-          // TODO: POST /api/v1/checkout/finalize
-          pop(); // Return to reporting / login
+          // Close out remaining open orders for this server
+          fetch('/api/v1/orders/close-batch', { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              console.log('[KINDpos] Server checkout finalized:', data);
+              pop(); // Return to reporting / login
+            })
+            .catch(function(err) {
+              console.error('[KINDpos] Finalize failed:', err);
+              pop();
+            });
         },
       }));
 
