@@ -321,13 +321,20 @@ function buildManagerSalesPanels(sales) {
     body.appendChild(svg);
   });
 
-  // TOTAL CHECKS — pareto chart: hourly checks sorted descending with cumulative line
+  // TOTAL CHECKS — pareto chart: grouped by shift
   var p2 = buildChartPanel('TOTAL CHECKS', s.total_checks || '--', function(body) {
     var svg = createSVG(400, 160);
-    var data = [];
+    // Group hourly data into shifts
+    var shifts = { 'Open': 0, 'Lunch': 0, 'Midday': 0, 'Close': 0 };
     for (var i = 0; i < hourly.length; i++) {
-      data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].checks });
+      var hr = parseInt(hourly[i].hour);
+      if (hr < 12) shifts['Open'] += hourly[i].checks;
+      else if (hr < 14) shifts['Lunch'] += hourly[i].checks;
+      else if (hr < 16) shifts['Midday'] += hourly[i].checks;
+      else shifts['Close'] += hourly[i].checks;
     }
+    var data = [];
+    for (var key in shifts) data.push({ label: key, value: shifts[key] });
     drawParetoChart(svg, data, { barColor: CHART.sky, lineColor: CHART.pink, width: 400, height: 160 });
     body.appendChild(svg);
   });
