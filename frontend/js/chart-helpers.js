@@ -136,7 +136,15 @@ export function drawBarChart(svg, data, options) {
     }
 
     if (showValueAbove) {
-      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: barY - 3, fill: color, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].value;
+      var valStr = '' + data[i].value;
+      var vFs = parseInt(fs(13, w));
+      var vTw = valStr.length * vFs * 0.6 + 10;
+      var vTh = vFs + 4;
+      var vX = x + groupW / 2;
+      var vY = barY + vTh + 4;
+      if (vY > padTop + chartH - 2) vY = barY + vTh;
+      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: '#444444' }));
+      svg.appendChild(svgEl('text', { x: vX, y: vY - 1, fill: color, 'font-size': '' + vFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valStr;
     }
 
     if (showLabels) {
@@ -235,30 +243,33 @@ export function drawStackedArea(svg, data, options) {
     svg.appendChild(svgEl('rect', { x: toX(i) - ptSz / 2, y: toY(data[i].value) - ptSz / 2, width: ptSz, height: ptSz, fill: color }));
   }
 
-  // Data callouts on peak values — below data point with grey bg
+  // Data callouts on all points — inside column area with grey bg
   if (options.showCallouts) {
-    var coFs = parseInt(fs(14, w));
-    var peakIdx = 0;
-    for (var i = 1; i < n; i++) { if (data[i].value > data[peakIdx].value) peakIdx = i; }
+    var coFs = parseInt(fs(13, w));
     var calloutFmt = options.calloutFmt || function(v) { return v; };
-    var calloutText = calloutFmt(data[peakIdx].value);
-    var cx = toX(peakIdx);
-    var cy = toY(data[peakIdx].value) + coFs + 6;
-    var tw = calloutText.length * coFs * 0.6 + 12;
-    var th = coFs + 6;
-    svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 4, width: tw, height: th, fill: '#444444', rx: 0 }));
-    svg.appendChild(svgEl('text', { x: cx, y: cy, fill: color, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = calloutText;
+    var colW = n > 1 ? chartW / (n - 1) : chartW;
+
+    for (var i = 0; i < n; i++) {
+      var cText = calloutFmt(data[i].value);
+      var cx = toX(i);
+      var cy = toY(data[i].value) + coFs + 6;
+      if (cy > baseline - 4) cy = toY(data[i].value) - 4;
+      var tw = cText.length * coFs * 0.6 + 10;
+      var th = coFs + 4;
+      svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 2, width: tw, height: th, fill: '#444444' }));
+      svg.appendChild(svgEl('text', { x: cx, y: cy - 1, fill: color, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = cText;
+    }
 
     if (hasCompare) {
-      var cPeakIdx = 0;
-      for (var i = 1; i < n; i++) { if ((data[i].compareValue || 0) > (data[cPeakIdx].compareValue || 0)) cPeakIdx = i; }
-      if (cPeakIdx !== peakIdx) {
-        var cText = calloutFmt(data[cPeakIdx].compareValue);
-        var ccx = toX(cPeakIdx);
-        var ccy = toY(data[cPeakIdx].compareValue) + coFs + 6;
-        var ctw = cText.length * coFs * 0.6 + 12;
-        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 4, width: ctw, height: th, fill: '#444444', rx: 0 }));
-        svg.appendChild(svgEl('text', { x: ccx, y: ccy, fill: compareColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle' })).textContent = cText;
+      for (var i = 0; i < n; i++) {
+        if (data[i].compareValue === undefined) continue;
+        var ccText = calloutFmt(data[i].compareValue);
+        var ccx = toX(i);
+        var ccy = toY(data[i].compareValue) + coFs + 6;
+        if (ccy > baseline - 4) ccy = toY(data[i].compareValue) - 4;
+        var ctw = ccText.length * coFs * 0.6 + 10;
+        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 2, width: ctw, height: th, fill: '#444444' }));
+        svg.appendChild(svgEl('text', { x: ccx, y: ccy - 1, fill: compareColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle' })).textContent = ccText;
       }
     }
   }
@@ -345,14 +356,15 @@ export function drawParetoChart(svg, data, options) {
     var barY = padTop + chartH - barH;
     svg.appendChild(svgEl('rect', { x: x + (groupW - barW) / 2, y: barY, width: barW, height: barH, fill: 'url(#paretoGrad)' }));
 
-    // Value callout centered inside top of bar (only when showCallouts is true) with grey bg
+    // Value callout inside top of bar with grey bg
     if (options.showCallouts) {
       var valText = '' + sorted[i].value;
       var vtw = valText.length * coFs * 0.6 + 12;
-      var vth = coFs + 6;
-      var vcy = barY + vth + 2;
-      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 4, width: vtw, height: vth, fill: '#444444', rx: 0 }));
-      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: vcy, fill: barColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valText;
+      var vth = coFs + 4;
+      var vcy = barY + vth + 4;
+      if (vcy > padTop + chartH - 2) vcy = barY + vth;
+      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 2, width: vtw, height: vth, fill: '#444444' }));
+      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: vcy - 1, fill: barColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valText;
     }
 
     // X label
