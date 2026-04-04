@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from datetime import datetime, timezone, timedelta
+from typing import Dict, Any, Optional, List
 
 from ..core.event_ledger import EventLedger
 from ..core.projections import project_order
@@ -604,4 +604,140 @@ class PrintContextBuilder:
             "per_person_avg": per_person_avg,
             "dayparts": dayparts,
             "terminal_id": settings.terminal_id,
+        }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  CLOCK HOURS SUMMARY
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def build_clock_hours_context(
+            self,
+            employee_id: str,
+            employee_name: str,
+            role_name: str = "",
+            action: str = "CLOCK IN",
+    ) -> Dict[str, Any]:
+        """
+        Build context for ClockHoursTemplate.
+
+        Calculates this-shift duration and weekly pay-period hours
+        from USER_LOGGED_IN / USER_LOGGED_OUT events.
+        """
+        now = datetime.now(timezone.utc)
+
+        # ── Determine pay-period window (Mon 00:00 → now) ────────────────────
+        days_since_monday = now.weekday()  # 0=Mon
+        period_start = (now - timedelta(days=days_since_monday)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        # Fetch all clock events within the pay period
+        login_events = await self.ledger.get_events_by_type(
+            EventType.USER_LOGGED_IN, since=period_start, limit=5000
+        )
+        logout_events = await self.ledger.get_events_by_type(
+            EventType.USER_LOGGED_OUT, since=period_start, limit=5000
+        )
+
+        # Filter to this employee
+        logins = sorted(
+            [e for e in login_events if (e.payload or {}).get("employee_id") == employee_id],
+            key=lambda e: e.timestamp,
+        )
+        logouts = sorted(
+            [e for e in logout_events if (e.payload or {}).get("employee_id") == employee_id],
+            key=lambda e: e.timestamp,
+        )
+
+        # ── Pair logins with logouts into shifts ─────────────────────────────
+        shifts: List[Dict[str, Any]] = []
+        logout_idx = 0
+        for login_ev in logins:
+            t_in = login_ev.timestamp
+            t_out = None
+            # Find the next logout after this login
+            while logout_idx < len(logouts):
+                if logouts[logout_idx].timestamp > t_in:
+                    t_out = logouts[logout_idx].timestamp
+                    logout_idx += 1
+                    break
+                logout_idx += 1
+            shifts.append({"in": t_in, "out": t_out})
+
+        # ── Current shift (the most recent for this employee) ────────────────
+        current_shift_in = None
+        current_shift_out = None
+        current_duration = ""
+        if shifts:
+            last = shifts[-1]
+            current_shift_in = last["in"].isoformat()
+            if last["out"]:
+                current_shift_out = last["out"].isoformat()
+                delta = last["out"] - last["in"]
+                h, rem = divmod(int(delta.total_seconds()), 3600)
+                m = rem // 60
+                current_duration = f"{h}h {m}m"
+
+        # ── Daily breakdown ──────────────────────────────────────────────────
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        daily_hours: List[Dict[str, str]] = []
+        total_seconds = 0
+
+        for d in range(7):
+            day_date = period_start + timedelta(days=d)
+            if day_date > now:
+                break
+            day_end = day_date + timedelta(days=1)
+            label = f"{day_names[d]} {day_date.strftime('%m/%d')}"
+
+            # Find shifts overlapping this day
+            day_shifts = [
+                s for s in shifts
+                if s["in"] < day_end and s["in"] >= day_date
+            ]
+
+            if not day_shifts:
+                daily_hours.append({"label": label, "in": "--", "out": "--", "hours": "--"})
+                continue
+
+            day_total_secs = 0
+            first_in = None
+            last_out = None
+            for s in day_shifts:
+                t_in = s["in"]
+                t_out = s["out"] or now  # still clocked in → use now
+                if first_in is None:
+                    first_in = t_in
+                last_out = t_out
+                secs = (t_out - t_in).total_seconds()
+                day_total_secs += secs
+                total_seconds += secs
+
+            hrs = day_total_secs / 3600
+            in_str = first_in.strftime("%I:%M%p") if first_in else "--"
+            out_str = last_out.strftime("%I:%M%p") if last_out and day_shifts[-1]["out"] else "NOW"
+            daily_hours.append({
+                "label": label,
+                "in": in_str,
+                "out": out_str,
+                "hours": f"{hrs:.1f}h",
+            })
+
+        total_hours = total_seconds / 3600
+        period_end_date = period_start + timedelta(days=6)
+        period_label = f"{period_start.strftime('%m/%d')} - {period_end_date.strftime('%m/%d')}"
+
+        return {
+            "restaurant_name": getattr(settings, "restaurant_name", "KINDpos"),
+            "employee_name": employee_name,
+            "role_name": role_name,
+            "action": action,
+            "date": now.strftime("%m/%d/%Y"),
+            "time": now.strftime("%I:%M %p"),
+            "clock_in": current_shift_in,
+            "clock_out": current_shift_out,
+            "shift_duration": current_duration,
+            "period_label": period_label,
+            "daily_hours": daily_hours,
+            "period_total_hours": f"{total_hours:.1f}",
         }

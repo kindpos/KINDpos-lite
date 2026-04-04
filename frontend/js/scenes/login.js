@@ -311,14 +311,14 @@ function showClockOverlay(emp, isClockedIn, clockRecord, roleName) {
         var outBtn = buildButton('CLOCK OUT', {
           fill: T.red, color: '#ffffff', fontSize: '36px',
           width: 300, height: 70,
-          onTap: function() { doClockOut(emp, statusEl); },
+          onTap: function() { doClockOut(emp, roleName, statusEl); },
         });
         panel.appendChild(outBtn);
       } else {
         var inBtn = buildButton('CLOCK IN', {
           fill: T.goGreen, color: '#ffffff', fontSize: '36px',
           width: 300, height: 70,
-          onTap: function() { doClockIn(emp, statusEl); },
+          onTap: function() { doClockIn(emp, roleName, statusEl); },
         });
         panel.appendChild(inBtn);
       }
@@ -329,7 +329,15 @@ function showClockOverlay(emp, isClockedIn, clockRecord, roleName) {
   });
 }
 
-function doClockIn(emp, statusEl) {
+function printClockHours(emp, roleName, action) {
+  fetch('/api/v1/print/clock-hours/' + encodeURIComponent(emp.id), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_name: emp.name, role_name: roleName, action: action }),
+  }).catch(function() { /* printing is best-effort */ });
+}
+
+function doClockIn(emp, roleName, statusEl) {
   fetch('/api/v1/servers/clock-in', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -338,6 +346,7 @@ function doClockIn(emp, statusEl) {
     if (data.success) {
       statusEl.textContent = 'Clocked in!';
       statusEl.style.color = T.goGreen;
+      printClockHours(emp, roleName, 'CLOCK IN');
       setTimeout(function() { dismissOverlay(); }, 1200);
     } else {
       statusEl.textContent = 'Failed to clock in';
@@ -349,7 +358,7 @@ function doClockIn(emp, statusEl) {
   });
 }
 
-function doClockOut(emp, statusEl) {
+function doClockOut(emp, roleName, statusEl) {
   fetch('/api/v1/servers/clock-out', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -358,6 +367,7 @@ function doClockOut(emp, statusEl) {
     if (data.success) {
       statusEl.textContent = 'Clocked out!';
       statusEl.style.color = T.gold;
+      printClockHours(emp, roleName, 'CLOCK OUT');
       setTimeout(function() { dismissOverlay(); }, 1200);
     } else {
       statusEl.textContent = 'Failed to clock out';

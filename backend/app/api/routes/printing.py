@@ -71,6 +71,36 @@ async def retry_job(job_id: str):
     await print_queue.reset_for_retry(job_id)
     return {"status": "reset_for_retry", "job_id": job_id}
 
+class ClockHoursRequest(BaseModel):
+    employee_name: str
+    role_name: str = ""
+    action: str = "CLOCK IN"
+
+
+@router.post("/clock-hours/{employee_id}")
+async def print_clock_hours(
+    employee_id: str,
+    request: ClockHoursRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Print shift hours and pay-period summary on clock in/out."""
+    builder = PrintContextBuilder(ledger)
+    context = await builder.build_clock_hours_context(
+        employee_id=employee_id,
+        employee_name=request.employee_name,
+        role_name=request.role_name,
+        action=request.action,
+    )
+    job_id = await print_queue.enqueue(
+        order_id=f"clock-{employee_id}",
+        template_id="clock_hours",
+        printer_mac="DEFAULT_RECEIPT",
+        ticket_number="CLK",
+        context=context,
+    )
+    return {"status": "queued", "job_id": job_id}
+
+
 @router.post("/test")
 async def print_test(template_name: str = Body(..., embed=True), printer_mac: str = Body(..., embed=True)):
     """Fire a fixture template to a printer (test panel)."""
