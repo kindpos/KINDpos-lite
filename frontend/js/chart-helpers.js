@@ -217,7 +217,7 @@ export function drawStackedArea(svg, data, options) {
     svg.appendChild(svgEl('path', { d: cPath, fill: 'url(#areaGrad2)' }));
     var cPts = [];
     for (var i = 0; i < n; i++) cPts.push(toX(i) + ',' + toY(data[i].compareValue || 0));
-    svg.appendChild(svgEl('polyline', { points: cPts.join(' '), fill: 'none', stroke: compareColor, 'stroke-width': 2.5, 'stroke-dasharray': '6,3' }));
+    svg.appendChild(svgEl('polyline', { points: cPts.join(' '), fill: 'none', stroke: compareColor, 'stroke-width': 4, 'stroke-dasharray': '8,4' }));
     for (var i = 0; i < n; i++) {
       svg.appendChild(svgEl('rect', { x: toX(i) - ptSz / 2, y: toY(data[i].compareValue || 0) - ptSz / 2, width: ptSz, height: ptSz, fill: compareColor }));
     }
@@ -230,7 +230,7 @@ export function drawStackedArea(svg, data, options) {
   svg.appendChild(svgEl('path', { d: pPath, fill: 'url(#areaGrad1)' }));
   var pPts = [];
   for (var i = 0; i < n; i++) pPts.push(toX(i) + ',' + toY(data[i].value));
-  svg.appendChild(svgEl('polyline', { points: pPts.join(' '), fill: 'none', stroke: color, 'stroke-width': 3 }));
+  svg.appendChild(svgEl('polyline', { points: pPts.join(' '), fill: 'none', stroke: color, 'stroke-width': 4.5 }));
   for (var i = 0; i < n; i++) {
     svg.appendChild(svgEl('rect', { x: toX(i) - ptSz / 2, y: toY(data[i].value) - ptSz / 2, width: ptSz, height: ptSz, fill: color }));
   }
@@ -345,12 +345,12 @@ export function drawParetoChart(svg, data, options) {
     var barY = padTop + chartH - barH;
     svg.appendChild(svgEl('rect', { x: x + (groupW - barW) / 2, y: barY, width: barW, height: barH, fill: 'url(#paretoGrad)' }));
 
-    // Value callout centered above each bar (only when showCallouts is true) with grey bg
+    // Value callout centered inside top of bar (only when showCallouts is true) with grey bg
     if (options.showCallouts) {
       var valText = '' + sorted[i].value;
       var vtw = valText.length * coFs * 0.6 + 12;
       var vth = coFs + 6;
-      var vcy = barY - 6;
+      var vcy = barY + vth + 2;
       svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 4, width: vtw, height: vth, fill: '#444444', rx: 0 }));
       svg.appendChild(svgEl('text', { x: x + groupW / 2, y: vcy, fill: barColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valText;
     }
@@ -367,7 +367,7 @@ export function drawParetoChart(svg, data, options) {
   }
 
   // Cumulative line
-  svg.appendChild(svgEl('polyline', { points: cumPts.join(' '), fill: 'none', stroke: lineColor, 'stroke-width': 2.5 }));
+  svg.appendChild(svgEl('polyline', { points: cumPts.join(' '), fill: 'none', stroke: lineColor, 'stroke-width': 4 }));
   for (var i = 0; i < cumPts.length; i++) {
     var parts = cumPts[i].split(',');
     svg.appendChild(svgEl('rect', { x: parseFloat(parts[0]) - ptSz / 2, y: parseFloat(parts[1]) - ptSz / 2, width: ptSz, height: ptSz, fill: lineColor }));
@@ -492,7 +492,7 @@ export function drawTrendLine(svg, data, options) {
   // Threshold lines
   for (var t = 0; t < thresholds.length; t++) {
     var ty = toY(thresholds[t].value);
-    svg.appendChild(svgEl('line', { x1: padLeft, y1: ty, x2: w - padRight, y2: ty, stroke: thresholds[t].color, 'stroke-width': 1.5, 'stroke-dasharray': '4,3' }));
+    svg.appendChild(svgEl('line', { x1: padLeft, y1: ty, x2: w - padRight, y2: ty, stroke: thresholds[t].color, 'stroke-width': 3, 'stroke-dasharray': '6,4' }));
   }
 
   // Comparison: shaded area + dashed line
@@ -507,7 +507,7 @@ export function drawTrendLine(svg, data, options) {
     for (var i = 0; i < compareData.length; i++) {
       cPoints.push(toX(i) + ',' + toY(compareData[i].value));
     }
-    svg.appendChild(svgEl('polyline', { points: cPoints.join(' '), fill: 'none', stroke: compareColor, 'stroke-width': 2, 'stroke-dasharray': '5,3' }));
+    svg.appendChild(svgEl('polyline', { points: cPoints.join(' '), fill: 'none', stroke: compareColor, 'stroke-width': 3.5, 'stroke-dasharray': '8,4' }));
     for (var i = 0; i < compareData.length; i++) {
       svg.appendChild(svgEl('rect', { x: toX(i) - ptSz / 2, y: toY(compareData[i].value) - ptSz / 2, width: ptSz, height: ptSz, fill: compareColor }));
     }
@@ -524,7 +524,7 @@ export function drawTrendLine(svg, data, options) {
   for (var i = 0; i < data.length; i++) {
     points.push(toX(i) + ',' + toY(data[i].value));
   }
-  svg.appendChild(svgEl('polyline', { points: points.join(' '), fill: 'none', stroke: color, 'stroke-width': 2 }));
+  svg.appendChild(svgEl('polyline', { points: points.join(' '), fill: 'none', stroke: color, 'stroke-width': 3.5 }));
   for (var i = 0; i < data.length; i++) {
     svg.appendChild(svgEl('rect', { x: toX(i) - ptSz / 2, y: toY(data[i].value) - ptSz / 2, width: ptSz, height: ptSz, fill: color }));
   }

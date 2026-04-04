@@ -322,7 +322,7 @@ function buildManagerSalesPanels(sales, fullSize) {
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
       data.push({ label: label, value: hourly[i].net, compareValue: cmp });
     }
-    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize, legend: ['Today', 'Last Wk'] });
+    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: true, legend: ['Today', 'Last Wk'] });
     body.appendChild(svg);
   });
 
@@ -336,7 +336,7 @@ function buildManagerSalesPanels(sales, fullSize) {
       var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
       data.push({ label: label, value: hourly[i].checks, compareValue: cmp });
     }
-    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, legend: ['Today', 'Last Wk'], showCallouts: fullSize, calloutFmt: function(v) { return v; } });
+    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, legend: ['Today', 'Last Wk'], showCallouts: true, calloutFmt: function(v) { return v; } });
     body.appendChild(svg);
   });
 
@@ -347,7 +347,7 @@ function buildManagerSalesPanels(sales, fullSize) {
     for (var i = 0; i < dailyAvg.length; i++) {
       data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
     }
-    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: svgW, height: svgH, showCallouts: fullSize });
+    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: svgW, height: svgH, showCallouts: true });
     body.appendChild(svg);
   });
 
@@ -526,7 +526,7 @@ function buildServerShiftPanels(sales, fullSize) {
       var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
       data.push({ label: label, value: hourly[i].checks });
     }
-    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
+    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
     body.appendChild(svg);
   });
 
@@ -629,7 +629,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
       var val = d.hours || 0;
       data.push({ label: d.day, value: val });
     }
-    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
+    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
 
     // Draw dashed outline for scheduled-unworked days
     var padLeft = 50;
