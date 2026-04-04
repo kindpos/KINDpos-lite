@@ -107,6 +107,40 @@ async def reload_devices(ledger: EventLedger = Depends(get_ledger)):
         "using_mock": any("mock" in d for d in device_ids),
     }
 
+
+@router.get("/test-device")
+async def test_device(ledger: EventLedger = Depends(get_ledger)):
+    """Send GetStatus to the card reader and return the raw response."""
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+
+    device = manager.get_device_for_terminal(settings.terminal_id)
+    if not device:
+        return {"connected": False, "error": "No device registered", "using_mock": True}
+
+    is_mock = device.config and device.config.protocol == "mock"
+    if is_mock:
+        return {"connected": True, "device": "mock", "using_mock": True, "status": "ready"}
+
+    # Real device — check status
+    try:
+        status = await device.check_status()
+        cfg = device.config
+        return {
+            "connected": status.value != "OFFLINE",
+            "using_mock": False,
+            "status": status.value,
+            "device": {
+                "name": cfg.name if cfg else "unknown",
+                "ip": cfg.ip_address if cfg else "",
+                "port": cfg.port if cfg else 0,
+                "register_id": cfg.register_id if cfg else "",
+                "serial": cfg.device_id if cfg else "",
+            },
+        }
+    except Exception as e:
+        return {"connected": False, "using_mock": False, "error": str(e)}
+
 def get_payment_manager(ledger: EventLedger = Depends(get_ledger)) -> PaymentManager:
     global _manager
     if _manager is None:
