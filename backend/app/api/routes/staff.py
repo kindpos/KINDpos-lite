@@ -47,9 +47,23 @@ class ClockOutRequest(BaseModel):
     employee_name: str
 
 
+async def _clocked_in_ids(ledger: EventLedger) -> set:
+    """Return the set of employee IDs currently clocked in."""
+    login_events = await ledger.get_events_by_type(EventType.USER_LOGGED_IN)
+    logout_events = await ledger.get_events_by_type(EventType.USER_LOGGED_OUT)
+    clocked_in: dict = {}
+    for e in sorted(login_events, key=lambda x: x.sequence_number or 0):
+        clocked_in[e.payload["employee_id"]] = e
+    for e in sorted(logout_events, key=lambda x: x.sequence_number or 0):
+        clocked_in.pop(e.payload["employee_id"], None)
+    return set(clocked_in.keys())
+
+
 @router.post("/clock-in")
 async def clock_in(request: ClockInRequest, ledger: EventLedger = Depends(get_ledger)):
     """Record a staff clock-in event."""
+    if request.employee_id in await _clocked_in_ids(ledger):
+        raise HTTPException(status_code=400, detail="Already clocked in")
     event = user_logged_in(
         terminal_id=settings.terminal_id,
         employee_id=request.employee_id,
@@ -67,6 +81,8 @@ async def clock_in(request: ClockInRequest, ledger: EventLedger = Depends(get_le
 @router.post("/clock-out")
 async def clock_out(request: ClockOutRequest, ledger: EventLedger = Depends(get_ledger)):
     """Record a staff clock-out event."""
+    if request.employee_id not in await _clocked_in_ids(ledger):
+        raise HTTPException(status_code=400, detail="Not clocked in")
     event = user_logged_out(
         terminal_id=settings.terminal_id,
         employee_id=request.employee_id,
