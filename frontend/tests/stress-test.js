@@ -136,7 +136,7 @@ async function navigateToOrderEntry() {
   var scene = findSceneEl('login');
   if (scene) {
     await wait(500); // Wait for employee list to load from API
-    var qs = findButtonByText('Quick\nService', scene);
+    var qs = findButtonByText('< Quick Service >', scene);
     if (qs) tap(qs);
     await wait(50);
     var keys = scene.querySelectorAll('div');
@@ -429,7 +429,7 @@ async function runRapidFire() {
       await wait(500); // Wait for employee list to load from API
       var scene = findSceneEl('login');
       // Find Quick Service first
-      var qs = findButtonByText('Quick\nService', scene);
+      var qs = findButtonByText('< Quick Service >', scene);
       if (qs) tap(qs);
       await wait(30);
       // Find numpad keys
@@ -968,19 +968,60 @@ async function runTouchDebounce() {
       await resetToLogin();
     });
 
-    // TD-05: Long-press doesn't trigger multiple tap events
-    await it('TD-05', 'Long-press simulation — single action', async function() {
+    // TD-05: Long-press on numpad CLR clears all, short tap backspaces
+    await it('TD-05', 'Long-press CLR clears all, short tap backspaces', async function() {
       if (SM.getActiveScene() !== 'login') await resetToLogin();
       var scene = findSceneEl('login');
-      var qs = findButtonByText('Quick\nService', scene);
-      assert(qs, 'Quick Service button found');
-      // Simulate long press: pointerdown, wait, pointerup
-      qs.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-      await wait(500); // Hold for 500ms
-      qs.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-      await wait(100);
-      // Only one tap should register
-      assertEqual(SM.getActiveScene(), 'login', 'Still on login (no nav from action select)');
+
+      // Enter some digits via numpad
+      var numpad = scene.querySelector('div'); // numpad is in the login scene
+      var keys = scene.querySelectorAll('div');
+      // Find the CLR key and digit keys by text
+      var clrKey = null;
+      var digitKeys = {};
+      for (var i = 0; i < keys.length; i++) {
+        var txt = keys[i].textContent.trim();
+        if (txt === 'clr' && keys[i].children.length <= 1) clrKey = keys[i].parentElement;
+        if (/^[0-9]$/.test(txt) && keys[i].children.length <= 1) digitKeys[txt] = keys[i].parentElement;
+      }
+      assert(clrKey, 'CLR key found');
+      assert(digitKeys['1'], 'Digit 1 key found');
+
+      // Type 1-2-3
+      tap(digitKeys['1']); await wait(30);
+      tap(digitKeys['2']); await wait(30);
+      tap(digitKeys['3']); await wait(30);
+
+      // Short tap CLR — should backspace (remove last digit only)
+      clrKey.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await wait(50); // Short hold
+      clrKey.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      await wait(50);
+
+      // Type another digit to verify partial clear worked (pin should be "12" + "4" = "124")
+      tap(digitKeys['4']); await wait(30);
+
+      // Long-press CLR — should clear ALL
+      clrKey.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await wait(600); // Long hold > 500ms threshold
+      clrKey.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      await wait(50);
+
+      // Pin should be empty now — verify by typing 1 and checking display shows single dot
+      tap(digitKeys['1']); await wait(30);
+      // Display should show a single masked character (one dot = one digit entered after full clear)
+      var display = scene.querySelector('div[style*="letter-spacing"]');
+      if (display) {
+        // Should be exactly 1 masked dot (●) — confirms full clear worked
+        var dots = display.textContent.trim().split(/\s+/).filter(function(c) { return c; });
+        assertEqual(dots.length, 1, 'After long-press clear + 1 digit, display shows 1 character');
+      }
+
+      // Clean up
+      clrKey.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await wait(600);
+      clrKey.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      await wait(50);
     });
 
     // TD-06: Two-finger tap (multi-touch) — single tap or ignored

@@ -112,21 +112,46 @@ export function buildNumpad(opts) {
     pair.inner.style.lineHeight = '1';
     pair.inner.textContent = key.label;
 
-    pair.wrap.addEventListener('pointerup', function() {
-      if (key.type === 'digit') {
-        if (pin.length < maxDigits) {
-          pin += key.label;
+    if (key.type === 'clear') {
+      // CLR: normal tap clears last digit, long-press (500ms) clears all
+      var _clrTimer = null;
+      var _clrFired = false;
+      pair.wrap.addEventListener('pointerdown', function() {
+        _clrFired = false;
+        _clrTimer = setTimeout(function() {
+          _clrFired = true;
+          pin = '';
           render();
           if (onChange) onChange(pin);
+        }, 500);
+      });
+      pair.wrap.addEventListener('pointerup', function() {
+        if (_clrTimer) { clearTimeout(_clrTimer); _clrTimer = null; }
+        if (!_clrFired) {
+          // Short tap — backspace (remove last digit)
+          if (pin.length > 0) {
+            pin = pin.slice(0, -1);
+            render();
+            if (onChange) onChange(pin);
+          }
         }
-      } else if (key.type === 'clear') {
-        pin = '';
-        render();
-        if (onChange) onChange(pin);
-      } else if (key.type === 'submit') {
-        if (pin.length > 0) onSubmit(pin);
-      }
-    });
+      });
+      pair.wrap.addEventListener('pointercancel', function() {
+        if (_clrTimer) { clearTimeout(_clrTimer); _clrTimer = null; }
+      });
+    } else {
+      pair.wrap.addEventListener('pointerup', function() {
+        if (key.type === 'digit') {
+          if (pin.length < maxDigits) {
+            pin += key.label;
+            render();
+            if (onChange) onChange(pin);
+          }
+        } else if (key.type === 'submit') {
+          if (pin.length > 0) onSubmit(pin);
+        }
+      });
+    }
 
     card.appendChild(pair.wrap);
   });
