@@ -39,6 +39,8 @@ export const T = {
   lavenderL:'#d0b8ff',
   lavenderD:'#5a3f7a',
   yellow:   '#ffff00',
+  mintB:    '#7bed9f',
+  redB:     '#ff4757',
   catProteins:  '#ff4757',
   catProteinsL: '#ff7a87',
   catProteinsD: '#7a1f28',
@@ -103,6 +105,8 @@ export function bevelEdges(fillColor) {
   if (fillColor === T.catBeverages)return { light: T.catBeveragesL,dark: T.catBeveragesD};
   if (fillColor === T.catSauces)   return { light: T.catSaucesL,   dark: T.catSaucesD  };
   if (fillColor === T.catStarches) return { light: T.catStarchesL, dark: T.catStarchesD};
+  if (fillColor === T.mintB)  return { light: '#aff4c4', dark: '#3a7a4d' };
+  if (fillColor === T.redB)   return { light: '#ff7a87', dark: '#7a1f28' };
   return { light: T.bgLight, dark: T.bgEdge };
 }
 
@@ -119,6 +123,8 @@ export function shadowColor(fillColor) {
   if (fillColor === T.catBeverages)return 'rgba(25, 40, 80, 0.8)';
   if (fillColor === T.catSauces)   return 'rgba(100, 55, 0, 0.8)';
   if (fillColor === T.catStarches) return 'rgba(35, 80, 50, 0.8)';
+  if (fillColor === T.mintB)  return 'rgba(35, 80, 50, 0.8)';
+  if (fillColor === T.redB)   return 'rgba(100, 20, 30, 0.8)';
   return 'rgba(10, 10, 10, 0.8)';
 }
 
