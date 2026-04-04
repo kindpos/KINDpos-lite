@@ -323,7 +323,7 @@ function renderScanning(card) {
 
   var statusCol = document.createElement('div');
   var scanLbl = makeLabel('Scanning network...', GOLD, '22px');
-  var subLbl   = makeLabel('Probing 254 hosts on ports 9100 · 443 · 8080', T.bgLight, '20px');
+  var subLbl   = makeLabel('Probing 254 hosts on ports 9100 · 443 · 8080', T.subtleText, '20px');
   statusCol.appendChild(scanLbl);
   statusCol.appendChild(subLbl);
 
@@ -399,7 +399,7 @@ function renderEnterIP(card) {
     pair.wrap.style.width = '72px';
     pair.wrap.style.height = '56px';
     pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize = key.t === 'digit' ? '26px' : '18px';
+    pair.inner.style.fontSize = key.t === 'digit' ? '26px' : '20px';
     pair.inner.style.color = color;
     pair.inner.textContent = key.l;
 
@@ -531,7 +531,7 @@ function renderManualAdd(ip, card) {
   hdr.style.padding = '16px 20px 4px';
   inner.appendChild(hdr);
 
-  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.bgLight, '20px');
+  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.subtleText, '20px');
   sub.style.padding = '4px 20px 16px';
   inner.appendChild(sub);
 
@@ -671,10 +671,10 @@ function renderScanResults(card) {
   list.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:8px 16px;overflow-y:auto;flex:1;';
 
   if (state.scanResults.length === 0) {
-    var empty = makeLabel('No devices responded on ports 9100, 443, 8080.', T.bgLight, '20px');
+    var empty = makeLabel('No devices responded on ports 9100, 443, 8080.', T.subtleText, '20px');
     empty.style.padding = '8px 0';
     list.appendChild(empty);
-    var tip = makeLabel('Try "Enter IP" to probe a specific address directly.', T.bgLight, '20px');
+    var tip = makeLabel('Try "Enter IP" to probe a specific address directly.', T.subtleText, '20px');
     tip.style.opacity = '0.6';
     list.appendChild(tip);
   }
@@ -705,7 +705,7 @@ function renderScanResults(card) {
   footer.style.cssText = 'display:flex;gap:10px;padding:10px 16px;flex-shrink:0;';
   footer.appendChild(buildButton('Scan Again', { fill: GOLD, color: DARK, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'scanning'; state.scanResults = []; renderHWContent(card); doScan(null, card); } }));
   footer.appendChild(buildButton('Enter IP',   { fill: BG,   color: GOLD, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); } }));
-  footer.appendChild(buildButton('Cancel',     { fill: BG,   color: T.bgLight, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'choose'; renderHWContent(card); } }));
+  footer.appendChild(buildButton('Cancel',     { fill: BG,   color: T.subtleText, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'choose'; renderHWContent(card); } }));
   inner.appendChild(footer);
 }
 
@@ -718,7 +718,7 @@ function renderConfirmDevice(card) {
   var hdr = makeLabel('Configure Device', GOLD, '22px');
   hdr.style.padding = '16px 20px 2px';
   inner.appendChild(hdr);
-  var sub = makeLabel(dev.ip + '  ·  ' + dev.mac, T.bgLight, '20px');
+  var sub = makeLabel(dev.ip + '  ·  ' + dev.mac, T.subtleText, '20px');
   sub.style.padding = '0 20px 12px';
   inner.appendChild(sub);
 

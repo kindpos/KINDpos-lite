@@ -29,7 +29,7 @@ PRINTER_PORTS     = [9100, 9101, 9102]
 # LPD, IPP, HTTP management (some Epson models expose HTTP)
 PRINTER_PORTS_EXT = [515, 631, 80]
 # Dejavoo SPIN and common card reader ports
-CARD_READER_PORTS = [8443, 9443, 443, 8080]
+CARD_READER_PORTS = [8443, 9443, 443, 8080, 10009, 4443, 9000]
 
 ALL_SCAN_PORTS    = PRINTER_PORTS + PRINTER_PORTS_EXT + CARD_READER_PORTS
 
@@ -169,7 +169,7 @@ async def _probe_host(host: str):
         try:
             hit = await asyncio.wait_for(
                 loop.run_in_executor(None, _tcp_probe, host, port),
-                timeout=0.4
+                timeout=1.0
             )
             if hit:
                 mac   = _get_mac(host)
@@ -189,7 +189,7 @@ async def _probe_host(host: str):
 def _tcp_probe(host: str, port: int) -> bool:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.35)
+            s.settimeout(0.8)
             s.connect((host, port))
             return True
     except Exception:
