@@ -51,8 +51,13 @@ function buildCardWrap(cardInner) {
   btn.inner.style.padding = '0';
   btn.inner.appendChild(cardInner);
   btn.wrap.style.flex = '1';
-  btn.wrap.style.maxHeight = '90%';
+  btn.wrap.style.maxHeight = '85%';
+  btn.wrap.style.maxWidth = '46%';
   btn.wrap.style.height = '100%';
+  // Increase shadow for more raised look
+  var shadow = shadowColor(T.mint);
+  btn.wrap.style.filter = 'drop-shadow(6px 8px 2px ' + shadow + ')';
+  btn.wrap._shadow = shadow;
   return btn.wrap;
 }
 
@@ -91,13 +96,13 @@ function buildLeftCard(params, sales, labor) {
   if (params.role === 'manager') {
     // SALES card — title + numbers both gold (title color)
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:56px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:16px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:50px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:12px;';
     title.textContent = 'SALES';
     card.appendChild(title);
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Net: <span style="color:' + g + '">' + (s ? fmt(s.net_sales) : '--') + '</span></div>' +
       '<div>Total Checks: <span style="color:' + g + '">' + (s ? s.total_checks : '--') + '</span></div>' +
@@ -110,7 +115,7 @@ function buildLeftCard(params, sales, labor) {
       var cashPct = total > 0 ? (s.cash_total / total * 100).toFixed(0) : 0;
       var cardPct = total > 0 ? (s.card_total / total * 100).toFixed(0) : 0;
       var breakdown = document.createElement('div');
-      breakdown.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';';
+      breakdown.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
       // Labels above bar
       breakdown.innerHTML =
         '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
@@ -124,20 +129,20 @@ function buildLeftCard(params, sales, labor) {
       card.appendChild(breakdown);
     } else {
       var fallback = document.createElement('div');
-      fallback.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';';
+      fallback.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
       fallback.textContent = 'Cash: --   Card: --';
       card.appendChild(fallback);
     }
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:56px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:16px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:50px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:12px;';
     title.textContent = 'SHIFT';
     card.appendChild(title);
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Guests: <span style="color:' + g + '">' + (s ? (s.total_guests || '--') : '--') + '</span></div>' +
       '<div>Tables: <span style="color:' + g + '">' + (s ? (s.total_tables || '--') : '--') + '</span></div>' +
@@ -153,7 +158,7 @@ function buildLeftCard(params, sales, labor) {
 
 function buildVerticalRail(text, color) {
   var rail = document.createElement('div');
-  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:56px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:16px;';
+  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:50px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:12px;';
   for (var i = 0; i < text.length; i++) {
     var ch = document.createElement('div');
     ch.style.cssText = 'line-height:1;';
@@ -175,7 +180,7 @@ function buildRightCard(params, sales, labor) {
     card.appendChild(buildVerticalRail('LABOR', lc));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l && l.ot_alerts && l.ot_alerts.length > 0) {
@@ -188,7 +193,7 @@ function buildRightCard(params, sales, labor) {
       '<div>Total Hrs: <span style="color:' + lc + '">' + (l ? l.total_hours : '--') + '</span></div>' +
       '<div>Tip Pool: <span style="color:' + T.gold + '">' + (l ? fmt(l.tip_pool) : '--') + '</span></div>' +
       '<div>COB: <span style="color:' + lc + '">' + (l ? l.cob_percent + '%' : '--') + '</span></div>' +
-      '<div style="margin-top:8px;font-size:24px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:8px;font-size:20px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   } else {
     // HOURS card — numbers in cyan (title color), money in gold
@@ -196,7 +201,7 @@ function buildRightCard(params, sales, labor) {
     card.appendChild(buildVerticalRail('HOURS', hc));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l) {
@@ -210,7 +215,7 @@ function buildRightCard(params, sales, labor) {
       '<div>Out: <span style="color:' + hc + '">' + (l ? (l.clock_out || 'active') : '--') + '</span></div>' +
       '<div>Today: <span style="color:' + hc + '">' + (l ? l.today_hours + 'h' : '--') + '</span></div>' +
       '<div>Week: <span style="color:' + hc + '">' + (l ? l.weekly_hours + 'h' : '--') + '</span></div>' +
-      '<div style="margin-top:8px;font-size:24px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:8px;font-size:20px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   }
 
@@ -509,8 +514,8 @@ function buildServerShiftPanels(sales) {
     wrap.style.cssText = 'padding:12px;font-family:Courier New,monospace;display:flex;flex-direction:column;gap:6px;';
 
     wrap.innerHTML =
-      '<div style="font-size:24px;color:' + CHART.gold + '">Card Tips: ' + fmt(s.tips_collected || 0) + '</div>' +
-      '<div style="font-size:24px;color:' + CHART.red + '">Tipout: -' + fmt(s.tipout_amount || 0) + '</div>' +
+      '<div style="font-size:20px;color:' + CHART.gold + '">Card Tips: ' + fmt(s.tips_collected || 0) + '</div>' +
+      '<div style="font-size:20px;color:' + CHART.red + '">Tipout: -' + fmt(s.tipout_amount || 0) + '</div>' +
       '<div style="height:1px;background:' + T.border + ';margin:4px 0;"></div>' +
       '<div style="font-size:28px;font-weight:bold;color:' + CHART.gold + '">Take-home: ' + fmt(s.take_home || 0) + '</div>' +
       '<div style="font-size:28px;color:' + CHART.gold + '">Cash Tips: ' + fmt(s.cash_tips || 0) + '</div>' +
