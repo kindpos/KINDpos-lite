@@ -13,9 +13,9 @@ This is the magic of event sourcing:
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
-from decimal import Decimal
 
 from .events import Event, EventType
+from .money import money_round
 
 
 @dataclass
@@ -38,7 +38,7 @@ class OrderItem:
     def subtotal(self) -> float:
         """Calculate item subtotal including modifiers."""
         modifier_total = sum(m.get("price", 0) for m in self.modifiers)
-        return (self.price + modifier_total) * self.quantity
+        return money_round((self.price + modifier_total) * self.quantity)
 
 
 @dataclass
@@ -88,12 +88,12 @@ class Order:
     @property
     def subtotal(self) -> float:
         """Sum of all items."""
-        return round(sum(item.subtotal for item in self.items), 2)
+        return money_round(sum(item.subtotal for item in self.items))
 
     @property
     def discount_total(self) -> float:
         """Sum of all discounts."""
-        return round(sum(d.get("amount", 0) for d in self.discounts), 2)
+        return money_round(sum(d.get("amount", 0) for d in self.discounts))
 
     @property
     def tax_rate(self) -> float:
@@ -106,22 +106,22 @@ class Order:
     def tax(self) -> float:
         """Calculate tax on subtotal after discounts."""
         taxable = self.subtotal - self.discount_total
-        return round(taxable * self.tax_rate, 2)
+        return money_round(taxable * self.tax_rate)
 
     @property
     def total(self) -> float:
         """Final total."""
-        return round(self.subtotal - self.discount_total + self.tax, 2)
+        return money_round(self.subtotal - self.discount_total + self.tax)
 
     @property
     def amount_paid(self) -> float:
         """Sum of confirmed payments."""
-        return round(sum(p.amount for p in self.payments if p.status == "confirmed"), 2)
+        return money_round(sum(p.amount for p in self.payments if p.status == "confirmed"))
 
     @property
     def balance_due(self) -> float:
         """Remaining balance."""
-        return round(self.total - self.amount_paid, 2)
+        return money_round(self.total - self.amount_paid)
 
     @property
     def is_fully_paid(self) -> bool:

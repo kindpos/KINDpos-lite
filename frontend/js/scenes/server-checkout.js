@@ -87,7 +87,7 @@ function fetchServerState(params) {
       tipOutTotal:   0,
       takeHome:      d.card_tips    || 0,
       cashReceived:  d.cash_total   || 0,
-      cashExpected:  (d.cash_total || 0) - (d.card_tips || 0),
+      cashExpected:  parseFloat(((d.cash_total || 0) - (d.card_tips || 0)).toFixed(2)),
       closedOrders:  d.closed_order_ids || [],
     };
     recalcTipOut(state);

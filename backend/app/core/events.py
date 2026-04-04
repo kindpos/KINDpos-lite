@@ -14,6 +14,8 @@ import uuid
 import hashlib
 import json
 
+from .money import money_round
+
 
 class OrderType(str, Enum):
     """Core order types used by KINDpos."""
@@ -1364,9 +1366,9 @@ def batch_submitted(
         terminal_id=terminal_id,
         payload={
             "order_count": order_count,
-            "total_amount": round(total_amount, 2),
-            "cash_total": round(cash_total, 2),
-            "card_total": round(card_total, 2),
+            "total_amount": money_round(total_amount),
+            "cash_total": money_round(cash_total),
+            "card_total": money_round(card_total),
             "order_ids": order_ids,
             "submitted_at": datetime.now(timezone.utc).isoformat(),
         },
@@ -1394,10 +1396,10 @@ def day_closed(
         payload={
             "date": date,
             "total_orders": total_orders,
-            "total_sales": round(total_sales, 2),
-            "total_tips": round(total_tips, 2),
-            "cash_total": round(cash_total, 2),
-            "card_total": round(card_total, 2),
+            "total_sales": money_round(total_sales),
+            "total_tips": money_round(total_tips),
+            "cash_total": money_round(cash_total),
+            "card_total": money_round(card_total),
             "order_ids": order_ids,
             "payment_count": payment_count,
             "opened_at": opened_at,

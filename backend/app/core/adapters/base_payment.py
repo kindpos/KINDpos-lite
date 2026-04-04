@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from decimal import Decimal
 import uuid
@@ -69,6 +69,14 @@ class TransactionRequest(BaseModel):
     server_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
     split_info: Optional[SplitInfo] = None
+
+    @field_validator("amount", "tip_amount", "service_charge_amount", mode="before")
+    @classmethod
+    def _coerce_via_str(cls, v):
+        """Avoid IEEE 754 artifacts: Decimal(str(10.10)) not Decimal(10.10)."""
+        if isinstance(v, float):
+            return Decimal(str(v))
+        return v
 
 # 1.6 TransactionResult
 class TransactionStatus(str, Enum):

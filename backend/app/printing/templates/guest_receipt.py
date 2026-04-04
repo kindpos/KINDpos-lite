@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from .base_template import BaseTemplate
+from app.core.money import money_round
 
 class GuestReceiptTemplate(BaseTemplate):
     """
@@ -101,7 +102,7 @@ class GuestReceiptTemplate(BaseTemplate):
             base_amount = context.get('subtotal', 0.0) if calc_base == 'pretax' else context.get('total', 0.0)
             
             for pct in percentages:
-                amount = round(base_amount * (pct / 100), 2)
+                amount = money_round(base_amount * (pct / 100))
                 commands.append({'type': 'text', 'content': f"  {pct}%{' ' * 7}${amount:>7.2f}"})
             
             commands.append({'type': 'feed', 'lines': 1})
