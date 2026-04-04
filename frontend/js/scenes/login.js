@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T } from '../tokens.js';
+import { T, bevelEdges, shadowColor } from '../tokens.js';
 import { buildButton, buildGap } from '../components.js';
 import { buildNumpad } from '../numpad.js';
 import { registerScene, push, overlay } from '../scene-manager.js';
@@ -24,19 +24,52 @@ var employees = [];  // loaded from /api/v1/servers on scene enter
 var actionButtons = [];  // track buttons for highlight
 
 function clearHighlights() {
+  var b = T.bevel;
   actionButtons.forEach(function(item) {
-    item.wrap.style.outline = 'none';
-    item.wrap.style.outlineOffset = '0';
+    var edges = bevelEdges(item.fill);
+    var shadow = shadowColor(item.fill);
+    var inner = item.wrap.querySelector('div');
+    inner.style.borderTop    = b + 'px solid ' + edges.light;
+    inner.style.borderLeft   = b + 'px solid ' + edges.light;
+    inner.style.borderBottom = b + 'px solid ' + edges.dark;
+    inner.style.borderRight  = b + 'px solid ' + edges.dark;
+    item.wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ')';
+    item.wrap.style.transform = 'translate(0,0)';
+    item.selected = false;
   });
 }
 
 function highlightButton(action) {
   clearHighlights();
+  var b = T.bevel;
   actionButtons.forEach(function(item) {
     if (item.action === action) {
-      item.wrap.style.outline = '3px solid #ffffff';
-      item.wrap.style.outlineOffset = '4px';
+      var edges = bevelEdges(item.fill);
+      var inner = item.wrap.querySelector('div');
+      inner.style.borderTop    = b + 'px solid ' + edges.dark;
+      inner.style.borderLeft   = b + 'px solid ' + edges.dark;
+      inner.style.borderBottom = b + 'px solid ' + edges.light;
+      inner.style.borderRight  = b + 'px solid ' + edges.light;
+      item.wrap.style.filter = 'drop-shadow(0px 0px 0px transparent)';
+      item.wrap.style.transform = 'translate(' + T.shadowX + 'px, ' + T.shadowY + 'px)';
+      item.selected = true;
     }
+  });
+}
+
+function registerActionButton(wrap, action, fill) {
+  var entry = { wrap: wrap, action: action, fill: fill, selected: false };
+  actionButtons.push(entry);
+  // Re-apply pressed-in look after default pointerup/pointerleave restores it
+  wrap.addEventListener('pointerup', function() {
+    setTimeout(function() {
+      if (entry.selected) highlightButton(action);
+    }, 0);
+  });
+  wrap.addEventListener('pointerleave', function() {
+    setTimeout(function() {
+      if (entry.selected) highlightButton(action);
+    }, 0);
   });
 }
 
@@ -61,7 +94,7 @@ registerScene('login', {
       width: COL_LEFT - 60, height: QS_H,
       onTap: function() { handleAction('quick-service'); },
     });
-    actionButtons.push({ wrap: qsBtn, action: 'quick-service' });
+    registerActionButton(qsBtn, 'quick-service', T.mint);
     left.appendChild(qsBtn);
 
     left.appendChild(buildGap(40));
@@ -76,7 +109,7 @@ registerScene('login', {
       lineHeight: '0.75',
       onTap: function() { handleAction('clock'); },
     });
-    actionButtons.push({ wrap: clockBtn, action: 'clock' });
+    registerActionButton(clockBtn, 'clock', T.cyan);
     row.appendChild(clockBtn);
 
     var reportBtn = buildButton('Reporting', {
@@ -84,7 +117,7 @@ registerScene('login', {
       width: MGMT_W, height: MGMT_H,
       onTap: function() { handleAction('reporting'); },
     });
-    actionButtons.push({ wrap: reportBtn, action: 'reporting' });
+    registerActionButton(reportBtn, 'reporting', T.cyan);
     row.appendChild(reportBtn);
 
     left.appendChild(row);
@@ -97,7 +130,7 @@ registerScene('login', {
       width: COL_LEFT - 60, height: CONFIG_H,
       onTap: function() { handleAction('configuration'); },
     });
-    actionButtons.push({ wrap: configBtn, action: 'configuration' });
+    registerActionButton(configBtn, 'configuration', T.gold);
     left.appendChild(configBtn);
 
     el.appendChild(left);
@@ -138,7 +171,8 @@ registerScene('login', {
 
 function handleAction(action) {
   selectedAction = action;
-  highlightButton(action);
+  // Defer so it applies after the default pointerup handler restores the button
+  setTimeout(function() { highlightButton(action); }, 0);
 }
 
 function handlePinSubmit(pin) {
