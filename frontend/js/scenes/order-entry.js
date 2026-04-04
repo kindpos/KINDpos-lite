@@ -917,6 +917,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
         fill: T.goGreen, color: T.bg, fontSize: '26px', height: 50,
         onTap: function() {
           if (ticket.length > 0) {
+            resolveInterrupt(); // close recall-action so confirm-clear can open
             interrupt('confirm-clear', {
               onBuild: function(cel) {
                 var cpanel = document.createElement('div');

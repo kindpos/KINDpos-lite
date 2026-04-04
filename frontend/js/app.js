@@ -3,8 +3,9 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { init, push, pop, replace } from './scene-manager.js';
+import { init, push, pop, replace, onBeforeTransition } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
+import { hideKeyboard } from './keyboard.js';
 
 // Import scenes (self-registering)
 import './scenes/login.js';
@@ -76,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     interruptContainer: document.getElementById('interrupt-container'),
     onDiagnostic: null,
   });
+
+  onBeforeTransition(hideKeyboard);
 
   push('login');
 
