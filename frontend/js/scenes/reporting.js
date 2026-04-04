@@ -90,24 +90,24 @@ function buildCollapsedView(el, params, sales, labor) {
 
 function buildLeftCard(params, sales, labor) {
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px 24px;box-sizing:border-box;';
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
   var s = sales;
 
   if (params.role === 'manager') {
     // SALES card — title + numbers both gold (title color)
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:50px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:12px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
     title.textContent = 'SALES';
     card.appendChild(title);
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Net: <span style="color:' + g + '">' + (s ? fmt(s.net_sales) : '--') + '</span></div>' +
-      '<div>Total Checks: <span style="color:' + g + '">' + (s ? s.total_checks : '--') + '</span></div>' +
-      '<div>Check Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>';
+      '<div>Checks: <span style="color:' + g + '">' + (s ? s.total_checks : '--') + '</span></div>' +
+      '<div>Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>';
     card.appendChild(kpis);
 
     // Cash / Card breakdown — single combined bar
@@ -116,40 +116,83 @@ function buildLeftCard(params, sales, labor) {
       var cashPct = total > 0 ? (s.cash_total / total * 100).toFixed(0) : 0;
       var cardPct = total > 0 ? (s.card_total / total * 100).toFixed(0) : 0;
       var breakdown = document.createElement('div');
-      breakdown.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
-      // Labels above bar
+      breakdown.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';';
       breakdown.innerHTML =
-        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">' +
           '<span>Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></span>' +
           '<span>Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></span>' +
         '</div>' +
-        '<div style="display:flex;height:20px;background:' + T.bg + ';">' +
+        '<div style="display:flex;height:16px;background:' + T.bg + ';">' +
           '<div style="width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.8;"></div>' +
           '<div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.8;"></div>' +
         '</div>';
       card.appendChild(breakdown);
     } else {
       var fallback = document.createElement('div');
-      fallback.style.cssText = 'margin-top:12px;font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
+      fallback.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';';
       fallback.textContent = 'Cash: --   Card: --';
       card.appendChild(fallback);
     }
+
+    // Close Day button + active checks
+    var btnArea = document.createElement('div');
+    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
+
+    var closeDayBtn = buildStyledButton(T.red);
+    closeDayBtn.inner.textContent = 'Close Day';
+    closeDayBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:32px;color:#fff;padding:10px 16px;text-align:center;';
+    closeDayBtn.wrap.style.cssText = 'align-self:stretch;';
+    closeDayBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('close-day', params);
+    });
+    btnArea.appendChild(closeDayBtn.wrap);
+
+    var activeChecks = document.createElement('div');
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';text-align:center;';
+    var checkCount = s ? s.total_checks : 0;
+    activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
+    btnArea.appendChild(activeChecks);
+
+    card.appendChild(btnArea);
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:50px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:12px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
     title.textContent = 'SHIFT';
     card.appendChild(title);
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Guests: <span style="color:' + g + '">' + (s ? (s.total_guests || '--') : '--') + '</span></div>' +
       '<div>Tables: <span style="color:' + g + '">' + (s ? (s.total_tables || '--') : '--') + '</span></div>' +
-      '<div>Check Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>' +
-      '<div style="margin-top:8px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Tipout: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
+      '<div>Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>' +
+      '<div style="margin-top:4px;font-size:28px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Out: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
+
+    // Checkout button + active checks
+    var btnArea = document.createElement('div');
+    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:6px;';
+
+    var checkoutBtn = buildStyledButton('#33ff99');
+    checkoutBtn.inner.textContent = 'Checkout';
+    checkoutBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.bgDark + ';padding:8px 16px;text-align:center;';
+    checkoutBtn.wrap.style.cssText = 'align-self:stretch;';
+    checkoutBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('server-checkout', params);
+    });
+    btnArea.appendChild(checkoutBtn.wrap);
+
+    var activeChecks = document.createElement('div');
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';text-align:center;';
+    var checkCount = s ? s.total_checks : 0;
+    activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
+    btnArea.appendChild(activeChecks);
+
+    card.appendChild(btnArea);
   }
 
   return card;
@@ -159,7 +202,7 @@ function buildLeftCard(params, sales, labor) {
 
 function buildVerticalRail(text, color) {
   var rail = document.createElement('div');
-  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:50px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:12px;';
+  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:42px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:10px;';
   for (var i = 0; i < text.length; i++) {
     var ch = document.createElement('div');
     ch.style.cssText = 'line-height:1;';
@@ -171,7 +214,7 @@ function buildVerticalRail(text, color) {
 
 function buildRightCard(params, sales, labor) {
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px 24px;gap:12px;box-sizing:border-box;';
+  card.style.cssText = 'display:flex;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;gap:10px;box-sizing:border-box;overflow:hidden;';
 
   var l = labor;
 
@@ -181,7 +224,7 @@ function buildRightCard(params, sales, labor) {
     card.appendChild(buildVerticalRail('LABOR', lc));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l && l.ot_alerts && l.ot_alerts.length > 0) {
@@ -191,18 +234,18 @@ function buildRightCard(params, sales, labor) {
     }
 
     kpis.innerHTML =
-      '<div>Total Hrs: <span style="color:' + lc + '">' + (l ? l.total_hours : '--') + '</span></div>' +
-      '<div>Tip Pool: <span style="color:' + T.gold + '">' + (l ? fmt(l.tip_pool) : '--') + '</span></div>' +
+      '<div>Hrs: <span style="color:' + lc + '">' + (l ? l.total_hours : '--') + '</span></div>' +
+      '<div>Tips: <span style="color:' + T.gold + '">' + (l ? fmt(l.tip_pool) : '--') + '</span></div>' +
       '<div>COB: <span style="color:' + lc + '">' + (l ? l.cob_percent + '%' : '--') + '</span></div>' +
-      '<div style="margin-top:8px;font-size:20px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:4px;font-size:18px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   } else {
-    // HOURS card — numbers in cyan (title color), money in gold
-    var hc = T.cyan;
+    // HOURS card — numbers in #33ff99 (same as LABOR), money in gold
+    var hc = '#33ff99';
     card.appendChild(buildVerticalRail('HOURS', hc));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:10px;flex:1;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l) {
@@ -213,10 +256,10 @@ function buildRightCard(params, sales, labor) {
 
     kpis.innerHTML =
       '<div>In: <span style="color:' + hc + '">' + (l ? l.clock_in : '--') + '</span></div>' +
-      '<div>Out: <span style="color:' + hc + '">' + (l ? (l.clock_out || 'active') : '--') + '</span></div>' +
+      '<div>Out: <span style="color:' + hc + '">' + (l ? (l.clock_out || 'active') : '--') + '</span></div>'  +
       '<div>Today: <span style="color:' + hc + '">' + (l ? l.today_hours + 'h' : '--') + '</span></div>' +
       '<div>Week: <span style="color:' + hc + '">' + (l ? l.weekly_hours + 'h' : '--') + '</span></div>' +
-      '<div style="margin-top:8px;font-size:20px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:4px;font-size:18px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   }
 
@@ -322,7 +365,7 @@ function buildManagerSalesPanels(sales, fullSize) {
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
       data.push({ label: label, value: hourly[i].net, compareValue: cmp });
     }
-    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize, legend: ['Today', 'Last Wk'] });
+    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: true, legend: ['Today', 'Last Wk'] });
     body.appendChild(svg);
   });
 
@@ -336,7 +379,7 @@ function buildManagerSalesPanels(sales, fullSize) {
       var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
       data.push({ label: label, value: hourly[i].checks, compareValue: cmp });
     }
-    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, legend: ['Today', 'Last Wk'], showCallouts: fullSize, calloutFmt: function(v) { return v; } });
+    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, legend: ['Today', 'Last Wk'], showCallouts: true, calloutFmt: function(v) { return v; } });
     body.appendChild(svg);
   });
 
@@ -347,7 +390,7 @@ function buildManagerSalesPanels(sales, fullSize) {
     for (var i = 0; i < dailyAvg.length; i++) {
       data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
     }
-    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: svgW, height: svgH, showCallouts: fullSize });
+    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: svgW, height: svgH, showCallouts: true });
     body.appendChild(svg);
   });
 
@@ -526,7 +569,7 @@ function buildServerShiftPanels(sales, fullSize) {
       var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
       data.push({ label: label, value: hourly[i].checks });
     }
-    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
+    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
     body.appendChild(svg);
   });
 
@@ -629,7 +672,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
       var val = d.hours || 0;
       data.push({ label: d.day, value: val });
     }
-    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
+    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
 
     // Draw dashed outline for scheduled-unworked days
     var padLeft = 50;

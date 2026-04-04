@@ -139,10 +139,17 @@ registerScene('login', {
     var right = document.createElement('div');
     right.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;';
 
+    // PIN prompt — hidden until an action button is tapped
+    var pinPrompt = document.createElement('div');
+    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';text-align:center;padding:6px 0;min-height:32px;';
+    pinPrompt.textContent = '';
+    _pinPromptEl = pinPrompt;
+    right.appendChild(pinPrompt);
+
     right.appendChild(buildNumpad({
       maxDigits: 6,
       masked: true,
-      onSubmit: function(pin) { handlePinSubmit(pin); },
+      onSubmit: function(pin) { handlePinSubmit(pin, pinPrompt); },
     }));
 
     // Version label at bottom-right with multi-color spans
@@ -169,15 +176,34 @@ registerScene('login', {
   timeoutMs: 0,
 });
 
+var _pinPromptEl = null;
+
+var actionLabels = {
+  'quick-service': 'Quick Service',
+  'clock': 'Clock In/Out',
+  'reporting': 'Reporting',
+  'configuration': 'Configurations',
+};
+
 function handleAction(action) {
   selectedAction = action;
-  // Defer so it applies after the default pointerup handler restores the button
   setTimeout(function() { highlightButton(action); }, 0);
+  if (_pinPromptEl) {
+    _pinPromptEl.textContent = 'Enter PIN for ' + (actionLabels[action] || action);
+    _pinPromptEl.style.color = T.mint;
+  }
 }
 
-function handlePinSubmit(pin) {
+function handlePinSubmit(pin, promptEl) {
   var emp = employees.find(function(e) { return e.pin === pin; });
-  if (!emp) return;  // invalid PIN — ignore
+  if (!emp) {
+    if (promptEl || _pinPromptEl) {
+      var el = promptEl || _pinPromptEl;
+      el.textContent = 'Invalid PIN';
+      el.style.color = T.red;
+    }
+    return;
+  }
 
   var action = selectedAction || 'quick-service';
   var role = emp.role || 'server';
@@ -188,7 +214,14 @@ function handlePinSubmit(pin) {
     case 'clock':         break;
     case 'reporting':     push('reporting', base); break;
     case 'configuration':
-      if (role !== 'manager') return;  // only managers can access config
+      if (role !== 'manager') {
+        if (promptEl || _pinPromptEl) {
+          var el = promptEl || _pinPromptEl;
+          el.textContent = 'Manager access only';
+          el.style.color = T.red;
+        }
+        return;
+      }
       push('settings', { pin: pin });
       break;
   }
