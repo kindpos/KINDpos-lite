@@ -45,6 +45,17 @@ function fetchData(params) {
 //  BUILD COLLAPSED CARDS
 // ═══════════════════════════════════════════════════
 
+function buildCardWrap(cardInner) {
+  // Wrap card in a styled button shell (beveled edges, shadow, chamfer)
+  var btn = buildStyledButton(T.mint);
+  btn.inner.style.padding = '0';
+  btn.inner.appendChild(cardInner);
+  btn.wrap.style.flex = '1';
+  btn.wrap.style.maxHeight = '90%';
+  btn.wrap.style.height = '100%';
+  return btn.wrap;
+}
+
 function buildCollapsedView(el, params, sales, labor) {
   el.innerHTML = '';
   el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;box-sizing:border-box;padding:20px;gap:20px;';
@@ -52,32 +63,28 @@ function buildCollapsedView(el, params, sales, labor) {
   var leftCard = buildLeftCard(params, sales, labor);
   var rightCard = buildRightCard(params, sales, labor);
 
-  leftCard.style.flex = '1';
-  leftCard.style.maxHeight = '90%';
-  leftCard.style.border = '20px solid ' + T.mint;
-  rightCard.style.flex = '1';
-  rightCard.style.maxHeight = '90%';
-  rightCard.style.border = '20px solid ' + T.mint;
+  var leftWrap = buildCardWrap(leftCard);
+  var rightWrap = buildCardWrap(rightCard);
 
-  leftCard.addEventListener('pointerup', function() {
+  leftWrap.addEventListener('pointerup', function() {
     expandedCard = 'left';
     renderCurrentState();
   });
 
-  rightCard.addEventListener('pointerup', function() {
+  rightWrap.addEventListener('pointerup', function() {
     expandedCard = 'right';
     renderCurrentState();
   });
 
-  el.appendChild(leftCard);
-  el.appendChild(rightCard);
+  el.appendChild(leftWrap);
+  el.appendChild(rightWrap);
 }
 
 // ── LEFT CARD: SALES (manager) or SHIFT (server) ──
 
 function buildLeftCard(params, sales, labor) {
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;flex-direction:column;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px 24px;';
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px 24px;box-sizing:border-box;';
 
   var s = sales;
 
@@ -158,7 +165,7 @@ function buildVerticalRail(text, color) {
 
 function buildRightCard(params, sales, labor) {
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px 24px;gap:12px;';
+  card.style.cssText = 'display:flex;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px 24px;gap:12px;box-sizing:border-box;';
 
   var l = labor;
 
