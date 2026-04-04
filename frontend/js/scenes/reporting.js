@@ -322,7 +322,7 @@ function buildManagerSalesPanels(sales, fullSize) {
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
       data.push({ label: label, value: hourly[i].net, compareValue: cmp });
     }
-    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
+    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize, legend: ['Today', 'Last Wk'] });
     body.appendChild(svg);
   });
 
@@ -351,17 +351,51 @@ function buildManagerSalesPanels(sales, fullSize) {
     body.appendChild(svg);
   });
 
-  // CASH / CARD — horizontal bars with percentage labels
+  // CASH / CARD — win98-style combined bar
   var p4 = buildChartPanel('CASH / CARD', s.cash_total ? fmt((s.cash_total || 0) + (s.card_total || 0)) : '--', function(body) {
-    var svg = createSVG(svgW, svgH);
     var total = (s.cash_total || 0) + (s.card_total || 0);
     var cashPct = total > 0 ? Math.round((s.cash_total || 0) / total * 100) : 0;
     var cardPct = total > 0 ? 100 - cashPct : 0;
-    drawHorizontalBars(svg, [
-      { label: 'Cash', value: s.cash_total || 0, sublabel: fmt(s.cash_total || 0) + ' (' + cashPct + '%)', color: CHART.gold },
-      { label: 'Card', value: s.card_total || 0, sublabel: fmt(s.card_total || 0) + ' (' + cardPct + '%)', color: CHART.sky },
-    ], { width: svgW, height: svgH, labelWidth: fullSize ? 80 : 50 });
-    body.appendChild(svg);
+
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-family:' + T.fb + ';';
+
+    // Labels row
+    var labels = document.createElement('div');
+    labels.style.cssText = 'display:flex;justify-content:space-between;font-size:' + (fullSize ? '20' : '16') + 'px;';
+    labels.innerHTML =
+      '<span style="color:' + CHART.gold + '">Cash: ' + fmt(s.cash_total || 0) + ' (' + cashPct + '%)</span>' +
+      '<span style="color:' + CHART.sky + '">Card: ' + fmt(s.card_total || 0) + ' (' + cardPct + '%)</span>';
+    wrap.appendChild(labels);
+
+    // Win98-style bar — beveled raised look
+    var barOuter = document.createElement('div');
+    barOuter.style.cssText = 'height:' + (fullSize ? '28' : '20') + 'px;background:' + T.bg + ';border:2px solid;border-color:' + T.bgLight + ' ' + T.bgDark + ' ' + T.bgDark + ' ' + T.bgLight + ';position:relative;';
+
+    // Inner sunken bar area
+    var barInner = document.createElement('div');
+    barInner.style.cssText = 'position:absolute;inset:2px;display:flex;border:1px solid;border-color:' + T.bgDark + ' ' + T.bgLight + ' ' + T.bgLight + ' ' + T.bgDark + ';';
+
+    // Cash segment
+    var cashBar = document.createElement('div');
+    cashBar.style.cssText = 'width:' + cashPct + '%;height:100%;background:' + CHART.gold + ';';
+    barInner.appendChild(cashBar);
+
+    // Card segment
+    var cardBar = document.createElement('div');
+    cardBar.style.cssText = 'width:' + cardPct + '%;height:100%;background:' + CHART.sky + ';';
+    barInner.appendChild(cardBar);
+
+    barOuter.appendChild(barInner);
+    wrap.appendChild(barOuter);
+
+    // Total line
+    var totalLine = document.createElement('div');
+    totalLine.style.cssText = 'text-align:center;font-size:' + (fullSize ? '22' : '16') + 'px;color:' + CHART.mint + ';margin-top:4px;';
+    totalLine.innerHTML = 'Total: <span style="color:' + CHART.gold + '">' + fmt(total) + '</span>';
+    wrap.appendChild(totalLine);
+
+    body.appendChild(wrap);
   });
 
   return [p1, p2, p3, p4];
@@ -401,7 +435,7 @@ function buildManagerLaborPanels(labor, fullSize) {
 
     // Text breakdown below chart
     var info = document.createElement('div');
-    info.style.cssText = 'padding:4px 8px;font-family:Courier New,monospace;font-size:20px;color:' + CHART.mint + ';';
+    info.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:20px;color:' + CHART.mint + ';';
     info.innerHTML =
       'Card Tips: <span style="color:' + CHART.gold + '">' + fmt(l.card_tips_total || 0) + '</span> ' +
       '- Tipout: <span style="color:' + CHART.red + '">' + fmt(l.tipout_deducted || 0) + '</span> ' +
@@ -455,7 +489,7 @@ function buildManagerLaborPanels(labor, fullSize) {
 
     // Status text
     var statusEl = document.createElement('div');
-    statusEl.style.cssText = 'position:absolute;top:4px;right:8px;font-family:Courier New,monospace;font-size:20px;color:' + otColor + ';font-weight:bold;';
+    statusEl.style.cssText = 'position:absolute;top:4px;right:8px;font-family:' + T.fb + ';font-size:20px;color:' + otColor + ';font-weight:bold;';
     statusEl.textContent = otStatus;
     body.appendChild(statusEl);
   });
@@ -495,7 +529,7 @@ function buildServerShiftPanels(sales, fullSize) {
     body.appendChild(svg);
 
     var avgText = document.createElement('div');
-    avgText.style.cssText = 'padding:4px 8px;font-family:Courier New,monospace;font-size:20px;color:' + CHART.mint + ';';
+    avgText.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:20px;color:' + CHART.mint + ';';
     avgText.textContent = 'Avg guests/table: ' + (s.guests_per_table || '--');
     body.appendChild(avgText);
   });
@@ -516,7 +550,7 @@ function buildServerShiftPanels(sales, fullSize) {
   // TIPS / TIPOUT — styled DOM text panel
   var p4 = buildChartPanel('TIPS / TIPOUT', s.tips_collected ? fmt(s.tips_collected) : '--', function(body) {
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:12px;font-family:Courier New,monospace;display:flex;flex-direction:column;gap:6px;';
+    wrap.style.cssText = 'padding:12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:6px;';
 
     wrap.innerHTML =
       '<div style="font-size:20px;color:' + CHART.gold + '">Card Tips: ' + fmt(s.tips_collected || 0) + '</div>' +
@@ -543,7 +577,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
   // TODAY'S SHIFT — big clock in/out text + progress bar
   var p1 = buildChartPanel('TODAY\'S SHIFT', l.today_hours ? l.today_hours + 'h' : '--', function(body) {
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:8px 12px;font-family:Courier New,monospace;display:flex;flex-direction:column;gap:4px;';
+    wrap.style.cssText = 'padding:8px 12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:4px;';
 
     wrap.innerHTML =
       '<div style="font-size:20px;color:' + CHART.cyan + '">Time In</div>' +
@@ -599,7 +633,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
 
     // Daily table
     var table = document.createElement('div');
-    table.style.cssText = 'padding:2px 8px;font-family:Courier New,monospace;font-size:20px;overflow-y:auto;flex:1;';
+    table.style.cssText = 'padding:2px 8px;font-family:' + T.fb + ';font-size:20px;overflow-y:auto;flex:1;';
 
     var remainScheduled = 0;
     for (var i = 0; i < weekly.length; i++) {
@@ -649,7 +683,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
 
   var p4 = buildChartPanel('OT ALERT', statusLabel, function(body) {
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:8px 12px;font-family:Courier New,monospace;display:flex;flex-direction:column;gap:6px;';
+    wrap.style.cssText = 'padding:8px 12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:6px;';
 
     // Status box
     var statusBox = document.createElement('div');
