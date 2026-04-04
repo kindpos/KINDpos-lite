@@ -233,26 +233,33 @@ class DejavooSPInAdapter(BasePaymentDevice):
             resp = await self._client.get(url, timeout=client_timeout)
             resp.raise_for_status()
 
-            body = resp.text.strip()
+            # Handle response as bytes if no charset detected
+            try:
+                body = resp.text.strip()
+            except Exception:
+                body = resp.content.decode('utf-8', errors='replace').strip()
+
             logger.debug(f"SPIn ← {body}")
             print(f"  SPIn ← {resp.status_code} ({len(body)} bytes)")
 
             # Strip <xmp>...</xmp> wrapper if present
-            if body.startswith("<xmp>"):
-                body = body[5:]
-            if body.endswith("</xmp>"):
-                body = body[:-6]
+            if "<xmp>" in body:
+                body = body.split("<xmp>", 1)[-1]
+            if "</xmp>" in body:
+                body = body.split("</xmp>", 1)[0]
 
             body = body.strip()
             if not body:
+                print(f"  SPIn ← empty body after stripping xmp")
                 return None
 
             # URL-decode any encoded chars in the response
             body = urllib.parse.unquote(body)
+            print(f"  SPIn parsed: {body[:120]}")
 
             return ET.fromstring(body)
 
-        except httpx.RequestError as e:
+        except Exception as e:
             logger.error(f"SPIn request failed: {type(e).__name__}: {e}")
             print(f"  SPIn request failed: {type(e).__name__}: {e}")
             return None
