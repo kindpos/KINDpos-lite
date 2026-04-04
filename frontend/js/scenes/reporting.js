@@ -71,7 +71,7 @@ function buildCard(opts) {
 
     infoLines.forEach(function(line) {
       var span = document.createElement('span');
-      span.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + (line.color || T.mint) + ';';
+      span.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + (line.color || T.mint) + ';';
       span.textContent = line.text;
       infoWrap.appendChild(span);
     });

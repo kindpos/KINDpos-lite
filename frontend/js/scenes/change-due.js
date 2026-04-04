@@ -135,7 +135,7 @@ registerScene('change-due', {
     // ── Tap to dismiss hint ───────────────────────
     var hint = document.createElement('div');
     hint.style.cssText = [
-      'font-family:' + T.fb + ';font-size:12px;color:#2a3a2a;',
+      'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';',
       'letter-spacing:0.1em;margin-top:12px;',
     ].join('');
     hint.textContent = 'tap anywhere to continue';

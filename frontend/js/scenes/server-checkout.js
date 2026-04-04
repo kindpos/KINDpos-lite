@@ -195,7 +195,7 @@ function buildReceiptContent(state) {
   wrap.appendChild(divider());
 
   var footer = document.createElement('div');
-  footer.style.cssText = 'text-align:center;margin-top:6px;font-size:' + SMALL + ';color:' + T.dimText + ';';
+  footer.style.cssText = 'text-align:center;margin-top:6px;font-size:' + SMALL + ';color:' + T.mutedText + ';';
   footer.innerHTML = 'Terminal: T-001<br>** CONFIDENTIAL **';
   wrap.appendChild(footer);
 
@@ -219,7 +219,7 @@ function buildReceiptPanel(state) {
   header.style.cssText = [
     'flex-shrink:0;padding:6px 12px;',
     'background:' + T.mintEdgeD + ';',
-    'font-family:' + T.fb + ';font-size:11px;color:#1a1a1a;',
+    'font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
   header.textContent = 'PRINT PREVIEW';
@@ -291,7 +291,7 @@ function buildCardHeader(opts) {
 
   // Index number
   var num = document.createElement('div');
-  num.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.dimText + ';flex-shrink:0;width:18px;';
+  num.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';flex-shrink:0;width:28px;';
   num.textContent = String(opts.index).padStart(2, '0');
   header.appendChild(num);
 
@@ -300,13 +300,13 @@ function buildCardHeader(opts) {
   titleWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;';
 
   var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + T.mint + ';font-weight:bold;';
+  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';font-weight:bold;';
   titleEl.textContent = opts.title || '';
   titleWrap.appendChild(titleEl);
 
   if (opts.subtext) {
     var sub = document.createElement('div');
-    sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     sub.textContent = opts.subtext;
     titleWrap.appendChild(sub);
   }
@@ -331,7 +331,7 @@ function buildCardHeader(opts) {
 
   // Chevron
   var chevron = document.createElement('div');
-  chevron.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.dimText + ';flex-shrink:0;width:14px;';
+  chevron.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';flex-shrink:0;width:14px;';
   chevron.textContent = '›';
   rightWrap.appendChild(chevron);
 
@@ -371,11 +371,11 @@ function bodyRow(label, value, valueColor) {
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';';
 
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:13px;color:' + T.mutedText + ';';
+  lbl.style.cssText = 'font-size:20px;color:' + T.mutedText + ';';
   lbl.textContent = label;
 
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:14px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
+  val.style.cssText = 'font-size:20px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
   val.textContent = value;
 
   row.appendChild(lbl);
@@ -390,7 +390,7 @@ function buildJumpButton(label, fill, textColor, onTap) {
   pair.wrap.style.height = '36px';
   pair.wrap.style.marginTop = '6px';
   pair.inner.style.fontFamily = T.fb;
-  pair.inner.style.fontSize = '13px';
+  pair.inner.style.fontSize = '20px';
   pair.inner.style.color = textColor;
   pair.inner.textContent = label;
   pair.wrap.addEventListener('pointerup', onTap);
@@ -582,7 +582,7 @@ function buildCard04(state) {
 
   state.tipOutRoles.forEach(function(r) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:13px;';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:20px;';
 
     var nameEl = document.createElement('span');
     nameEl.style.cssText = 'color:' + T.mint + ';min-width:60px;';
@@ -594,7 +594,7 @@ function buildCard04(state) {
 
     // Percent badge
     var badge = document.createElement('div');
-    badge.style.cssText = 'border:2px solid ' + T.gold + ';padding:2px 8px;font-family:' + T.fb + ';font-size:12px;color:' + T.gold + ';min-width:36px;text-align:center;';
+    badge.style.cssText = 'border:2px solid ' + T.gold + ';padding:2px 8px;font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';min-width:36px;text-align:center;';
     badge.textContent = r.percent + '%';
 
     var basisEl = document.createElement('span');
@@ -617,11 +617,11 @@ function buildCard04(state) {
   if (state.oneTimeRole && state.oneTimeRole.percent > 0) {
     var ot = state.oneTimeRole;
     var otRow = document.createElement('div');
-    otRow.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:13px;';
+    otRow.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:20px;';
     otRow.innerHTML =
       '<span style="color:' + T.mint + ';min-width:60px;">' + (ot.label || 'One-Time') + '</span>' +
       '<span style="color:' + T.dimText + ';">–</span>' +
-      '<div style="border:2px solid ' + T.gold + ';padding:2px 8px;font-family:' + T.fb + ';font-size:12px;color:' + T.gold + ';min-width:36px;text-align:center;">' + ot.percent + '%</div>' +
+      '<div style="border:2px solid ' + T.gold + ';padding:2px 8px;font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';min-width:36px;text-align:center;">' + ot.percent + '%</div>' +
       '<span style="color:' + T.mutedText + ';flex:1;">' + ot.basis + '</span>' +
       '<span style="color:' + T.mint + ';margin-left:auto;">' + fmt(ot.amount) + '</span>';
     body.appendChild(otRow);
@@ -709,7 +709,7 @@ function buildCard06(state) {
   body.appendChild(bodyRow('Cash Expected', fmt(state.cashExpected)));
 
   var infoEl = document.createElement('div');
-  infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.dimText + ';margin-top:6px;';
+  infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';margin-top:6px;';
   infoEl.textContent = 'Informational — no action required';
   body.appendChild(infoEl);
 
@@ -766,7 +766,7 @@ function buildAlertPanel(state) {
     hdr.style.cssText = [
       'flex-shrink:0;padding:10px 14px;',
       'background:' + (blocked ? '#1a0000' : '#0a1a0a') + ';',
-      'font-family:' + T.fb + ';font-size:13px;font-weight:bold;text-align:center;',
+      'font-family:' + T.fb + ';font-size:20px;font-weight:bold;text-align:center;',
       'color:' + (blocked ? T.red : T.mint) + ';',
     ].join('');
     hdr.textContent = blocked ? '⚠  Resolve to finalize' : '✓  Ready to finalize';
@@ -777,7 +777,7 @@ function buildAlertPanel(state) {
 
     function alertItem(color, text) {
       var item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:11px;color:' + color + ';';
+      item.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:20px;color:' + color + ';';
       var dot = document.createElement('div');
       dot.style.cssText = 'width:8px;height:8px;clip-path:circle(50%);background:' + color + ';flex-shrink:0;';
       var txt = document.createElement('span');
@@ -817,7 +817,7 @@ function buildAlertPanel(state) {
 
     // Manager approval gate
     var mgr = document.createElement('div');
-    mgr.style.cssText = 'flex-shrink:0;padding:8px;border-top:1px solid #1a1a1a;font-family:' + T.fb + ';font-size:9px;color:#333;text-align:center;';
+    mgr.style.cssText = 'flex-shrink:0;padding:8px;border-top:1px solid #1a1a1a;font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;';
     mgr.textContent = '[ manager approval required ]';
     panel.appendChild(mgr);
   }
@@ -864,7 +864,7 @@ function buildRightColumn(state) {
 
   // Manager gate label
   var mgLabel = document.createElement('div');
-  mgLabel.style.cssText = 'font-family:' + T.fb + ';font-size:9px;color:#333;text-align:center;flex-shrink:0;';
+  mgLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;flex-shrink:0;';
   mgLabel.textContent = '[ manager approval gate ]';
   col.appendChild(mgLabel);
 
@@ -933,7 +933,7 @@ function openAdjustOverlay(state) {
 
       // Overlay header
       var ovHdr = document.createElement('div');
-      ovHdr.style.cssText = 'background:' + T.gold + ';padding:12px 20px;font-family:' + T.fb + ';font-size:18px;color:#1a1a1a;font-weight:bold;text-align:center;';
+      ovHdr.style.cssText = 'background:' + T.gold + ';padding:12px 20px;font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;font-weight:bold;text-align:center;';
       ovHdr.textContent = 'Adjust Tip-Out %';
       card.appendChild(ovHdr);
 
@@ -952,7 +952,7 @@ function openAdjustOverlay(state) {
 
       // One-time row
       var otLabel = document.createElement('div');
-      otLabel.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.dimText + ';';
+      otLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';';
       otLabel.textContent = 'ONE-TIME (this checkout only)';
       body.appendChild(otLabel);
       body.appendChild(buildAdjustRow(workingOneTime));
@@ -1011,12 +1011,12 @@ function buildAdjustRow(role) {
   row.style.cssText = 'display:flex;align-items:center;gap:10px;font-family:' + T.fb + ';';
 
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-size:14px;color:' + T.mint + ';min-width:80px;';
+  nameEl.style.cssText = 'font-size:20px;color:' + T.mint + ';min-width:80px;';
   nameEl.textContent = role.label;
 
   // Basis selector (simple toggle: Net Sales ↔ Liquor Sales)
   var basisBtn = document.createElement('div');
-  basisBtn.style.cssText = 'font-size:11px;color:' + T.mutedText + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
+  basisBtn.style.cssText = 'font-size:20px;color:' + T.mutedText + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
   basisBtn.textContent = role.basis;
   basisBtn.addEventListener('pointerup', function() {
     role.basis = role.basis === 'Net Sales' ? 'Liquor Sales' : 'Net Sales';
@@ -1037,7 +1037,7 @@ function buildAdjustRow(role) {
 
   // % display
   var pctEl = document.createElement('div');
-  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
+  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
   pctEl.textContent = role.percent + '%';
 
   // + button
@@ -1108,12 +1108,12 @@ function doFinalize(state) {
       ].join('');
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';margin-bottom:8px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:8px;';
       msg.textContent = 'Manager approval required';
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.dimText + ';margin-bottom:24px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';margin-bottom:24px;';
       sub.textContent = 'Enter manager PIN to confirm';
       card.appendChild(sub);
 
@@ -1121,7 +1121,7 @@ function doFinalize(state) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Approve', {
-        fill: T.gold, color: '#1a1a1a', fontSize: '16px',
+        fill: T.gold, color: '#1a1a1a', fontSize: '20px',
         width: 150, height: 44,
         onTap: function() {
           resolveInterrupt(true);
@@ -1140,7 +1140,7 @@ function doFinalize(state) {
       }));
 
       btns.appendChild(buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '16px',
+        fill: T.darkBtn, color: T.mint, fontSize: '20px',
         width: 120, height: 44,
         onTap: function() { cancelInterrupt(); },
       }));

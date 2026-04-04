@@ -286,7 +286,12 @@ function buildScene(el, params) {
 
   // ── Scroll card (sunken panel) ──
   var scrollCard = document.createElement('div');
-  scrollCard.style.cssText = 'flex:1;min-height:0;background:' + T.mint + ';overflow-y:auto;padding:8px;';
+  scrollCard.style.cssText = 'flex:1;min-height:0;background:' + T.mint + ';overflow-y:auto;padding:8px;scrollbar-width:none;-ms-overflow-style:none;';
+  // Hide scrollbar via WebKit pseudo-element
+  var style = document.createElement('style');
+  style.textContent = '.tip-scroll::-webkit-scrollbar{display:none}';
+  document.head.appendChild(style);
+  scrollCard.classList.add('tip-scroll');
   applySunkenStyle(scrollCard);
 
   var table = document.createElement('table');
@@ -318,7 +323,7 @@ function buildScene(el, params) {
 
   // ── Batch zero button ──
   batchBar = buildButton('Set all unadjusted tips to $0?', {
-    fill: T.darkBtn, color: T.cyan, fontSize: '16px',
+    fill: T.darkBtn, color: T.cyan, fontSize: '20px',
     height: 40,
     onTap: function() { doBatchZero(); },
   });
@@ -402,7 +407,7 @@ function buildScene(el, params) {
 
   function addSummaryLine(label, valueKey, valueColor) {
     var line = document.createElement('div');
-    line.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:16px;';
+    line.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:20px;';
     var lbl = document.createElement('span');
     lbl.textContent = label;
     lbl.style.color = T.mint;
@@ -530,7 +535,7 @@ function doCheckout(params) {
         card.style.clipPath = chamfer(10);
 
         var msg = document.createElement('div');
-        msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';margin-bottom:20px;';
+        msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:20px;';
         msg.textContent = n + ' tip' + (n > 1 ? 's' : '') + ' not adjusted. Set to $0 or go back and adjust.';
         card.appendChild(msg);
 
@@ -538,7 +543,7 @@ function doCheckout(params) {
         btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
         btns.appendChild(buildButton('Set to $0', {
-          fill: T.red, color: '#fff', fontSize: '18px',
+          fill: T.red, color: '#fff', fontSize: '20px',
           width: 130, height: 44,
           onTap: function() {
             checks.forEach(function(c) {
@@ -553,7 +558,7 @@ function doCheckout(params) {
         }));
 
         btns.appendChild(buildButton('Go Back', {
-          fill: T.darkBtn, color: T.mint, fontSize: '18px',
+          fill: T.darkBtn, color: T.mint, fontSize: '20px',
           width: 130, height: 44,
           onTap: function() { cancelInterrupt(); },
         }));

@@ -62,7 +62,7 @@ function buildLeft(params) {
   ].join('');
 
   var summaryLabel = document.createElement('div');
-  summaryLabel.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mintDim + ';letter-spacing:0.1em;margin-bottom:8px;';
+  summaryLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.1em;margin-bottom:8px;';
   summaryLabel.textContent = 'ITEM SUMMARY';
   summaryCard.appendChild(summaryLabel);
 
@@ -70,7 +70,7 @@ function buildLeft(params) {
     var row = document.createElement('div');
     row.style.cssText = [
       'display:flex;justify-content:space-between;',
-      'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';',
       'padding:3px 0;border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var nameEl = document.createElement('span');
@@ -176,7 +176,7 @@ function buildCenter(params) {
     waitIcon.style.cssText = 'font-size:48px;';
     waitIcon.textContent = '◈';
     var waitText = document.createElement('div');
-    waitText.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mintDim + ';letter-spacing:0.08em;text-align:center;line-height:1.6;';
+    waitText.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.08em;text-align:center;line-height:1.6;';
     waitText.textContent = 'TAP OR INSERT\nCARD TO CONTINUE';
     waitCard.appendChild(waitIcon);
     waitCard.appendChild(waitText);
@@ -273,7 +273,7 @@ function buildRight(params) {
     // Status message
     var statusEl = document.createElement('div');
     statusEl.id = 'card-status-msg';
-    statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mintEdgeD + ';text-align:center;line-height:1.6;letter-spacing:0.05em;';
+    statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;line-height:1.6;letter-spacing:0.05em;';
     statusEl.textContent = 'Present card on terminal\nTap, insert, or swipe';
     panel.appendChild(statusEl);
 
@@ -291,7 +291,7 @@ function buildRight(params) {
 
     // Device info
     var devInfo = document.createElement('div');
-    devInfo.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:#2a3a2a;letter-spacing:0.12em;margin-top:8px;';
+    devInfo.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.12em;margin-top:8px;';
     devInfo.textContent = '— DEJAVOO SPIn TERMINAL —';
     panel.appendChild(devInfo);
 
@@ -309,7 +309,7 @@ function buildRight(params) {
   changeStrip.id = 'pay-display-change';
   changeStrip.style.cssText = [
     'padding:6px 12px;flex-shrink:0;display:none;',
-    'font-family:' + T.fb + ';font-size:16px;color:' + T.cyan + ';',
+    'font-family:' + T.fb + ';font-size:20px;color:' + T.cyan + ';',
     'background:' + T.bgDark + ';border:2px solid ' + T.bgLight + ';',
   ].join('');
   changeStrip.textContent = 'Change Due: $0.00';

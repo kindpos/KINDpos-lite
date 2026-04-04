@@ -103,7 +103,7 @@ function fetchDayState(params) {
 function buildReceiptContent(state) {
   var BASE   = '28px';
   var HEADER = '30px';
-  var SMALL  = '18px';
+  var SMALL  = '20px';
   var COL    = '#1a1a1a';
   var DIM    = '#447744';
 
@@ -202,7 +202,7 @@ function buildReceiptContent(state) {
   wrap.appendChild(divider());
 
   var footer = document.createElement('div');
-  footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:' + T.dimText + ';';
+  footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:' + T.mutedText + ';';
   footer.innerHTML = 'Terminal: ' + state.terminalId + '<br>** MANAGER REPORT — CONFIDENTIAL **';
   wrap.appendChild(footer);
 
@@ -223,7 +223,7 @@ function buildReceiptPanel(state) {
   header.style.cssText = [
     'flex-shrink:0;padding:6px 12px;',
     'background:' + T.mintEdgeD + ';',
-    'font-family:' + T.fb + ';font-size:11px;color:#1a1a1a;',
+    'font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
   header.textContent = 'PRINT PREVIEW';
@@ -287,7 +287,7 @@ function buildCardHeader(opts) {
   header.appendChild(accentBar);
 
   var num = document.createElement('div');
-  num.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.dimText + ';flex-shrink:0;width:18px;';
+  num.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';flex-shrink:0;width:28px;';
   num.textContent = String(opts.index).padStart(2, '0');
   header.appendChild(num);
 
@@ -295,13 +295,13 @@ function buildCardHeader(opts) {
   titleWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;';
 
   var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + T.mint + ';font-weight:bold;';
+  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';font-weight:bold;';
   titleEl.textContent = opts.title || '';
   titleWrap.appendChild(titleEl);
 
   if (opts.subtext) {
     var sub = document.createElement('div');
-    sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     sub.textContent = opts.subtext;
     if (opts.subtextColor) sub.style.color = opts.subtextColor;
     titleWrap.appendChild(sub);
@@ -324,7 +324,7 @@ function buildCardHeader(opts) {
   rightWrap.appendChild(dot);
 
   var chevron = document.createElement('div');
-  chevron.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.dimText + ';flex-shrink:0;width:14px;';
+  chevron.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';flex-shrink:0;width:14px;';
   chevron.textContent = '›';
   rightWrap.appendChild(chevron);
 
@@ -344,10 +344,10 @@ function bodyRow(label, value, valueColor) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';';
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:13px;color:' + T.mutedText + ';';
+  lbl.style.cssText = 'font-size:20px;color:' + T.mutedText + ';';
   lbl.textContent = label;
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:14px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
+  val.style.cssText = 'font-size:20px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
   val.textContent = value;
   row.appendChild(lbl);
   row.appendChild(val);
@@ -360,7 +360,7 @@ function buildJumpButton(label, fill, textColor, onTap) {
   pair.wrap.style.height = '36px';
   pair.wrap.style.marginTop = '6px';
   pair.inner.style.fontFamily = T.fb;
-  pair.inner.style.fontSize = '13px';
+  pair.inner.style.fontSize = '20px';
   pair.inner.style.color = textColor;
   pair.inner.textContent = label;
   pair.wrap.addEventListener('pointerup', onTap);
@@ -586,7 +586,7 @@ function buildAlertPanel(state) {
     hdr.style.cssText = [
       'flex-shrink:0;padding:10px 14px;',
       'background:' + (blocked ? '#1a0000' : '#0a1a0a') + ';',
-      'font-family:' + T.fb + ';font-size:13px;font-weight:bold;text-align:center;',
+      'font-family:' + T.fb + ';font-size:20px;font-weight:bold;text-align:center;',
       'color:' + (blocked ? T.red : T.mint) + ';',
     ].join('');
     hdr.textContent = blocked ? '⚠  Resolve to close' : '✓  Ready to close';
@@ -597,7 +597,7 @@ function buildAlertPanel(state) {
 
     function alertItem(color, text) {
       var item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:11px;color:' + color + ';';
+      item.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:20px;color:' + color + ';';
       var dot = document.createElement('div');
       dot.style.cssText = 'width:8px;height:8px;clip-path:circle(50%);background:' + color + ';flex-shrink:0;';
       var txt = document.createElement('span');
@@ -624,7 +624,7 @@ function buildAlertPanel(state) {
     panel.appendChild(list);
 
     var mgr = document.createElement('div');
-    mgr.style.cssText = 'flex-shrink:0;padding:8px;border-top:1px solid #1a1a1a;font-family:' + T.fb + ';font-size:9px;color:#333;text-align:center;';
+    mgr.style.cssText = 'flex-shrink:0;padding:8px;border-top:1px solid #1a1a1a;font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;';
     mgr.textContent = '[ manager approval required ]';
     panel.appendChild(mgr);
   }
@@ -670,11 +670,11 @@ function openBatchOverlay(state, onSettled) {
       titleLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
 
       var icon = document.createElement('div');
-      icon.style.cssText = 'width:16px;height:16px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:#1a1a1a;clip-path:' + chamfer(3) + ';';
+      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#1a1a1a;clip-path:' + chamfer(3) + ';';
       icon.textContent = '$';
 
       var titleText = document.createElement('span');
-      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
+      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
       titleText.textContent = 'Batch Settlement — KINDpos/lite';
 
       var closeBtn = document.createElement('div');
@@ -683,7 +683,7 @@ function openBatchOverlay(state, onSettled) {
         'border-top:1px solid #f26858;border-left:1px solid #f26858;',
         'border-bottom:1px solid #5e160c;border-right:1px solid #5e160c;',
         'display:flex;align-items:center;justify-content:center;',
-        'font-size:11px;color:' + T.mint + ';cursor:pointer;font-weight:bold;',
+        'font-size:20px;color:' + T.mint + ';cursor:pointer;font-weight:bold;',
         'clip-path:' + chamfer(3) + ';',
       ].join('');
       closeBtn.textContent = '✕';
@@ -713,7 +713,7 @@ function openBatchOverlay(state, onSettled) {
 
       function infoRow(label, value) {
         var row = document.createElement('div');
-        row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:13px;';
+        row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:20px;';
         var l = document.createElement('span');
         l.style.color = T.mutedText;
         l.textContent = label;
@@ -732,7 +732,7 @@ function openBatchOverlay(state, onSettled) {
 
       // Status text
       var statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.mint + ';min-height:18px;';
+      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';min-height:20px;';
       statusEl.textContent = 'Ready to submit batch to processor.';
       body.appendChild(statusEl);
 
@@ -762,7 +762,7 @@ function openBatchOverlay(state, onSettled) {
       progWrap.appendChild(progContainer);
 
       var pctEl = document.createElement('div');
-      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';text-align:right;margin-top:2px;';
+      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:right;margin-top:2px;';
       pctEl.textContent = '0%';
       progWrap.appendChild(pctEl);
       body.appendChild(progWrap);
@@ -776,7 +776,7 @@ function openBatchOverlay(state, onSettled) {
         pair.wrap.style.width = '100px';
         pair.wrap.style.height = '36px';
         pair.inner.style.fontFamily = T.fb;
-        pair.inner.style.fontSize = '13px';
+        pair.inner.style.fontSize = '20px';
         pair.inner.style.color = textColor;
         pair.inner.textContent = label;
         return pair;
@@ -922,7 +922,7 @@ function buildRightColumn(state) {
 
   // Manager gate label
   var mgLabel = document.createElement('div');
-  mgLabel.style.cssText = 'font-family:' + T.fb + ';font-size:9px;color:#333;text-align:center;flex-shrink:0;';
+  mgLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;flex-shrink:0;';
   mgLabel.textContent = '[ manager approval gate ]';
   col.appendChild(mgLabel);
 
@@ -937,7 +937,7 @@ function buildCloseDayButton(state) {
   var pair = buildStyledButton(blocked ? T.bgDark : T.gold);
   pair.wrap.style.cssText = 'width:100%;height:' + BTN_H + 'px;flex-shrink:0;';
   pair.inner.style.fontFamily = T.fb;
-  pair.inner.style.fontSize = '18px';
+  pair.inner.style.fontSize = '20px';
   pair.inner.style.color = blocked ? '#554400' : '#1a1a1a';
   pair.inner.textContent = '//CLOSE DAY//';
 
@@ -975,12 +975,12 @@ function doCloseDay(state) {
       ].join('');
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';margin-bottom:8px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:8px;';
       msg.textContent = 'Manager approval required';
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.dimText + ';margin-bottom:24px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';margin-bottom:24px;';
       sub.textContent = 'Enter manager PIN to confirm';
       card.appendChild(sub);
 
@@ -988,7 +988,7 @@ function doCloseDay(state) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Approve', {
-        fill: T.gold, color: '#1a1a1a', fontSize: '16px',
+        fill: T.gold, color: '#1a1a1a', fontSize: '20px',
         width: 160, height: 44,
         onTap: function() {
           resolveInterrupt(true);
@@ -1006,7 +1006,7 @@ function doCloseDay(state) {
       }));
 
       btns.appendChild(buildButton('Cancel', {
-        fill: T.bgDark, color: T.mint, fontSize: '16px',
+        fill: T.bgDark, color: T.mint, fontSize: '20px',
         width: 120, height: 44,
         onTap: function() { cancelInterrupt(); },
       }));

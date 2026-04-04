@@ -64,11 +64,11 @@ function buildReceiptPanel(params) {
   ].join('');
 
   var titleEl = document.createElement('span');
-  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mintDim + ';letter-spacing:0.1em;';
+  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.1em;';
   titleEl.textContent = 'ITEM SUMMARY';
 
   var checkEl = document.createElement('span');
-  checkEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';letter-spacing:0.05em;';
+  checkEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';letter-spacing:0.05em;';
   checkEl.textContent = params.checkId || 'QS-001';
 
   header.appendChild(titleEl);
@@ -81,7 +81,7 @@ function buildReceiptPanel(params) {
     'display:grid;grid-template-columns:1fr 60px 90px;',
     'padding:6px 14px;',
     'border-bottom:1px solid ' + T.bgLight + ';',
-    'font-family:' + T.fb + ';font-size:13px;color:' + T.mintDim + ';',
+    'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';',
     'letter-spacing:0.1em;flex-shrink:0;',
   ].join('');
   colHeaders.innerHTML = '<span>ITEM</span><span style="text-align:center">QTY</span><span style="text-align:right">PRICE</span>';
@@ -108,7 +108,7 @@ function buildReceiptPanel(params) {
     nameEl.textContent = item.name;
 
     var qtyEl = document.createElement('span');
-    qtyEl.style.cssText = 'text-align:center;font-size:16px;color:' + T.mintDim + ';';
+    qtyEl.style.cssText = 'text-align:center;font-size:20px;color:' + T.mutedText + ';';
     qtyEl.textContent = '×' + (item.qty || 1);
 
     var priceEl = document.createElement('span');
@@ -147,7 +147,7 @@ function buildReceiptPanel(params) {
 
 function buildFooterRow(label, value, big, color) {
   var row = document.createElement('div');
-  var size = big ? '22px' : '16px';
+  var size = big ? '22px' : '20px';
   var col  = color || T.mint;
   row.style.cssText = [
     'display:flex;justify-content:space-between;',
@@ -177,10 +177,10 @@ function buildPricePanel(params) {
     'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',
   ].join('');
   var promptLabel = document.createElement('div');
-  promptLabel.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mintDim + ';letter-spacing:0.12em;margin-bottom:4px;';
+  promptLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.12em;margin-bottom:4px;';
   promptLabel.textContent = 'PAYMENT METHOD';
   var promptText = document.createElement('div');
-  promptText.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
+  promptText.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
   promptText.textContent = 'Select card or cash to continue';
   prompt.appendChild(promptLabel);
   prompt.appendChild(promptText);
@@ -199,7 +199,7 @@ function buildPricePanel(params) {
   ].join('');
 
   var cardLabel = document.createElement('div');
-  cardLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:#1a1a1a;letter-spacing:0.12em;';
+  cardLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;letter-spacing:0.12em;';
   cardLabel.textContent = '◈  CARD';
 
   var cardAmount = document.createElement('div');
@@ -244,7 +244,7 @@ function buildPricePanel(params) {
   ].join('');
 
   var cashLabel = document.createElement('div');
-  cashLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:#1a1a1a;letter-spacing:0.12em;';
+  cashLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;letter-spacing:0.12em;';
   cashLabel.textContent = '$  CASH';
 
   var cashAmount = document.createElement('div');
@@ -252,7 +252,7 @@ function buildPricePanel(params) {
   cashAmount.textContent = '$' + (params.cashPrice || 0).toFixed(2);
 
   var cashSavings = document.createElement('div');
-  cashSavings.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:#2a4a2a;letter-spacing:0.06em;';
+  cashSavings.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;letter-spacing:0.06em;';
   var savings = ((params.cardTotal || 0) - (params.cashPrice || 0)).toFixed(2);
   cashSavings.textContent = 'save $' + savings + ' with cash';
 

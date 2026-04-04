@@ -333,7 +333,7 @@ function renderScanning(card) {
 
   // Enter IP shortcut — larger
   var shortcut = buildButton('Know the IP? Enter it directly →', {
-    fill: BG, color: GOLD, fontSize: '18px', height: 44, width: 380,
+    fill: BG, color: GOLD, fontSize: '20px', height: 44, width: 380,
     onTap: function() {
       if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
       state.addStep = 'enter-ip';
@@ -427,7 +427,7 @@ function renderEnterIP(card) {
   inner.appendChild(padGrid);
 
   inner.appendChild(buildButton('CANCEL', {
-    fill: BG, color: GOLD, fontSize: '16px', width: 200, height: 36,
+    fill: BG, color: GOLD, fontSize: '20px', width: 200, height: 36,
     onTap: function() { state.addStep = 'choose'; renderHWContent(card); },
   }));
 }
@@ -561,7 +561,7 @@ function renderManualAdd(ip, card) {
     var btn = buildButton(t.label, {
       fill: selectedType === t.id ? GOLD : BG,
       color: selectedType === t.id ? DARK : GOLD,
-      fontSize: '14px', height: 38,
+      fontSize: '20px', height: 38,
       onTap: function() { selectedType = t.id; refreshTypeBtns(); },
     });
     typeBtnEls[t.id] = btn;
@@ -571,7 +571,7 @@ function renderManualAdd(ip, card) {
 
   form.appendChild(makeLabel('Device Name', GOLD, '15px'));
   var nameDisplay = document.createElement('div');
-  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:18px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
+  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
   var deviceName = '';
   nameDisplay.textContent = '—';
@@ -581,7 +581,7 @@ function renderManualAdd(ip, card) {
   presetRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
   ['Kitchen', 'Receipt', 'Bar Kitchen', 'Card Reader'].forEach(function(p) {
     presetRow.appendChild(buildButton(p, {
-      fill: BG, color: GOLD, fontSize: '14px', height: 32,
+      fill: BG, color: GOLD, fontSize: '20px', height: 32,
       onTap: function() { deviceName = p; nameDisplay.textContent = p; },
     }));
   });
@@ -592,7 +592,7 @@ function renderManualAdd(ip, card) {
   footer.style.cssText = 'display:flex;gap:10px;padding:12px 20px;flex-shrink:0;';
 
   footer.appendChild(buildButton('//ADD ANYWAY//', {
-    fill: GOLD, color: DARK, fontSize: '18px', height: 48,
+    fill: GOLD, color: DARK, fontSize: '20px', height: 48,
     onTap: async function() {
       await saveDevice({
         mac:  'MANUAL-' + ip.replace(/\./g, '-'),
@@ -607,7 +607,7 @@ function renderManualAdd(ip, card) {
   }));
 
   footer.appendChild(buildButton('Try Again', {
-    fill: BG, color: GOLD, fontSize: '18px', height: 48,
+    fill: BG, color: GOLD, fontSize: '20px', height: 48,
     onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); },
   }));
 
@@ -645,7 +645,7 @@ function buildLiveDeviceRow(dev, card) {
     // We keep a reference to card via closure — but card may have been replaced.
     // Use a dataset attribute so the confirm step can find the device.
     var addBtn = buildButton('+ Add', {
-      fill: GOLD, color: DARK, fontSize: '14px', width: 76, height: 32,
+      fill: GOLD, color: DARK, fontSize: '20px', width: 76, height: 32,
       onTap: function() {
         state.foundDevice = Object.assign({}, dev);
         state.addStep = 'confirm';
@@ -693,7 +693,7 @@ function renderScanResults(card) {
       row.appendChild(makeLabel('Saved ✓', GOLD, '13px'));
     } else {
       row.appendChild(buildButton('+ Add', {
-        fill: GOLD, color: DARK, fontSize: '16px', width: 80, height: 36,
+        fill: GOLD, color: DARK, fontSize: '20px', width: 80, height: 36,
         onTap: function() { state.foundDevice = Object.assign({}, dev); state.addStep = 'confirm'; renderHWContent(card); },
       }));
     }
@@ -703,9 +703,9 @@ function renderScanResults(card) {
 
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex;gap:10px;padding:10px 16px;flex-shrink:0;';
-  footer.appendChild(buildButton('Scan Again', { fill: GOLD, color: DARK, fontSize: '18px', height: 40, onTap: function() { state.addStep = 'scanning'; state.scanResults = []; renderHWContent(card); doScan(null, card); } }));
-  footer.appendChild(buildButton('Enter IP',   { fill: BG,   color: GOLD, fontSize: '18px', height: 40, onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); } }));
-  footer.appendChild(buildButton('Cancel',     { fill: BG,   color: T.bgLight, fontSize: '18px', height: 40, onTap: function() { state.addStep = 'choose'; renderHWContent(card); } }));
+  footer.appendChild(buildButton('Scan Again', { fill: GOLD, color: DARK, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'scanning'; state.scanResults = []; renderHWContent(card); doScan(null, card); } }));
+  footer.appendChild(buildButton('Enter IP',   { fill: BG,   color: GOLD, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); } }));
+  footer.appendChild(buildButton('Cancel',     { fill: BG,   color: T.bgLight, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'choose'; renderHWContent(card); } }));
   inner.appendChild(footer);
 }
 
@@ -753,7 +753,7 @@ function renderConfirmDevice(card) {
     var btn = buildButton(t.label, {
       fill: selectedType === t.id ? GOLD : BG,
       color: selectedType === t.id ? DARK : GOLD,
-      fontSize: '14px', height: 38,
+      fontSize: '20px', height: 38,
       onTap: function() { selectedType = t.id; refreshTypeBtns(); },
     });
     typeBtnEls[t.id] = btn;
@@ -764,7 +764,7 @@ function renderConfirmDevice(card) {
   // Name
   form.appendChild(makeLabel('Device Name', GOLD, '15px'));
   var nameDisplay = document.createElement('div');
-  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:18px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
+  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
   var deviceName = dev.name || '';
   nameDisplay.textContent = deviceName || '—';
@@ -780,7 +780,7 @@ function renderConfirmDevice(card) {
                 :                                  ['Card Reader', 'Dejavoo'];
     presets.forEach(function(p) {
       presetRow.appendChild(buildButton(p, {
-        fill: BG, color: GOLD, fontSize: '14px', height: 32,
+        fill: BG, color: GOLD, fontSize: '20px', height: 32,
         onTap: function() { deviceName = p; nameDisplay.textContent = p; },
       }));
     });
@@ -842,13 +842,13 @@ function renderDeviceList(card, type) {
     actions.style.cssText = 'display:flex;gap:8px;';
 
     var testBtn = buildButton('Test', {
-      fill: BG, color: T.cyan, fontSize: '14px', width: 70, height: 36,
+      fill: BG, color: T.cyan, fontSize: '20px', width: 70, height: 36,
       onTap: function() { testDevice(dev, testBtn); },
     });
     actions.appendChild(testBtn);
 
     actions.appendChild(buildButton('Remove', {
-      fill: T.red, color: '#fff', fontSize: '14px', width: 80, height: 36,
+      fill: T.red, color: '#fff', fontSize: '20px', width: 80, height: 36,
       onTap: async function() { await deleteDevice(dev.mac); render(); },
     }));
 
