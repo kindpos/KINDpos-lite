@@ -65,7 +65,7 @@ export function setHeaderBack(show) {
     if (info) info.textContent = 'KINDpos/lite <> Vz1.0';
   } else {
     if (nav) nav.style.display = 'none';
-    if (info) info.textContent = 'KINDpos/lite <> Vz1.0';
+    if (info) info.textContent = '';
   }
 }
 

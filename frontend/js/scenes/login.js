@@ -21,12 +21,31 @@ var MGMT_W     = 250;
 
 var selectedAction = null;
 var employees = [];  // loaded from /api/v1/servers on scene enter
+var actionButtons = [];  // track buttons for highlight
+
+function clearHighlights() {
+  actionButtons.forEach(function(item) {
+    item.wrap.style.outline = 'none';
+    item.wrap.style.outlineOffset = '0';
+  });
+}
+
+function highlightButton(action) {
+  clearHighlights();
+  actionButtons.forEach(function(item) {
+    if (item.action === action) {
+      item.wrap.style.outline = '3px solid #ffffff';
+      item.wrap.style.outlineOffset = '4px';
+    }
+  });
+}
 
 registerScene('login', {
   onEnter: function(el, params) {
     setSceneName(null);
     setHeaderBack(false);
     selectedAction = null;
+    actionButtons = [];
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
       employees = data.servers || [];
     }).catch(function() { employees = []; });
@@ -34,14 +53,16 @@ registerScene('login', {
 
     // ── LEFT COLUMN ──
     var left = document.createElement('div');
-    left.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:0;';
+    left.style.cssText = 'display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;';
 
     // Quick Service — large button at top
-    left.appendChild(buildButton('< Quick Service >', {
+    var qsBtn = buildButton('< Quick Service >', {
       fill: T.mint, color: T.bg, fontSize: '60px',
       width: COL_LEFT - 60, height: QS_H,
       onTap: function() { handleAction('quick-service'); },
-    }));
+    });
+    actionButtons.push({ wrap: qsBtn, action: 'quick-service' });
+    left.appendChild(qsBtn);
 
     left.appendChild(buildGap(40));
 
@@ -49,29 +70,35 @@ registerScene('login', {
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:20px;';
 
-    row.appendChild(buildButton('Clock\nin/out', {
+    var clockBtn = buildButton('Clock\nin/out', {
       fill: T.cyan, color: T.bg, fontSize: T.fsMgmt,
       width: MGMT_W, height: MGMT_H,
       lineHeight: '0.75',
       onTap: function() { handleAction('clock'); },
-    }));
+    });
+    actionButtons.push({ wrap: clockBtn, action: 'clock' });
+    row.appendChild(clockBtn);
 
-    row.appendChild(buildButton('Reporting', {
+    var reportBtn = buildButton('Reporting', {
       fill: T.cyan, color: T.bg, fontSize: T.fsMgmt,
       width: MGMT_W, height: MGMT_H,
       onTap: function() { handleAction('reporting'); },
-    }));
+    });
+    actionButtons.push({ wrap: reportBtn, action: 'reporting' });
+    row.appendChild(reportBtn);
 
     left.appendChild(row);
 
     left.appendChild(buildGap(40));
 
     // Configurations — wide gold button at bottom
-    left.appendChild(buildButton('< Configurations >', {
+    var configBtn = buildButton('< Configurations >', {
       fill: T.gold, color: T.bg, fontSize: '60px',
       width: COL_LEFT - 60, height: CONFIG_H,
       onTap: function() { handleAction('configuration'); },
-    }));
+    });
+    actionButtons.push({ wrap: configBtn, action: 'configuration' });
+    left.appendChild(configBtn);
 
     el.appendChild(left);
 
@@ -87,7 +114,7 @@ registerScene('login', {
 
     // Version label at bottom-right with multi-color spans
     var version = document.createElement('div');
-    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:24px;padding:4px 0;';
+    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:24px;padding:4px 0;margin-right:0;';
     var parts = [
       { text: 'KIND', color: T.gold },
       { text: 'pos', color: T.red },
@@ -111,6 +138,7 @@ registerScene('login', {
 
 function handleAction(action) {
   selectedAction = action;
+  highlightButton(action);
 }
 
 function handlePinSubmit(pin) {
