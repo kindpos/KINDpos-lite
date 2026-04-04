@@ -6,7 +6,7 @@
 
 import { T, buildStyledButton } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, push, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
+import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
@@ -28,6 +28,9 @@ var API = '/api/v1';
 
 // ── Order ID — one per transaction, reset on fresh enter ──
 var currentOrderId = null;
+
+// ── Void reasons ──────────────────────────────────
+var VOID_REASONS = ['Wrong Order', 'Customer Request', 'Manager Comp', 'Other'];
 
 // ── Menu data ─────────────────────────────────────
 var MENU_DATA = [
@@ -618,6 +621,7 @@ function handleVoid() {
   var selected = ticket.filter(function(i) { return i.selected; });
   var hasSelected = selected.length > 0;
   var anyUnsent = hasSelected && selected.every(function(i) { return !i.sent; });
+  var voidingEntireOrder = !hasSelected;
 
   if (hasSelected && anyUnsent) {
     // Silent delete — unsent selected items, no pin required
@@ -627,18 +631,20 @@ function handleVoid() {
     return;
   }
 
+  if (voidingEntireOrder && ticket.length === 0) return;
+
   // VOID flow — PIN then reason
   interrupt('void-pin', {
     reason: 'void',
     onBuild: function(el) { buildPinOverlay(el, function(pinOk) {
       if (!pinOk) { cancelInterrupt(); return; }
       resolveInterrupt();
-      showVoidReasons(selected.length > 0 ? selected : ticket);
+      showVoidReasons(voidingEntireOrder ? ticket : selected, voidingEntireOrder);
     }); },
   }).catch(function() {});
 }
 
-function showVoidReasons(targets) {
+function showVoidReasons(targets, isFullVoid) {
   interrupt('void-reason', {
     onBuild: function(el) {
       var panel = document.createElement('div');
@@ -650,7 +656,7 @@ function showVoidReasons(targets) {
 
       var lbl = document.createElement('div');
       lbl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.red + ';letter-spacing:2px;margin-bottom:4px;';
-      lbl.textContent = '// VOID REASON //';
+      lbl.textContent = isFullVoid ? '// VOID ENTIRE ORDER //' : '// VOID REASON //';
       panel.appendChild(lbl);
 
       VOID_REASONS.forEach(function(r) {
@@ -660,13 +666,37 @@ function showVoidReasons(targets) {
             targets.forEach(function(inst) { inst.voided = true; inst.voidReason = r; });
             ticket = ticket.filter(function(i) { return !i.voided; });
             resolveInterrupt();
-            renderTicket();
-            updateBottomBar();
+
+            if (isFullVoid && currentOrderId) {
+              fetch(API + '/orders/' + currentOrderId + '/void', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: r }),
+              }).catch(function(err) {
+                console.error('[KINDpos] Void API error:', err);
+              }).then(function() {
+                currentOrderId = null;
+                replace('login');
+              });
+            } else if (isFullVoid) {
+              currentOrderId = null;
+              replace('login');
+            } else {
+              renderTicket();
+              updateBottomBar();
+            }
           },
         });
         btn.style.width = '240px';
         panel.appendChild(btn);
       });
+
+      var cancelBtn = buildButton('CANCEL', {
+        fill: T.bgLight, color: T.red, fontSize: '22px', height: 40,
+        onTap: function() { cancelInterrupt(); },
+      });
+      cancelBtn.style.width = '240px';
+      panel.appendChild(cancelBtn);
 
       el.appendChild(panel);
     },
