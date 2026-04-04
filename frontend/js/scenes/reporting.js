@@ -8,10 +8,11 @@ import { T, chamfer, buildStyledButton, applySunkenStyle, bevelEdges, shadowColo
 import { buildButton, buildGap } from '../components.js';
 import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-import { CHART, createSVG, svgEl, drawBarChart, drawStackedArea, drawParetoChart, drawHorizontalBars, drawTrendLine, drawProgressBar, buildChartPanel } from '../chart-helpers.js';
+import { CHART, createSVG, svgEl, drawBarChart, drawStackedArea, drawParetoChart, drawHorizontalBars, drawTrendLine, drawProgressBar, buildChartPanel, buildChartGrid } from '../chart-helpers.js';
 
 // ── Module state ────────────────────────────────────
 var expandedCard = null;
+var expandedPanel = null;
 var currentParams = null;
 var currentEl = null;
 var salesData = null;
@@ -278,40 +279,42 @@ function buildExpandedView(el, params, sales, labor) {
 }
 
 function buildPanelGrid(params, sales, labor) {
-  var grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;flex:1;min-height:0;';
-
-  var panels;
+  var builderFn;
   if (params.role === 'manager' && expandedCard === 'left') {
-    panels = buildManagerSalesPanels(sales);
+    builderFn = function(full) { return buildManagerSalesPanels(sales, full); };
   } else if (params.role === 'manager' && expandedCard === 'right') {
-    panels = buildManagerLaborPanels(labor);
+    builderFn = function(full) { return buildManagerLaborPanels(labor, full); };
   } else if (params.role === 'server' && expandedCard === 'left') {
-    panels = buildServerShiftPanels(sales);
+    builderFn = function(full) { return buildServerShiftPanels(sales, full); };
   } else {
-    panels = buildServerHoursPanels(sales, labor);
+    builderFn = function(full) { return buildServerHoursPanels(sales, labor, full); };
   }
 
-  for (var i = 0; i < panels.length; i++) {
-    grid.appendChild(panels[i]);
-  }
+  var chartGrid = buildChartGrid(builderFn, function(state) {
+    expandedPanel = state.expandedIdx;
+    renderCurrentState();
+  });
 
-  return grid;
+  // Sync initial state
+  chartGrid.state.expandedIdx = expandedPanel;
+  return chartGrid.render();
 }
 
 // ═══════════════════════════════════════════════════
 //  MANAGER SALES PANELS
 // ═══════════════════════════════════════════════════
 
-function buildManagerSalesPanels(sales) {
+function buildManagerSalesPanels(sales, fullSize) {
   var s = sales || {};
   var hourly = s.hourly_sales || [];
   var lastWeek = s.last_week_hourly || [];
   var dailyAvg = s.daily_check_avg || [];
+  var svgW = fullSize ? 900 : 400;
+  var svgH = fullSize ? 380 : 160;
 
   // NET SALES — side-by-side bar chart: today (teal) vs last week (orange)
   var p1 = buildChartPanel('NET SALES', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
       var hr = parseInt(hourly[i].hour);
@@ -319,13 +322,13 @@ function buildManagerSalesPanels(sales) {
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
       data.push({ label: label, value: hourly[i].net, compareValue: cmp });
     }
-    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: 400, height: 160, showLabels: true, showValueAbove: true });
+    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
     body.appendChild(svg);
   });
 
   // TOTAL CHECKS — stacked area: today vs last week, 12hr labels
   var p2 = buildChartPanel('TOTAL CHECKS', s.total_checks || '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
       var hr = parseInt(hourly[i].hour);
@@ -333,31 +336,31 @@ function buildManagerSalesPanels(sales) {
       var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
       data.push({ label: label, value: hourly[i].checks, compareValue: cmp });
     }
-    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: 400, height: 160, calloutFmt: function(v) { return v; }, legend: ['Today', 'Last Wk'] });
+    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, legend: ['Today', 'Last Wk'], showCallouts: fullSize, calloutFmt: function(v) { return v; } });
     body.appendChild(svg);
   });
 
   // CHECK AVG — pareto: which days are most profitable, sorted descending
   var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < dailyAvg.length; i++) {
       data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
     }
-    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: 400, height: 160 });
+    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: svgW, height: svgH, showCallouts: fullSize });
     body.appendChild(svg);
   });
 
   // CASH / CARD — horizontal bars with percentage labels
   var p4 = buildChartPanel('CASH / CARD', s.cash_total ? fmt((s.cash_total || 0) + (s.card_total || 0)) : '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var total = (s.cash_total || 0) + (s.card_total || 0);
     var cashPct = total > 0 ? Math.round((s.cash_total || 0) / total * 100) : 0;
     var cardPct = total > 0 ? 100 - cashPct : 0;
     drawHorizontalBars(svg, [
       { label: 'Cash', value: s.cash_total || 0, sublabel: fmt(s.cash_total || 0) + ' (' + cashPct + '%)', color: CHART.gold },
       { label: 'Card', value: s.card_total || 0, sublabel: fmt(s.card_total || 0) + ' (' + cardPct + '%)', color: CHART.sky },
-    ], { width: 400, height: 160, labelWidth: 50 });
+    ], { width: svgW, height: svgH, labelWidth: fullSize ? 80 : 50 });
     body.appendChild(svg);
   });
 
@@ -368,7 +371,7 @@ function buildManagerSalesPanels(sales) {
 //  MANAGER LABOR PANELS
 // ═══════════════════════════════════════════════════
 
-function buildManagerLaborPanels(labor) {
+function buildManagerLaborPanels(labor, fullSize) {
   var l = labor || {};
   var employees = l.employees || [];
   var cobTrend = l.cob_trend || [];
@@ -464,7 +467,7 @@ function buildManagerLaborPanels(labor) {
 //  SERVER SHIFT PANELS
 // ═══════════════════════════════════════════════════
 
-function buildServerShiftPanels(sales) {
+function buildServerShiftPanels(sales, fullSize) {
   var s = sales || {};
   var hourly = s.hourly_sales || [];
   var hourlyTables = s.hourly_tables || [];
@@ -533,7 +536,7 @@ function buildServerShiftPanels(sales) {
 //  SERVER HOURS PANELS
 // ═══════════════════════════════════════════════════
 
-function buildServerHoursPanels(sales, labor) {
+function buildServerHoursPanels(sales, labor, fullSize) {
   var l = labor || {};
   var weekly = l.weekly_breakdown || [];
 
@@ -723,8 +726,14 @@ registerScene('reporting', {
   },
   onExit: function() {},
   canExit: function() {
+    if (expandedPanel !== null) {
+      expandedPanel = null;
+      renderCurrentState();
+      return Promise.resolve(false);
+    }
     if (expandedCard) {
       expandedCard = null;
+      expandedPanel = null;
       renderCurrentState();
       return Promise.resolve(false);
     }

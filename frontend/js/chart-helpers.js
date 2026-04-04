@@ -218,18 +218,19 @@ export function drawStackedArea(svg, data, options) {
     svg.appendChild(svgEl('rect', { x: toX(i) - 4, y: toY(data[i].value) - 4, width: 8, height: 8, fill: color }));
   }
 
-  // Data callouts on peak values (highest primary + highest compare)
-  var peakIdx = 0;
-  for (var i = 1; i < n; i++) { if (data[i].value > data[peakIdx].value) peakIdx = i; }
-  var calloutFmt = options.calloutFmt || function(v) { return v; };
-  svg.appendChild(svgEl('text', { x: toX(peakIdx), y: toY(data[peakIdx].value) - 8, fill: color, 'font-size': '15', 'font-family': 'Courier New', 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = calloutFmt(data[peakIdx].value);
+  // Data callouts on peak values (only when showCallouts is true)
+  if (options.showCallouts) {
+    var peakIdx = 0;
+    for (var i = 1; i < n; i++) { if (data[i].value > data[peakIdx].value) peakIdx = i; }
+    var calloutFmt = options.calloutFmt || function(v) { return v; };
+    svg.appendChild(svgEl('text', { x: toX(peakIdx), y: toY(data[peakIdx].value) - 8, fill: color, 'font-size': '15', 'font-family': 'Courier New', 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = calloutFmt(data[peakIdx].value);
 
-  if (hasCompare) {
-    var cPeakIdx = 0;
-    for (var i = 1; i < n; i++) { if ((data[i].compareValue || 0) > (data[cPeakIdx].compareValue || 0)) cPeakIdx = i; }
-    // Only show compare callout if it doesn't overlap primary peak
-    if (cPeakIdx !== peakIdx) {
-      svg.appendChild(svgEl('text', { x: toX(cPeakIdx), y: toY(data[cPeakIdx].compareValue) - 8, fill: compareColor, 'font-size': '14', 'font-family': 'Courier New', 'text-anchor': 'middle' })).textContent = calloutFmt(data[cPeakIdx].compareValue);
+    if (hasCompare) {
+      var cPeakIdx = 0;
+      for (var i = 1; i < n; i++) { if ((data[i].compareValue || 0) > (data[cPeakIdx].compareValue || 0)) cPeakIdx = i; }
+      if (cPeakIdx !== peakIdx) {
+        svg.appendChild(svgEl('text', { x: toX(cPeakIdx), y: toY(data[cPeakIdx].compareValue) - 8, fill: compareColor, 'font-size': '14', 'font-family': 'Courier New', 'text-anchor': 'middle' })).textContent = calloutFmt(data[cPeakIdx].compareValue);
+      }
     }
   }
 
@@ -312,8 +313,10 @@ export function drawParetoChart(svg, data, options) {
     var barY = padTop + chartH - barH;
     svg.appendChild(svgEl('rect', { x: x + (groupW - barW) / 2, y: barY, width: barW, height: barH, fill: 'url(#paretoGrad)' }));
 
-    // Value callout above each bar
-    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: barY - 4, fill: barColor, 'font-size': '14', 'font-family': 'Courier New', 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = sorted[i].value;
+    // Value callout above each bar (only when showCallouts is true)
+    if (options.showCallouts) {
+      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: barY - 4, fill: barColor, 'font-size': '14', 'font-family': 'Courier New', 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = sorted[i].value;
+    }
 
     // X label
     svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': '15', 'font-family': 'Courier New', 'text-anchor': 'middle' })).textContent = sorted[i].label;
@@ -567,4 +570,51 @@ export function buildChartPanel(title, value, contentFn) {
 
   panel.appendChild(body);
   return panel;
+}
+
+// ═══════════════════════════════════════════════════
+//  CHART GRID — 2×2 panel grid with tap-to-expand
+//  panelBuilderFn(fullSize) should return array of 4 panels
+//  onStateChange() is called when expand/collapse happens
+// ═══════════════════════════════════════════════════
+
+export function buildChartGrid(panelBuilderFn, onStateChange) {
+  var state = { expandedIdx: null };
+
+  function render() {
+    var container = document.createElement('div');
+    var fullSize = state.expandedIdx !== null;
+
+    if (fullSize) {
+      container.style.cssText = 'display:flex;flex:1;min-height:0;';
+      var panels = panelBuilderFn(true);
+      var panel = panels[state.expandedIdx];
+      panel.style.flex = '1';
+      panel.style.cursor = 'pointer';
+      panel.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        state.expandedIdx = null;
+        if (onStateChange) onStateChange(state);
+      });
+      container.appendChild(panel);
+    } else {
+      container.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;flex:1;min-height:0;';
+      var panels = panelBuilderFn(false);
+      for (var i = 0; i < panels.length; i++) {
+        (function(idx) {
+          panels[idx].style.cursor = 'pointer';
+          panels[idx].addEventListener('pointerup', function(e) {
+            e.stopPropagation();
+            state.expandedIdx = idx;
+            if (onStateChange) onStateChange(state);
+          });
+        })(i);
+        container.appendChild(panels[i]);
+      }
+    }
+
+    return container;
+  }
+
+  return { render: render, state: state };
 }
