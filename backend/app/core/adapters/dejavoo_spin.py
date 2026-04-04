@@ -31,7 +31,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
     def __init__(self):
         self._status = PaymentDeviceStatus.OFFLINE
         self._config: Optional[PaymentDeviceConfig] = None
-        self._client = httpx.AsyncClient(timeout=95.0) # Long timeout for transactions
+        self._client = httpx.AsyncClient(timeout=95.0, verify=False) # Long timeout; skip cert verify for LAN devices
 
     @property
     def status(self) -> PaymentDeviceStatus:
@@ -202,16 +202,26 @@ class DejavooSPInAdapter(BasePaymentDevice):
         if not self._config:
             return None
         
-        url = f"http://{self._config.ip_address}:{self._config.port}/api/"
-        try:
-            logger.debug(f"Sending Dejavoo Request: {xml_body}")
-            response = await self._client.post(url, content=xml_body, headers={"Content-Type": "application/xml"})
-            response.raise_for_status()
-            logger.debug(f"Received Dejavoo Response: {response.text}")
-            return response.text
-        except httpx.RequestError as e:
-            logger.error(f"HTTP Request to Dejavoo failed: {e}")
-            return None
+        ip = self._config.ip_address
+        port = self._config.port
+        headers = {"Content-Type": "application/xml"}
+
+        # Try HTTPS first (Dejavoo devices typically use self-signed certs),
+        # then fall back to HTTP if HTTPS fails to connect.
+        for scheme in ("https", "http"):
+            url = f"{scheme}://{ip}:{port}/api/"
+            try:
+                logger.debug(f"Sending Dejavoo Request ({scheme}): {xml_body}")
+                response = await self._client.post(url, content=xml_body, headers=headers)
+                response.raise_for_status()
+                logger.debug(f"Received Dejavoo Response: {response.text}")
+                return response.text
+            except httpx.RequestError as e:
+                logger.warning(f"Dejavoo {scheme} request failed: {type(e).__name__}: {e}")
+                continue  # try next scheme
+
+        print(f"  Dejavoo unreachable at {ip}:{port} (tried HTTPS and HTTP)")
+        return None
 
     def _parse_response(self, response: Optional[str], expected_inv: str) -> TransactionResult:
         if not response:
