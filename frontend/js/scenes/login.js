@@ -4,10 +4,10 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, bevelEdges, shadowColor } from '../tokens.js';
+import { T, bevelEdges, shadowColor, chamfer } from '../tokens.js';
 import { buildButton, buildGap } from '../components.js';
 import { buildNumpad } from '../numpad.js';
-import { registerScene, push, overlay } from '../scene-manager.js';
+import { registerScene, push, overlay, dismissOverlay } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var COL_LEFT   = 530;
@@ -211,7 +211,7 @@ function handlePinSubmit(pin, promptEl) {
 
   switch (action) {
     case 'quick-service': push('order-entry', { mode: 'service', pin: pin, employeeId: emp.id, employeeName: emp.name }); break;
-    case 'clock':         break;
+    case 'clock':         handleClockOverlay(emp); break;
     case 'reporting':     push('reporting', base); break;
     case 'configuration':
       if (role !== 'manager') {
@@ -225,4 +225,146 @@ function handlePinSubmit(pin, promptEl) {
       push('settings', { pin: pin });
       break;
   }
+}
+
+// ═══════════════════════════════════════════════════
+//  CLOCK IN/OUT OVERLAY
+// ═══════════════════════════════════════════════════
+
+function handleClockOverlay(emp) {
+  Promise.all([
+    fetch('/api/v1/servers/clocked-in').then(function(r) { return r.json(); }),
+    fetch('/api/v1/config/roles').then(function(r) { return r.json(); }),
+  ]).then(function(results) {
+    var clockedInData = results[0];
+    var rolesData = results[1];
+
+    var staff = clockedInData.staff || [];
+    var isClockedIn = staff.some(function(s) { return s.employee_id === emp.id; });
+    var clockRecord = staff.find(function(s) { return s.employee_id === emp.id; });
+
+    var roleName = emp.role || 'Staff';
+    var roles = Array.isArray(rolesData) ? rolesData : [];
+    var matchedRole = roles.find(function(r) { return r.role_id === emp.role; });
+    if (matchedRole) roleName = matchedRole.name;
+
+    showClockOverlay(emp, isClockedIn, clockRecord, roleName);
+  }).catch(function() {
+    if (_pinPromptEl) {
+      _pinPromptEl.textContent = 'Network error';
+      _pinPromptEl.style.color = T.red;
+    }
+  });
+}
+
+function showClockOverlay(emp, isClockedIn, clockRecord, roleName) {
+  overlay('clock-io', {
+    onBuild: function(el) {
+      var panel = document.createElement('div');
+      panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;'
+        + 'width:420px;background:' + T.bgDark + ';border:4px solid ' + T.cyan
+        + ';padding:20px;gap:16px;clip-path:' + chamfer(10) + ';';
+
+      // Header row
+      var hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;';
+
+      var title = document.createElement('span');
+      title.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.cyan + ';letter-spacing:2px;';
+      title.textContent = '// CLOCK IN/OUT //';
+
+      var closeBtn = buildButton('\u2715', {
+        fill: T.red, color: '#ffffff', fontSize: '20px',
+        width: 34, height: 34,
+        onTap: function() { dismissOverlay(); },
+      });
+
+      hdr.appendChild(title);
+      hdr.appendChild(closeBtn);
+      panel.appendChild(hdr);
+
+      // Employee name
+      var nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.gold + ';text-align:center;';
+      nameEl.textContent = emp.name;
+      panel.appendChild(nameEl);
+
+      // Role or clock-in time
+      var infoEl = document.createElement('div');
+      infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.cyan + ';text-align:center;';
+      if (isClockedIn && clockRecord) {
+        var t = new Date(clockRecord.clocked_in_at);
+        var timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        infoEl.textContent = 'Clocked in since ' + timeStr;
+      } else {
+        infoEl.textContent = 'Role: ' + roleName;
+      }
+      panel.appendChild(infoEl);
+
+      // Status message area
+      var statusEl = document.createElement('div');
+      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';text-align:center;min-height:24px;';
+      statusEl.textContent = '';
+
+      // Action button
+      if (isClockedIn) {
+        var outBtn = buildButton('CLOCK OUT', {
+          fill: T.red, color: '#ffffff', fontSize: '36px',
+          width: 300, height: 70,
+          onTap: function() { doClockOut(emp, statusEl); },
+        });
+        panel.appendChild(outBtn);
+      } else {
+        var inBtn = buildButton('CLOCK IN', {
+          fill: T.goGreen, color: '#ffffff', fontSize: '36px',
+          width: 300, height: 70,
+          onTap: function() { doClockIn(emp, statusEl); },
+        });
+        panel.appendChild(inBtn);
+      }
+
+      panel.appendChild(statusEl);
+      el.appendChild(panel);
+    },
+  });
+}
+
+function doClockIn(emp, statusEl) {
+  fetch('/api/v1/servers/clock-in', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_id: emp.id, employee_name: emp.name }),
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) {
+      statusEl.textContent = 'Clocked in!';
+      statusEl.style.color = T.goGreen;
+      setTimeout(function() { dismissOverlay(); }, 1200);
+    } else {
+      statusEl.textContent = 'Failed to clock in';
+      statusEl.style.color = T.red;
+    }
+  }).catch(function() {
+    statusEl.textContent = 'Network error';
+    statusEl.style.color = T.red;
+  });
+}
+
+function doClockOut(emp, statusEl) {
+  fetch('/api/v1/servers/clock-out', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_id: emp.id, employee_name: emp.name }),
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) {
+      statusEl.textContent = 'Clocked out!';
+      statusEl.style.color = T.gold;
+      setTimeout(function() { dismissOverlay(); }, 1200);
+    } else {
+      statusEl.textContent = 'Failed to clock out';
+      statusEl.style.color = T.red;
+    }
+  }).catch(function() {
+    statusEl.textContent = 'Network error';
+    statusEl.style.color = T.red;
+  });
 }
