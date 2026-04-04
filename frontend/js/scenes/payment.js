@@ -229,17 +229,78 @@ function buildRight(params) {
   col.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;';
 
   if (params.paymentMode !== 'cash') {
-    // Card — empty right panel (card reader handles UI)
-    var spacer = document.createElement('div');
-    spacer.style.cssText = [
+    // Card — transaction status panel
+    var panel = document.createElement('div');
+    panel.style.cssText = [
       'flex:1;background:' + T.bgDark + ';',
       'border:2px solid ' + T.bgLight + ';',
       'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',
-      'display:flex;align-items:center;justify-content:center;',
-      'font-family:' + T.fb + ';font-size:14px;color:#2a3a2a;letter-spacing:0.1em;',
+      'display:flex;flex-direction:column;',
+      'align-items:center;justify-content:center;gap:20px;',
+      'padding:24px;',
     ].join('');
-    spacer.textContent = '— CARD READER ACTIVE —';
-    col.appendChild(spacer);
+
+    // Terminal icon
+    var icon = document.createElement('div');
+    icon.style.cssText = [
+      'width:80px;height:80px;',
+      'border:3px solid ' + T.gold + ';',
+      'display:flex;align-items:center;justify-content:center;',
+      'font-size:36px;color:' + T.gold + ';',
+      'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);',
+    ].join('');
+    icon.textContent = '◈';
+    panel.appendChild(icon);
+
+    // Status heading
+    var heading = document.createElement('div');
+    heading.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';letter-spacing:0.1em;text-align:center;';
+    heading.textContent = 'CARD READER ACTIVE';
+    panel.appendChild(heading);
+
+    // Animated dots
+    var dotsEl = document.createElement('div');
+    dotsEl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';letter-spacing:0.3em;height:30px;';
+    dotsEl.textContent = '●○○';
+    panel.appendChild(dotsEl);
+    var dotFrame = 0;
+    var dotPatterns = ['●○○', '○●○', '○○●', '○●○'];
+    var dotTimer = setInterval(function() {
+      dotFrame = (dotFrame + 1) % dotPatterns.length;
+      dotsEl.textContent = dotPatterns[dotFrame];
+    }, 400);
+
+    // Status message
+    var statusEl = document.createElement('div');
+    statusEl.id = 'card-status-msg';
+    statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mintEdgeD + ';text-align:center;line-height:1.6;letter-spacing:0.05em;';
+    statusEl.textContent = 'Present card on terminal\nTap, insert, or swipe';
+    panel.appendChild(statusEl);
+
+    // Amount display
+    var amtEl = document.createElement('div');
+    amtEl.style.cssText = [
+      'margin-top:12px;padding:12px 24px;',
+      'border:2px solid ' + T.gold + ';',
+      'clip-path:polygon(6px 0%,calc(100% - 6px) 0%,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0% calc(100% - 6px),0% 6px);',
+      'font-family:' + T.fb + ';font-size:28px;color:' + T.gold + ';',
+      'text-align:center;letter-spacing:0.08em;',
+    ].join('');
+    amtEl.textContent = '$' + params.cardTotal.toFixed(2);
+    panel.appendChild(amtEl);
+
+    // Device info
+    var devInfo = document.createElement('div');
+    devInfo.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:#2a3a2a;letter-spacing:0.12em;margin-top:8px;';
+    devInfo.textContent = '— DEJAVOO SPIn TERMINAL —';
+    panel.appendChild(devInfo);
+
+    // Clean up timer on scene exit
+    panel.addEventListener('remove', function() { clearInterval(dotTimer); });
+    // Also store timer for cleanup
+    panel._dotTimer = dotTimer;
+
+    col.appendChild(panel);
     return col;
   }
 
