@@ -173,16 +173,27 @@ function buildLeftCard(params, sales, labor) {
       '<div style="margin-top:8px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Tipout: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
 
-    // Checkout button — #33ff99 to match LABOR/HOURS color
+    // Checkout button + active checks
+    var btnArea = document.createElement('div');
+    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:6px;';
+
     var checkoutBtn = buildStyledButton('#33ff99');
     checkoutBtn.inner.textContent = 'Checkout';
     checkoutBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.bgDark + ';padding:8px 16px;text-align:center;';
-    checkoutBtn.wrap.style.cssText = 'margin-top:auto;align-self:stretch;';
+    checkoutBtn.wrap.style.cssText = 'align-self:stretch;';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
       push('server-checkout', params);
     });
-    card.appendChild(checkoutBtn.wrap);
+    btnArea.appendChild(checkoutBtn.wrap);
+
+    var activeChecks = document.createElement('div');
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';text-align:center;';
+    var checkCount = s ? s.total_checks : 0;
+    activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
+    btnArea.appendChild(activeChecks);
+
+    card.appendChild(btnArea);
   }
 
   return card;
