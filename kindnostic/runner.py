@@ -1,6 +1,7 @@
 """KINDnostic runner — discovers and executes probes, records results."""
 
 import importlib
+import os
 import pkgutil
 import time
 import uuid
@@ -8,6 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import Callable, Optional
 
 import kindnostic.probes
+from kindnostic.alerts import AlertQueue
+from kindnostic.entomology import write_boot_diagnostic
 from kindnostic.storage import BootStorage
 from kindnostic.support_codes import generate_support_code
 from kindnostic.types import Category, ProbeResult, Status
@@ -132,5 +135,29 @@ def run_all(db_path: Optional[str] = None) -> int:
             duration_ms=total_ms,
             outcome=outcome,
         )
+
+    # Write BOOT_DIAGNOSTIC event to Entomology
+    try:
+        write_boot_diagnostic(
+            boot_id=boot_id,
+            outcome=outcome,
+            results=results,
+            total_duration_ms=total_ms,
+            db_path=db_path,
+        )
+    except Exception:
+        pass  # Entomology integration is best-effort
+
+    # Enqueue alert if any failures/warnings
+    try:
+        with AlertQueue(db_path) as alerts:
+            alerts.enqueue(
+                boot_id=boot_id,
+                terminal_id=os.environ.get("KINDPOS_TERMINAL_ID", "terminal_01"),
+                results=results,
+            )
+            alerts.flush()  # Attempt to send if webhook configured
+    except Exception:
+        pass  # Alert queue is best-effort
 
     return exit_code

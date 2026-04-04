@@ -134,3 +134,25 @@ class BootStorage:
         if row is None:
             return None
         return dict(row)
+
+    def get_boot_history(self, n: int = 10) -> list[dict]:
+        """Return the last N boot summaries, most recent first."""
+        assert self._conn is not None
+        rows = self._conn.execute(
+            "SELECT * FROM boot_summary ORDER BY timestamp DESC LIMIT ?",
+            (n,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_probe_trend(self, probe_name: str, n: int = 20) -> list[dict]:
+        """Return pass/fail history for a specific probe across the last N boots."""
+        assert self._conn is not None
+        rows = self._conn.execute(
+            """SELECT boot_id, timestamp, status, duration_ms, message
+               FROM boot_results
+               WHERE probe_name = ?
+               ORDER BY timestamp DESC
+               LIMIT ?""",
+            (probe_name, n),
+        ).fetchall()
+        return [dict(row) for row in rows]
