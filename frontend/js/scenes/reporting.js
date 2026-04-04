@@ -1,99 +1,177 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Reporting Scene
-//  2×2 dashboard grid, role-driven
+//  Role-driven two-card dashboard with drill-down charts
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton, applySunkenStyle, bevelEdges } from '../tokens.js';
+import { T, chamfer, buildStyledButton, applySunkenStyle, bevelEdges, shadowColor } from '../tokens.js';
 import { buildButton, buildGap } from '../components.js';
 import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
-// ── Stats — fetched from day-summary API ─────────
-function getStats(role, employeeId) {
-  var url = '/api/v1/orders/day-summary';
-  if (role !== 'manager' && employeeId) url += '?server_id=' + encodeURIComponent(employeeId);
-  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
-    return {
-      unadjustedTips: d.unadjusted_tips || 0,
-      totalTips: d.total_tips || 0,
-      netSales: d.net_sales || 0,
-      totalChecks: d.total_checks || 0,
-    };
-  }).catch(function() {
-    return { unadjustedTips: 0, totalTips: 0, netSales: 0, totalChecks: 0 };
-  });
-}
+// ── Module state ────────────────────────────────────
+var expandedCard = null;
+var currentParams = null;
+var currentEl = null;
+var salesData = null;
+var laborData = null;
 
 function fmt(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
 // ═══════════════════════════════════════════════════
-//  CARD BUILDER
-//  Thick colored border, dark inner, title + info lines
+//  FETCH DATA
 // ═══════════════════════════════════════════════════
 
-function buildCard(opts) {
-  var borderColor = opts.borderColor || T.mint;
-  var title       = opts.title       || '';
-  var titleColor  = opts.titleColor  || T.mint;
-  var infoLines   = opts.infoLines   || [];
-  var onTap       = opts.onTap       || null;
-  var borderW     = opts.borderWidth || 12;
+function fetchData(params) {
+  var today = new Date().toISOString().slice(0, 10);
+  var salesUrl = '/api/v1/reports/sales-summary?date=' + today;
+  var laborUrl = '/api/v1/reports/labor-summary?date=' + today;
 
-  // Outer wrapper — the colored border
-  var outer = document.createElement('div');
-  outer.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;';
-  outer.style.background = borderColor;
-  outer.style.padding = borderW + 'px';
-  outer.style.clipPath = chamfer(10);
-  outer.style.transition = 'transform 80ms';
-
-  // Inner dark card
-  var inner = document.createElement('div');
-  inner.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;';
-  inner.style.background = T.bg;
-  inner.style.clipPath = chamfer(6);
-  inner.style.padding = '16px';
-
-  // Inner border (the second border visible in mockup)
-  inner.style.border = '3px solid ' + borderColor;
-
-  // Title text
-  var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:42px;color:' + titleColor + ';text-align:center;line-height:1.1;white-space:pre-line;';
-  titleEl.textContent = title;
-  inner.appendChild(titleEl);
-
-  // Info lines
-  if (infoLines.length > 0) {
-    var infoWrap = document.createElement('div');
-    infoWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:8px;';
-
-    infoLines.forEach(function(line) {
-      var span = document.createElement('span');
-      span.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + (line.color || T.mint) + ';';
-      span.textContent = line.text;
-      infoWrap.appendChild(span);
-    });
-
-    inner.appendChild(infoWrap);
+  if (params.role === 'server' && params.employeeId) {
+    salesUrl += '&server_id=' + encodeURIComponent(params.employeeId);
+    laborUrl += '&server_id=' + encodeURIComponent(params.employeeId);
   }
 
-  outer.appendChild(inner);
+  return Promise.all([
+    fetch(salesUrl).then(function(r) { return r.json(); }).catch(function() { return null; }),
+    fetch(laborUrl).then(function(r) { return r.json(); }).catch(function() { return null; }),
+  ]).then(function(results) {
+    return { sales: results[0], labor: results[1] };
+  });
+}
 
-  // Press animation
-  outer.addEventListener('pointerdown', function() {
-    outer.style.transform = 'translate(' + T.shadowX + 'px, ' + T.shadowY + 'px)';
-  });
-  outer.addEventListener('pointerup', function() {
-    outer.style.transform = 'translate(0,0)';
-    if (onTap) onTap();
-  });
-  outer.addEventListener('pointerleave', function() {
-    outer.style.transform = 'translate(0,0)';
+// ═══════════════════════════════════════════════════
+//  BUILD COLLAPSED CARDS
+// ═══════════════════════════════════════════════════
+
+function buildCollapsedView(el, params, sales, labor) {
+  el.innerHTML = '';
+  el.style.cssText = 'display:flex;flex-direction:column;height:100%;box-sizing:border-box;padding:20px;';
+
+  // Outer frame — mint border
+  var frame = document.createElement('div');
+  frame.style.cssText = 'flex:1;display:flex;gap:0;border:3px solid ' + T.mint + ';box-sizing:border-box;min-height:0;';
+
+  var leftCard = buildLeftCard(params, sales, labor);
+  var rightCard = buildRightCard(params, sales, labor);
+
+  leftCard.style.flex = '1';
+  rightCard.style.flex = '1';
+
+  leftCard.addEventListener('pointerup', function() {
+    console.log('expand left');
   });
 
-  return outer;
+  rightCard.addEventListener('pointerup', function() {
+    console.log('expand right');
+  });
+
+  frame.appendChild(leftCard);
+  frame.appendChild(rightCard);
+  el.appendChild(frame);
+}
+
+// ── LEFT CARD: SALES (manager) or SHIFT (server) ──
+
+function buildLeftCard(params, sales, labor) {
+  var card = document.createElement('div');
+  card.style.cssText = 'display:flex;flex-direction:column;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px;gap:8px;border-right:2px solid ' + T.border + ';';
+
+  var s = sales;
+
+  if (params.role === 'manager') {
+    // SALES card
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:Impact,sans-serif;font-size:36px;font-weight:bold;font-style:italic;color:' + T.gold + ';';
+    title.textContent = 'SALES';
+    card.appendChild(title);
+
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:12px;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';';
+    kpis.innerHTML =
+      '<div>Net: ' + (s ? fmt(s.net_sales) : '--') + '</div>' +
+      '<div>Checks: ' + (s ? s.total_checks : '--') + '</div>' +
+      '<div>Avg: ' + (s ? fmt(s.check_avg) : '--') + '</div>' +
+      '<div>Cash: ' + (s ? fmt(s.cash_total) : '--') + ' / Card: ' + (s ? fmt(s.card_total) : '--') + '</div>';
+    card.appendChild(kpis);
+  } else {
+    // SHIFT card
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:Impact,sans-serif;font-size:36px;font-weight:bold;font-style:italic;color:' + T.gold + ';';
+    title.textContent = 'SHIFT';
+    card.appendChild(title);
+
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:12px;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';';
+    kpis.innerHTML =
+      '<div>Guests: ' + (s ? (s.total_guests || '--') : '--') + '</div>' +
+      '<div>Tables: ' + (s ? (s.total_tables || '--') : '--') + '</div>' +
+      '<div>Check Avg: ' + (s ? fmt(s.check_avg) : '--') + '</div>' +
+      '<div>Tips: ' + (s ? fmt(s.tips_collected || 0) : '--') + ' / Tipout: ' + (s ? fmt(s.tipout_amount || 0) : '--') + '</div>';
+    card.appendChild(kpis);
+  }
+
+  return card;
+}
+
+// ── RIGHT CARD: LABOR (manager) or HOURS (server) ──
+
+function buildRightCard(params, sales, labor) {
+  var card = document.createElement('div');
+  card.style.cssText = 'display:flex;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:20px;gap:12px;';
+
+  var l = labor;
+
+  if (params.role === 'manager') {
+    // LABOR card — vertical cyan rail + KPIs
+    var rail = document.createElement('div');
+    rail.style.cssText = 'writing-mode:vertical-rl;text-orientation:mixed;font-family:Impact,sans-serif;font-size:36px;font-weight:bold;color:' + T.cyan + ';display:flex;align-items:center;justify-content:center;';
+    rail.textContent = 'LABOR';
+    card.appendChild(rail);
+
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:6px;flex:1;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';justify-content:center;';
+
+    var otAlert = '--';
+    if (l && l.ot_alerts && l.ot_alerts.length > 0) {
+      otAlert = l.ot_alerts.length + ' warning(s)';
+    } else if (l) {
+      otAlert = 'All clear';
+    }
+
+    kpis.innerHTML =
+      '<div>Total Hrs: ' + (l ? l.total_hours : '--') + '</div>' +
+      '<div>Tip Pool: ' + (l ? fmt(l.tip_pool) : '--') + '</div>' +
+      '<div>COB: ' + (l ? l.cob_percent + '%' : '--') + '</div>' +
+      '<div style="color:' + T.gold + '">OT: ' + otAlert + '</div>';
+    card.appendChild(kpis);
+  } else {
+    // HOURS card — vertical cyan rail + KPIs
+    var rail = document.createElement('div');
+    rail.style.cssText = 'writing-mode:vertical-rl;text-orientation:mixed;font-family:Impact,sans-serif;font-size:36px;font-weight:bold;color:' + T.cyan + ';display:flex;align-items:center;justify-content:center;';
+    rail.textContent = 'HOURS';
+    card.appendChild(rail);
+
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:6px;flex:1;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';justify-content:center;';
+
+    var otAlert = '--';
+    if (l) {
+      if (l.ot_status === 'warning') otAlert = 'Warning';
+      else if (l.ot_status === 'over') otAlert = 'OVERTIME';
+      else otAlert = 'All clear';
+    }
+
+    kpis.innerHTML =
+      '<div>In: ' + (l ? l.clock_in : '--') + '</div>' +
+      '<div>Out: ' + (l ? (l.clock_out || 'active') : '--') + '</div>' +
+      '<div>Today: ' + (l ? l.today_hours + 'h' : '--') + '</div>' +
+      '<div>Week: ' + (l ? l.weekly_hours + 'h' : '--') + '</div>' +
+      '<div style="color:' + T.gold + '">OT: ' + otAlert + '</div>';
+    card.appendChild(kpis);
+  }
+
+  return card;
 }
 
 // ═══════════════════════════════════════════════════
@@ -101,80 +179,13 @@ function buildCard(opts) {
 // ═══════════════════════════════════════════════════
 
 function buildScene(el, params) {
-  var role = params.role || 'server';
+  currentEl = el;
+  currentParams = params;
 
-  el.style.display = 'grid';
-  el.style.gridTemplateColumns = '1fr 1fr';
-  el.style.gridTemplateRows = '1fr 1fr';
-  el.style.gap = '16px';
-  el.style.padding = '20px';
-  el.style.height = '100%';
-  el.style.boxSizing = 'border-box';
-
-  getStats(role, params.employeeId).then(function(stats) {
-    // ── TOP LEFT: Tip Adjustment (mint) ──
-    var tipInfoLines = [
-      { text: 'Unadjusted: ' + stats.unadjustedTips, color: T.cyan },
-      { text: 'Total Tips: ' + fmt(stats.totalTips),  color: T.gold },
-    ];
-    if (role === 'manager') {
-      tipInfoLines[0].text = 'Unadjusted: ' + stats.unadjustedTips + ' (all servers)';
-    }
-
-    el.appendChild(buildCard({
-      borderColor: T.mint,
-      title: 'Tip\nAdjustment',
-      titleColor: T.mint,
-      infoLines: tipInfoLines,
-      onTap: function() {
-        push('tip-adjustment', {
-          employeeId: params.employeeId,
-          employeeName: params.employeeName,
-          role: role,
-        });
-      },
-    }));
-
-    // ── TOP RIGHT: Checkout (server) / Close Day (manager) ──
-    if (role === 'manager') {
-      el.appendChild(buildCard({
-        borderColor: T.red,
-        title: 'Close Day',
-        titleColor: T.mint,
-        infoLines: [],
-        onTap: function() {
-          push('close-day', { pin: params.pin, managerName: params.employeeName });
-        },
-      }));
-    } else {
-      el.appendChild(buildCard({
-        borderColor: T.red,
-        title: 'Checkout',
-        titleColor: T.mint,
-        infoLines: [],
-        onTap: function() {
-          push('server-checkout', {
-            employeeId: params.employeeId,
-            employeeName: params.employeeName,
-          });
-        },
-      }));
-    }
-
-    // ── BOTTOM LEFT: Sales Summary (mint, display-only) ──
-    el.appendChild(buildCard({
-      borderColor: T.mint,
-      title: 'Sales\nSummary',
-      titleColor: T.mint,
-      infoLines: [
-        { text: 'Net Sales: ' + fmt(stats.netSales),  color: T.gold },
-        { text: 'Checks: ' + stats.totalChecks,       color: T.cyan },
-      ],
-    }));
-
-    // ── BOTTOM RIGHT: empty (batch settlement lives in Close Day) ──
-    var empty = document.createElement('div');
-    el.appendChild(empty);
+  fetchData(params).then(function(data) {
+    salesData = data.sales;
+    laborData = data.labor;
+    buildCollapsedView(el, params, salesData, laborData);
   });
 }
 
@@ -186,6 +197,7 @@ registerScene('reporting', {
   onEnter: function(el, params) {
     setSceneName('Reporting');
     setHeaderBack(true);
+    expandedCard = null;
     buildScene(el, params);
   },
   onExit: function() {},
