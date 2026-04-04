@@ -202,26 +202,17 @@ class DejavooSPInAdapter(BasePaymentDevice):
         if not self._config:
             return None
         
-        ip = self._config.ip_address
-        port = self._config.port
-        headers = {"Content-Type": "application/xml"}
-
-        # Try HTTPS first (Dejavoo devices typically use self-signed certs),
-        # then fall back to HTTP if HTTPS fails to connect.
-        for scheme in ("https", "http"):
-            url = f"{scheme}://{ip}:{port}/api/"
-            try:
-                logger.debug(f"Sending Dejavoo Request ({scheme}): {xml_body}")
-                response = await self._client.post(url, content=xml_body, headers=headers)
-                response.raise_for_status()
-                logger.debug(f"Received Dejavoo Response: {response.text}")
-                return response.text
-            except httpx.RequestError as e:
-                logger.warning(f"Dejavoo {scheme} request failed: {type(e).__name__}: {e}")
-                continue  # try next scheme
-
-        print(f"  Dejavoo unreachable at {ip}:{port} (tried HTTPS and HTTP)")
-        return None
+        url = f"http://{self._config.ip_address}:{self._config.port}/api/"
+        try:
+            logger.debug(f"Sending Dejavoo Request: {xml_body}")
+            response = await self._client.post(url, content=xml_body, headers={"Content-Type": "application/xml"})
+            response.raise_for_status()
+            logger.debug(f"Received Dejavoo Response: {response.text}")
+            return response.text
+        except httpx.RequestError as e:
+            logger.error(f"Dejavoo request failed: {type(e).__name__}: {e}")
+            print(f"  Dejavoo request failed: {type(e).__name__}: {e}")
+            return None
 
     def _parse_response(self, response: Optional[str], expected_inv: str) -> TransactionResult:
         if not response:
