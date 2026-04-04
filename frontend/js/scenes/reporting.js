@@ -82,12 +82,12 @@ function buildLeftCard(params, sales, labor) {
   if (params.role === 'manager') {
     // SALES card
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:52px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:20px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:72px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:20px;';
     title.textContent = 'SALES';
     card.appendChild(title);
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Net: ' + (s ? fmt(s.net_sales) : '--') + '</div>' +
       '<div>Total Checks: ' + (s ? s.total_checks : '--') + '</div>' +
@@ -97,12 +97,12 @@ function buildLeftCard(params, sales, labor) {
   } else {
     // SHIFT card
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:52px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:20px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:72px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:20px;';
     title.textContent = 'SHIFT';
     card.appendChild(title);
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Guests: ' + (s ? (s.total_guests || '--') : '--') + '</div>' +
       '<div>Tables: ' + (s ? (s.total_tables || '--') : '--') + '</div>' +
@@ -118,7 +118,7 @@ function buildLeftCard(params, sales, labor) {
 
 function buildVerticalRail(text, color) {
   var rail = document.createElement('div');
-  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:48px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:16px;';
+  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:72px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:16px;';
   for (var i = 0; i < text.length; i++) {
     var ch = document.createElement('div');
     ch.style.cssText = 'line-height:1;';
@@ -139,7 +139,7 @@ function buildRightCard(params, sales, labor) {
     card.appendChild(buildVerticalRail('LABOR', T.cyan));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;flex:1;font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;flex:1;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l && l.ot_alerts && l.ot_alerts.length > 0) {
@@ -159,7 +159,7 @@ function buildRightCard(params, sales, labor) {
     card.appendChild(buildVerticalRail('HOURS', T.cyan));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;flex:1;font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:14px;flex:1;font-family:' + T.fb + ';font-size:60px;color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l) {
