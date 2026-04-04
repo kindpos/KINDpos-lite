@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton, applySunkenStyle, shadowColor } from './tokens.js';
+import { T, buildStyledButton, applySunkenStyle, shadowColor } from './tokens.js';
 
 // ── Layout Constants ──
 var KB = {
@@ -79,7 +79,8 @@ export function hideKeyboard() {
     _kbRoot.style.transform = 'translateY(100%)';
     var root = _kbRoot;
     var handler = function() {
-      if (root.parentNode) root.parentNode.removeChild(root);
+      // Guard: don't remove if keyboard was re-shown during animation
+      if (!_visible && root.parentNode) root.parentNode.removeChild(root);
       root.removeEventListener('transitionend', handler);
     };
     root.addEventListener('transitionend', handler);
