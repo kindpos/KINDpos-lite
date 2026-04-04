@@ -407,7 +407,7 @@ export function drawHorizontalBars(svg, data, options) {
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barWidth, height: barH, fill: barColor }));
 
     if (data[i].sublabel) {
-      svg.appendChild(svgEl('text', { x: padLeft + barWidth + 4, y: y + rowH / 2 + 4, fill: '#cccccc', 'font-size': '15', 'font-family': FONT, 'text-anchor': 'start' })).textContent = data[i].sublabel;
+      svg.appendChild(svgEl('text', { x: padLeft + 6, y: y + rowH / 2 + 4, fill: '#1a1a1a', 'font-size': '15', 'font-family': FONT, 'text-anchor': 'start', 'font-weight': 'bold' })).textContent = data[i].sublabel;
     }
   }
 }
