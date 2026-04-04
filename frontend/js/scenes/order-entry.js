@@ -10,6 +10,7 @@ import { registerScene, push, overlay, dismissOverlay, interrupt, resolveInterru
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
+import { showKeyboard } from '../keyboard.js';
 
 var PAD      = 16;
 var GAP      = 16;
@@ -788,18 +789,41 @@ function deepCopyTicket(src) {
 // ── SAVE ─────────────────────────────────────────
 function handleSave() {
   if (ticket.length === 0) return;
-  savedTabs.push({
-    id:     ++saveSeq,
-    name:   'CHECK-' + String(saveSeq).padStart(3, '0'),
-    ticket: deepCopyTicket(ticket),   // deep copy — no shared references
+  var seq = ++saveSeq;
+  var checkNum = 'CHECK-' + String(seq).padStart(3, '0');
+  var snap = deepCopyTicket(ticket);   // deep copy — no shared references
+  showKeyboard({
+    placeholder: 'Name this tab (optional)',
+    initialValue: '',
+    maxLength: 20,
+    onDone: function(label) {
+      savedTabs.push({
+        id:       seq,
+        checkNum: checkNum,
+        name:     label ? checkNum + ' ' + label.toUpperCase() : checkNum,
+        ticket:   snap,
+      });
+      if (saveBtn) {
+        saveBtn.style.background = T.goGreen;
+        saveBtn.querySelector && (function() {
+          var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
+          if (inner) inner.style.color = T.bg;
+        })();
+      }
+    },
+    onDismiss: function() {
+      // Backdrop dismiss — save with default name
+      savedTabs.push({ id: seq, checkNum: checkNum, name: checkNum, ticket: snap });
+      if (saveBtn) {
+        saveBtn.style.background = T.goGreen;
+        saveBtn.querySelector && (function() {
+          var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
+          if (inner) inner.style.color = T.bg;
+        })();
+      }
+    },
+    dismissOnDone: true,
   });
-  if (saveBtn) {
-    saveBtn.style.background = T.goGreen;
-    saveBtn.querySelector && (function() {
-      var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
-      if (inner) inner.style.color = T.bg;
-    })();
-  }
 }
 
 // ── RECALL ───────────────────────────────────────
