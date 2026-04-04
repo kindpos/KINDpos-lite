@@ -252,7 +252,7 @@ function buildExpandedView(el, params, sales, labor) {
     headerRow.style.cssText = 'display:flex;flex:1;min-height:0;';
 
     var rail = document.createElement('div');
-    rail.style.cssText = 'writing-mode:vertical-rl;text-orientation:mixed;font-family:Impact,sans-serif;font-size:36px;font-weight:bold;color:' + T.cyan + ';display:flex;align-items:center;justify-content:center;padding:0 12px;flex-shrink:0;';
+    rail.style.cssText = 'writing-mode:vertical-rl;text-orientation:mixed;font-family:' + T.fh + ';font-size:36px;font-weight:bold;color:' + T.cyan + ';display:flex;align-items:center;justify-content:center;padding:0 12px;flex-shrink:0;';
     rail.textContent = params.role === 'manager' ? 'LABOR' : 'HOURS';
     headerRow.appendChild(rail);
 
@@ -265,7 +265,7 @@ function buildExpandedView(el, params, sales, labor) {
   } else {
     // Left card has title at top
     var titleBar = document.createElement('div');
-    titleBar.style.cssText = 'font-family:Impact,sans-serif;font-size:36px;font-weight:bold;font-style:italic;color:' + T.gold + ';padding:12px 16px 0;flex-shrink:0;';
+    titleBar.style.cssText = 'font-family:' + T.fh + ';font-size:36px;font-weight:bold;font-style:italic;color:' + T.gold + ';padding:12px 16px 0;flex-shrink:0;';
     titleBar.textContent = params.role === 'manager' ? 'SALES' : 'SHIFT';
     frame.appendChild(titleBar);
 
