@@ -7,10 +7,12 @@ MAC-as-identity: IPs change, MACs don't.
 import asyncio
 import os
 import socket
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional
 
 import aiosqlite
+import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -181,13 +183,23 @@ async def _probe_host(host: str):
             if hit:
                 mac   = _get_mac(host)
                 dtype = 'printer' if port in PRINTER_PORTS + PRINTER_PORTS_EXT else 'card_reader'
-                return {
+                result = {
                     'ip':   host,
                     'port': port,
                     'mac':  mac or f"UNKNOWN-{host.replace('.', '-')}",
                     'type': dtype,
                     'name': 'Thermal Printer' if dtype == 'printer' else 'Card Reader',
                 }
+                # Auto-detect SPIn details for card readers
+                if dtype == 'card_reader':
+                    spin = await _probe_spin(host, port)
+                    if spin.get('register_id'):
+                        result['register_id'] = spin['register_id']
+                    if spin.get('model'):
+                        result['name'] = spin['model']
+                    elif spin.get('status'):
+                        result['name'] = 'Dejavoo'
+                return result
         except (asyncio.TimeoutError, Exception):
             continue
     return None
@@ -218,6 +230,31 @@ def _get_mac(ip: str) -> Optional[str]:
         except Exception:
             continue
     return None
+
+
+async def _probe_spin(ip: str, port: int) -> dict:
+    """Probe a Dejavoo device via SPIn GetStatus to auto-detect RegisterId and name."""
+    xml = "<request><function>GetStatus</function><RegisterId></RegisterId></request>"
+    url = f"http://{ip}:{port}/spin/status.html"
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.post(
+                url,
+                data={"param": xml},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            if resp.status_code == 200 and resp.text.strip():
+                root = ET.fromstring(resp.text)
+                return {
+                    "register_id": root.findtext("RegisterId") or root.findtext("TerminalId") or "",
+                    "serial":      root.findtext("SerialNo") or "",
+                    "model":       root.findtext("Model") or "",
+                    "status":      root.findtext("RespMSG") or "",
+                }
+    except Exception:
+        pass
+    return {}
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DEVICE CRUD
