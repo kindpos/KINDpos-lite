@@ -16,7 +16,7 @@ var BTN_H    = 50;
 
 registerScene('receipt-review', {
   onEnter: function(el, params) {
-    setSceneName(params.checkId || 'QS-001');
+    setSceneName(params.checkId || 'ORDER');
     setHeaderBack(true);
 
     // params shape:
@@ -69,7 +69,7 @@ function buildReceiptPanel(params) {
 
   var checkEl = document.createElement('span');
   checkEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';letter-spacing:0.05em;';
-  checkEl.textContent = params.checkId || 'QS-001';
+  checkEl.textContent = params.checkId || 'ORDER';
 
   header.appendChild(titleEl);
   header.appendChild(checkEl);

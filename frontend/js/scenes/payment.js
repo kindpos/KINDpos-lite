@@ -23,7 +23,7 @@ var sceneData  = {};
 
 registerScene('payment', {
   onEnter: function(el, params) {
-    setSceneName(params.checkId || 'QS-001');
+    setSceneName(params.checkId || 'ORDER');
     setHeaderBack(false);   // no back mid-payment
 
     sceneEl          = el;

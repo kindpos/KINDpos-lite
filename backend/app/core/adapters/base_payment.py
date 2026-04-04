@@ -64,7 +64,7 @@ class TransactionRequest(BaseModel):
     service_charge_amount: Decimal = Decimal("0.00")
     payment_type: PaymentType = PaymentType.SALE
     terminal_id: str
-    server_id: str
+    server_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
     split_info: Optional[SplitInfo] = None
 

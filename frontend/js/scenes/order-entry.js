@@ -138,7 +138,7 @@ var PREFIXES = [
 
 registerScene('order-entry', {
   onEnter: function(el, params) {
-    setSceneName('QS-001');
+    setSceneName('NEW ORDER');
     setHeaderBack(true);
     activeTab      = 'items';
     activePrefix   = 'add';
@@ -729,6 +729,7 @@ async function handleSend() {
       if (!createRes.ok) throw new Error('Order create failed: ' + createRes.status);
       var created = await createRes.json();
       currentOrderId = created.order_id;   // use the backend-generated ID
+      setSceneName(currentOrderId.replace('order_', 'OS-').slice(0, 9).toUpperCase());
     }
 
     // Step 2 — post only unsent instances, each with their own modifiers
@@ -967,7 +968,7 @@ async function handlePay(params) {
 
   push('receipt-review', {
     orderId:     currentOrderId,
-    checkId:     'QS-001',
+    checkId:     currentOrderId.replace('order_', 'OS-').slice(0, 9).toUpperCase(),
     items:       items,
     subtotal:    totals.subtotal,
     tax:         totals.tax,
