@@ -85,10 +85,23 @@ registerScene('login', {
       onSubmit: function(pin) { handlePinSubmit(pin); },
     }));
 
-    // Version label at bottom-right
+    // Version label at bottom-right with multi-color spans
     var version = document.createElement('div');
-    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';padding:4px 0;';
-    version.textContent = 'KINDpos_lite // Vz1.0';
+    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:24px;padding:4px 0;';
+    var parts = [
+      { text: 'KIND', color: T.gold },
+      { text: 'pos', color: T.red },
+      { text: '_lite', color: T.gold },
+      { text: ' // ', color: T.mint },
+      { text: 'Vz', color: T.mint },
+      { text: '1.0', color: T.gold },
+    ];
+    parts.forEach(function(p) {
+      var span = document.createElement('span');
+      span.style.color = p.color;
+      span.textContent = p.text;
+      version.appendChild(span);
+    });
     right.appendChild(version);
 
     el.appendChild(right);
