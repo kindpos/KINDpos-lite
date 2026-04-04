@@ -26,7 +26,7 @@ var returnTimer = null;
 registerScene('payment', {
   onEnter: function(el, params) {
     setSceneName(params.checkId || 'ORDER');
-    setHeaderBack(false);
+    setHeaderBack(true);
 
     sceneEl          = el;
     sceneData        = params;

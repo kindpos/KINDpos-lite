@@ -161,7 +161,7 @@ function buildScene(el, params) {
       }));
     }
 
-    // ── BOTTOM LEFT: Sales Summary (mint) ──
+    // ── BOTTOM LEFT: Sales Summary (mint, display-only) ──
     el.appendChild(buildCard({
       borderColor: T.mint,
       title: 'Sales\nSummary',
@@ -170,9 +170,6 @@ function buildScene(el, params) {
         { text: 'Net Sales: ' + fmt(stats.netSales),  color: T.gold },
         { text: 'Checks: ' + stats.totalChecks,       color: T.cyan },
       ],
-      onTap: function() {
-        push('sales-summary', { role: role });
-      },
     }));
 
     // ── BOTTOM RIGHT: empty (batch settlement lives in Close Day) ──

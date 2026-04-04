@@ -30,9 +30,9 @@ export function setSceneName(name) {
 
 export function setHeaderBack(show) {
   const nav = document.getElementById('header-nav');
-  const info = document.getElementById('header-info');
+  const logout = document.getElementById('header-logout');
   if (nav) nav.innerHTML = '';
-  if (info) info.innerHTML = '';
+  if (logout) logout.innerHTML = '';
 
   if (show) {
     if (nav) {
@@ -50,8 +50,11 @@ export function setHeaderBack(show) {
       backPair.inner.textContent = '<<<';
       backPair.wrap.addEventListener('pointerup', () => pop());
       nav.appendChild(backPair.wrap);
+    }
 
-      // X  logout / reset button
+    // X  logout / reset button — far right of header
+    if (logout) {
+      logout.style.display = 'flex';
       const logoutPair = buildStyledButton(T.red);
       logoutPair.wrap.style.height = '44px';
       logoutPair.wrap.style.width = '52px';
@@ -60,12 +63,11 @@ export function setHeaderBack(show) {
       logoutPair.inner.style.color = '#fff';
       logoutPair.inner.textContent = 'X';
       logoutPair.wrap.addEventListener('pointerup', () => replace('login'));
-      nav.appendChild(logoutPair.wrap);
+      logout.appendChild(logoutPair.wrap);
     }
-    if (info) info.textContent = 'KINDpos/lite <> Vz1.0';
   } else {
     if (nav) nav.style.display = 'none';
-    if (info) info.textContent = '';
+    if (logout) logout.style.display = 'none';
   }
 }
 
