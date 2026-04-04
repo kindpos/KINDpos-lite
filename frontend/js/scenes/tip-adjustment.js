@@ -74,14 +74,40 @@ function renderTable() {
   if (!tableBody) return;
   tableBody.innerHTML = '';
 
-  checks.forEach(function(c, i) {
+  // Sort checks: card first, then cash (within closed)
+  var sorted = checks.map(function(c, i) { return { c: c, i: i }; });
+  sorted.sort(function(a, b) {
+    var ma = a.c.method === 'card' ? 0 : a.c.method === 'cash' ? 1 : 2;
+    var mb = b.c.method === 'card' ? 0 : b.c.method === 'cash' ? 1 : 2;
+    return ma - mb;
+  });
+
+  var lastMethod = null;
+  sorted.forEach(function(entry) {
+    var c = entry.c;
+    var i = entry.i;
     // Filter logic
     if (filter === 'unadjusted' && c.adjusted) return;
     var checkStatus = c.status || 'closed';
     if (statusFilter === 'open' && checkStatus !== 'open') return;
     if (statusFilter === 'closed' && checkStatus !== 'closed') return;
+    // Cash checks only visible under Closed filter
+    if (c.method === 'cash' && statusFilter !== 'closed') return;
 
     var isOpen = checkStatus === 'open';
+
+    // Group header when method changes (card → cash)
+    if (!isOpen && statusFilter === 'closed' && c.method !== lastMethod) {
+      lastMethod = c.method;
+      var hdr = document.createElement('tr');
+      var hdrTd = document.createElement('td');
+      hdrTd.colSpan = 5;
+      hdrTd.textContent = (c.method === 'card' ? 'Card' : 'Cash');
+      hdrTd.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + T.gold + ';padding:10px 8px 4px;text-align:left;border:none;background:transparent;';
+      hdr.appendChild(hdrTd);
+      tableBody.appendChild(hdr);
+    }
+
     var tr = document.createElement('tr');
     tr.dataset.idx = i;
 
