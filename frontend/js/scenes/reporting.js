@@ -47,14 +47,16 @@ function fetchData(params) {
 
 function buildCollapsedView(el, params, sales, labor) {
   el.innerHTML = '';
-  el.style.cssText = 'display:flex;height:100%;box-sizing:border-box;padding:20px;gap:20px;';
+  el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;box-sizing:border-box;padding:20px;gap:20px;';
 
   var leftCard = buildLeftCard(params, sales, labor);
   var rightCard = buildRightCard(params, sales, labor);
 
   leftCard.style.flex = '1';
+  leftCard.style.maxHeight = '90%';
   leftCard.style.border = '20px solid ' + T.mint;
   rightCard.style.flex = '1';
+  rightCard.style.maxHeight = '90%';
   rightCard.style.border = '20px solid ' + T.mint;
 
   leftCard.addEventListener('pointerup', function() {
