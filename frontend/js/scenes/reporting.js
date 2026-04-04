@@ -59,11 +59,13 @@ function buildCollapsedView(el, params, sales, labor) {
   rightCard.style.flex = '1';
 
   leftCard.addEventListener('pointerup', function() {
-    console.log('expand left');
+    expandedCard = 'left';
+    renderCurrentState();
   });
 
   rightCard.addEventListener('pointerup', function() {
-    console.log('expand right');
+    expandedCard = 'right';
+    renderCurrentState();
   });
 
   frame.appendChild(leftCard);
@@ -175,6 +177,99 @@ function buildRightCard(params, sales, labor) {
 }
 
 // ═══════════════════════════════════════════════════
+//  EXPANDED VIEW — 2×2 sunken panel grid
+// ═══════════════════════════════════════════════════
+
+function getCardName(params, side) {
+  if (params.role === 'manager') return side === 'left' ? 'Sales' : 'Labor';
+  return side === 'left' ? 'Shift' : 'Hours';
+}
+
+function buildExpandedView(el, params, sales, labor) {
+  el.innerHTML = '';
+  el.style.cssText = 'display:flex;flex-direction:column;height:100%;box-sizing:border-box;padding:20px;';
+
+  var cardName = getCardName(params, expandedCard);
+  setSceneName('Reporting // ' + cardName);
+
+  // Full-width frame
+  var frame = document.createElement('div');
+  frame.style.cssText = 'flex:1;display:flex;flex-direction:column;border:3px solid ' + T.mint + ';box-sizing:border-box;min-height:0;background:' + T.bgDark + ';';
+
+  var isRightCard = expandedCard === 'right';
+
+  // Header area
+  if (isRightCard) {
+    // Right card has vertical text rail on left side
+    var headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex;flex:1;min-height:0;';
+
+    var rail = document.createElement('div');
+    rail.style.cssText = 'writing-mode:vertical-rl;text-orientation:mixed;font-family:Impact,sans-serif;font-size:36px;font-weight:bold;color:' + T.cyan + ';display:flex;align-items:center;justify-content:center;padding:0 12px;flex-shrink:0;';
+    rail.textContent = params.role === 'manager' ? 'LABOR' : 'HOURS';
+    headerRow.appendChild(rail);
+
+    var gridWrap = document.createElement('div');
+    gridWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;padding:12px;';
+    gridWrap.appendChild(buildPanelGrid(params, sales, labor));
+    headerRow.appendChild(gridWrap);
+
+    frame.appendChild(headerRow);
+  } else {
+    // Left card has title at top
+    var titleBar = document.createElement('div');
+    titleBar.style.cssText = 'font-family:Impact,sans-serif;font-size:36px;font-weight:bold;font-style:italic;color:' + T.gold + ';padding:12px 16px 0;flex-shrink:0;';
+    titleBar.textContent = params.role === 'manager' ? 'SALES' : 'SHIFT';
+    frame.appendChild(titleBar);
+
+    var gridWrap = document.createElement('div');
+    gridWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;padding:12px;';
+    gridWrap.appendChild(buildPanelGrid(params, sales, labor));
+    frame.appendChild(gridWrap);
+  }
+
+  el.appendChild(frame);
+}
+
+function buildPanelGrid(params, sales, labor) {
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;flex:1;min-height:0;';
+
+  var panelNames = getPanelNames(params, expandedCard);
+
+  for (var i = 0; i < 4; i++) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'background:' + T.bgDark + ';display:flex;align-items:center;justify-content:center;font-family:Courier New,monospace;font-size:20px;color:' + T.mint + ';';
+    applySunkenStyle(panel);
+    panel.textContent = 'Chart: ' + panelNames[i];
+    grid.appendChild(panel);
+  }
+
+  return grid;
+}
+
+function getPanelNames(params, side) {
+  if (params.role === 'manager' && side === 'left')  return ['NET SALES', 'TOTAL CHECKS', 'CHECK AVG', 'CASH / CARD'];
+  if (params.role === 'manager' && side === 'right') return ['TOTAL HRS', 'TIP POOL', 'COB %', 'OT ALERT'];
+  if (params.role === 'server'  && side === 'left')  return ['TOTAL GUESTS', 'TOTAL TABLES', 'CHECK AVG', 'TIPS / TIPOUT'];
+  return ['TODAY\'S SHIFT', 'WEEKLY HOURS', 'TOTAL HRS', 'OT ALERT'];
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER STATE MACHINE
+// ═══════════════════════════════════════════════════
+
+function renderCurrentState() {
+  if (!currentEl || !currentParams) return;
+  if (expandedCard) {
+    buildExpandedView(currentEl, currentParams, salesData, laborData);
+  } else {
+    setSceneName('Reporting');
+    buildCollapsedView(currentEl, currentParams, salesData, laborData);
+  }
+}
+
+// ═══════════════════════════════════════════════════
 //  BUILD SCENE
 // ═══════════════════════════════════════════════════
 
@@ -185,7 +280,7 @@ function buildScene(el, params) {
   fetchData(params).then(function(data) {
     salesData = data.sales;
     laborData = data.labor;
-    buildCollapsedView(el, params, salesData, laborData);
+    renderCurrentState();
   });
 }
 
@@ -201,6 +296,14 @@ registerScene('reporting', {
     buildScene(el, params);
   },
   onExit: function() {},
+  canExit: function() {
+    if (expandedCard) {
+      expandedCard = null;
+      renderCurrentState();
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(true);
+  },
   cache: false,
   timeoutMs: 0,
 });
