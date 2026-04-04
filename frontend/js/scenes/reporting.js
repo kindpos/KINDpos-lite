@@ -410,32 +410,37 @@ function buildManagerLaborPanels(labor, fullSize) {
   var employees = l.employees || [];
   var cobTrend = l.cob_trend || [];
   var otAlerts = l.ot_alerts || [];
+  var svgW = fullSize ? 900 : 400;
+  var svgH = fullSize ? 380 : 160;
+  var lblW = fullSize ? 80 : 55;
+  var fontSize = fullSize ? '24px' : '20px';
 
   // TOTAL HRS — horizontal bars: employees by hours
   var p1 = buildChartPanel('TOTAL HRS', l.total_hours ? l.total_hours + 'h' : '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < employees.length; i++) {
       var emp = employees[i];
       data.push({ label: emp.name, value: emp.hours, sublabel: emp.hours + 'h (' + emp.clock_in + '-' + emp.clock_out + ')', color: CHART.cyan });
     }
-    drawHorizontalBars(svg, data, { width: 400, height: 160, labelWidth: 55 });
+    drawHorizontalBars(svg, data, { width: svgW, height: svgH, labelWidth: lblW });
     body.appendChild(svg);
   });
 
   // TIP POOL — horizontal bars: employees by tips
   var p2 = buildChartPanel('TIP POOL', l.tip_pool ? fmt(l.tip_pool) : '--', function(body) {
-    var svg = createSVG(400, 120);
+    var chartH = fullSize ? 300 : 120;
+    var svg = createSVG(svgW, chartH);
     var data = [];
     for (var i = 0; i < employees.length; i++) {
       data.push({ label: employees[i].name, value: employees[i].tips, sublabel: fmt(employees[i].tips), color: CHART.gold });
     }
-    drawHorizontalBars(svg, data, { width: 400, height: 120, labelWidth: 55 });
+    drawHorizontalBars(svg, data, { width: svgW, height: chartH, labelWidth: lblW });
     body.appendChild(svg);
 
     // Text breakdown below chart
     var info = document.createElement('div');
-    info.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:20px;color:' + CHART.mint + ';';
+    info.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + CHART.mint + ';';
     info.innerHTML =
       'Card Tips: <span style="color:' + CHART.gold + '">' + fmt(l.card_tips_total || 0) + '</span> ' +
       '- Tipout: <span style="color:' + CHART.red + '">' + fmt(l.tipout_deducted || 0) + '</span> ' +
@@ -445,13 +450,13 @@ function buildManagerLaborPanels(labor, fullSize) {
 
   // COB % — trend line with thresholds
   var p3 = buildChartPanel('COB %', l.cob_percent ? l.cob_percent + '%' : '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < cobTrend.length; i++) {
       data.push({ label: cobTrend[i].day, value: cobTrend[i].percent });
     }
     drawTrendLine(svg, data, {
-      color: CHART.cyan, width: 400, height: 160,
+      color: CHART.neonPurple, width: svgW, height: svgH,
       thresholds: [
         { value: 35, color: CHART.yellow },
         { value: 45, color: CHART.red },
@@ -464,7 +469,7 @@ function buildManagerLaborPanels(labor, fullSize) {
   var otStatus = otAlerts.length > 0 ? 'Warning' : 'All clear';
   var otColor = otAlerts.length > 0 ? CHART.yellow : CHART.cyan;
   var p4 = buildChartPanel('OT ALERT', otStatus, function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < employees.length; i++) {
       var wh = employees[i].weekly_hours;
@@ -473,7 +478,7 @@ function buildManagerLaborPanels(labor, fullSize) {
       else if (wh >= 35) barColor = CHART.yellow;
       data.push({ label: employees[i].name, value: wh, sublabel: wh + 'h', color: barColor });
     }
-    drawHorizontalBars(svg, data, { width: 400, height: 160, labelWidth: 55 });
+    drawHorizontalBars(svg, data, { width: svgW, height: svgH, labelWidth: lblW });
     // 40h threshold line
     if (employees.length > 0) {
       var maxH = 0;
@@ -481,15 +486,15 @@ function buildManagerLaborPanels(labor, fullSize) {
         if (employees[i].weekly_hours > maxH) maxH = employees[i].weekly_hours;
       }
       if (maxH > 0) {
-        var lineX = 55 + (40 / Math.max(maxH, 40)) * (400 - 55 - 10);
-        svg.appendChild(svgEl('line', { x1: lineX, y1: 0, x2: lineX, y2: 160, stroke: CHART.yellow, 'stroke-width': 2, 'stroke-dasharray': '4,3' }));
+        var lineX = lblW + (40 / Math.max(maxH, 40)) * (svgW - lblW - 10);
+        svg.appendChild(svgEl('line', { x1: lineX, y1: 0, x2: lineX, y2: svgH, stroke: CHART.yellow, 'stroke-width': 2, 'stroke-dasharray': '4,3' }));
       }
     }
     body.appendChild(svg);
 
     // Status text
     var statusEl = document.createElement('div');
-    statusEl.style.cssText = 'position:absolute;top:4px;right:8px;font-family:' + T.fb + ';font-size:20px;color:' + otColor + ';font-weight:bold;';
+    statusEl.style.cssText = 'position:absolute;top:4px;right:8px;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + otColor + ';font-weight:bold;';
     statusEl.textContent = otStatus;
     body.appendChild(statusEl);
   });
@@ -506,60 +511,75 @@ function buildServerShiftPanels(sales, fullSize) {
   var hourly = s.hourly_sales || [];
   var hourlyTables = s.hourly_tables || [];
   var dailyAvg = s.daily_check_avg || [];
+  var svgW = fullSize ? 900 : 400;
+  var svgH = fullSize ? 380 : 160;
+  var lblW = fullSize ? 60 : 40;
+  var fontSize = fullSize ? '24px' : '20px';
+  var lgFontSize = fullSize ? '36px' : '28px';
 
-  // TOTAL GUESTS — single bar chart per hour
+  // TOTAL GUESTS — bar chart per hour
   var p1 = buildChartPanel('TOTAL GUESTS', s.total_guests || '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
-      data.push({ label: hourly[i].hour.replace(':00', ''), value: hourly[i].checks });
+      var hr = parseInt(hourly[i].hour);
+      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      data.push({ label: label, value: hourly[i].checks });
     }
-    drawBarChart(svg, data, { color: CHART.cyan, width: 400, height: 160, showLabels: true, showValueAbove: true });
+    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
     body.appendChild(svg);
   });
 
   // TOTAL TABLES — horizontal bars per hour
   var p2 = buildChartPanel('TOTAL TABLES', s.total_tables || '--', function(body) {
-    var svg = createSVG(400, 130);
+    var chartH = fullSize ? 300 : 130;
+    var svg = createSVG(svgW, chartH);
     var data = [];
     for (var i = 0; i < hourlyTables.length; i++) {
-      data.push({ label: hourlyTables[i].hour.replace(':00', ''), value: hourlyTables[i].tables, sublabel: hourlyTables[i].tables + ' tbl', color: CHART.cyan });
+      var hr = parseInt(hourlyTables[i].hour);
+      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      data.push({ label: label, value: hourlyTables[i].tables, sublabel: hourlyTables[i].tables + ' tbl', color: CHART.teal });
     }
-    drawHorizontalBars(svg, data, { width: 400, height: 130, labelWidth: 40 });
+    drawHorizontalBars(svg, data, { width: svgW, height: chartH, labelWidth: lblW });
     body.appendChild(svg);
 
     var avgText = document.createElement('div');
-    avgText.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:20px;color:' + CHART.mint + ';';
+    avgText.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + CHART.mint + ';';
     avgText.textContent = 'Avg guests/table: ' + (s.guests_per_table || '--');
     body.appendChild(avgText);
   });
 
   // CHECK AVG — trend line: daily avg vs house avg
   var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     var compare = [];
     for (var i = 0; i < dailyAvg.length; i++) {
       data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
       compare.push({ label: dailyAvg[i].day, value: dailyAvg[i].house_avg });
     }
-    drawTrendLine(svg, data, { color: CHART.cyan, compareData: compare, compareColor: CHART.lavender, width: 400, height: 160 });
+    drawTrendLine(svg, data, { color: CHART.neonOrange, compareData: compare, compareColor: CHART.limeGreen, width: svgW, height: svgH });
     body.appendChild(svg);
   });
 
-  // TIPS / TIPOUT — styled DOM text panel
+  // TIPS / TIPOUT — styled DOM text panel with win98 bar for breakdown
   var p4 = buildChartPanel('TIPS / TIPOUT', s.tips_collected ? fmt(s.tips_collected) : '--', function(body) {
     var wrap = document.createElement('div');
     wrap.style.cssText = 'padding:12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:6px;';
 
+    var tipsTotal = s.tips_collected || 0;
+    var tipout = s.tipout_amount || 0;
+    var takeHome = s.take_home || 0;
+    var cashTips = s.cash_tips || 0;
+
     wrap.innerHTML =
-      '<div style="font-size:20px;color:' + CHART.gold + '">Card Tips: ' + fmt(s.tips_collected || 0) + '</div>' +
-      '<div style="font-size:20px;color:' + CHART.red + '">Tipout: -' + fmt(s.tipout_amount || 0) + '</div>' +
+      '<div style="font-size:' + fontSize + ';color:' + CHART.gold + '">Card Tips: ' + fmt(tipsTotal) + '</div>' +
+      '<div style="font-size:' + fontSize + ';color:' + CHART.red + '">Tipout: -' + fmt(tipout) + '</div>' +
       '<div style="height:1px;background:' + T.border + ';margin:4px 0;"></div>' +
-      '<div style="font-size:28px;font-weight:bold;color:' + CHART.gold + '">Take-home: ' + fmt(s.take_home || 0) + '</div>' +
-      '<div style="font-size:28px;color:' + CHART.gold + '">Cash Tips: ' + fmt(s.cash_tips || 0) + '</div>' +
+      '<div style="font-size:' + lgFontSize + ';font-weight:bold;color:' + CHART.gold + '">Take-home: ' + fmt(takeHome) + '</div>' +
+      '<div style="font-size:' + lgFontSize + ';color:' + CHART.gold + '">Cash Tips: ' + fmt(cashTips) + '</div>' +
       '<div style="height:2px;background:' + CHART.gold + ';margin:4px 0;"></div>' +
-      '<div><span style="font-size:20px;color:' + CHART.mint + '">TOTAL EARNED </span><span style="font-size:22px;color:' + CHART.gold + '">' + fmt((s.take_home || 0) + (s.cash_tips || 0)) + '</span></div>';
+      '<div><span style="font-size:' + fontSize + ';color:' + CHART.mint + '">TOTAL EARNED </span><span style="font-size:' + (fullSize ? '28px' : '22px') + ';color:' + CHART.gold + '">' + fmt(takeHome + cashTips) + '</span></div>';
     body.appendChild(wrap);
   });
 
@@ -573,6 +593,11 @@ function buildServerShiftPanels(sales, fullSize) {
 function buildServerHoursPanels(sales, labor, fullSize) {
   var l = labor || {};
   var weekly = l.weekly_breakdown || [];
+  var svgW = fullSize ? 900 : 400;
+  var svgH = fullSize ? 380 : 160;
+  var fontSize = fullSize ? '24px' : '20px';
+  var lgFontSize = fullSize ? '44px' : '36px';
+  var progW = fullSize ? 860 : 380;
 
   // TODAY'S SHIFT — big clock in/out text + progress bar
   var p1 = buildChartPanel('TODAY\'S SHIFT', l.today_hours ? l.today_hours + 'h' : '--', function(body) {
@@ -580,43 +605,48 @@ function buildServerHoursPanels(sales, labor, fullSize) {
     wrap.style.cssText = 'padding:8px 12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:4px;';
 
     wrap.innerHTML =
-      '<div style="font-size:20px;color:' + CHART.cyan + '">Time In</div>' +
-      '<div style="font-size:36px;color:' + CHART.cyan + '">' + (l.clock_in || '--') + '</div>' +
-      '<div style="font-size:20px;color:' + CHART.mint + '">Time Out</div>' +
-      '<div style="font-size:36px;color:' + CHART.mint + '">' + (l.clock_out || 'active') + '</div>' +
+      '<div style="font-size:' + fontSize + ';color:' + CHART.cyan + '">Time In</div>' +
+      '<div style="font-size:' + lgFontSize + ';color:' + CHART.cyan + '">' + (l.clock_in || '--') + '</div>' +
+      '<div style="font-size:' + fontSize + ';color:' + CHART.mint + '">Time Out</div>' +
+      '<div style="font-size:' + lgFontSize + ';color:' + CHART.mint + '">' + (l.clock_out || 'active') + '</div>' +
       '<div style="height:1px;background:' + T.border + ';margin:2px 0;"></div>' +
-      '<div style="font-size:22px;color:' + CHART.cyan + '">Today: ' + (l.today_hours || 0) + ' hrs</div>';
+      '<div style="font-size:' + (fullSize ? '28px' : '22px') + ';color:' + CHART.cyan + '">Today: ' + (l.today_hours || 0) + ' hrs</div>';
     body.appendChild(wrap);
 
     // Progress bar for shift span
-    var svg = createSVG(380, 24);
-    drawProgressBar(svg, l.today_hours || 0, 12, { width: 380, height: 24, color: CHART.cyan });
+    var svg = createSVG(progW, fullSize ? 32 : 24);
+    drawProgressBar(svg, l.today_hours || 0, 12, { width: progW, height: fullSize ? 32 : 24, color: CHART.cyan });
     svg.style.marginLeft = '12px';
     body.appendChild(svg);
   });
 
   // WEEKLY HOURS — bar chart per day
   var p2 = buildChartPanel('WEEKLY HOURS', l.weekly_hours ? l.weekly_hours + 'h' : '--', function(body) {
-    var svg = createSVG(400, 160);
+    var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < weekly.length; i++) {
       var d = weekly[i];
       var val = d.hours || 0;
       data.push({ label: d.day, value: val });
     }
-    drawBarChart(svg, data, { color: CHART.cyan, width: 400, height: 160, showLabels: true, showValueAbove: true });
+    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: fullSize });
 
     // Draw dashed outline for scheduled-unworked days
+    var padLeft = 50;
+    var padBottom = 26;
+    var chartW = svgW - padLeft - 8;
+    var chartH = svgH - (fullSize ? 22 : 10) - padBottom;
     for (var i = 0; i < weekly.length; i++) {
       if (weekly[i].scheduled && !weekly[i].hours && weekly[i].hours !== 0) {
-        var groupW = (400 - 40) / weekly.length;
+        var groupW = chartW / weekly.length;
         var barW = groupW * 0.6;
-        var x = 35 + i * groupW + (groupW - barW) / 2;
+        var x = padLeft + i * groupW + (groupW - barW) / 2;
         var maxVal = 0;
         for (var j = 0; j < data.length; j++) if (data[j].value > maxVal) maxVal = data[j].value;
         if (maxVal === 0) maxVal = 1;
-        var barH = (weekly[i].scheduled / maxVal) * 130;
-        svg.appendChild(svgEl('rect', { x: x, y: 160 - 18 - barH, width: barW, height: barH, fill: 'none', stroke: CHART.cyan, 'stroke-width': 1, 'stroke-dasharray': '4,3' }));
+        var barH = (weekly[i].scheduled / maxVal) * chartH;
+        var padTop = fullSize ? 22 : 10;
+        svg.appendChild(svgEl('rect', { x: x, y: padTop + chartH - barH, width: barW, height: barH, fill: 'none', stroke: CHART.electricBlue, 'stroke-width': 1, 'stroke-dasharray': '4,3' }));
       }
     }
 
@@ -626,33 +656,33 @@ function buildServerHoursPanels(sales, labor, fullSize) {
   // TOTAL HRS — progress bar + daily breakdown table
   var p3 = buildChartPanel('TOTAL HRS', l.weekly_hours ? l.weekly_hours + '/40h' : '--', function(body) {
     // Progress bar
-    var svg = createSVG(380, 28);
-    drawProgressBar(svg, l.weekly_hours || 0, 48, { width: 380, height: 28, color: CHART.cyan, warnAt: 35, critAt: 40 });
+    var svg = createSVG(progW, fullSize ? 36 : 28);
+    drawProgressBar(svg, l.weekly_hours || 0, 48, { width: progW, height: fullSize ? 36 : 28, color: CHART.cyan, warnAt: 35, critAt: 40 });
     svg.style.margin = '4px 12px';
     body.appendChild(svg);
 
     // Daily table
     var table = document.createElement('div');
-    table.style.cssText = 'padding:2px 8px;font-family:' + T.fb + ';font-size:20px;overflow-y:auto;flex:1;';
+    table.style.cssText = 'padding:2px 8px;font-family:' + T.fb + ';font-size:' + fontSize + ';overflow-y:auto;flex:1;';
 
     var remainScheduled = 0;
     for (var i = 0; i < weekly.length; i++) {
       var d = weekly[i];
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;gap:8px;padding:1px 0;';
+      row.style.cssText = 'display:flex;gap:' + (fullSize ? '16' : '8') + 'px;padding:' + (fullSize ? '3' : '1') + 'px 0;';
 
       var dayCol = document.createElement('span');
-      dayCol.style.cssText = 'width:35px;color:' + CHART.mint + ';';
+      dayCol.style.cssText = 'width:' + (fullSize ? '50' : '35') + 'px;color:' + CHART.mint + ';';
       dayCol.textContent = d.day;
       row.appendChild(dayCol);
 
       var inCol = document.createElement('span');
-      inCol.style.cssText = 'width:50px;color:' + T.dimText + ';';
+      inCol.style.cssText = 'width:' + (fullSize ? '70' : '50') + 'px;color:' + T.dimText + ';';
       inCol.textContent = d['in'] || '--';
       row.appendChild(inCol);
 
       var outCol = document.createElement('span');
-      outCol.style.cssText = 'width:50px;color:' + T.dimText + ';';
+      outCol.style.cssText = 'width:' + (fullSize ? '70' : '50') + 'px;color:' + T.dimText + ';';
       outCol.textContent = d['out'] || '--';
       row.appendChild(outCol);
 
@@ -668,7 +698,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
 
     if (remainScheduled > 0) {
       var footer = document.createElement('div');
-      footer.style.cssText = 'padding:2px 0;color:' + T.dimText + ';font-style:italic;font-size:20px;';
+      footer.style.cssText = 'padding:2px 0;color:' + T.dimText + ';font-style:italic;font-size:' + fontSize + ';';
       footer.textContent = 'Remaining scheduled: ' + remainScheduled + 'h';
       table.appendChild(footer);
     }
@@ -683,13 +713,13 @@ function buildServerHoursPanels(sales, labor, fullSize) {
 
   var p4 = buildChartPanel('OT ALERT', statusLabel, function(body) {
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:8px 12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:6px;';
+    wrap.style.cssText = 'padding:' + (fullSize ? '16px 24px' : '8px 12px') + ';font-family:' + T.fb + ';display:flex;flex-direction:column;gap:' + (fullSize ? '10' : '6') + 'px;';
 
     // Status box
     var statusBox = document.createElement('div');
-    statusBox.style.cssText = 'border:2px solid ' + statusColor + ';padding:8px 12px;text-align:center;';
+    statusBox.style.cssText = 'border:2px solid ' + statusColor + ';padding:' + (fullSize ? '12px 16px' : '8px 12px') + ';text-align:center;';
     var statusText = document.createElement('div');
-    statusText.style.cssText = 'font-size:20px;font-weight:bold;color:' + statusColor + ';';
+    statusText.style.cssText = 'font-size:' + (fullSize ? '28px' : '20px') + ';font-weight:bold;color:' + statusColor + ';';
     statusText.textContent = statusLabel;
     statusBox.appendChild(statusText);
     wrap.appendChild(statusBox);
@@ -706,11 +736,11 @@ function buildServerHoursPanels(sales, labor, fullSize) {
     var projColor = projected > 40 ? CHART.yellow : CHART.cyan;
 
     wrap.innerHTML +=
-      '<div style="display:flex;justify-content:space-between;font-size:20px;"><span style="color:' + CHART.mint + '">Worked so far</span><span style="color:' + CHART.cyan + '">' + worked + 'h</span></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:20px;"><span style="color:' + T.dimText + '">Scheduled remaining</span><span style="color:' + T.dimText + '">' + scheduledRemain + 'h</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + CHART.mint + '">Worked so far</span><span style="color:' + CHART.cyan + '">' + worked + 'h</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + T.dimText + '">Scheduled remaining</span><span style="color:' + T.dimText + '">' + scheduledRemain + 'h</span></div>' +
       '<div style="height:1px;background:' + T.border + ';"></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:20px;"><span style="color:' + CHART.mint + ';font-weight:bold">Projected total</span><span style="color:' + projColor + ';font-weight:bold">' + projected + 'h</span></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:20px;"><span style="color:' + CHART.mint + '">Buffer</span><span style="color:' + (buffer <= 0 ? CHART.yellow : CHART.cyan) + '">' + buffer + 'h</span></div>';
+      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + CHART.mint + ';font-weight:bold">Projected total</span><span style="color:' + projColor + ';font-weight:bold">' + projected + 'h</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + CHART.mint + '">Buffer</span><span style="color:' + (buffer <= 0 ? CHART.yellow : CHART.cyan) + '">' + buffer + 'h</span></div>';
 
     body.appendChild(wrap);
   });
