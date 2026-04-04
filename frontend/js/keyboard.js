@@ -193,7 +193,7 @@ function _buildRow(keys) {
     var fill, color;
     if (def.type === 'modifier') { fill = T.bg; color = T.cyan; }
     else if (def.type === 'action') { fill = T.gold; color = T.bgDark; }
-    else { fill = T.darkBtn; color = T.gold; }
+    else { fill = T.darkBtn; color = T.mint; }
 
     var pair = buildStyledButton(fill);
     pair.wrap.style.flex = def.flex;
