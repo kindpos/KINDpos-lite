@@ -527,11 +527,12 @@ function renderManualAdd(ip, card) {
   card.innerHTML = '';
   var inner = cardInner(card);
 
-  var hdr = makeLabel('Device Not Responding', T.red, '20px');
+  var hdr = makeLabel('Device Not Responding', T.red, '28px');
   hdr.style.padding = '16px 20px 4px';
+  hdr.style.fontWeight = 'bold';
   inner.appendChild(hdr);
 
-  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.subtleText, '20px');
+  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.mint, '22px');
   sub.style.padding = '4px 20px 16px';
   inner.appendChild(sub);
 
@@ -539,7 +540,7 @@ function renderManualAdd(ip, card) {
   form.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:0 20px;flex:1;';
 
   // Type selector
-  form.appendChild(makeLabel('Device Type', GOLD, '20px'));
+  form.appendChild(makeLabel('Device Type', GOLD, '22px'));
   var typeRow = document.createElement('div');
   typeRow.style.cssText = 'display:flex;gap:8px;';
   var TYPES = [
@@ -561,7 +562,7 @@ function renderManualAdd(ip, card) {
     var btn = buildButton(t.label, {
       fill: selectedType === t.id ? GOLD : BG,
       color: selectedType === t.id ? DARK : GOLD,
-      fontSize: '20px', height: 38,
+      fontSize: '20px', height: 44,
       onTap: function() { selectedType = t.id; refreshTypeBtns(); },
     });
     typeBtnEls[t.id] = btn;
@@ -569,7 +570,7 @@ function renderManualAdd(ip, card) {
   });
   form.appendChild(typeRow);
 
-  form.appendChild(makeLabel('Device Name', GOLD, '20px'));
+  form.appendChild(makeLabel('Device Name', GOLD, '22px'));
   var nameDisplay = document.createElement('div');
   nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
@@ -581,7 +582,7 @@ function renderManualAdd(ip, card) {
   presetRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
   ['Kitchen', 'Receipt', 'Bar Kitchen', 'Card Reader'].forEach(function(p) {
     presetRow.appendChild(buildButton(p, {
-      fill: BG, color: GOLD, fontSize: '20px', height: 32,
+      fill: BG, color: GOLD, fontSize: '20px', height: 40,
       onTap: function() { deviceName = p; nameDisplay.textContent = p; },
     }));
   });
@@ -726,7 +727,7 @@ function renderConfirmDevice(card) {
   form.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:0 20px;flex:1;overflow:hidden;';
 
   // Type selector
-  form.appendChild(makeLabel('Device Type', GOLD, '20px'));
+  form.appendChild(makeLabel('Device Type', GOLD, '22px'));
   var typeRow = document.createElement('div');
   typeRow.style.cssText = 'display:flex;gap:8px;';
 
@@ -753,7 +754,7 @@ function renderConfirmDevice(card) {
     var btn = buildButton(t.label, {
       fill: selectedType === t.id ? GOLD : BG,
       color: selectedType === t.id ? DARK : GOLD,
-      fontSize: '20px', height: 38,
+      fontSize: '20px', height: 44,
       onTap: function() { selectedType = t.id; refreshTypeBtns(); },
     });
     typeBtnEls[t.id] = btn;
@@ -762,7 +763,7 @@ function renderConfirmDevice(card) {
   form.appendChild(typeRow);
 
   // Name
-  form.appendChild(makeLabel('Device Name', GOLD, '20px'));
+  form.appendChild(makeLabel('Device Name', GOLD, '22px'));
   var nameDisplay = document.createElement('div');
   nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
