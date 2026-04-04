@@ -539,12 +539,12 @@ export function buildChartPanel(title, value, contentFn) {
   header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:' + CHART.headerBg + ';flex-shrink:0;border-bottom:1px solid ' + CHART.gridStroke + ';';
 
   var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-family:Courier New,monospace;font-size:21px;color:' + CHART.mint + ';font-weight:bold;letter-spacing:1px;';
+  titleEl.style.cssText = 'font-family:Courier New,monospace;font-size:14px;color:' + CHART.mint + ';font-weight:bold;letter-spacing:1px;';
   titleEl.textContent = title;
   header.appendChild(titleEl);
 
   var valueEl = document.createElement('div');
-  valueEl.style.cssText = 'font-family:Courier New,monospace;font-size:24px;color:' + CHART.gold + ';font-weight:bold;';
+  valueEl.style.cssText = 'font-family:Courier New,monospace;font-size:16px;color:' + CHART.gold + ';font-weight:bold;';
   valueEl.textContent = value;
   header.appendChild(valueEl);
 
