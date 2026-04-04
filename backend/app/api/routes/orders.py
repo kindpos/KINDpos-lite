@@ -417,7 +417,7 @@ async def get_day_summary(
                 checks_list.append({
                     "checkId": order.order_id,
                     "paymentId": card_payment.payment_id if card_payment else None,
-                    "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
+                    "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
                     "amount": money_round(order.total),
                     "tip": float(order_tip),
                     "adjusted": any(tip_map.get(p.payment_id) is not None for p in order.payments),
@@ -429,7 +429,7 @@ async def get_day_summary(
                 checks_list.append({
                     "checkId": order.order_id,
                     "paymentId": None,
-                    "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
+                    "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
                     "amount": money_round(order.total),
                     "tip": 0,
                     "adjusted": True,
@@ -440,7 +440,7 @@ async def get_day_summary(
             checks_list.append({
                 "checkId": order.order_id,
                 "paymentId": None,
-                "time": order.created_at.strftime("%-I:%M%p").lower() if order.created_at else "",
+                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
                 "amount": money_round(order.subtotal),
                 "tip": 0,
                 "adjusted": False,
