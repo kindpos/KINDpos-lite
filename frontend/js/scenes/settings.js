@@ -600,7 +600,7 @@ function renderManualAdd(ip, card) {
         ip:   ip,
         type: selectedType,
         name: deviceName || selectedType,
-        port: selectedType === 'card_reader' ? 443 : 9100,
+        port: selectedType === 'card_reader' ? 8443 : 9100,
       });
       state.addStep = 'choose';
       render();
