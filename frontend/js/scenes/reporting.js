@@ -173,8 +173,8 @@ function buildLeftCard(params, sales, labor) {
       '<div style="margin-top:8px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Tipout: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
 
-    // Checkout button — cyan to match HOURS card
-    var checkoutBtn = buildStyledButton(T.cyan);
+    // Checkout button — #33ff99 to match LABOR/HOURS color
+    var checkoutBtn = buildStyledButton('#33ff99');
     checkoutBtn.inner.textContent = 'Checkout';
     checkoutBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.bgDark + ';padding:8px 16px;text-align:center;';
     checkoutBtn.wrap.style.cssText = 'margin-top:auto;align-self:stretch;';
@@ -230,8 +230,8 @@ function buildRightCard(params, sales, labor) {
       '<div style="margin-top:8px;font-size:20px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   } else {
-    // HOURS card — numbers in cyan (title color), money in gold
-    var hc = T.cyan;
+    // HOURS card — numbers in #33ff99 (same as LABOR), money in gold
+    var hc = '#33ff99';
     card.appendChild(buildVerticalRail('HOURS', hc));
 
     var kpis = document.createElement('div');
