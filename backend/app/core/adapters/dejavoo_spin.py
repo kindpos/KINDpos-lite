@@ -40,7 +40,6 @@ class DejavooSPInAdapter(BasePaymentDevice):
     def __init__(self):
         self._status = PaymentDeviceStatus.OFFLINE
         self._config: Optional[PaymentDeviceConfig] = None
-        self._client = httpx.AsyncClient(timeout=90.0)
 
     @property
     def status(self) -> PaymentDeviceStatus:
@@ -56,7 +55,6 @@ class DejavooSPInAdapter(BasePaymentDevice):
         return status != PaymentDeviceStatus.OFFLINE
 
     async def disconnect(self) -> bool:
-        await self._client.aclose()
         self._status = PaymentDeviceStatus.OFFLINE
         return True
 
@@ -229,8 +227,9 @@ class DejavooSPInAdapter(BasePaymentDevice):
             logger.debug(f"SPIn → GET {self._config.ip_address}:{self._config.port} : {xml_body}")
             print(f"  SPIn → {self._config.ip_address}:{self._config.port}")
 
-            client_timeout = timeout or self._client.timeout.read
-            resp = await self._client.get(url, timeout=client_timeout)
+            request_timeout = timeout or 90.0
+            async with httpx.AsyncClient(timeout=request_timeout) as client:
+                resp = await client.get(url)
             resp.raise_for_status()
 
             # Handle response as bytes if no charset detected
