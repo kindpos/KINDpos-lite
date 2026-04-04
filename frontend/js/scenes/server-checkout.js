@@ -143,7 +143,7 @@ function buildReceiptContent(state) {
   id.style.cssText = 'text-align:center;margin-bottom:8px;';
   var r1 = document.createElement('div');
   r1.style.cssText = 'font-size:' + HEADER + ';font-weight:bold;';
-  r1.textContent = 'KINDpos Restaurant';
+  r1.textContent = state.restaurantName;
   var r2 = document.createElement('div');
   r2.style.cssText = 'font-size:' + BASE + ';font-weight:bold;';
   r2.textContent = 'SERVER CHECKOUT';
@@ -196,7 +196,7 @@ function buildReceiptContent(state) {
 
   var footer = document.createElement('div');
   footer.style.cssText = 'text-align:center;margin-top:6px;font-size:' + SMALL + ';color:' + T.mutedText + ';';
-  footer.innerHTML = 'Terminal: T-001<br>** CONFIDENTIAL **';
+  footer.innerHTML = 'Terminal: ' + state.terminalId + '<br>** CONFIDENTIAL **';
   wrap.appendChild(footer);
 
   return wrap;
@@ -1168,8 +1168,14 @@ function buildScene(el, params) {
     'overflow:hidden;',
   ].join('');
 
-  fetchServerState(params).then(function(state) {
-    _state = state;
+  Promise.all([
+    fetchServerState(params),
+    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).catch(function() { return null; }),
+  ]).then(function(results) {
+    _state = results[0];
+    var store = results[1];
+    _state.restaurantName = (store && store.info && store.info.restaurant_name) || 'KINDpos';
+    _state.terminalId     = (store && store.info && store.info.terminal_id)     || 'T-001';
     el.appendChild(buildReceiptPanel(_state));
     _cardsCol = buildCardsColumn(_state, el);
     el.appendChild(_cardsCol);

@@ -142,7 +142,7 @@ function buildReceiptContent(state) {
   id.style.cssText = 'text-align:center;margin-bottom:10px;';
   var r1 = document.createElement('div');
   r1.style.cssText = 'font-size:' + HEADER + ';font-weight:bold;';
-  r1.textContent = 'KINDpos Restaurant';
+  r1.textContent = state.restaurantName;
   var r2 = document.createElement('div');
   r2.style.cssText = 'font-size:' + BASE + ';font-weight:bold;';
   r2.textContent = 'SALES RECAP';
@@ -1032,8 +1032,14 @@ function buildScene(el, params) {
     'box-sizing:border-box;overflow:hidden;',
   ].join('');
 
-  fetchDayState(params).then(function(state) {
-    _state = state;
+  Promise.all([
+    fetchDayState(params),
+    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).catch(function() { return null; }),
+  ]).then(function(results) {
+    _state = results[0];
+    var store = results[1];
+    _state.restaurantName = (store && store.info && store.info.restaurant_name) || 'KINDpos';
+    _state.terminalId     = (store && store.info && store.info.terminal_id)     || _state.terminalId;
     el.appendChild(buildReceiptPanel(_state));
     _cardsCol = buildCardsColumn(_state);
     el.appendChild(_cardsCol);
