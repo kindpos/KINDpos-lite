@@ -53,9 +53,9 @@ function buildCollapsedView(el, params, sales, labor) {
   var rightCard = buildRightCard(params, sales, labor);
 
   leftCard.style.flex = '1';
-  leftCard.style.border = '3px solid ' + T.mint;
+  leftCard.style.border = '8px solid ' + T.mint;
   rightCard.style.flex = '1';
-  rightCard.style.border = '3px solid ' + T.mint;
+  rightCard.style.border = '8px solid ' + T.mint;
 
   leftCard.addEventListener('pointerup', function() {
     expandedCard = 'left';
@@ -198,7 +198,7 @@ function buildExpandedView(el, params, sales, labor) {
 
   // Full-width frame
   var frame = document.createElement('div');
-  frame.style.cssText = 'flex:1;display:flex;flex-direction:column;border:3px solid ' + T.mint + ';box-sizing:border-box;min-height:0;background:' + T.bgDark + ';';
+  frame.style.cssText = 'flex:1;display:flex;flex-direction:column;border:8px solid ' + T.mint + ';box-sizing:border-box;min-height:0;background:' + T.bgDark + ';';
 
   var isRightCard = expandedCard === 'right';
 
