@@ -134,6 +134,17 @@ function buildLeftCard(params, sales, labor) {
       fallback.textContent = 'Cash: --   Card: --';
       card.appendChild(fallback);
     }
+
+    // Close Day button
+    var closeDayBtn = buildStyledButton(T.red);
+    closeDayBtn.inner.textContent = 'Close Day';
+    closeDayBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:#fff;padding:8px 16px;text-align:center;';
+    closeDayBtn.wrap.style.cssText = 'margin-top:auto;align-self:stretch;';
+    closeDayBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      console.log('Close Day tapped');
+    });
+    card.appendChild(closeDayBtn.wrap);
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
@@ -150,6 +161,17 @@ function buildLeftCard(params, sales, labor) {
       '<div>Check Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>' +
       '<div style="margin-top:8px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Tipout: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
+
+    // Checkout button
+    var checkoutBtn = buildStyledButton(T.gold);
+    checkoutBtn.inner.textContent = 'Checkout';
+    checkoutBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.bgDark + ';padding:8px 16px;text-align:center;';
+    checkoutBtn.wrap.style.cssText = 'margin-top:auto;align-self:stretch;';
+    checkoutBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      console.log('Checkout tapped');
+    });
+    card.appendChild(checkoutBtn.wrap);
   }
 
   return card;
