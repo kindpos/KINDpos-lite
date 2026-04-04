@@ -135,16 +135,27 @@ function buildLeftCard(params, sales, labor) {
       card.appendChild(fallback);
     }
 
-    // Close Day button
+    // Close Day button + active checks
+    var btnArea = document.createElement('div');
+    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:6px;';
+
     var closeDayBtn = buildStyledButton(T.red);
     closeDayBtn.inner.textContent = 'Close Day';
-    closeDayBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:#fff;padding:8px 16px;text-align:center;';
-    closeDayBtn.wrap.style.cssText = 'margin-top:auto;align-self:stretch;';
+    closeDayBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:36px;color:#fff;padding:12px 20px;text-align:center;';
+    closeDayBtn.wrap.style.cssText = 'align-self:stretch;';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
       console.log('Close Day tapped');
     });
-    card.appendChild(closeDayBtn.wrap);
+    btnArea.appendChild(closeDayBtn.wrap);
+
+    var activeChecks = document.createElement('div');
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';text-align:center;';
+    var checkCount = s ? s.total_checks : 0;
+    activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
+    btnArea.appendChild(activeChecks);
+
+    card.appendChild(btnArea);
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
@@ -162,8 +173,8 @@ function buildLeftCard(params, sales, labor) {
       '<div style="margin-top:8px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Tipout: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
 
-    // Checkout button
-    var checkoutBtn = buildStyledButton(T.gold);
+    // Checkout button — cyan to match HOURS card
+    var checkoutBtn = buildStyledButton(T.cyan);
     checkoutBtn.inner.textContent = 'Checkout';
     checkoutBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.bgDark + ';padding:8px 16px;text-align:center;';
     checkoutBtn.wrap.style.cssText = 'margin-top:auto;align-self:stretch;';
