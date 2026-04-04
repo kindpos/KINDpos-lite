@@ -79,3 +79,62 @@ async def get_sales_summary(
         ]
 
     return base
+
+
+@router.get("/labor-summary")
+async def get_labor_summary(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    server_id: Optional[str] = Query(None, description="Employee ID for server-specific view"),
+):
+    """
+    Get labor summary for a given date.
+    Manager view (no server_id) returns house-level labor stats.
+    Server view (with server_id) returns individual employee details.
+    """
+    # TODO: wire to real event ledger data
+    if server_id:
+        return {
+            "date": date,
+            "clock_in": "10:00",  # TODO: wire to real event ledger data
+            "clock_out": "18:30",  # TODO: wire to real event ledger data
+            "today_hours": 8.5,  # TODO: wire to real event ledger data
+            "weekly_hours": 32.0,  # TODO: wire to real event ledger data
+            "weekly_breakdown": [  # TODO: wire to real event ledger data
+                {"day": "Mon", "hours": 8.0, "in": "10:00", "out": "18:00"},
+                {"day": "Tue", "hours": 7.5, "in": "10:30", "out": "18:00"},
+                {"day": "Wed", "hours": 0, "in": None, "out": None},
+                {"day": "Thu", "hours": 8.0, "in": "10:00", "out": "18:00"},
+                {"day": "Fri", "hours": 8.5, "in": "10:00", "out": "18:30"},
+                {"day": "Sat", "hours": None, "in": None, "out": None, "scheduled": 8.0},
+            ],
+            "ot_projected": 40.0,  # TODO: wire to real event ledger data
+            "ot_buffer": 0.0,  # TODO: wire to real event ledger data
+            "ot_status": "warning",  # TODO: wire to real event ledger data
+        }
+
+    return {
+        "date": date,
+        "total_hours": 24.5,  # TODO: wire to real event ledger data
+        "tip_pool": 387.20,  # TODO: wire to real event ledger data
+        "card_tips_total": 412.80,  # TODO: wire to real event ledger data
+        "tipout_percent": 2,  # TODO: wire to real event ledger data
+        "tipout_deducted": 25.60,  # TODO: wire to real event ledger data
+        "cob_percent": 28.4,  # TODO: wire to real event ledger data
+        "employees": [  # TODO: wire to real event ledger data
+            {"id": "EMP-001", "name": "Alex", "hours": 8.5, "clock_in": "10:00", "clock_out": "18:30", "tips": 155.80, "weekly_hours": 32.0},
+            {"id": "EMP-002", "name": "Jordan", "hours": 8.0, "clock_in": "10:00", "clock_out": "18:00", "tips": 128.40, "weekly_hours": 38.0},
+            {"id": "EMP-003", "name": "Casey", "hours": 8.0, "clock_in": "11:00", "clock_out": "19:00", "tips": 103.00, "weekly_hours": 24.0},
+        ],
+        "ot_alerts": [  # TODO: wire to real event ledger data
+            {"id": "EMP-002", "name": "Jordan", "weekly_hours": 38.0, "projected": 46.0, "status": "warning"},
+        ],
+        "cob_trend": [  # TODO: wire to real event ledger data
+            {"day": "Mon", "percent": 27.1},
+            {"day": "Tue", "percent": 29.3},
+            {"day": "Wed", "percent": 25.8},
+            {"day": "Thu", "percent": 31.2},
+            {"day": "Fri", "percent": 28.4},
+            {"day": "Sat", "percent": 26.9},
+            {"day": "Sun", "percent": 27.5},
+        ],
+    }
