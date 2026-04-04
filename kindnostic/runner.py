@@ -12,6 +12,7 @@ from typing import Callable, Optional
 
 import kindnostic.probes
 from kindnostic.alerts import AlertQueue
+from kindnostic.display import BootDisplay
 from kindnostic.entomology import write_boot_diagnostic
 from kindnostic.storage import BootStorage
 from kindnostic.support_codes import generate_support_code
@@ -230,6 +231,7 @@ def run_all(
     db_path: Optional[str] = None,
     verbose: bool = False,
     json_output: bool = False,
+    display: bool = False,
 ) -> int:
     """Main entry point. Discover probes, execute, store results, return exit code.
 
@@ -241,12 +243,24 @@ def run_all(
     boot_id = str(uuid.uuid4())
     start = time.monotonic()
 
+    # Start boot display server if requested
+    boot_display: Optional[BootDisplay] = None
+    if display:
+        boot_display = BootDisplay()
+        boot_display.start()
+        boot_display.state.boot_id = boot_id
+
     probes = discover_probes()
 
     results: list[tuple[ProbeResult, int]] = []
-    for name, fn, category in probes:
+    for i, (name, fn, category) in enumerate(probes):
+        if boot_display:
+            boot_display.state.set_progress(i, len(probes), name.removeprefix("probe_"))
         result, duration_ms = run_probe(fn, category)
         results.append((result, duration_ms))
+
+    if boot_display:
+        boot_display.state.set_progress(len(probes), len(probes), "complete")
 
     total_ms = int((time.monotonic() - start) * 1000)
 
@@ -257,6 +271,33 @@ def run_all(
     )
     outcome = "BLOCKED" if has_critical_fail else "READY"
     exit_code = 1 if has_critical_fail else 0
+
+    # Update boot display with final screen
+    if boot_display:
+        boot_display.state.outcome = outcome
+        warnings = [
+            {"probe": r.probe_name, "message": r.message or ""}
+            for r, _ in results if r.status == Status.WARN
+        ]
+        if has_critical_fail:
+            failed = [
+                {"probe": r.probe_name, "message": r.message or "unknown"}
+                for r, _ in results
+                if r.status == Status.FAIL and r.category == Category.CRITICAL
+            ]
+            code = generate_support_code(failed[0]["probe"]) if failed else "KN-XX-0000"
+            boot_display.state.set_failure(failed, code)
+
+            # Wait for manager override (blocking — this keeps the service running)
+            import time as _time
+            while not boot_display.state.override_completed:
+                _time.sleep(0.5)
+
+            # Override was completed — update outcome
+            outcome = "OVERRIDE"
+            exit_code = 0
+        else:
+            boot_display.state.set_success(warnings if warnings else None)
 
     # Print results
     _print_results(results, boot_id, total_ms, outcome, verbose, json_output)
@@ -310,6 +351,12 @@ def run_all(
             alerts.flush()  # Attempt to send if webhook configured
     except Exception:
         pass  # Alert queue is best-effort
+
+    # Stop boot display server
+    if boot_display:
+        # Give browser a moment to load the final screen
+        time.sleep(1)
+        boot_display.stop()
 
     return exit_code
 

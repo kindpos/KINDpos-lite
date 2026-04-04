@@ -34,6 +34,11 @@ def main() -> int:
         default=None,
         help="Path to diagnostic_boot.db (overrides default)",
     )
+    parser.add_argument(
+        "--display",
+        action="store_true",
+        help="Start boot display HTTP server on port 8888 for kiosk browser",
+    )
 
     args = parser.parse_args()
 
@@ -49,6 +54,7 @@ def main() -> int:
         db_path=args.db_path,
         verbose=args.verbose,
         json_output=args.json_output,
+        display=args.display,
     )
 
 
