@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton } from '../tokens.js';
+import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -201,9 +201,10 @@ function buildTicket(parentEl) {
   itemList.style.cssText = 'flex:1;overflow:hidden;display:flex;flex-direction:column;gap:4px;';
   panel.appendChild(itemList);
 
-  // Summary + Totals — combined card
+  // Summary + Totals — combined card with sunken bevel
   var summaryTotals = document.createElement('div');
-  summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;border-top:2px solid ' + T.bgLight + ';flex-shrink:0;';
+  summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;flex-shrink:0;';
+  applySunkenStyle(summaryTotals);
   summaryTotals.appendChild(buildSummaryRow('Subtotal', '$0.00', 'ticket-subtotal'));
   summaryTotals.appendChild(buildSummaryRow('Tax',      '$0.00', 'ticket-tax'));
   var mintSep = document.createElement('div');
@@ -218,7 +219,7 @@ function buildTicket(parentEl) {
 
 function buildSummaryRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';line-height:1.15;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';line-height:0.92;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
@@ -229,7 +230,7 @@ function buildSummaryRow(label, value, id) {
 
 function buildTotalRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.gold + ';line-height:1.15;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.gold + ';line-height:0.92;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
@@ -323,7 +324,7 @@ function buildMain(parentEl, params) {
     'margin-top:-' + OVERLAP + 'px;',
   ].join('');
 
-  var tabItems = buildButton('ADD ITEM', {
+  var tabItems = buildButton('ADD ITEMS', {
     fill: T.mint, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
     onTap: function() { switchTab('items', canvas, tabItems, tabMods); },
   });
@@ -338,7 +339,7 @@ function buildMain(parentEl, params) {
   tabMods.style.gridRow    = '1';
 
   var send = buildButton('//SEND//', {
-    fill: T.goGreen, color: T.bg, fontSize: '40px', fontFamily: T.fh,
+    fill: T.goGreen, color: T.bg, fontSize: '30px', fontFamily: T.fh,
     onTap: function() { handleSend(); },
   });
   send.style.gridColumn = '5';
