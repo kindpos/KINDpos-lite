@@ -181,12 +181,12 @@ function buildTicket(parentEl) {
   var topRow = document.createElement('div');
   topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;flex-shrink:0;';
 
-  saveBtn = buildButton('//SAVE//', {
+  saveBtn = buildButton('SAVE', {
     fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H,
     onTap: function() { handleSave(); },
   });
 
-  var recallBtnEl = buildButton('//RECALL//', {
+  var recallBtnEl = buildButton('RECALL', {
     fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H,
     onTap: function() { handleRecall(); },
   });
@@ -338,21 +338,21 @@ function buildMain(parentEl, params) {
   tabMods.style.gridColumn = '3 / 5';
   tabMods.style.gridRow    = '1';
 
-  var send = buildButton('//SEND//', {
+  var send = buildButton('SEND', {
     fill: T.goGreen, color: T.bg, fontSize: '30px', fontFamily: T.fh,
     onTap: function() { handleSend(); },
   });
   send.style.gridColumn = '5';
   send.style.gridRow    = '1 / 3';
 
-  var disc  = buildButton('//DISC//', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H, fontFamily: T.fh });
-  var voidB = buildButton('//VOID//', { fill: T.red,     color: '#fff', fontSize: '26px', height: BTN_H, fontFamily: T.fh,
+  var disc  = buildButton('DISC', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H, fontFamily: T.fh });
+  var voidB = buildButton('VOID', { fill: T.red,     color: '#fff', fontSize: '26px', height: BTN_H, fontFamily: T.fh,
     onTap: function() { handleVoid(); },
   });
   voidB.id = 'void-btn';
-  var print = buildButton('//PRINT//',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H, fontFamily: T.fh });
+  var print = buildButton('PRINT',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H, fontFamily: T.fh });
 
-  var pay = buildButton('//PAY//', { fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
+  var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
     onTap: function() { handlePay(params); },
   });
 
@@ -974,7 +974,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       checkLbl.textContent = tab.checkNum;
       panel.appendChild(checkLbl);
 
-      var recallBtn = buildButton('//RECALL//', {
+      var recallBtn = buildButton('RECALL', {
         fill: T.goGreen, color: T.bg, fontSize: '26px', height: 50,
         onTap: function() {
           if (ticket.length > 0) {
@@ -1009,7 +1009,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       });
       recallBtn.style.width = '280px';
 
-      var deleteBtn = buildButton('//DELETE//', {
+      var deleteBtn = buildButton('DELETE', {
         fill: T.red, color: '#fff', fontSize: '26px', height: 50,
         onTap: doDelete,
       });
@@ -1035,7 +1035,7 @@ function updateBottomBar() {
   var selected = ticket.filter(function(i) { return i.selected; });
   var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
   var inner = voidBtn.firstElementChild;
-  if (inner) inner.textContent = unsentSelected ? '//DELETE//' : '//VOID//';
+  if (inner) inner.textContent = unsentSelected ? 'DELETE' : 'VOID';
 }
 
 async function handlePay(params) {
