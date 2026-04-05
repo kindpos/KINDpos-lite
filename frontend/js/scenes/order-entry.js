@@ -309,7 +309,7 @@ function buildMain(parentEl, params) {
   canvas.id = 'hex-canvas';
   canvas.style.cssText = [
     'flex:1;background:' + T.bg5 + ';',
-    'border:2px solid ' + T.mint + ';',
+    'border:7px solid ' + T.mint + ';',
     'margin-bottom:0;padding-bottom:' + OVERLAP + 'px;',
     'position:relative;overflow:hidden;',
   ].join('');

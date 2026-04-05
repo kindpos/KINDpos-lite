@@ -141,7 +141,7 @@ export function HexNav(container, opts) {
     }
 
     // Label
-    var fontSize = h.r > 70 ? 35 : h.r > 30 ? 25 : 20;
+    var fontSize = h.r > 70 ? 28 : h.r > 30 ? 22 : 18;
     var lines    = h.label.split(' ');
     lines.forEach(function(line, i) {
       var text = document.createElementNS(svgNS, 'text');
