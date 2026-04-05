@@ -13,7 +13,7 @@ import { setSceneName, setHeaderBack } from '../app.js';
 var COL_LEFT   = 530;
 var COL_RIGHT  = 410;
 var COL_GAP    = 20;
-var SCENE_PAD  = 20;
+var SCENE_PAD  = 10;
 var QS_H       = 120;
 var MGMT_H     = 130;
 var CONFIG_H   = 100;
@@ -86,7 +86,7 @@ registerScene('login', {
 
     // ── LEFT COLUMN ──
     var left = document.createElement('div');
-    left.style.cssText = 'display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;';
+    left.style.cssText = 'display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:0;padding-top:20px;';
 
     // Quick Service — large button at top
     var qsBtn = buildButton('< Quick Service >', {
@@ -141,7 +141,7 @@ registerScene('login', {
 
     // PIN prompt — hidden until an action button is tapped
     var pinPrompt = document.createElement('div');
-    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';text-align:center;padding:6px 0;min-height:32px;';
+    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';text-align:center;padding:2px 0;min-height:26px;';
     pinPrompt.textContent = '';
     _pinPromptEl = pinPrompt;
     right.appendChild(pinPrompt);
@@ -149,6 +149,11 @@ registerScene('login', {
     right.appendChild(buildNumpad({
       maxDigits: 6,
       masked: true,
+      displayH: 60,
+      gap: 16,
+      keyH: 72,
+      keyGap: 12,
+      cardPad: 18,
       onSubmit: function(pin) { handlePinSubmit(pin, pinPrompt); },
     }));
 
