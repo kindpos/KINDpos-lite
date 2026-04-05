@@ -143,6 +143,51 @@ async def test_device(ledger: EventLedger = Depends(get_ledger)):
     except Exception as e:
         return {"connected": False, "using_mock": False, "error": str(e)}
 
+@router.get("/spin-diag")
+async def spin_diagnostic(ledger: EventLedger = Depends(get_ledger)):
+    """Send multiple SPIn XML variants to diagnose what the terminal accepts."""
+    import httpx, urllib.parse, xml.etree.ElementTree as ET_diag
+
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+    device = manager.get_device_for_terminal(settings.terminal_id)
+    if not device or not device.config or device.config.protocol == "mock":
+        return {"error": "No real card reader loaded"}
+
+    cfg = device.config
+    reg = cfg.register_id or ""
+    base_url = f"http://{cfg.ip_address}:{cfg.port}/spin/cgi.html"
+
+    tests = [
+        ("GetStatus bare",        f'<request><function>GetStatus</function><RegisterId>{reg}</RegisterId></request>'),
+        ("GetStatus +Amount",     f'<request><function>GetStatus</function><RegisterId>{reg}</RegisterId><Amount>0.00</Amount></request>'),
+        ("Sale minimal",          f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0001</InvNum></request>'),
+        ("Sale +PaymentType",     f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0002</InvNum><PaymentType>Credit</PaymentType></request>'),
+        ("Sale +AuthKey",         f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><AuthKey></AuthKey><Amount>0.01</Amount><InvNum>diag0003</InvNum><PaymentType>Credit</PaymentType></request>'),
+        ("CreditSale function",   f'<request><function>CreditSale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0004</InvNum></request>'),
+        ("Sale +SPInProto fields", f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0005</InvNum><PaymentType>Credit</PaymentType><Tip>0.00</Tip><Frequency>OneTime</Frequency></request>'),
+    ]
+
+    results = []
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for name, xml in tests:
+            encoded = urllib.parse.quote(xml, safe='')
+            url = f"{base_url}?TerminalTransaction={encoded}"
+            try:
+                resp = await client.get(url)
+                body = resp.text.strip()
+                if "<xmp>" in body:
+                    body = body.split("<xmp>", 1)[-1]
+                if "</xmp>" in body:
+                    body = body.split("</xmp>", 1)[0]
+                body = urllib.parse.unquote(body.strip())
+                results.append({"test": name, "status": resp.status_code, "response": body, "xml_sent": xml})
+            except Exception as e:
+                results.append({"test": name, "error": str(e), "xml_sent": xml})
+
+    return {"device": f"{cfg.ip_address}:{cfg.port}", "register_id": reg, "results": results}
+
+
 def get_payment_manager(ledger: EventLedger = Depends(get_ledger)) -> PaymentManager:
     global _manager
     if _manager is None:

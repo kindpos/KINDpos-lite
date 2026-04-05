@@ -228,6 +228,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
         try:
             logger.debug(f"SPIn → GET {self._config.ip_address}:{self._config.port} : {xml_body}")
             print(f"  SPIn → {self._config.ip_address}:{self._config.port}")
+            print(f"  SPIn XML: {xml_body}")
 
             request_timeout = timeout or 90.0
             async with httpx.AsyncClient(timeout=request_timeout) as client:
@@ -256,7 +257,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
 
             # URL-decode any encoded chars in the response
             body = urllib.parse.unquote(body)
-            print(f"  SPIn parsed: {body[:120]}")
+            print(f"  SPIn resp:  {body}")
 
             return ET.fromstring(body)
 
