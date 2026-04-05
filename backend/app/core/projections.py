@@ -63,7 +63,7 @@ class Order:
     This is NOT stored - it's computed by replaying events.
     """
     order_id: str
-    check_number: Optional[int] = None
+    check_number: Optional[str] = None
     table: Optional[str] = None
     server_id: Optional[str] = None
     server_name: Optional[str] = None

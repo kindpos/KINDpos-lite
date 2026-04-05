@@ -144,7 +144,7 @@ class PaymentResponse(BaseModel):
 class OrderResponse(BaseModel):
     """Response model for an order."""
     order_id: str
-    check_number: Optional[int] = None
+    check_number: Optional[str] = None
     table: Optional[str]
     server_id: Optional[str]
     server_name: Optional[str]
@@ -243,9 +243,21 @@ async def create_order(
     """Create a new order."""
     order_id = f"order_{uuid.uuid4().hex[:12]}"
 
-    # Generate sequential check number
-    order_count = await ledger.count_events_by_type(EventType.ORDER_CREATED)
-    check_number = order_count + 1
+    # Generate sequential check number with order-type prefix
+    ORDER_TYPE_PREFIXES = {
+        "quick_service": "QS",
+        "dine_in": "DI",
+        "to_go": "TG",
+        "bar_tab": "BT",
+        "delivery": "DL",
+        "staff": "ST",
+    }
+    order_type = request.order_type or "dine_in"
+    prefix = ORDER_TYPE_PREFIXES.get(order_type, "OR")
+    type_count = await ledger.count_events_by_type_and_payload(
+        EventType.ORDER_CREATED, "order_type", order_type
+    )
+    check_number = f"{prefix}-{type_count + 1:03d}"
 
     event = order_created(
         terminal_id=settings.terminal_id,
@@ -436,7 +448,7 @@ async def get_day_summary(
                     (p for p in order.payments if p.method != "cash" and p.status == "confirmed"),
                     None,
                 )
-                check_label = '#' + str(order.check_number) if order.check_number else order.order_id
+                check_label = order.check_number if order.check_number else order.order_id
                 checks_list.append({
                     "checkId": order.order_id,
                     "checkLabel": check_label,
@@ -450,7 +462,7 @@ async def get_day_summary(
                 })
             else:
                 # Cash-only closed orders — no tip adjustment needed
-                check_label = '#' + str(order.check_number) if order.check_number else order.order_id
+                check_label = order.check_number if order.check_number else order.order_id
                 checks_list.append({
                     "checkId": order.order_id,
                     "checkLabel": check_label,
@@ -463,7 +475,7 @@ async def get_day_summary(
                     "status": "closed",
                 })
         elif order.status == "open":
-            check_label = '#' + str(order.check_number) if order.check_number else order.order_id
+            check_label = order.check_number if order.check_number else order.order_id
             checks_list.append({
                 "checkId": order.order_id,
                 "checkLabel": check_label,

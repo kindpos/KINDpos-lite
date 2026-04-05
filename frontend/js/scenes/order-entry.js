@@ -789,7 +789,7 @@ async function handleSend() {
       var created = await createRes.json();
       currentOrderId = created.order_id;   // use the backend-generated ID
       currentCheckNumber = created.check_number;
-      setSceneName('#' + currentCheckNumber);
+      setSceneName(currentCheckNumber);
     }
 
     // Step 2 — post only unsent instances, each with their own modifiers
@@ -1054,7 +1054,7 @@ async function handlePay(params) {
 
   push('receipt-review', {
     orderId:     currentOrderId,
-    checkId:     '#' + currentCheckNumber,
+    checkId:     currentCheckNumber,
     items:       items,
     subtotal:    totals.subtotal,
     tax:         totals.tax,

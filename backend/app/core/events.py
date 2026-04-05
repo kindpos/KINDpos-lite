@@ -284,7 +284,7 @@ def order_created(
         order_type: str = "dine_in",  # dine_in, takeout, delivery
         guest_count: int = 1,
         customer_name: Optional[str] = None,
-        check_number: Optional[int] = None,
+        check_number: Optional[str] = None,
         **kwargs
 ) -> Event:
     """Create an ORDER_CREATED event."""

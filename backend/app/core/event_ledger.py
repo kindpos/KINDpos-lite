@@ -434,6 +434,17 @@ class EventLedger:
         row = await cursor.fetchone()
         return row[0]
 
+    async def count_events_by_type_and_payload(
+        self, event_type: EventType, payload_key: str, payload_value: str
+    ) -> int:
+        """Get count of events of a specific type where a payload field matches."""
+        cursor = await self._db.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type = ? AND json_extract(payload, ?) = ?",
+            (event_type.value, f"$.{payload_key}", payload_value),
+        )
+        row = await cursor.fetchone()
+        return row[0]
+
     # =========================================================================
     # INTEGRITY VERIFICATION
     # =========================================================================
