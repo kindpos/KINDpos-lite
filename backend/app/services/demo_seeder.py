@@ -40,7 +40,7 @@ async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
             "first_name": parts[0],
             "last_name": parts[1] if len(parts) > 1 else "",
             "display_name": name,
-            "role_id": emp["role"],
+            "role_ids": [emp["role"]],
             "pin": emp["pin"],
             "hourly_rate": 0.0,
             "active": True,

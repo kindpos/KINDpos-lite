@@ -25,7 +25,7 @@ async def check(path):
     events = await ledger.get_events_by_type(EventType.EMPLOYEE_CREATED, limit=100)
     print(f"  [{p.resolve()}]  {len(events)} EMPLOYEE_CREATED event(s)")
     for e in events:
-        print(f"    - {e.payload.get('display_name')}  PIN: {e.payload.get('pin')}  role: {e.payload.get('role_id')}")
+        print(f"    - {e.payload.get('display_name')}  PIN: {e.payload.get('pin')}  roles: {e.payload.get('role_ids', e.payload.get('role_id'))}")
     await ledger.close()
 
 async def main():

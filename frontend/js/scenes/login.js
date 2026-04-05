@@ -223,15 +223,16 @@ function handlePinSubmit(pin, promptEl) {
   }
 
   var action = selectedAction || 'quick-service';
-  var role = emp.role || 'server';
-  var base = { pin: pin, employeeId: emp.id, employeeName: emp.name, role: role };
+  var empRoles = emp.roles || [emp.role || 'server'];
+  var role = empRoles[0] || 'server';
+  var base = { pin: pin, employeeId: emp.id, employeeName: emp.name, role: role, roles: empRoles };
 
   switch (action) {
     case 'quick-service': push('order-entry', { mode: 'service', pin: pin, employeeId: emp.id, employeeName: emp.name }); break;
     case 'clock':         handleClockOverlay(emp); break;
     case 'reporting':     push('reporting', base); break;
     case 'configuration':
-      if (role !== 'manager') {
+      if (empRoles.indexOf('manager') === -1) {
         if (promptEl || _pinPromptEl) {
           var el = promptEl || _pinPromptEl;
           el.textContent = 'Manager access only';
@@ -260,12 +261,16 @@ function handleClockOverlay(emp) {
     var isClockedIn = staff.some(function(s) { return s.employee_id === emp.id; });
     var clockRecord = staff.find(function(s) { return s.employee_id === emp.id; });
 
-    var roleName = emp.role || 'Staff';
-    var roles = Array.isArray(rolesData) ? rolesData : [];
-    var matchedRole = roles.find(function(r) { return r.role_id === emp.role; });
-    if (matchedRole) roleName = matchedRole.name;
+    var empRoles = emp.roles || [emp.role || 'server'];
+    var allRoles = Array.isArray(rolesData) ? rolesData : [];
 
-    showClockOverlay(emp, isClockedIn, clockRecord, roleName);
+    // Resolve role names for this employee's roles
+    var empRoleObjects = empRoles.map(function(rid) {
+      var matched = allRoles.find(function(r) { return r.role_id === rid; });
+      return { role_id: rid, name: matched ? matched.name : rid };
+    });
+
+    showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects);
   }).catch(function() {
     if (_pinPromptEl) {
       _pinPromptEl.textContent = 'Network error';
@@ -274,17 +279,7 @@ function handleClockOverlay(emp) {
   });
 }
 
-function showClockOverlay(emp, isClockedIn, clockRecord, roleName) {
-  // Fetch all roles so we can offer role selection on clock-in
-  fetch('/api/v1/config/roles').then(function(r) { return r.json(); }).then(function(rolesData) {
-    var allRoles = Array.isArray(rolesData) ? rolesData : [];
-    _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, allRoles);
-  }).catch(function() {
-    _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, []);
-  });
-}
-
-function _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, allRoles) {
+function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
   overlay('clock-io', {
     onBuild: function(el) {
       var panel = document.createElement('div');
@@ -333,11 +328,22 @@ function _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, allRoles) {
         var outBtn = buildButton('CLOCK OUT', {
           fill: T.red, color: '#ffffff', fontSize: '36px',
           width: 340, height: 70,
-          onTap: function() { doClockOut(emp, roleName, statusEl); },
+          onTap: function() { doClockOut(emp, empRoleObjects[0].name, statusEl); },
         });
         panel.appendChild(outBtn);
+      } else if (empRoleObjects.length === 1) {
+        // Single role — auto clock in immediately
+        var singleRole = empRoleObjects[0];
+        var infoEl = document.createElement('div');
+        infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.cyan + ';text-align:center;';
+        infoEl.textContent = 'Role: ' + singleRole.name;
+        panel.appendChild(infoEl);
+        panel.appendChild(statusEl);
+        el.appendChild(panel);
+        doClockIn(emp, singleRole.name, statusEl);
+        return;
       } else {
-        // Not clocked in — show role buttons
+        // Multiple roles — show selection buttons
         var selectLabel = document.createElement('div');
         selectLabel.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mutedText + ';text-align:center;';
         selectLabel.textContent = 'Select role to clock in:';
@@ -346,12 +352,10 @@ function _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, allRoles) {
         var btnRow = document.createElement('div');
         btnRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;';
 
-        // Show all roles as clock-in options
-        var rolesToShow = allRoles.length > 0 ? allRoles : [{ role_id: emp.role, name: roleName }];
-        rolesToShow.forEach(function(role) {
+        empRoleObjects.forEach(function(role) {
           var btn = buildButton(role.name.toUpperCase(), {
             fill: T.goGreen, color: '#ffffff', fontSize: '28px',
-            width: rolesToShow.length === 1 ? 340 : 200, height: 64,
+            width: empRoleObjects.length <= 2 ? 200 : 140, height: 64,
             onTap: function() { doClockIn(emp, role.name, statusEl); },
           });
           btnRow.appendChild(btn);

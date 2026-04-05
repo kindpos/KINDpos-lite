@@ -767,7 +767,8 @@ function openPinGate(onSuccess) {
         onSubmit: function(pin) {
           fetch('/api/v1/config/employees').then(function(r) { return r.json(); }).then(function(emps) {
             var match = emps.some(function(e) {
-              return e.pin === pin && e.role_id === 'manager' && e.active !== false;
+              var roles = e.role_ids || [e.role_id];
+              return e.pin === pin && roles.indexOf('manager') !== -1 && e.active !== false;
             });
             if (match) {
               resolveInterrupt(true);
