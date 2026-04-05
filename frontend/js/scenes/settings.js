@@ -1,11 +1,10 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Settings Scene (Configuration)
-//  Hardware tab top / Terminal tab bottom
-//  Nav column left (hardware) or right (terminal)
+//  Two-card dashboard (reporting theme) with drill-down
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
+import { T, chamfer, buildStyledButton, applySunkenStyle, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { buildNumpad } from '../numpad.js';
 import { registerScene, pop, overlay, dismissOverlay } from '../scene-manager.js';
@@ -17,18 +16,8 @@ var API = '/api/v1';
 
 // ── Layout ────────────────────────────────────────
 var PAD      = 12;
-var TAB_W    = 340;
-var TAB_H    = 52;
-var TAB_OVR  = 26;
 var BORDER_W = 4;
 var NAV_W    = 160;
-var NAV_GAP  = 8;
-var SCENE_W  = 1024;
-var SCENE_H  = 548;
-var INNER_W  = SCENE_W - PAD * 2;
-var CARD_W   = INNER_W - NAV_W - NAV_GAP - PAD;
-// Card spans between the two tabs — each tab overlaps by TAB_OVR
-var CARD_H   = SCENE_H - PAD * 2 - 2 * (TAB_H - TAB_OVR);  // 472px
 
 var GOLD = T.gold;
 var MINT = T.mint;
@@ -44,6 +33,7 @@ var state = {
   scanning:     false,
   addStep:      'choose',
   foundDevice:  null,
+  expandedCard: null,   // null = collapsed dashboard, 'hardware' or 'terminal'
   eventSource:  null,   // active EventSource — prevent double-open
   terminalId:   'T-001',
   terminalName: 'KIND BBQ',
@@ -74,8 +64,17 @@ var TERM_NAVS = [
 
 registerScene('settings', {
   cache: false,
+  canExit: function() {
+    if (state.expandedCard) {
+      state.expandedCard = null;
+      renderCurrentState();
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(true);
+  },
   onEnter: function(el) {
     rootEl = el;
+    state.expandedCard = null;
     state.activeTab   = 'hardware';
     state.activeNav   = 'add';
     state.addStep     = 'choose';
@@ -86,9 +85,9 @@ registerScene('settings', {
     setSceneName('Configuration');
     setHeaderBack(true);
 
-    el.style.cssText = 'width:100%;height:100%;padding:' + PAD + 'px;box-sizing:border-box;position:relative;background:' + T.bgDark + ';';
+    el.style.cssText = 'width:100%;height:100%;position:relative;background:' + T.bg + ';';
 
-    loadSavedDevices().then(function() { render(); });
+    loadSavedDevices().then(function() { renderCurrentState(); });
   },
   onExit: function() {
     if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
@@ -150,112 +149,164 @@ async function scanNetwork(targetIp) {
 //  RENDER
 // ═══════════════════════════════════════════════════
 
-function render() {
+function renderCurrentState() {
   if (!rootEl) return;
-  rootEl.innerHTML = '';
+  if (state.expandedCard) {
+    buildExpandedView(rootEl);
+  } else {
+    setSceneName('Configuration');
+    buildCollapsedView(rootEl);
+  }
+}
 
-  var isHW     = state.activeTab === 'hardware';
-  var tabColor = isHW ? GOLD : MINT;
+// ═══════════════════════════════════════════════════
+//  COLLAPSED DASHBOARD (two-card view)
+// ═══════════════════════════════════════════════════
 
-  var cardLeft = isHW ? PAD + NAV_W + NAV_GAP : PAD;
-  var cardTop  = PAD + TAB_H - TAB_OVR;
+function buildCardWrap(cardInner) {
+  var btn = buildStyledButton(T.mint);
+  btn.inner.style.padding = '0';
+  btn.inner.appendChild(cardInner);
+  btn.wrap.style.flex = '1';
+  btn.wrap.style.maxHeight = '85%';
+  btn.wrap.style.maxWidth = '46%';
+  btn.wrap.style.height = '100%';
+  var shadow = shadowColor(T.mint);
+  btn.wrap.style.filter = 'drop-shadow(6px 8px 2px ' + shadow + ')';
+  btn.wrap._shadow = shadow;
+  return btn.wrap;
+}
 
-  // ── Hardware tab (top center of card) ─────────────
-  var hwTabX = cardLeft + (CARD_W / 2) - (TAB_W / 2);
-  buildTab('Hardware', GOLD, isHW, hwTabX, PAD, function() {
-    if (isHW) return;
-    state.activeTab = 'hardware'; state.activeNav = 'add'; state.addStep = 'choose'; render();
-  });
-
-  // ── Terminal tab (bottom center of card) ──────────
-  var termTabY = cardTop + CARD_H - TAB_OVR;
-  buildTab('Terminal', MINT, !isHW, hwTabX, termTabY, function() {
-    if (!isHW) return;
-    state.activeTab = 'terminal'; state.activeNav = 'identity'; render();
-  });
-
-  // ── Card ──────────────────────────────────────────
+function buildHardwareCard() {
   var card = document.createElement('div');
-  card.dataset.kindCard = '1';
-  card.style.cssText = [
-    'position:absolute;left:' + cardLeft + 'px;top:' + cardTop + 'px;',
-    'width:' + CARD_W + 'px;height:' + CARD_H + 'px;',
-    'border:' + BORDER_W + 'px solid ' + tabColor + ';',
-    'box-sizing:border-box;overflow:hidden;background:' + BG + ';',
-  ].join('');
-  rootEl.appendChild(card);
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
-  // ── Nav column ────────────────────────────────────
-  if (isHW) buildHWNav(cardTop);
-  else buildTermNav(cardLeft + CARD_W + NAV_GAP, cardTop);
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+  title.textContent = 'HARDWARE';
+  card.appendChild(title);
 
-  // ── Content ───────────────────────────────────────
-  if (isHW) renderHWContent(card);
-  else renderTermContent(card);
+  var printerCount = state.savedDevices.filter(function(d) { return d.type === 'kitchen' || d.type === 'receipt'; }).length;
+  var readerCount = state.savedDevices.filter(function(d) { return d.type === 'card_reader'; }).length;
+  var otherCount = state.savedDevices.length - printerCount - readerCount;
+
+  var kpis = document.createElement('div');
+  kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
+  kpis.innerHTML =
+    '<div>Printers: <span style="color:' + T.gold + '">' + printerCount + '</span></div>' +
+    '<div>Card Readers: <span style="color:' + T.gold + '">' + readerCount + '</span></div>' +
+    '<div>Peripherals: <span style="color:' + T.gold + '">' + otherCount + '</span></div>';
+  card.appendChild(kpis);
+
+  return card;
 }
 
-function buildTab(label, color, active, x, y, onTap) {
-  var tab = document.createElement('div');
-  tab.style.cssText = [
-    'position:absolute;left:' + x + 'px;top:' + y + 'px;',
-    'width:' + TAB_W + 'px;height:' + TAB_H + 'px;',
-    'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fh + ';font-size:32px;',
-    'cursor:pointer;user-select:none;z-index:10;',
-    'clip-path:' + chamfer(8) + ';',
-    active
-      ? 'background:' + color + ';color:' + DARK + ';'
-      : 'background:' + BG + ';color:' + color + ';border:' + BORDER_W + 'px solid ' + color + ';',
-  ].join('');
-  tab.textContent = label;
-  tab.addEventListener('pointerup', onTap);
-  rootEl.appendChild(tab);
+function buildTerminalCard() {
+  var card = document.createElement('div');
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.mint + ';margin-bottom:6px;';
+  title.textContent = 'TERMINAL';
+  card.appendChild(title);
+
+  var kpis = document.createElement('div');
+  kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
+  kpis.innerHTML =
+    '<div>Network:</div>' +
+    '<div>IP: <span style="color:' + T.cyan + '">' + state.ipAddress + '</span></div>';
+  card.appendChild(kpis);
+
+  return card;
 }
 
-// ── Hardware nav ──────────────────────────────────
-function buildHWNav(cardTop) {
-  HW_NAVS.forEach(function(nav, i) {
+function buildCollapsedView(el) {
+  el.innerHTML = '';
+  el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;box-sizing:border-box;padding:20px;gap:20px;';
+
+  var leftCard = buildHardwareCard();
+  var rightCard = buildTerminalCard();
+
+  var leftWrap = buildCardWrap(leftCard);
+  var rightWrap = buildCardWrap(rightCard);
+
+  leftWrap.addEventListener('pointerup', function() {
+    state.expandedCard = 'hardware';
+    state.activeTab = 'hardware';
+    state.activeNav = 'add';
+    renderCurrentState();
+  });
+
+  rightWrap.addEventListener('pointerup', function() {
+    state.expandedCard = 'terminal';
+    state.activeTab = 'terminal';
+    state.activeNav = 'identity';
+    renderCurrentState();
+  });
+
+  el.appendChild(leftWrap);
+  el.appendChild(rightWrap);
+}
+
+// ═══════════════════════════════════════════════════
+//  EXPANDED VIEW (full-width frame with nav + content)
+// ═══════════════════════════════════════════════════
+
+function buildExpandedView(el) {
+  el.innerHTML = '';
+  el.style.cssText = 'display:flex;flex-direction:column;height:100%;box-sizing:border-box;padding:' + PAD + 'px;';
+
+  var isHW = state.expandedCard === 'hardware';
+
+  var frame = document.createElement('div');
+  frame.style.cssText = 'flex:1;display:flex;min-height:0;background:' + BG + ';border:' + BORDER_W + 'px solid ' + T.mint + ';box-sizing:border-box;overflow:hidden;';
+
+  if (isHW) {
+    var navStrip = buildNavStrip(HW_NAVS, GOLD);
+    frame.appendChild(navStrip);
+
+    var content = document.createElement('div');
+    content.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:' + BG + ';';
+    renderHWContent(content);
+    frame.appendChild(content);
+  } else {
+    var content = document.createElement('div');
+    content.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:' + BG + ';';
+    renderTermContent(content);
+    frame.appendChild(content);
+
+    var navStrip = buildNavStrip(TERM_NAVS, MINT);
+    frame.appendChild(navStrip);
+  }
+
+  el.appendChild(frame);
+}
+
+function buildNavStrip(navItems, accentColor) {
+  var strip = document.createElement('div');
+  strip.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:12px;flex-shrink:0;width:' + NAV_W + 'px;';
+
+  navItems.forEach(function(nav) {
     var isActive = state.activeNav === nav.id;
-    var btn = document.createElement('div');
-    btn.style.cssText = [
-      'position:absolute;left:' + PAD + 'px;top:' + (cardTop + 20 + i * 72) + 'px;',
-      'width:' + NAV_W + 'px;height:52px;',
-      'display:flex;align-items:center;justify-content:center;text-align:center;',
-      'font-family:' + T.fb + ';font-size:20px;font-weight:bold;',
-      isActive
-        ? 'background:' + GOLD + ';color:' + DARK + ';'
-        : 'background:' + BG + ';color:' + GOLD + ';border:' + BORDER_W + 'px solid ' + GOLD + ';',
-      'cursor:pointer;user-select:none;clip-path:' + chamfer(6) + ';z-index:5;box-sizing:border-box;',
-    ].join('');
-    btn.textContent = nav.label;
-    btn.addEventListener('pointerup', function() {
+    var btn = buildStyledButton(isActive ? accentColor : BG);
+    btn.wrap.style.width = '100%';
+    btn.inner.style.fontFamily = T.fb;
+    btn.inner.style.fontSize = '20px';
+    btn.inner.style.fontWeight = 'bold';
+    btn.inner.style.color = isActive ? DARK : accentColor;
+    btn.inner.style.padding = '10px 8px';
+    btn.inner.style.textAlign = 'center';
+    btn.inner.textContent = nav.label;
+    btn.wrap.style.cursor = 'pointer';
+    btn.wrap.addEventListener('pointerup', function() {
       state.activeNav = nav.id;
       if (nav.id === 'add') { state.addStep = 'choose'; state.foundDevice = null; }
-      render();
+      renderCurrentState();
     });
-    rootEl.appendChild(btn);
+    strip.appendChild(btn.wrap);
   });
-}
 
-// ── Terminal nav ──────────────────────────────────
-function buildTermNav(navX, cardTop) {
-  TERM_NAVS.forEach(function(nav, i) {
-    var isActive = state.activeNav === nav.id;
-    var btn = document.createElement('div');
-    btn.style.cssText = [
-      'position:absolute;left:' + navX + 'px;top:' + (cardTop + 20 + i * 80) + 'px;',
-      'width:' + NAV_W + 'px;height:64px;',
-      'display:flex;align-items:center;justify-content:center;',
-      'font-family:' + T.fb + ';font-size:20px;font-weight:bold;',
-      isActive
-        ? 'background:' + MINT + ';color:' + DARK + ';'
-        : 'background:' + BG + ';color:' + MINT + ';border:' + BORDER_W + 'px solid ' + MINT + ';',
-      'cursor:pointer;user-select:none;clip-path:' + chamfer(6) + ';z-index:5;box-sizing:border-box;',
-    ].join('');
-    btn.textContent = nav.label;
-    btn.addEventListener('pointerup', function() { state.activeNav = nav.id; render(); });
-    rootEl.appendChild(btn);
-  });
+  return strip;
 }
 
 // ═══════════════════════════════════════════════════
@@ -641,7 +692,7 @@ function renderManualAdd(ip, card) {
         register_id: selectedType === 'card_reader' ? registerId : '',
       });
       state.addStep = 'choose';
-      render();
+      renderCurrentState();
     },
   }));
 
@@ -866,7 +917,7 @@ function renderConfirmDevice(card) {
         port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
         register_id: selectedType === 'card_reader' ? registerId2 : '',
       });
-      state.addStep = 'choose'; state.foundDevice = null; render();
+      state.addStep = 'choose'; state.foundDevice = null; renderCurrentState();
     },
   }));
   footer.appendChild(buildButton('Back', {
@@ -920,7 +971,7 @@ function renderDeviceList(card, type) {
 
     actions.appendChild(buildButton('Remove', {
       fill: T.red, color: '#fff', fontSize: '20px', width: 80, height: 36,
-      onTap: async function() { await deleteDevice(dev.mac); render(); },
+      onTap: async function() { await deleteDevice(dev.mac); renderCurrentState(); },
     }));
 
     row.appendChild(actions);
