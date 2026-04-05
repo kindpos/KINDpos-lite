@@ -532,7 +532,7 @@ function buildCardTile(def, idx) {
 
   // Title
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.gold + ';font-weight:bold;text-align:center;';
+  title.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.mint + ';font-weight:bold;text-align:center;';
   title.textContent = def.title;
   inner.appendChild(title);
 
@@ -556,7 +556,7 @@ function buildCardTile(def, idx) {
   // Hint
   var hint = document.createElement('div');
   hint.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';text-align:center;margin-top:2px;';
-  hint.textContent = 'tap to expand ▸';
+  hint.textContent = '▸';
   inner.appendChild(hint);
 
   // Status dot (bottom-right)
@@ -599,7 +599,7 @@ function buildCardStrip(def, idx) {
   ].join('');
 
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:20px;color:' + T.gold + ';';
+  lbl.style.cssText = 'font-size:20px;color:' + T.mint + ';';
   lbl.textContent = def.title;
   strip.appendChild(lbl);
 
@@ -671,11 +671,11 @@ function buildExpandedView(state, idx) {
     'user-select:none;-webkit-user-select:none;',
   ].join('');
   var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:27px;color:' + T.gold + ';font-weight:bold;';
+  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:27px;color:' + T.mint + ';font-weight:bold;';
   hTitle.textContent = defs[idx].title;
   var hHint = document.createElement('span');
   hHint.style.cssText = 'font-family:' + T.fb + ';font-size:21px;color:' + T.mint + ';';
-  hHint.textContent = 'tap to collapse ▾';
+  hHint.textContent = '▾';
   hdr.appendChild(hTitle);
   hdr.appendChild(hHint);
   hdr.addEventListener('pointerup', function() { collapseToGrid(); });
