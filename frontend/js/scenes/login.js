@@ -275,11 +275,21 @@ function handleClockOverlay(emp) {
 }
 
 function showClockOverlay(emp, isClockedIn, clockRecord, roleName) {
+  // Fetch all roles so we can offer role selection on clock-in
+  fetch('/api/v1/config/roles').then(function(r) { return r.json(); }).then(function(rolesData) {
+    var allRoles = Array.isArray(rolesData) ? rolesData : [];
+    _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, allRoles);
+  }).catch(function() {
+    _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, []);
+  });
+}
+
+function _buildClockOverlay(emp, isClockedIn, clockRecord, roleName, allRoles) {
   overlay('clock-io', {
     onBuild: function(el) {
       var panel = document.createElement('div');
       panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;'
-        + 'width:420px;background:' + T.bgDark + ';border:4px solid ' + T.cyan
+        + 'width:480px;background:' + T.bgDark + ';border:7px solid ' + T.cyan
         + ';padding:20px;gap:16px;clip-path:' + chamfer(10) + ';';
 
       // Header row
@@ -287,12 +297,12 @@ function showClockOverlay(emp, isClockedIn, clockRecord, roleName) {
       hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;';
 
       var title = document.createElement('span');
-      title.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.cyan + ';letter-spacing:2px;';
+      title.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.cyan + ';letter-spacing:2px;';
       title.textContent = '// CLOCK IN/OUT //';
 
       var closeBtn = buildButton('\u2715', {
-        fill: T.red, color: '#ffffff', fontSize: '20px',
-        width: 34, height: 34,
+        fill: T.red, color: '#ffffff', fontSize: '22px',
+        width: 38, height: 38,
         onTap: function() { dismissOverlay(); },
       });
 
@@ -302,42 +312,51 @@ function showClockOverlay(emp, isClockedIn, clockRecord, roleName) {
 
       // Employee name
       var nameEl = document.createElement('div');
-      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.gold + ';text-align:center;';
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:36px;color:' + T.gold + ';text-align:center;';
       nameEl.textContent = emp.name;
       panel.appendChild(nameEl);
 
-      // Role or clock-in time
-      var infoEl = document.createElement('div');
-      infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.cyan + ';text-align:center;';
-      if (isClockedIn && clockRecord) {
-        var t = new Date(clockRecord.clocked_in_at);
-        var timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        infoEl.textContent = 'Clocked in since ' + timeStr;
-      } else {
-        infoEl.textContent = 'Role: ' + roleName;
-      }
-      panel.appendChild(infoEl);
-
       // Status message area
       var statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';text-align:center;min-height:24px;';
+      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';text-align:center;min-height:28px;';
       statusEl.textContent = '';
 
-      // Action button
-      if (isClockedIn) {
+      if (isClockedIn && clockRecord) {
+        // Clocked in — show info + clock out
+        var t = new Date(clockRecord.clocked_in_at);
+        var timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var infoEl = document.createElement('div');
+        infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.cyan + ';text-align:center;';
+        infoEl.textContent = 'Clocked in since ' + timeStr;
+        panel.appendChild(infoEl);
+
         var outBtn = buildButton('CLOCK OUT', {
           fill: T.red, color: '#ffffff', fontSize: '36px',
-          width: 300, height: 70,
+          width: 340, height: 70,
           onTap: function() { doClockOut(emp, roleName, statusEl); },
         });
         panel.appendChild(outBtn);
       } else {
-        var inBtn = buildButton('CLOCK IN', {
-          fill: T.goGreen, color: '#ffffff', fontSize: '36px',
-          width: 300, height: 70,
-          onTap: function() { doClockIn(emp, roleName, statusEl); },
+        // Not clocked in — show role buttons
+        var selectLabel = document.createElement('div');
+        selectLabel.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mutedText + ';text-align:center;';
+        selectLabel.textContent = 'Select role to clock in:';
+        panel.appendChild(selectLabel);
+
+        var btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;';
+
+        // Show all roles as clock-in options
+        var rolesToShow = allRoles.length > 0 ? allRoles : [{ role_id: emp.role, name: roleName }];
+        rolesToShow.forEach(function(role) {
+          var btn = buildButton(role.name.toUpperCase(), {
+            fill: T.goGreen, color: '#ffffff', fontSize: '28px',
+            width: rolesToShow.length === 1 ? 340 : 200, height: 64,
+            onTap: function() { doClockIn(emp, role.name, statusEl); },
+          });
+          btnRow.appendChild(btn);
         });
-        panel.appendChild(inBtn);
+        panel.appendChild(btnRow);
       }
 
       panel.appendChild(statusEl);
