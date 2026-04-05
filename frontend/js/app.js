@@ -28,7 +28,7 @@ export function setSceneName(name) {
   updateClock();
 }
 
-export function setHeaderBack({ back = false, x = false } = {}) {
+export function setHeaderBack({ back = false, x = false, onBack = null } = {}) {
   const nav = document.getElementById('header-nav');
   const logout = document.getElementById('header-logout');
   if (nav) nav.innerHTML = '';
@@ -46,7 +46,7 @@ export function setHeaderBack({ back = false, x = false } = {}) {
     backPair.inner.style.fontSize = T.fsBtnSm;
     backPair.inner.style.color = '#fff';
     backPair.inner.textContent = '<<<';
-    backPair.wrap.addEventListener('pointerup', () => pop());
+    backPair.wrap.addEventListener('pointerup', onBack || (() => pop()));
     nav.appendChild(backPair.wrap);
   } else if (nav) {
     nav.style.display = 'none';

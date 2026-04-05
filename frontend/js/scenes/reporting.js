@@ -834,9 +834,18 @@ function buildServerHoursPanels(sales, labor, fullSize) {
 function renderCurrentState() {
   if (!currentEl || !currentParams) return;
   if (expandedCard) {
+    setHeaderBack({ back: true, x: true, onBack: function() {
+      if (expandedPanel !== null) {
+        expandedPanel = null;
+      } else {
+        expandedCard = null;
+      }
+      renderCurrentState();
+    }});
     buildExpandedView(currentEl, currentParams, salesData, laborData);
   } else {
     setSceneName('Reporting');
+    setHeaderBack({ x: true });
     buildCollapsedView(currentEl, currentParams, salesData, laborData);
   }
 }
