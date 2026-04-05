@@ -23,6 +23,7 @@ var BANNER_H   = 36;
 var BEVEL      = 4;
 var CHAM       = 8;
 var RED        = '#ff3355';
+var GREY       = '#555555';
 
 // ── Scene state ───────────────────────────────────
 var _state         = null;
@@ -274,7 +275,7 @@ function getCardDefs(state) {
     {
       title: 'Revenue Summary',
       hero: fmt(state.netSales),
-      heroColor: T.gold,
+      heroColor: state.netSales > 0 ? T.gold : GREY,
       subtitle: 'Gross / Voids / Disc / Net',
       border: T.border,
       statusColor: null,
@@ -290,7 +291,7 @@ function getCardDefs(state) {
     {
       title: 'Payment Breakdown',
       hero: fmt(state.cardSales),
-      heroColor: T.gold,
+      heroColor: state.cardSales > 0 ? T.gold : GREY,
       subtitle: 'Cash / Card / Tips',
       border: T.border,
       statusColor: null,
@@ -311,7 +312,7 @@ function getCardDefs(state) {
     {
       title: 'Category Sales',
       hero: fmt(state.netSales),
-      heroColor: T.gold,
+      heroColor: state.netSales > 0 ? T.gold : GREY,
       subtitle: 'by menu category',
       border: T.border,
       statusColor: null,
@@ -343,7 +344,7 @@ function getCardDefs(state) {
     {
       title: 'Daypart Summary',
       hero: fmt(state.netSales),
-      heroColor: T.gold,
+      heroColor: state.netSales > 0 ? T.gold : GREY,
       subtitle: 'AM / PM / Late split',
       border: T.border,
       statusColor: null,
@@ -359,7 +360,7 @@ function getCardDefs(state) {
     {
       title: 'Tips & Gratuity',
       hero: fmt(state.totalTips),
-      heroColor: T.gold,
+      heroColor: state.totalTips > 0 ? T.gold : GREY,
       subtitle: 'collected • tip-out paid',
       border: T.border,
       statusColor: null,

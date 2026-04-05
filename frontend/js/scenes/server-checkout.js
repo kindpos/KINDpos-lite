@@ -22,6 +22,7 @@ var BANNER_H    = 36;
 var BEVEL       = 4;
 var CHAM        = 8;
 var RED         = '#ff3355';
+var GREY        = '#555555';
 
 // ── Scene state ──────────────────────────────────
 var _state         = null;
@@ -130,7 +131,7 @@ function buildReceiptContent(state) {
   var BASE   = T.fsBtn;
   var HEADER = T.fsBtn;
   var SMALL  = T.fsSmall;
-  var COL    = '#1a1a1a';
+  var COL    = '#555555';
   var DIM    = '#447744';
 
   var wrap = document.createElement('div');
@@ -197,20 +198,20 @@ function buildReceiptContent(state) {
 
   // Take-home
   var thRow = row('TAKE-HOME', fmt(state.takeHome));
-  thRow.querySelector('span:last-child').style.color = T.cyan;
+  thRow.querySelector('span:last-child').style.color = state.takeHome > 0 ? T.cyan : COL;
   thRow.querySelector('span:last-child').style.fontSize = T.fsBtn;
   wrap.appendChild(thRow);
   wrap.appendChild(divider());
 
   // Cash expected
   var ceRow = row('CASH EXPECTED', fmt(state.cashExpected));
-  ceRow.querySelector('span:last-child').style.color = T.gold;
+  ceRow.querySelector('span:last-child').style.color = state.cashExpected > 0 ? T.gold : COL;
   ceRow.querySelector('span:last-child').style.fontSize = T.fsBtn;
   wrap.appendChild(ceRow);
   wrap.appendChild(divider());
 
   var footer = document.createElement('div');
-  footer.style.cssText = 'text-align:center;margin-top:6px;font-size:' + SMALL + ';color:' + T.mutedText + ';';
+  footer.style.cssText = 'text-align:center;margin-top:6px;font-size:' + SMALL + ';color:' + COL + ';';
   footer.textContent = '** CONFIDENTIAL **';
   wrap.appendChild(footer);
 
@@ -365,7 +366,7 @@ function getCardDefs(state) {
     {
       title: 'Sales Summary',
       hero: fmt(state.netSales),
-      heroColor: T.gold,
+      heroColor: state.netSales > 0 ? T.gold : GREY,
       subtitle: state.totalChecks + ' checks • ' + fmt(state.avgCheck) + ' avg',
       border: T.border,
       statusColor: null,
@@ -384,7 +385,7 @@ function getCardDefs(state) {
     {
       title: 'Tip Summary',
       hero: fmt(state.cardTips + state.cashTips),
-      heroColor: T.gold,
+      heroColor: (state.cardTips + state.cashTips) > 0 ? T.gold : GREY,
       subtitle: 'card tips • cash tips',
       border: T.border,
       statusColor: state.unadjustedTips > 0 ? T.yellow : null,
@@ -404,7 +405,7 @@ function getCardDefs(state) {
     {
       title: 'Tip-Out Calc',
       hero: '−' + fmt(state.tipOutTotal),
-      heroColor: RED,
+      heroColor: state.tipOutTotal > 0 ? RED : GREY,
       subtitle: (state.tipOutRoles.length ? state.tipOutRoles[0].percent + '% rate' : '0%') + ' • editable',
       border: T.border,
       statusColor: null,
@@ -435,7 +436,7 @@ function getCardDefs(state) {
     {
       title: 'Take-Home',
       hero: fmt(state.takeHome),
-      heroColor: T.gold,
+      heroColor: state.takeHome > 0 ? T.gold : GREY,
       subtitle: 'tips − tipout + cash',
       border: T.gold,
       statusColor: null,
