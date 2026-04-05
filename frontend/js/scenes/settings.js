@@ -200,7 +200,11 @@ function buildHardwareCard() {
 
   items.forEach(function(item) {
     var btn = buildStyledButton(BG);
-    btn.inner.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';padding:8px 12px;display:flex;justify-content:space-between;align-items:center;';
+    btn.inner.style.fontFamily = T.fb;
+    btn.inner.style.fontSize = '36px';
+    btn.inner.style.color = T.mint;
+    btn.inner.style.padding = '8px 12px';
+    btn.inner.style.justifyContent = 'space-between';
     btn.inner.innerHTML = item.label + ' <span style="color:' + T.gold + '">' + item.count + '</span>';
     btn.wrap.style.width = '100%';
     if (item.nav) {
