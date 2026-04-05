@@ -74,9 +74,11 @@ function fetchServerState(params) {
   return Promise.all([
     fetch(summaryUrl).then(function(r) { return r.json(); }),
     fetch(tipoutUrl).then(function(r) { return r.json(); }).catch(function() { return []; }),
+    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).catch(function() { return {}; }),
   ]).then(function(results) {
     var d = results[0];
     var rules = results[1];
+    var store = results[2];
     var today = new Date();
 
     // Map TipoutRule {role_from, role_to, percentage, calculation_base} to UI format
@@ -112,6 +114,8 @@ function fetchServerState(params) {
       cashReceived:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
       cashExpected:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
       closedOrders:  d.closed_order_ids || [],
+      restaurantName: (store.info && store.info.restaurant_name) || 'KINDpos',
+      terminalId: '',
     };
     recalcTipOut(state);
     return state;
@@ -207,7 +211,7 @@ function buildReceiptContent(state) {
 
   var footer = document.createElement('div');
   footer.style.cssText = 'text-align:center;margin-top:6px;font-size:' + SMALL + ';color:' + T.mutedText + ';';
-  footer.innerHTML = 'Terminal: ' + state.terminalId + '<br>** CONFIDENTIAL **';
+  footer.textContent = '** CONFIDENTIAL **';
   wrap.appendChild(footer);
 
   return wrap;
@@ -1072,14 +1076,8 @@ function buildScene(el, params) {
     'box-sizing:border-box;overflow:hidden;',
   ].join('');
 
-  Promise.all([
-    fetchServerState(params),
-    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).catch(function() { return null; }),
-  ]).then(function(results) {
-    _state = results[0];
-    var store = results[1];
-    _state.restaurantName = (store && store.info && store.info.restaurant_name) || 'KINDpos';
-    _state.terminalId     = (store && store.info && store.info.terminal_id)     || 'T-001';
+  fetchServerState(params).then(function(state) {
+    _state = state;
 
     el.appendChild(buildReceiptPanel(_state));
 

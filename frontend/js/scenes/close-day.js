@@ -75,7 +75,8 @@ function fetchDayState(params) {
 
     return {
       date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
-      terminalId: (store.info && store.info.restaurant_name) || 'Terminal',
+      restaurantName: (store.info && store.info.restaurant_name) || 'KINDpos',
+      terminalId: '',
       printedBy:  params.managerName || 'Manager',
 
       // Revenue
@@ -226,7 +227,7 @@ function buildReceiptContent(state) {
 
   var footer = document.createElement('div');
   footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:' + T.mutedText + ';';
-  footer.innerHTML = 'Terminal: ' + state.terminalId + '<br>** MANAGER REPORT — CONFIDENTIAL **';
+  footer.textContent = '** MANAGER REPORT — CONFIDENTIAL **';
   wrap.appendChild(footer);
 
   return wrap;
@@ -1109,8 +1110,7 @@ function openBatchOverlay(state, onSettled) {
 function refreshScene() {
   if (!_rightCol || !_state) return;
   fetchDayState({ managerName: _state.printedBy }).then(function(newState) {
-    newState.restaurantName = _state.restaurantName;
-    newState.terminalId = _state.terminalId;
+    newState.terminalId = _state.terminalId || '';
     _state = newState;
     _expandedIdx = null;
 
@@ -1146,14 +1146,8 @@ function buildScene(el, params) {
     'box-sizing:border-box;overflow:hidden;',
   ].join('');
 
-  Promise.all([
-    fetchDayState(params),
-    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).catch(function() { return null; }),
-  ]).then(function(results) {
-    _state = results[0];
-    var store = results[1];
-    _state.restaurantName = (store && store.info && store.info.restaurant_name) || 'KINDpos';
-    _state.terminalId     = (store && store.info && store.info.terminal_id)     || _state.terminalId;
+  fetchDayState(params).then(function(state) {
+    _state = state;
 
     // Left column: receipt
     el.appendChild(buildReceiptPanel(_state));
