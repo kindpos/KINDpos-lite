@@ -47,7 +47,6 @@ var state = {
 var rootEl = null;
 
 var HW_NAVS = [
-  { id: 'add',      label: '//Add Device//' },
   { id: 'readers',  label: 'Card Readers'   },
   { id: 'printers', label: 'Printers'       },
 ];
@@ -76,7 +75,7 @@ registerScene('settings', {
     rootEl = el;
     state.expandedCard = null;
     state.activeTab   = 'hardware';
-    state.activeNav   = 'add';
+    state.activeNav   = 'printers';
     state.addStep     = 'choose';
     state.foundDevice = null;
     state.scanResults = [];
@@ -179,7 +178,7 @@ function buildCardWrap(cardInner) {
 
 function buildHardwareCard() {
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
   var title = document.createElement('div');
   title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
@@ -190,14 +189,34 @@ function buildHardwareCard() {
   var readerCount = state.savedDevices.filter(function(d) { return d.type === 'card_reader'; }).length;
   var otherCount = state.savedDevices.length - printerCount - readerCount;
 
-  var kpis = document.createElement('div');
-  kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
-  kpis.innerHTML =
-    '<div>Printers: <span style="color:' + T.gold + '">' + printerCount + '</span></div>' +
-    '<div>Card Readers: <span style="color:' + T.gold + '">' + readerCount + '</span></div>' +
-    '<div>Peripherals: <span style="color:' + T.gold + '">' + otherCount + '</span></div>';
-  card.appendChild(kpis);
+  var items = [
+    { label: 'Printers',     count: printerCount, nav: 'printers' },
+    { label: 'Card Readers', count: readerCount,  nav: 'readers'  },
+    { label: 'Peripherals',  count: otherCount,   nav: null       },
+  ];
 
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:4px;';
+
+  items.forEach(function(item) {
+    var btn = buildStyledButton(BG);
+    btn.inner.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';padding:8px 12px;display:flex;justify-content:space-between;align-items:center;';
+    btn.inner.innerHTML = item.label + ' <span style="color:' + T.gold + '">' + item.count + '</span>';
+    btn.wrap.style.width = '100%';
+    if (item.nav) {
+      btn.wrap.style.cursor = 'pointer';
+      btn.wrap.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        state.expandedCard = 'hardware';
+        state.activeTab = 'hardware';
+        state.activeNav = item.nav;
+        renderCurrentState();
+      });
+    }
+    btns.appendChild(btn.wrap);
+  });
+
+  card.appendChild(btns);
   return card;
 }
 
@@ -229,13 +248,6 @@ function buildCollapsedView(el) {
 
   var leftWrap = buildCardWrap(leftCard);
   var rightWrap = buildCardWrap(rightCard);
-
-  leftWrap.addEventListener('pointerup', function() {
-    state.expandedCard = 'hardware';
-    state.activeTab = 'hardware';
-    state.activeNav = 'add';
-    renderCurrentState();
-  });
 
   rightWrap.addEventListener('pointerup', function() {
     state.expandedCard = 'terminal';
@@ -300,7 +312,6 @@ function buildNavStrip(navItems, accentColor) {
     btn.wrap.style.cursor = 'pointer';
     btn.wrap.addEventListener('pointerup', function() {
       state.activeNav = nav.id;
-      if (nav.id === 'add') { state.addStep = 'choose'; state.foundDevice = null; }
       renderCurrentState();
     });
     strip.appendChild(btn.wrap);
@@ -315,8 +326,7 @@ function buildNavStrip(navItems, accentColor) {
 
 function renderHWContent(card) {
   card.innerHTML = '';  // always clear before render
-  if (state.activeNav === 'add')      renderAddDevice(card);
-  else if (state.activeNav === 'printers') renderDeviceList(card, 'printer');
+  if (state.activeNav === 'printers')      renderDeviceList(card, 'printer');
   else if (state.activeNav === 'readers')  renderDeviceList(card, 'card_reader');
 }
 
