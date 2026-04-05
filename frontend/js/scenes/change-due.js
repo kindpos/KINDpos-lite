@@ -107,7 +107,7 @@ registerScene('change-due', {
     // ── Receipt printing indicator ────────────────
     var printLine = document.createElement('div');
     printLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
       'letter-spacing:0.12em;margin-top:32px;',
     ].join('');
     printLine.textContent = 'RECEIPT PRINTING...';
@@ -133,7 +133,7 @@ registerScene('change-due', {
     // ── Tap to dismiss hint ───────────────────────
     var hint = document.createElement('div');
     hint.style.cssText = [
-      'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';',
+      'font-family:' + T.fb + ';font-size:24px;color:' + T.mutedText + ';',
       'letter-spacing:0.1em;margin-top:12px;',
     ].join('');
     hint.textContent = 'tap anywhere to continue';

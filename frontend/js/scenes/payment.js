@@ -117,7 +117,7 @@ function buildReceiptPanel(params) {
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 50px 80px;',
       'padding:4px 0;',
-      'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var name = document.createElement('div');
@@ -351,7 +351,7 @@ function buildCardPanel(params) {
   // Status text
   var status = document.createElement('div');
   status.style.cssText = [
-    'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';',
+    'font-family:' + T.fb + ';font-size:24px;color:' + T.mutedText + ';',
     'text-align:center;line-height:1.6;letter-spacing:0.05em;',
     'white-space:pre-line;',
   ].join('');
@@ -456,7 +456,7 @@ function activateResult(params, change) {
 
   // Charged line
   var charged = document.createElement('div');
-  charged.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.06em;';
+  charged.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mutedText + ';letter-spacing:0.06em;';
   charged.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + amount.toFixed(2);
   panel.appendChild(charged);
 
@@ -661,10 +661,10 @@ function showProcessingOverlay(amount, onDone) {
       var titleBar = document.createElement('div');
       titleBar.style.cssText = 'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');padding:5px 8px;display:flex;align-items:center;gap:8px;';
       var icon = document.createElement('div');
-      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
+      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
       icon.textContent = '◈';
       var titleText = document.createElement('span');
-      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
+      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
       titleText.textContent = 'Card Payment — $' + amount.toFixed(2);
       titleBar.appendChild(icon);
       titleBar.appendChild(titleText);
@@ -676,7 +676,7 @@ function showProcessingOverlay(amount, onDone) {
 
       // Status text
       statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';min-height:24px;';
+      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';min-height:24px;';
       statusEl.textContent = statusMessages[0];
       body.appendChild(statusEl);
 

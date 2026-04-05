@@ -86,7 +86,7 @@ function buildReceiptPanel(params) {
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 50px 80px;',
       'padding:4px 0;',
-      'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var n = document.createElement('div');
@@ -169,7 +169,7 @@ function buildMethodPanel(params) {
   ].join('');
   applySunkenStyle(prompt);
   var pLabel = document.createElement('div');
-  pLabel.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + T.gold + ';letter-spacing:0.1em;';
+  pLabel.style.cssText = 'font-family:' + T.fh + ';font-size:24px;color:' + T.gold + ';letter-spacing:0.1em;';
   pLabel.textContent = 'PAYMENT METHOD';
   var pText = document.createElement('div');
   pText.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';margin-top:2px;';

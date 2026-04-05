@@ -255,7 +255,7 @@ function buildPrefixCard() {
 
   // Label
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';flex-shrink:0;margin-right:2px;';
+  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mutedText + ';flex-shrink:0;margin-right:2px;';
   lbl.textContent = 'PREFIX:';
   card.appendChild(lbl);
 
@@ -513,11 +513,11 @@ function renderTicket() {
       gRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
 
       var gName = document.createElement('span');
-      gName.style.cssText = 'font-family:' + T.fb + ';font-size:20px;font-weight:bold;color:' + T.mint + ';';
+      gName.style.cssText = 'font-family:' + T.fb + ';font-size:24px;font-weight:bold;color:' + T.mint + ';';
       gName.textContent = (instances.length > 1 ? instances.length + '\u00d7 ' : '') + name;
 
       var gPrice = document.createElement('span');
-      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:20px;font-weight:bold;color:' + T.mint + ';';
+      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:24px;font-weight:bold;color:' + T.mint + ';';
       gPrice.textContent = '$' + groupPrice.toFixed(2);
 
       gRow.appendChild(gName);
@@ -568,11 +568,11 @@ function renderTicket() {
         iRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
 
         var iName = document.createElement('span');
-        iName.style.cssText = 'font-family:' + T.fb + ';font-size:20px;font-weight:bold;color:' + fg + ';';
+        iName.style.cssText = 'font-family:' + T.fb + ';font-size:24px;font-weight:bold;color:' + fg + ';';
         iName.textContent = inst.name;
 
         var iPrice = document.createElement('span');
-        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:20px;font-weight:bold;color:' + fg + ';';
+        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:24px;font-weight:bold;color:' + fg + ';';
         var total = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
         iPrice.textContent = '$' + total.toFixed(2);
 
@@ -623,7 +623,7 @@ function renderTicket() {
 // ── SEPARATOR + MOD ROW helpers ───────────────────
 function buildSeparator() {
   var sep = document.createElement('div');
-  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:20px;color:' + T.mintEdgeD + ';letter-spacing:2px;overflow:hidden;white-space:nowrap;line-height:1;';
+  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:24px;color:' + T.mintEdgeD + ';letter-spacing:2px;overflow:hidden;white-space:nowrap;line-height:1;';
   sep.textContent = '- - - - - - - - - - - - - - - - - -';
   return sep;
 }
@@ -633,7 +633,7 @@ function buildModRow(name, price, dark, showPrice) {
   row.style.cssText = [
     'display:flex;justify-content:space-between;',
     'padding:2px 8px 2px 20px;',
-    'font-family:' + T.fb + ';font-size:20px;font-weight:bold;',
+    'font-family:' + T.fb + ';font-size:24px;font-weight:bold;',
     'color:' + (dark ? '#1a1a1a' : T.gold) + ';',
   ].join('');
   var n = document.createElement('span');
@@ -683,7 +683,7 @@ function showVoidReasons(targets, isFullVoid) {
       ].join('');
 
       var lbl = document.createElement('div');
-      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.red + ';letter-spacing:2px;margin-bottom:4px;';
+      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.red + ';letter-spacing:2px;margin-bottom:4px;';
       lbl.textContent = isFullVoid ? '// VOID ENTIRE ORDER //' : '// VOID REASON //';
       panel.appendChild(lbl);
 
@@ -746,7 +746,7 @@ function buildPinOverlay(el, cb) {
   ].join('');
 
   var lbl = document.createElement('div');
-  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';letter-spacing:2px;';
+  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';letter-spacing:2px;';
   lbl.textContent = '// MANAGER PIN //';
   panel.appendChild(lbl);
 
@@ -894,7 +894,7 @@ function handleRecall() {
       var hdr = document.createElement('div');
       hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;';
       var title = document.createElement('span');
-      title.style.cssText = 'font-family:' + T.fb + ';font-size:20px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
+      title.style.cssText = 'font-family:' + T.fb + ';font-size:24px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
       title.textContent = '// RECALL //';
       var closeBtn = buildButton('\u2715', {
         fill: T.red, color: T.mint, fontSize: '20px', height: 30,
@@ -911,7 +911,7 @@ function handleRecall() {
 
       if (savedTabs.length === 0) {
         var empty = document.createElement('div');
-        empty.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:20px;text-align:center;padding:40px 0;';
+        empty.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:24px;text-align:center;padding:40px 0;';
         empty.textContent = 'No saved tabs';
         grid.appendChild(empty);
       } else {
@@ -985,7 +985,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
                 var cpanel = document.createElement('div');
                 cpanel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:320px;background:#1a1a1a;border:4px solid ' + T.gold + ';padding:20px;';
                 var clbl = document.createElement('div');
-                clbl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';letter-spacing:1px;text-align:center;';
+                clbl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';letter-spacing:1px;text-align:center;';
                 clbl.textContent = 'Clear current ticket?';
                 cpanel.appendChild(clbl);
                 var yesBtn = buildButton('YES — CLEAR', {

@@ -488,7 +488,7 @@ function buildCardTile(def, idx) {
   inner.appendChild(hero);
 
   var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';text-align:center;';
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';text-align:center;';
   sub.textContent = def.subtitle;
   inner.appendChild(sub);
 
@@ -533,12 +533,12 @@ function buildCardStrip(def, idx) {
   ].join('');
 
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:20px;color:' + T.mint + ';';
+  lbl.style.cssText = 'font-size:24px;color:' + T.mint + ';';
   lbl.textContent = def.title;
   strip.appendChild(lbl);
 
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:20px;color:' + T.cyan + ';';
+  val.style.cssText = 'font-size:24px;color:' + T.cyan + ';';
   val.textContent = def.hero;
   strip.appendChild(val);
 
@@ -673,7 +673,7 @@ function buildActionBar(state) {
 
   function arrow() {
     var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';flex-shrink:0;';
+    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';flex-shrink:0;';
     el.textContent = '→';
     return el;
   }
@@ -752,7 +752,7 @@ function openPinGate(onSuccess) {
       card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:24px 32px;text-align:center;clip-path:' + chamfer(10) + ';';
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:4px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';margin-bottom:4px;';
       msg.textContent = 'Manager PIN Required';
       card.appendChild(msg);
 
@@ -818,7 +818,7 @@ function openAdjustOverlay(state) {
       card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:0;width:520px;clip-path:' + chamfer(12) + ';display:flex;flex-direction:column;overflow:hidden;';
 
       var ovHdr = document.createElement('div');
-      ovHdr.style.cssText = 'background:' + T.gold + ';padding:12px 20px;font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;font-weight:bold;text-align:center;';
+      ovHdr.style.cssText = 'background:' + T.gold + ';padding:12px 20px;font-family:' + T.fb + ';font-size:24px;color:#1a1a1a;font-weight:bold;text-align:center;';
       ovHdr.textContent = 'Adjust Tip-Out %';
       card.appendChild(ovHdr);
 
@@ -832,7 +832,7 @@ function openAdjustOverlay(state) {
       body.appendChild(sep);
 
       var otLabel = document.createElement('div');
-      otLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
+      otLabel.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';';
       otLabel.textContent = 'ONE-TIME (this checkout only)';
       body.appendChild(otLabel);
       body.appendChild(buildAdjustRow(workingOneTime));
@@ -882,11 +882,11 @@ function buildAdjustRow(role) {
   row.style.cssText = 'display:flex;align-items:center;gap:10px;font-family:' + T.fb + ';';
 
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-size:20px;color:' + T.mint + ';min-width:80px;';
+  nameEl.style.cssText = 'font-size:24px;color:' + T.mint + ';min-width:80px;';
   nameEl.textContent = role.label;
 
   var basisBtn = document.createElement('div');
-  basisBtn.style.cssText = 'font-size:20px;color:' + T.mint + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
+  basisBtn.style.cssText = 'font-size:24px;color:' + T.mint + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
   basisBtn.textContent = role.basis;
   basisBtn.addEventListener('pointerup', function() {
     role.basis = role.basis === 'Net Sales' ? 'Liquor Sales' : 'Net Sales';
@@ -902,7 +902,7 @@ function buildAdjustRow(role) {
   });
 
   var pctEl = document.createElement('div');
-  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
+  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
   pctEl.textContent = role.percent + '%';
 
   var incBtn = buildStyledButton(T.bgDark);
@@ -968,7 +968,7 @@ function showCashTipDeclaration(state) {
       card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:4px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';margin-bottom:4px;';
       msg.textContent = 'Declare Cash Tips';
       card.appendChild(msg);
 
