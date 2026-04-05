@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Server Checkout Scene
-//  Receipt preview left | 6 accordion cards middle | Alert + buttons right
+//  2-column: Receipt preview left | Card grid + banner + action bar right
 //  Two blockers: open checks + unadjusted tips
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
@@ -12,24 +12,26 @@ import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
 // ── Layout ────────────────────────────────────────
-var RECEIPT_W   = 290;
-var CARDS_W     = 472;
-var RIGHT_W     = 250;
-var COL_GAP     = 13;
+var RECEIPT_W   = 280;
+var COL_GAP     = 20;
 var SCENE_PAD   = 13;
-var CARD_H      = 82;       // collapsed card height
-var CARD_GAP    = 6;
-var PRINT_H     = 84;
-var FINALIZE_H  = 100;
+var CARD_GAP    = 8;
+var STRIP_H     = 28;
+var ACTION_H    = 48;
+var BANNER_H    = 36;
+var BEVEL       = 4;
+var CHAM        = 8;
+var MANAGER_PIN = '1234';
+var RED         = '#ff3355';
 
-// ── Scene state — reset in onExit ────────────────
+// ── Scene state ──────────────────────────────────
 var _state         = null;
-var _openCardBody  = null;  // currently expanded card body element
-var _openChevron   = null;  // chevron span of the open card
-var _finalizeWrap  = null;  // finalize button wrapper (for state update)
-var _alertContent  = null;  // alert panel inner content (for state update)
-var _receiptScroll = null;  // receipt scrollable area (for state update)
-var _cardsCol      = null;  // cards column el (for rebuild after adjust)
+var _expandedIdx   = null;
+var _gridContainer = null;
+var _bannerEl      = null;
+var _receiptScroll = null;
+var _rightCol      = null;
+var _pinUnlocked   = false;
 
 // ─────────────────────────────────────────────────
 //  HELPERS
@@ -111,7 +113,6 @@ function buildReceiptContent(state) {
   var wrap = document.createElement('div');
   wrap.style.cssText = 'padding:12px 14px;font-family:' + T.fb + ';color:' + COL + ';display:flex;flex-direction:column;gap:0;';
 
-  // Section header (full-width bold label)
   function sectionHeader(text) {
     var el = document.createElement('div');
     el.style.cssText = 'font-size:' + HEADER + ';font-weight:bold;margin-top:8px;margin-bottom:2px;';
@@ -119,28 +120,22 @@ function buildReceiptContent(state) {
     return el;
   }
 
-  // Two-column data row: label left, value right
   function row(label, value) {
     var el = document.createElement('div');
     el.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-size:' + BASE + ';padding:1px 0;';
-    var l = document.createElement('span');
-    l.textContent = label;
-    var v = document.createElement('span');
-    v.style.fontWeight = 'bold';
-    v.textContent = value;
-    el.appendChild(l);
-    el.appendChild(v);
+    var l = document.createElement('span'); l.textContent = label;
+    var v = document.createElement('span'); v.style.fontWeight = 'bold'; v.textContent = value;
+    el.appendChild(l); el.appendChild(v);
     return el;
   }
 
-  // Divider line
   function divider() {
     var el = document.createElement('div');
     el.style.cssText = 'border-top:1px dashed ' + DIM + ';margin:6px 0;';
     return el;
   }
 
-  // Top identity block
+  // Header
   var id = document.createElement('div');
   id.style.cssText = 'text-align:center;margin-bottom:8px;';
   var r1 = document.createElement('div');
@@ -149,33 +144,26 @@ function buildReceiptContent(state) {
   var r2 = document.createElement('div');
   r2.style.cssText = 'font-size:' + BASE + ';font-weight:bold;';
   r2.textContent = 'SERVER CHECKOUT';
-  id.appendChild(r1);
-  id.appendChild(r2);
+  id.appendChild(r1); id.appendChild(r2);
   wrap.appendChild(id);
 
   wrap.appendChild(row('Server:', state.employeeName));
   wrap.appendChild(row('Date:', state.date));
   wrap.appendChild(divider());
 
-  wrap.appendChild(sectionHeader('SALES SUMMARY'));
+  wrap.appendChild(sectionHeader('SALES'));
+  wrap.appendChild(row('Checks Closed', String(state.totalChecks)));
   wrap.appendChild(row('Net Sales', fmt(state.netSales)));
-  wrap.appendChild(row('Liquor Sales', fmt(state.liquorSales)));
-  wrap.appendChild(row('Cash Sales', fmt(state.cashSales)));
-  wrap.appendChild(row('Card Sales', fmt(state.cardSales)));
-  wrap.appendChild(divider());
-
-  wrap.appendChild(sectionHeader('CHECK STATS'));
-  wrap.appendChild(row('Total Checks', String(state.totalChecks)));
-  wrap.appendChild(row('Average Check', fmt(state.avgCheck)));
   wrap.appendChild(divider());
 
   wrap.appendChild(sectionHeader('TIPS'));
   wrap.appendChild(row('Card Tips', fmt(state.cardTips)));
+  wrap.appendChild(row('Cash Tips', fmt(state.cashTips)));
   wrap.appendChild(divider());
 
   wrap.appendChild(sectionHeader('TIP-OUT'));
   state.tipOutRoles.forEach(function(r) {
-    wrap.appendChild(row(r.label + ' ' + r.percent + '% ' + r.basis, fmt(r.amount)));
+    wrap.appendChild(row(r.label + ' ' + r.percent + '%', fmt(r.amount)));
   });
   if (state.oneTimeRole && state.oneTimeRole.percent > 0) {
     var ot = state.oneTimeRole;
@@ -184,16 +172,18 @@ function buildReceiptContent(state) {
   wrap.appendChild(row('Tip-Out Total', fmt(state.tipOutTotal)));
   wrap.appendChild(divider());
 
-  wrap.appendChild(sectionHeader('TAKE-HOME'));
-  wrap.appendChild(row('Card Tips', fmt(state.cardTips)));
-  wrap.appendChild(row('Tip-Out', '− ' + fmt(state.tipOutTotal)));
-  wrap.appendChild(row('Take-Home', fmt(state.takeHome)));
+  // Take-home
+  var thRow = row('TAKE-HOME', fmt(state.takeHome));
+  thRow.querySelector('span:last-child').style.color = T.cyan;
+  thRow.querySelector('span:last-child').style.fontSize = '34px';
+  wrap.appendChild(thRow);
   wrap.appendChild(divider());
 
-  wrap.appendChild(sectionHeader('CASH EXPECTED'));
-  wrap.appendChild(row('Cash Received', fmt(state.cashReceived)));
-  wrap.appendChild(row('Card Tips Owed', '− ' + fmt(state.cardTips)));
-  wrap.appendChild(row('Cash Expected', fmt(state.cashExpected)));
+  // Cash expected
+  var ceRow = row('CASH EXPECTED', fmt(state.cashExpected));
+  ceRow.querySelector('span:last-child').style.color = T.gold;
+  ceRow.querySelector('span:last-child').style.fontSize = '34px';
+  wrap.appendChild(ceRow);
   wrap.appendChild(divider());
 
   var footer = document.createElement('div');
@@ -204,32 +194,28 @@ function buildReceiptContent(state) {
   return wrap;
 }
 
-
-
 function buildReceiptPanel(state) {
   var panel = document.createElement('div');
   panel.style.cssText = [
     'width:' + RECEIPT_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'background:' + T.mint + ';',
-    'border-right:4px solid ' + T.mintEdgeD + ';',
+    'background:#1a1a1a;',
     'overflow:hidden;',
   ].join('');
+  applySunkenStyle(panel);
 
-  // Header label
   var header = document.createElement('div');
   header.style.cssText = [
     'flex-shrink:0;padding:6px 12px;',
-    'background:' + T.mintEdgeD + ';',
-    'font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;',
+    'background:' + T.bgEdge + ';',
+    'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
   header.textContent = 'PRINT PREVIEW';
   panel.appendChild(header);
 
-  // Scrollable receipt content
   _receiptScroll = document.createElement('div');
-  _receiptScroll.style.cssText = 'flex:1;overflow-y:auto;';
+  _receiptScroll.style.cssText = 'flex:1;overflow-y:auto;background:' + T.mint + ';';
   _receiptScroll.appendChild(buildReceiptContent(state));
   panel.appendChild(_receiptScroll);
 
@@ -237,624 +223,438 @@ function buildReceiptPanel(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  ACCORDION CARDS (middle)
+//  DETAIL ROW HELPERS
 // ─────────────────────────────────────────────────
 
-function collapseOpenCard() {
-  if (_openCardBody) {
-    _openCardBody.style.display = 'none';
-    _openCardBody = null;
-  }
-  if (_openChevron) {
-    _openChevron.textContent = '›';
-    _openChevron = null;
-  }
-}
-
-function buildCardShell(opts) {
-  // opts: { accent, border, bg, bgHot, index }
-  var wrap = document.createElement('div');
-  wrap.style.cssText = [
-    'flex-shrink:0;',
-    'border:2px solid ' + (opts.border || T.border) + ';',
-    'background:' + (opts.bg || T.bgDark) + ';',
-    'display:flex;flex-direction:column;',
-    'overflow:hidden;',
-  ].join('');
-
-  // Left accent bar
-  var accent = document.createElement('div');
-  accent.style.cssText = [
-    'position:absolute;left:0;top:0;bottom:0;width:6px;',
-    'background:' + (opts.accent || T.mint) + ';',
-  ].join('');
-
-  return { wrap: wrap, accent: accent };
-}
-
-// Header row — always visible, tappable
-function buildCardHeader(opts) {
-  // opts: { index, title, accent, value, subtext, statusColor, onToggle }
-  var header = document.createElement('div');
-  header.style.cssText = [
-    'position:relative;',
-    'height:' + CARD_H + 'px;',
-    'flex-shrink:0;',
-    'display:flex;align-items:center;',
-    'padding:0 14px 0 20px;',
-    'cursor:pointer;user-select:none;-webkit-user-select:none;',
-    'gap:10px;',
-  ].join('');
-
-  // Accent bar
-  var accentBar = document.createElement('div');
-  accentBar.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:6px;background:' + (opts.accent || T.mint) + ';';
-  header.appendChild(accentBar);
-
-  // Index number
-  var num = document.createElement('div');
-  num.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';flex-shrink:0;width:28px;';
-  num.textContent = String(opts.index).padStart(2, '0');
-  header.appendChild(num);
-
-  // Title + sub
-  var titleWrap = document.createElement('div');
-  titleWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;';
-
-  var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';font-weight:bold;';
-  titleEl.textContent = opts.title || '';
-  titleWrap.appendChild(titleEl);
-
-  if (opts.subtext) {
-    var sub = document.createElement('div');
-    sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-    sub.textContent = opts.subtext;
-    titleWrap.appendChild(sub);
-  }
-
-  header.appendChild(titleWrap);
-
-  // Right: value + status dot + chevron
-  var rightWrap = document.createElement('div');
-  rightWrap.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
-
-  if (opts.value != null) {
-    var val = document.createElement('div');
-    val.style.cssText = 'font-family:' + T.fb + ';font-size:' + (opts.valueLarge ? '22px' : '15px') + ';color:' + T.gold + ';font-weight:bold;text-align:right;';
-    val.textContent = opts.value;
-    rightWrap.appendChild(val);
-  }
-
-  // Status dot
-  var dot = document.createElement('div');
-  dot.style.cssText = 'width:10px;height:10px;clip-path:circle(50%);background:' + (opts.statusColor || T.mint) + ';opacity:' + (opts.statusColor ? '1' : '0.5') + ';flex-shrink:0;';
-  rightWrap.appendChild(dot);
-
-  // Chevron
-  var chevron = document.createElement('div');
-  chevron.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';flex-shrink:0;width:14px;';
-  chevron.textContent = '›';
-  rightWrap.appendChild(chevron);
-
-  header.appendChild(rightWrap);
-
-  // Press animation
-  header.addEventListener('pointerdown', function() {
-    header.style.background = 'rgba(255,255,255,0.03)';
-  });
-  header.addEventListener('pointerleave', function() {
-    header.style.background = '';
-  });
-  header.addEventListener('pointerup', function() {
-    header.style.background = '';
-    if (opts.onToggle) opts.onToggle(chevron);
-  });
-
-  return { el: header, chevron: chevron };
-}
-
-// Card body container
-function buildCardBody() {
-  var body = document.createElement('div');
-  body.style.cssText = [
-    'display:none;',
-    'border-top:1px solid #333;',
-    'background:' + T.bgDark + ';',
-    'padding:14px 20px;',
-    'flex-direction:column;gap:8px;',
-  ].join('');
-  return body;
-}
-
-// Generic info row inside card body
-function bodyRow(label, value, valueColor) {
+function detailRow(label, value, valueColor) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';';
-
+  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';padding:2px 0;';
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:20px;color:' + T.mutedText + ';';
+  lbl.style.cssText = 'font-size:18px;color:' + T.mutedText + ';';
   lbl.textContent = label;
-
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:20px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
+  val.style.cssText = 'font-size:18px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
   val.textContent = value;
-
-  row.appendChild(lbl);
-  row.appendChild(val);
+  row.appendChild(lbl); row.appendChild(val);
   return row;
 }
 
-// Inline jump button
-function buildJumpButton(label, fill, textColor, onTap) {
-  var pair = buildStyledButton(fill);
-  pair.wrap.style.width = '100%';
-  pair.wrap.style.height = '36px';
-  pair.wrap.style.marginTop = '6px';
-  pair.inner.style.fontFamily = T.fb;
-  pair.inner.style.fontSize = '20px';
-  pair.inner.style.color = textColor;
-  pair.inner.textContent = label;
-  pair.wrap.addEventListener('pointerup', onTap);
-  return pair.wrap;
-}
-
-// ── Toggle helper used by all cards ──────────────
-function makeToggle(body) {
-  return function(chevron) {
-    if (body.style.display === 'none' || body.style.display === '') {
-      if (body.style.display === '') {
-        // Already open — close it
-        body.style.display = 'none';
-        chevron.textContent = '›';
-        _openCardBody = null;
-        _openChevron = null;
-        return;
-      }
-    }
-    // Close previously open card
-    collapseOpenCard();
-    // Open this one
-    body.style.display = 'flex';
-    chevron.textContent = '▾';
-    _openCardBody = body;
-    _openChevron = chevron;
-  };
+function detailDivider() {
+  var el = document.createElement('div');
+  el.style.cssText = 'border-top:1px solid #333;margin:4px 0;';
+  return el;
 }
 
 // ─────────────────────────────────────────────────
-//  CARD 01 — Sales Summary
+//  SHORTCUT BUTTONS (UNADJUSTED + $0 ALL)
 // ─────────────────────────────────────────────────
 
-function buildCard01(state) {
-  var body = buildCardBody();
-  var toggle = makeToggle(body);
+function buildShortcutRow(state) {
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;';
 
-  var h = buildCardHeader({
-    index: 1, title: 'Sales Summary',
-    subtext: 'Net / Liquor / Cash / Card',
-    value: fmt(state.netSales),
-    accent: T.mint, statusColor: null,
-    onToggle: toggle,
+  var uPair = buildStyledButton(T.darkBtn);
+  uPair.wrap.style.cssText = 'flex:1;height:34px;';
+  uPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.lavender + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + T.lavender + ';';
+  uPair.inner.textContent = 'UNADJUSTED';
+  uPair.wrap.addEventListener('pointerup', function() {
+    push('tip-adjustment', { filter: 'unadjusted', employeeId: state.employeeId, employeeName: state.employeeName });
   });
+  row.appendChild(uPair.wrap);
 
-  body.style.display = 'none';
-  body.appendChild(bodyRow('Net Sales',     fmt(state.netSales)));
-  body.appendChild(bodyRow('Liquor Sales',  fmt(state.liquorSales)));
-  body.appendChild(bodyRow('Cash Sales',    fmt(state.cashSales)));
-  body.appendChild(bodyRow('Card Sales',    fmt(state.cardSales)));
+  var zPair = buildStyledButton(T.darkBtn);
+  zPair.wrap.style.cssText = 'flex:1;height:34px;';
+  zPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + RED + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + RED + ';';
+  zPair.inner.textContent = '$0 ALL';
+  zPair.wrap.addEventListener('pointerup', function() {
+    doZeroAll(state);
+  });
+  row.appendChild(zPair.wrap);
 
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid ' + T.border + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
-  wrap.appendChild(h.el);
-  wrap.appendChild(body);
-  return wrap;
+  return row;
 }
 
 // ─────────────────────────────────────────────────
-//  CARD 02 — Check Stats  (RED if open checks)
+//  $0 ALL ACTION
 // ─────────────────────────────────────────────────
 
-function buildCard02(state, sceneEl) {
-  var blocked = state.openChecks > 0;
-  var body = buildCardBody();
-  var toggle = makeToggle(body);
+function doZeroAll(state) {
+  var count = state.unadjustedTips || 0;
+  if (count === 0) return;
 
-  var borderColor  = blocked ? T.red    : T.border;
-  var accentColor  = blocked ? T.red    : T.mint;
-  var bgColor      = blocked ? '#1a0a0a' : T.bgDark;
-  var statusColor  = blocked ? T.red    : null;
-  var subtext      = blocked
-    ? '⚠  ' + state.openChecks + ' open check' + (state.openChecks > 1 ? 's' : '') + ' — must close'
-    : state.totalChecks + ' checks · ' + fmt(state.avgCheck) + ' avg';
+  interrupt('zero-confirm', {
+    reason: 'zero-all-tips',
+    onBuild: function(el) {
+      el.style.flexDirection = 'column';
+      el.style.gap = '16px';
 
-  var h = buildCardHeader({
-    index: 2, title: 'Check Stats',
-    subtext: subtext,
-    value: fmt(state.avgCheck),
-    accent: accentColor, statusColor: statusColor,
-    onToggle: toggle,
-  });
+      var card = document.createElement('div');
+      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + RED + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
 
-  // Override subtext color if blocked
-  if (blocked) {
-    var subEl = h.el.querySelectorAll('div')[2];
-    if (subEl) subEl.style.color = T.red;
-  }
+      var msg = document.createElement('div');
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';margin-bottom:12px;';
+      msg.textContent = 'Zero out all ' + count + ' unadjusted tips?';
+      card.appendChild(msg);
 
-  body.style.display = 'none';
-  body.appendChild(bodyRow('Total Checks', String(state.totalChecks), T.mint));
-  body.appendChild(bodyRow('Avg Check',    fmt(state.avgCheck)));
+      var sub = document.createElement('div');
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';margin-bottom:20px;';
+      sub.textContent = 'This will set all unadjusted card tips to $0.00';
+      card.appendChild(sub);
 
-  if (blocked) {
-    body.appendChild(buildJumpButton(
-      '→ Open Checks', T.red, '#fff',
-      function() {
-        // TODO: push('order-entry') or open checks scene when available
-      }
-    ));
-  }
+      var btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid ' + borderColor + ';background:' + bgColor + ';display:flex;flex-direction:column;';
-  wrap.appendChild(h.el);
-  wrap.appendChild(body);
-  return wrap;
+      btns.appendChild(buildButton('CONFIRM', {
+        fill: T.red, color: '#fff', fontSize: '18px',
+        width: 140, height: 44,
+        onTap: function() { resolveInterrupt(true); },
+      }));
+
+      btns.appendChild(buildButton('CANCEL', {
+        fill: T.darkBtn, color: T.mint, fontSize: '18px',
+        width: 120, height: 44,
+        onTap: function() { cancelInterrupt(); },
+      }));
+
+      card.appendChild(btns);
+      el.appendChild(card);
+    },
+  }).then(function() {
+    var url = '/api/v1/payments/zero-unadjusted';
+    if (state.employeeId) url += '?server_id=' + encodeURIComponent(state.employeeId);
+    fetch(url, { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function() { refreshScene(); })
+      .catch(function(err) { console.error('[KINDpos] Zero all failed:', err); });
+  }).catch(function() {});
 }
 
 // ─────────────────────────────────────────────────
-//  CARD 03 — Tips Received  (YELLOW if unadjusted)
+//  CARD DEFINITIONS — 4 cards in 2×2 grid
 // ─────────────────────────────────────────────────
 
-function buildCard03(state) {
-  var blocked = state.unadjustedTips > 0;
-  var body = buildCardBody();
-  var toggle = makeToggle(body);
-
-  var borderColor = blocked ? T.yellow  : T.border;
-  var accentColor = blocked ? T.yellow  : T.gold;
-  var bgColor     = blocked ? '#1a1400' : T.bgDark;
-  var statusColor = blocked ? T.yellow  : null;
-  var subtext     = blocked
-    ? '⚠  ' + state.unadjustedTips + ' unadjusted — adjust or enter $0.00'
-    : 'Card tips this shift';
-
-  var h = buildCardHeader({
-    index: 3, title: 'Tips Received',
-    subtext: subtext,
-    value: fmt(state.cardTips),
-    accent: accentColor, statusColor: statusColor,
-    onToggle: toggle,
-  });
-
-  if (blocked) {
-    var subEl = h.el.querySelectorAll('div')[2];
-    if (subEl) subEl.style.color = T.yellow;
-  }
-
-  body.style.display = 'none';
-  body.appendChild(bodyRow('Card Tips', fmt(state.cardTips), blocked ? T.yellow : T.gold));
-
-  if (blocked) {
-    body.appendChild(buildJumpButton(
-      '→ Tip Adjustment  (' + state.unadjustedTips + ' remaining)',
-      T.bgDark, T.yellow,
-      function() {
-        // Return here after adjustment via pop()
-        push('tip-adjustment', {
-          employeeId:   state.employeeId,
-          employeeName: state.employeeName,
-          role: 'server',
+function getCardDefs(state) {
+  return [
+    {
+      title: 'Sales Summary',
+      hero: fmt(state.netSales),
+      heroColor: T.cyan,
+      subtitle: state.totalChecks + ' checks • ' + fmt(state.avgCheck) + ' avg',
+      border: T.border,
+      statusColor: null,
+      buildExpanded: function(el) {
+        el.appendChild(detailRow('Net Sales',    fmt(state.netSales)));
+        el.appendChild(detailRow('Cash Sales',   fmt(state.cashSales)));
+        el.appendChild(detailRow('Card Sales',   fmt(state.cardSales)));
+        el.appendChild(detailDivider());
+        el.appendChild(detailRow('Total Checks', String(state.totalChecks), T.mint));
+        el.appendChild(detailRow('Avg Check',    fmt(state.avgCheck)));
+        if (state.openChecks > 0) {
+          el.appendChild(detailRow('Open Checks', String(state.openChecks), RED));
+        }
+      },
+    },
+    {
+      title: 'Tip Summary',
+      hero: fmt(state.cardTips + state.cashTips),
+      heroColor: T.cyan,
+      subtitle: 'card tips • cash tips',
+      border: T.border,
+      statusColor: state.unadjustedTips > 0 ? T.yellow : null,
+      hasShortcuts: true,
+      buildExpanded: function(el) {
+        el.appendChild(detailRow('Card Tips',    fmt(state.cardTips)));
+        el.appendChild(detailRow('Cash Tips',    fmt(state.cashTips)));
+        el.appendChild(detailDivider());
+        el.appendChild(detailRow('Total Tips',   fmt(state.cardTips + state.cashTips), T.gold));
+        if (state.unadjustedTips > 0) {
+          el.appendChild(detailRow('Unadjusted', String(state.unadjustedTips), T.yellow));
+        }
+        el.appendChild(buildGap(8));
+        el.appendChild(buildShortcutRow(state));
+      },
+    },
+    {
+      title: 'Tip-Out Calc',
+      hero: '−' + fmt(state.tipOutTotal),
+      heroColor: RED,
+      subtitle: (state.tipOutRoles.length ? state.tipOutRoles[0].percent + '% rate' : '0%') + ' • editable',
+      border: T.border,
+      statusColor: null,
+      buildExpanded: function(el) {
+        state.tipOutRoles.forEach(function(r) {
+          el.appendChild(detailRow(r.label + ' (' + r.percent + '% ' + r.basis + ')', fmt(r.amount)));
         });
-      }
-    ));
-    // Add yellow border to jump button
+        if (state.oneTimeRole && state.oneTimeRole.percent > 0) {
+          var ot = state.oneTimeRole;
+          el.appendChild(detailRow((ot.label || 'One-Time') + ' ' + ot.percent + '%', fmt(ot.amount)));
+        }
+        el.appendChild(detailDivider());
+        el.appendChild(detailRow('Total Tip-Out', fmt(state.tipOutTotal)));
+
+        // Adjust % button
+        var adjPair = buildStyledButton(T.gold);
+        adjPair.wrap.style.cssText = 'width:100%;height:36px;margin-top:8px;';
+        adjPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:#1a1a1a;display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.gold + ';';
+        adjPair.inner.textContent = 'Adjust %';
+        adjPair.wrap.addEventListener('pointerup', function() {
+          openAdjustOverlay(state);
+        });
+        el.appendChild(adjPair.wrap);
+      },
+    },
+    {
+      title: 'Take-Home',
+      hero: fmt(state.takeHome),
+      heroColor: T.gold,
+      subtitle: 'tips − tipout + cash',
+      border: T.gold,
+      statusColor: null,
+      buildExpanded: function(el) {
+        el.appendChild(detailRow('Card Tips',    fmt(state.cardTips)));
+        el.appendChild(detailRow('Tip-Out',      '− ' + fmt(state.tipOutTotal), RED));
+        el.appendChild(detailDivider());
+        el.appendChild(detailRow('Take-Home',    fmt(state.takeHome), T.gold));
+        el.appendChild(detailDivider());
+        el.appendChild(detailRow('Cash Expected', fmt(state.cashExpected)));
+      },
+    },
+  ];
+}
+
+// ─────────────────────────────────────────────────
+//  CARD TILE (collapsed view in grid)
+// ─────────────────────────────────────────────────
+
+function buildCardTile(def, idx) {
+  var pair = buildStyledButton(T.darkBtn);
+  var wrap = pair.wrap;
+  var inner = pair.inner;
+
+  inner.style.borderWidth = BEVEL + 'px';
+  inner.style.clipPath = chamfer(CHAM);
+  inner.style.flexDirection = 'column';
+  inner.style.alignItems = 'stretch';
+  inner.style.justifyContent = 'flex-start';
+  inner.style.padding = '10px 12px';
+  inner.style.position = 'relative';
+  inner.style.gap = '2px';
+
+  if (def.border && def.border !== T.border) {
+    inner.style.borderColor = def.border;
   }
 
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid ' + borderColor + ';background:' + bgColor + ';display:flex;flex-direction:column;';
-  if (blocked) {
-    // Yellow border override on jump button
-    var jBtn = body.querySelector('[style]');
-  }
-  wrap.appendChild(h.el);
-  wrap.appendChild(body);
-  return wrap;
-}
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;text-align:center;';
+  title.textContent = def.title;
+  inner.appendChild(title);
 
-// ─────────────────────────────────────────────────
-//  CARD 04 — Tip-Out
-// ─────────────────────────────────────────────────
+  var hr = document.createElement('div');
+  hr.style.cssText = 'height:1px;background:' + T.border + ';margin:4px 0;';
+  inner.appendChild(hr);
 
-function buildCard04(state) {
-  var body = buildCardBody();
-  var toggle = makeToggle(body);
+  var hero = document.createElement('div');
+  hero.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + (def.heroColor || T.cyan) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
+  hero.textContent = def.hero;
+  inner.appendChild(hero);
 
-  var roleNames = state.tipOutRoles.map(function(r) { return r.label; }).join(' / ');
+  var sub = document.createElement('div');
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.mutedText + ';text-align:center;';
+  sub.textContent = def.subtitle;
+  inner.appendChild(sub);
 
-  var h = buildCardHeader({
-    index: 4, title: 'Tip-Out',
-    subtext: roleNames,
-    value: fmt(state.tipOutTotal),
-    accent: T.gold, statusColor: null,
-    onToggle: toggle,
-  });
+  var hint = document.createElement('div');
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.dimText + ';text-align:center;margin-top:2px;';
+  hint.textContent = 'tap to expand ▸';
+  inner.appendChild(hint);
 
-  body.style.display = 'none';
+  var dot = document.createElement('div');
+  dot.style.cssText = 'position:absolute;bottom:8px;right:8px;width:8px;height:8px;clip-path:circle(50%);background:' + (def.statusColor || T.cyan) + ';opacity:' + (def.statusColor ? '1' : '0.4') + ';';
+  inner.appendChild(dot);
 
-  state.tipOutRoles.forEach(function(r) {
-    var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:20px;';
-
-    var nameEl = document.createElement('span');
-    nameEl.style.cssText = 'color:' + T.mint + ';min-width:60px;';
-    nameEl.textContent = r.label;
-
-    var dash = document.createElement('span');
-    dash.style.cssText = 'color:' + T.dimText + ';';
-    dash.textContent = '–';
-
-    // Percent badge
-    var badge = document.createElement('div');
-    badge.style.cssText = 'border:2px solid ' + T.gold + ';padding:2px 8px;font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';min-width:36px;text-align:center;';
-    badge.textContent = r.percent + '%';
-
-    var basisEl = document.createElement('span');
-    basisEl.style.cssText = 'color:' + T.mutedText + ';flex:1;';
-    basisEl.textContent = r.basis;
-
-    var amtEl = document.createElement('span');
-    amtEl.style.cssText = 'color:' + T.mint + ';margin-left:auto;';
-    amtEl.textContent = fmt(r.amount);
-
-    row.appendChild(nameEl);
-    row.appendChild(dash);
-    row.appendChild(badge);
-    row.appendChild(basisEl);
-    row.appendChild(amtEl);
-    body.appendChild(row);
-  });
-
-  // One-time role if set
-  if (state.oneTimeRole && state.oneTimeRole.percent > 0) {
-    var ot = state.oneTimeRole;
-    var otRow = document.createElement('div');
-    otRow.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:20px;';
-    otRow.innerHTML =
-      '<span style="color:' + T.mint + ';min-width:60px;">' + (ot.label || 'One-Time') + '</span>' +
-      '<span style="color:' + T.dimText + ';">–</span>' +
-      '<div style="border:2px solid ' + T.gold + ';padding:2px 8px;font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';min-width:36px;text-align:center;">' + ot.percent + '%</div>' +
-      '<span style="color:' + T.mutedText + ';flex:1;">' + ot.basis + '</span>' +
-      '<span style="color:' + T.mint + ';margin-left:auto;">' + fmt(ot.amount) + '</span>';
-    body.appendChild(otRow);
+  if (def.hasShortcuts && _state) {
+    var shortcuts = buildShortcutRow(_state);
+    shortcuts.style.marginTop = '4px';
+    inner.appendChild(shortcuts);
   }
 
-  // Divider
-  var div = document.createElement('div');
-  div.style.cssText = 'border-top:1px solid #333;margin:6px 0;';
-  body.appendChild(div);
-
-  // Total row
-  body.appendChild(bodyRow('Total Tip-Out', fmt(state.tipOutTotal)));
-
-  // Adjust % button
-  body.appendChild(buildJumpButton('Adjust %', T.gold, '#1a1a1a', function() {
-    openAdjustOverlay(state);
-  }));
-
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid ' + T.dimText + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
-  wrap.appendChild(h.el);
-  wrap.appendChild(body);
-  return wrap;
-}
-
-// ─────────────────────────────────────────────────
-//  CARD 05 — Take-Home  (hero number)
-// ─────────────────────────────────────────────────
-
-function buildCard05(state) {
-  var body = buildCardBody();
-  var toggle = makeToggle(body);
-
-  var h = buildCardHeader({
-    index: 5, title: 'Take-Home',
-    subtext: 'Card Tips − Tip-Out',
-    value: fmt(state.takeHome),
-    valueLarge: true,
-    accent: T.gold, statusColor: null,
-    onToggle: toggle,
+  wrap.addEventListener('pointerup', function(e) {
+    if (e.target.closest && e.target.closest('[data-shortcut]')) return;
+    expandCard(idx);
   });
 
-  body.style.display = 'none';
-  body.appendChild(bodyRow('Card Tips',  fmt(state.cardTips)));
-  body.appendChild(bodyRow('Tip-Out',    '− ' + fmt(state.tipOutTotal), T.red));
-
-  var divEl = document.createElement('div');
-  divEl.style.cssText = 'border-top:1px solid ' + T.border + ';margin:4px 0;';
-  body.appendChild(divEl);
-
-  body.appendChild(bodyRow('Take-Home', fmt(state.takeHome), T.gold));
-
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid ' + T.gold + ';background:#1f1a0a;display:flex;flex-direction:column;';
-  wrap.appendChild(h.el);
-  wrap.appendChild(body);
   return wrap;
 }
 
 // ─────────────────────────────────────────────────
-//  CARD 06 — Cash Expected
+//  CARD STRIP (thin label for collapsed siblings)
 // ─────────────────────────────────────────────────
 
-function buildCard06(state) {
-  var body = buildCardBody();
-  var toggle = makeToggle(body);
-
-  var h = buildCardHeader({
-    index: 6, title: 'Cash Expected',
-    subtext: 'Cash Received − Card Tips',
-    value: fmt(state.cashExpected),
-    valueLarge: true,
-    accent: T.mint, statusColor: null,
-    onToggle: toggle,
-  });
-
-  body.style.display = 'none';
-  body.appendChild(bodyRow('Cash Received',  fmt(state.cashReceived)));
-  body.appendChild(bodyRow('Card Tips Owed', '− ' + fmt(state.cardTips), T.red));
-
-  var divEl = document.createElement('div');
-  divEl.style.cssText = 'border-top:1px solid ' + T.border + ';margin:4px 0;';
-  body.appendChild(divEl);
-
-  body.appendChild(bodyRow('Cash Expected', fmt(state.cashExpected)));
-
-  var infoEl = document.createElement('div');
-  infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';margin-top:6px;';
-  infoEl.textContent = 'Informational — no action required';
-  body.appendChild(infoEl);
-
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'border:2px solid ' + T.border + ';background:' + T.bgDark + ';display:flex;flex-direction:column;';
-  wrap.appendChild(h.el);
-  wrap.appendChild(body);
-  return wrap;
-}
-
-// ─────────────────────────────────────────────────
-//  CARDS COLUMN
-// ─────────────────────────────────────────────────
-
-function buildCardsColumn(state, sceneEl) {
-  var col = document.createElement('div');
-  col.style.cssText = [
-    'width:' + CARDS_W + 'px;flex-shrink:0;',
-    'display:flex;flex-direction:column;',
-    'gap:' + CARD_GAP + 'px;',
-    'overflow-y:auto;',
+function buildCardStrip(def, idx) {
+  var strip = document.createElement('div');
+  strip.style.cssText = [
+    'height:' + STRIP_H + 'px;',
+    'display:flex;align-items:center;justify-content:space-between;',
+    'padding:0 12px;cursor:pointer;',
+    'background:' + T.bgDark + ';',
+    'border:1px solid ' + T.border + ';',
+    'clip-path:' + chamfer(4) + ';',
+    'font-family:' + T.fb + ';',
+    'user-select:none;-webkit-user-select:none;',
   ].join('');
 
-  col.appendChild(buildCard01(state));
-  col.appendChild(buildCard02(state, sceneEl));
-  col.appendChild(buildCard03(state));
-  col.appendChild(buildCard04(state));
-  col.appendChild(buildCard05(state));
-  col.appendChild(buildCard06(state));
+  var lbl = document.createElement('span');
+  lbl.style.cssText = 'font-size:13px;color:' + T.gold + ';';
+  lbl.textContent = def.title;
+  strip.appendChild(lbl);
 
-  return col;
+  var val = document.createElement('span');
+  val.style.cssText = 'font-size:13px;color:' + T.cyan + ';';
+  val.textContent = def.hero;
+  strip.appendChild(val);
+
+  strip.addEventListener('pointerup', function() { expandCard(idx); });
+
+  return strip;
 }
 
 // ─────────────────────────────────────────────────
-//  ALERT SUMMARY PANEL (right, top)
+//  GRID VIEW (2×2 card grid)
 // ─────────────────────────────────────────────────
 
-function buildAlertPanel(state) {
-  var panel = document.createElement('div');
-  panel.style.cssText = [
+function buildGridView(state) {
+  var defs = getCardDefs(state);
+  var grid = document.createElement('div');
+  grid.style.cssText = [
     'flex:1;',
-    'border:1px solid ' + T.bg2 + ';',
+    'display:grid;',
+    'grid-template-columns:repeat(2,1fr);',
+    'grid-template-rows:repeat(2,1fr);',
+    'gap:' + CARD_GAP + 'px;',
+  ].join('');
+
+  defs.forEach(function(def, i) { grid.appendChild(buildCardTile(def, i)); });
+
+  return grid;
+}
+
+// ─────────────────────────────────────────────────
+//  EXPANDED VIEW
+// ─────────────────────────────────────────────────
+
+function buildExpandedView(state, idx) {
+  var defs = getCardDefs(state);
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:4px;overflow:hidden;';
+
+  for (var i = 0; i < idx; i++) { wrap.appendChild(buildCardStrip(defs[i], i)); }
+
+  var expanded = document.createElement('div');
+  expanded.style.cssText = [
+    'flex:1;',
     'background:' + T.bgDark + ';',
+    'border:2px solid ' + (defs[idx].border || T.border) + ';',
+    'clip-path:' + chamfer(CHAM) + ';',
     'display:flex;flex-direction:column;',
     'overflow:hidden;',
   ].join('');
 
-  function rebuildContent() {
-    panel.innerHTML = '';
-    var blocked = isBlocked(state);
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'flex-shrink:0;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:' + T.bg3 + ';cursor:pointer;user-select:none;-webkit-user-select:none;';
+  var hTitle = document.createElement('span');
+  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';font-weight:bold;';
+  hTitle.textContent = defs[idx].title;
+  var hHint = document.createElement('span');
+  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
+  hHint.textContent = 'tap to collapse ▾';
+  hdr.appendChild(hTitle); hdr.appendChild(hHint);
+  hdr.addEventListener('pointerup', function() { collapseToGrid(); });
+  expanded.appendChild(hdr);
 
-    // Header
-    var hdr = document.createElement('div');
-    hdr.style.cssText = [
-      'flex-shrink:0;padding:10px 14px;',
-      'background:' + (blocked ? '#1a0000' : '#0a1a0a') + ';',
-      'font-family:' + T.fb + ';font-size:20px;font-weight:bold;text-align:center;',
-      'color:' + (blocked ? T.red : T.mint) + ';',
-    ].join('');
-    hdr.textContent = blocked ? '⚠  Resolve to finalize' : '✓  Ready to finalize';
-    panel.appendChild(hdr);
+  var content = document.createElement('div');
+  content.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:4px;';
+  defs[idx].buildExpanded(content);
+  expanded.appendChild(content);
 
-    var list = document.createElement('div');
-    list.style.cssText = 'padding:12px 14px;display:flex;flex-direction:column;gap:10px;flex:1;';
+  wrap.appendChild(expanded);
 
-    function alertItem(color, text) {
-      var item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:8px;font-family:' + T.fb + ';font-size:20px;color:' + color + ';';
-      var dot = document.createElement('div');
-      dot.style.cssText = 'width:8px;height:8px;clip-path:circle(50%);background:' + color + ';flex-shrink:0;';
-      var txt = document.createElement('span');
-      txt.textContent = text;
-      item.appendChild(dot);
-      item.appendChild(txt);
-      return item;
-    }
+  for (var j = idx + 1; j < defs.length; j++) { wrap.appendChild(buildCardStrip(defs[j], j)); }
 
-    // Blockers
-    if (state.openChecks > 0) {
-      list.appendChild(alertItem(T.red, state.openChecks + ' open check' + (state.openChecks > 1 ? 's' : '') + ' not closed'));
-    }
-    if (state.unadjustedTips > 0) {
-      list.appendChild(alertItem(T.yellow, state.unadjustedTips + ' unadjusted tip' + (state.unadjustedTips > 1 ? 's' : '')));
-    }
-
-    // Separator if mixed
-    if (blocked) {
-      var sep = document.createElement('div');
-      sep.style.cssText = 'border-top:1px solid ' + T.bg2 + ';margin:4px 0;';
-      list.appendChild(sep);
-    }
-
-    // Clean items
-    function cleanItem(text) {
-      list.appendChild(alertItem(T.border, text));
-    }
-    if (state.openChecks === 0)    cleanItem('Check Stats ✓');
-    if (state.unadjustedTips === 0) cleanItem('Tips Received ✓');
-    cleanItem('Sales Summary ✓');
-    cleanItem('Tip-Out ✓');
-    cleanItem('Take-Home ✓');
-    cleanItem('Cash Expected ✓');
-
-    panel.appendChild(list);
-
-    // Manager approval gate
-    var mgr = document.createElement('div');
-    mgr.style.cssText = 'flex-shrink:0;padding:8px;border-top:1px solid #1a1a1a;font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;';
-    mgr.textContent = '[ manager approval required ]';
-    panel.appendChild(mgr);
-  }
-
-  rebuildContent();
-  panel._rebuild = rebuildContent;
-  _alertContent = panel;
-  return panel;
+  return wrap;
 }
 
 // ─────────────────────────────────────────────────
-//  RIGHT COLUMN (alert + buttons)
+//  EXPAND / COLLAPSE STATE
 // ─────────────────────────────────────────────────
 
-function buildRightColumn(state) {
-  var col = document.createElement('div');
-  col.style.cssText = [
-    'width:' + RIGHT_W + 'px;flex-shrink:0;',
-    'display:flex;flex-direction:column;',
-    'gap:8px;',
+function expandCard(idx) {
+  if (!_state || !_gridContainer) return;
+  _expandedIdx = idx;
+  _gridContainer.innerHTML = '';
+  _gridContainer.appendChild(buildExpandedView(_state, idx));
+}
+
+function collapseToGrid() {
+  if (!_state || !_gridContainer) return;
+  _expandedIdx = null;
+  _gridContainer.innerHTML = '';
+  _gridContainer.appendChild(buildGridView(_state));
+}
+
+// ─────────────────────────────────────────────────
+//  BLOCKER / CLEAR BANNER
+// ─────────────────────────────────────────────────
+
+function buildBlockerBanner(state) {
+  var el = document.createElement('div');
+  el.style.cssText = [
+    'flex-shrink:0;height:' + BANNER_H + 'px;',
+    'display:flex;align-items:center;justify-content:center;',
+    'font-family:' + T.fb + ';font-size:16px;',
+    'clip-path:' + chamfer(4) + ';',
   ].join('');
 
-  // Alert panel — flex:1 fills space above buttons
-  col.appendChild(buildAlertPanel(state));
+  var blocked = isBlocked(state);
+  if (blocked) {
+    el.style.background = 'rgba(255,51,85,0.1)';
+    el.style.border = '1px solid ' + RED;
+    el.style.color = RED;
+    var msgs = [];
+    if (state.openChecks > 0) msgs.push(state.openChecks + ' open check' + (state.openChecks > 1 ? 's' : ''));
+    if (state.unadjustedTips > 0) msgs.push(state.unadjustedTips + ' unadjusted tip' + (state.unadjustedTips > 1 ? 's' : ''));
+    el.textContent = '⚠ RESOLVE: ' + msgs.join(' + ');
+  } else {
+    el.style.background = 'rgba(51,255,255,0.08)';
+    el.style.border = '1px solid ' + T.cyan;
+    el.style.color = T.cyan;
+    el.textContent = '✓ ALL CLEAR — ready to finalize';
+  }
 
-  // PRINT — always available
-  var printPair = buildStyledButton(T.bgLight);
-  printPair.wrap.style.width = '100%';
-  printPair.wrap.style.height = PRINT_H + 'px';
-  printPair.inner.style.fontFamily = T.fb;
-  printPair.inner.style.fontSize = '22px';
-  printPair.inner.style.color = T.mint;
+  _bannerEl = el;
+  return el;
+}
+
+// ─────────────────────────────────────────────────
+//  ACTION BAR (PRINT → FINALIZE)
+// ─────────────────────────────────────────────────
+
+function buildActionBar(state) {
+  var bar = document.createElement('div');
+  bar.style.cssText = 'flex-shrink:0;height:' + ACTION_H + 'px;display:flex;align-items:stretch;gap:8px;';
+
+  function arrow() {
+    var el = document.createElement('div');
+    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:20px;color:' + T.dimText + ';flex-shrink:0;';
+    el.textContent = '→';
+    return el;
+  }
+
+  // PRINT
+  var printPair = buildStyledButton(T.darkBtn);
+  printPair.wrap.style.cssText = 'flex:1;height:100%;';
+  printPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:18px;color:' + T.cyan + ';border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
-    // Print server checkout receipts for all closed orders
     if (state.closedOrders && state.closedOrders.length) {
       state.closedOrders.forEach(function(oid) {
         fetch('/api/v1/print/receipt/' + oid + '?copy_type=itemized', { method: 'POST' })
@@ -862,47 +662,94 @@ function buildRightColumn(state) {
       });
     }
   });
-  col.appendChild(printPair.wrap);
-
-  // Manager gate label
-  var mgLabel = document.createElement('div');
-  mgLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;flex-shrink:0;';
-  mgLabel.textContent = '[ manager approval gate ]';
-  col.appendChild(mgLabel);
+  bar.appendChild(printPair.wrap);
+  bar.appendChild(arrow());
 
   // FINALIZE
-  col.appendChild(buildFinalizeButton(state));
-
-  return col;
-}
-
-function buildFinalizeButton(state) {
   var blocked = isBlocked(state);
-  var fill     = blocked ? T.bgDark  : T.gold;
-  var textColor = blocked ? '#554400' : '#1a1a1a';
-  var label    = '//FINALIZE//';
-
-  var pair = buildStyledButton(fill);
-  pair.wrap.style.width = '100%';
-  pair.wrap.style.height = FINALIZE_H + 'px';
-  pair.inner.style.fontFamily = T.fb;
-  pair.inner.style.fontSize = '20px';
-  pair.inner.style.color = textColor;
-  pair.inner.textContent = label;
+  var finPair = buildStyledButton(T.darkBtn);
+  finPair.wrap.style.cssText = 'flex:1;height:100%;';
 
   if (blocked) {
-    // Dashed border overlay to signal disabled
-    pair.wrap.style.outline = '2px dashed #554400';
-    pair.wrap.style.outlineOffset = '-4px';
-    pair.wrap.style.pointerEvents = 'none';
+    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#555;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    finPair.inner.textContent = '🔒 //FINALIZE//';
+    finPair.wrap.style.pointerEvents = 'none';
+    finPair.wrap.style.opacity = '0.5';
+  } else if (!_pinUnlocked) {
+    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#888;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    finPair.inner.textContent = '🔒 //FINALIZE//';
+    finPair.wrap.addEventListener('pointerup', function() {
+      openPinGate(function() {
+        _pinUnlocked = true;
+        if (bar.parentNode) {
+          var newBar = buildActionBar(state);
+          bar.parentNode.replaceChild(newBar, bar);
+        }
+      });
+    });
   } else {
-    pair.wrap.addEventListener('pointerup', function() {
+    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#1a1a1a;border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.cyan + ';';
+    finPair.inner.textContent = '//FINALIZE//';
+    finPair.wrap.addEventListener('pointerup', function() {
       doFinalize(state);
     });
   }
+  bar.appendChild(finPair.wrap);
 
-  _finalizeWrap = pair.wrap;
-  return pair.wrap;
+  return bar;
+}
+
+// ─────────────────────────────────────────────────
+//  MANAGER PIN GATE
+// ─────────────────────────────────────────────────
+
+function openPinGate(onSuccess) {
+  interrupt('manager-pin', {
+    reason: 'manager-pin',
+    onBuild: function(el) {
+      el.style.flexDirection = 'column';
+      el.style.gap = '16px';
+      el.style.alignItems = 'center';
+
+      var card = document.createElement('div');
+      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:24px 32px;text-align:center;clip-path:' + chamfer(10) + ';';
+
+      var msg = document.createElement('div');
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:4px;';
+      msg.textContent = 'Manager PIN Required';
+      card.appendChild(msg);
+
+      var sub = document.createElement('div');
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';margin-bottom:16px;';
+      sub.textContent = 'Enter 4-digit manager PIN';
+      card.appendChild(sub);
+
+      var pad = buildNumpad({
+        maxDigits: 4,
+        masked: true,
+        onSubmit: function(pin) {
+          if (pin === MANAGER_PIN) {
+            resolveInterrupt(true);
+          } else {
+            pad.setError('WRONG PIN');
+          }
+        },
+      });
+      card.appendChild(pad);
+
+      var cancelBtn = buildButton('Cancel', {
+        fill: T.darkBtn, color: T.mint, fontSize: '16px',
+        width: 120, height: 40,
+        onTap: function() { cancelInterrupt(); },
+      });
+      cancelBtn.style.marginTop = '12px';
+      card.appendChild(cancelBtn);
+
+      el.appendChild(card);
+    },
+  }).then(function() {
+    if (onSuccess) onSuccess();
+  }).catch(function() {});
 }
 
 // ─────────────────────────────────────────────────
@@ -910,7 +757,6 @@ function buildFinalizeButton(state) {
 // ─────────────────────────────────────────────────
 
 function openAdjustOverlay(state) {
-  // Working copy of roles
   var workingRoles = state.tipOutRoles.map(function(r) {
     return { label: r.label, percent: r.percent, basis: r.basis };
   });
@@ -924,16 +770,8 @@ function openAdjustOverlay(state) {
       el.style.gap = '0';
 
       var card = document.createElement('div');
-      card.style.cssText = [
-        'background:' + T.bg + ';',
-        'border:3px solid ' + T.gold + ';',
-        'padding:0;width:520px;',
-        'clip-path:' + chamfer(12) + ';',
-        'display:flex;flex-direction:column;',
-        'overflow:hidden;',
-      ].join('');
+      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:0;width:520px;clip-path:' + chamfer(12) + ';display:flex;flex-direction:column;overflow:hidden;';
 
-      // Overlay header
       var ovHdr = document.createElement('div');
       ovHdr.style.cssText = 'background:' + T.gold + ';padding:12px 20px;font-family:' + T.fb + ';font-size:20px;color:#1a1a1a;font-weight:bold;text-align:center;';
       ovHdr.textContent = 'Adjust Tip-Out %';
@@ -942,17 +780,12 @@ function openAdjustOverlay(state) {
       var body = document.createElement('div');
       body.style.cssText = 'padding:16px 20px;display:flex;flex-direction:column;gap:12px;';
 
-      // Per-role rows
-      workingRoles.forEach(function(r) {
-        body.appendChild(buildAdjustRow(r));
-      });
+      workingRoles.forEach(function(r) { body.appendChild(buildAdjustRow(r)); });
 
-      // Divider
       var sep = document.createElement('div');
       sep.style.cssText = 'border-top:1px solid ' + T.border + ';';
       body.appendChild(sep);
 
-      // One-time row
       var otLabel = document.createElement('div');
       otLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';';
       otLabel.textContent = 'ONE-TIME (this checkout only)';
@@ -961,7 +794,6 @@ function openAdjustOverlay(state) {
 
       card.appendChild(body);
 
-      // Confirm / Cancel buttons
       var btnRow = document.createElement('div');
       btnRow.style.cssText = 'display:flex;gap:0;border-top:2px solid ' + T.border + ';';
 
@@ -972,9 +804,7 @@ function openAdjustOverlay(state) {
       cancelPair.inner.style.fontSize = '16px';
       cancelPair.inner.style.color = T.mint;
       cancelPair.inner.textContent = 'CANCEL';
-      cancelPair.wrap.addEventListener('pointerup', function() {
-        dismissOverlay();
-      });
+      cancelPair.wrap.addEventListener('pointerup', function() { dismissOverlay(); });
 
       var confirmPair = buildStyledButton(T.gold);
       confirmPair.wrap.style.flex = '1';
@@ -984,15 +814,10 @@ function openAdjustOverlay(state) {
       confirmPair.inner.style.color = '#1a1a1a';
       confirmPair.inner.textContent = 'CONFIRM';
       confirmPair.wrap.addEventListener('pointerup', function() {
-        // Write back to state
-        workingRoles.forEach(function(r, i) {
-          state.tipOutRoles[i].percent = r.percent;
-        });
+        workingRoles.forEach(function(r, i) { state.tipOutRoles[i].percent = r.percent; });
         state.oneTimeRole = workingOneTime.percent > 0 ? {
-          label: workingOneTime.label,
-          percent: workingOneTime.percent,
-          basis: workingOneTime.basis,
-          basisAmt: 0, amount: 0,
+          label: workingOneTime.label, percent: workingOneTime.percent,
+          basis: workingOneTime.basis, basisAmt: 0, amount: 0,
         } : null;
         recalcTipOut(state);
         dismissOverlay();
@@ -1002,7 +827,6 @@ function openAdjustOverlay(state) {
       btnRow.appendChild(cancelPair.wrap);
       btnRow.appendChild(confirmPair.wrap);
       card.appendChild(btnRow);
-
       el.appendChild(card);
     },
   });
@@ -1016,7 +840,6 @@ function buildAdjustRow(role) {
   nameEl.style.cssText = 'font-size:20px;color:' + T.mint + ';min-width:80px;';
   nameEl.textContent = role.label;
 
-  // Basis selector (simple toggle: Net Sales ↔ Liquor Sales)
   var basisBtn = document.createElement('div');
   basisBtn.style.cssText = 'font-size:20px;color:' + T.mutedText + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
   basisBtn.textContent = role.basis;
@@ -1025,30 +848,21 @@ function buildAdjustRow(role) {
     basisBtn.textContent = role.basis;
   });
 
-  // − button
   var decBtn = buildStyledButton(T.bgDark);
-  decBtn.wrap.style.width = '36px';
-  decBtn.wrap.style.height = '36px';
-  decBtn.inner.style.fontFamily = T.fb;
-  decBtn.inner.style.fontSize = '20px';
-  decBtn.inner.style.color = T.mint;
+  decBtn.wrap.style.width = '36px'; decBtn.wrap.style.height = '36px';
+  decBtn.inner.style.fontFamily = T.fb; decBtn.inner.style.fontSize = '20px'; decBtn.inner.style.color = T.mint;
   decBtn.inner.textContent = '−';
   decBtn.wrap.addEventListener('pointerup', function() {
     if (role.percent > 0) { role.percent = parseFloat((role.percent - 0.5).toFixed(1)); pctEl.textContent = role.percent + '%'; }
   });
 
-  // % display
   var pctEl = document.createElement('div');
   pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
   pctEl.textContent = role.percent + '%';
 
-  // + button
   var incBtn = buildStyledButton(T.bgDark);
-  incBtn.wrap.style.width = '36px';
-  incBtn.wrap.style.height = '36px';
-  incBtn.inner.style.fontFamily = T.fb;
-  incBtn.inner.style.fontSize = '20px';
-  incBtn.inner.style.color = T.mint;
+  incBtn.wrap.style.width = '36px'; incBtn.wrap.style.height = '36px';
+  incBtn.inner.style.fontFamily = T.fb; incBtn.inner.style.fontSize = '20px'; incBtn.inner.style.color = T.mint;
   incBtn.inner.textContent = '+';
   incBtn.wrap.addEventListener('pointerup', function() {
     if (role.percent < 20) { role.percent = parseFloat((role.percent + 0.5).toFixed(1)); pctEl.textContent = role.percent + '%'; }
@@ -1062,30 +876,19 @@ function buildAdjustRow(role) {
   return row;
 }
 
-// ─────────────────────────────────────────────────
-//  REFRESH AFTER ADJUST (rebuild affected elements)
-// ─────────────────────────────────────────────────
-
 function refreshAfterAdjust(state) {
-  // Rebuild receipt
   if (_receiptScroll) {
     _receiptScroll.innerHTML = '';
     _receiptScroll.appendChild(buildReceiptContent(state));
   }
-  // Rebuild cards column
-  if (_cardsCol) {
-    collapseOpenCard();
-    _cardsCol.innerHTML = '';
-    _cardsCol.appendChild(buildCard01(state));
-    _cardsCol.appendChild(buildCard02(state, null));
-    _cardsCol.appendChild(buildCard03(state));
-    _cardsCol.appendChild(buildCard04(state));
-    _cardsCol.appendChild(buildCard05(state));
-    _cardsCol.appendChild(buildCard06(state));
-  }
-  // Rebuild alert
-  if (_alertContent && _alertContent._rebuild) {
-    _alertContent._rebuild();
+  if (_rightCol) {
+    _rightCol.innerHTML = '';
+    _gridContainer = document.createElement('div');
+    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    _gridContainer.appendChild(buildGridView(state));
+    _rightCol.appendChild(_gridContainer);
+    _rightCol.appendChild(buildBlockerBanner(state));
+    _rightCol.appendChild(buildActionBar(state));
   }
 }
 
@@ -1117,12 +920,7 @@ function showCashTipDeclaration(state) {
       el.style.alignItems = 'center';
 
       var card = document.createElement('div');
-      card.style.cssText = [
-        'background:' + T.bg + ';',
-        'border:3px solid ' + T.gold + ';',
-        'padding:28px 36px;text-align:center;max-width:420px;',
-        'clip-path:' + chamfer(10) + ';',
-      ].join('');
+      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
 
       var msg = document.createElement('div');
       msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:4px;';
@@ -1134,17 +932,11 @@ function showCashTipDeclaration(state) {
       sub.textContent = 'Enter cash tips received (optional)';
       card.appendChild(sub);
 
-      // Amount display
       var display = document.createElement('div');
-      display.style.cssText = [
-        'font-family:' + T.fb + ';font-size:32px;color:' + T.mint + ';',
-        'background:' + T.darkBtn + ';padding:12px 24px;margin-bottom:16px;',
-        'clip-path:' + chamfer(6) + ';min-width:180px;',
-      ].join('');
+      display.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.mint + ';background:' + T.darkBtn + ';padding:12px 24px;margin-bottom:16px;clip-path:' + chamfer(6) + ';min-width:180px;';
       display.textContent = '$0.00';
       card.appendChild(display);
 
-      // Numpad
       var padWrap = document.createElement('div');
       padWrap.style.cssText = 'margin-bottom:16px;';
       var pad = buildNumpad({
@@ -1158,7 +950,6 @@ function showCashTipDeclaration(state) {
       padWrap.appendChild(pad);
       card.appendChild(padWrap);
 
-      // Buttons
       var btns = document.createElement('div');
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
@@ -1167,17 +958,14 @@ function showCashTipDeclaration(state) {
         width: 130, height: 44,
         onTap: function() {
           var cents = parseInt(tipValue, 10) || 0;
-          var amount = cents / 100;
-          resolveInterrupt(amount);
+          resolveInterrupt(cents / 100);
         },
       }));
 
       btns.appendChild(buildButton('Skip', {
         fill: T.darkBtn, color: T.mutedText, fontSize: '18px',
         width: 100, height: 44,
-        onTap: function() {
-          resolveInterrupt(null);
-        },
+        onTap: function() { resolveInterrupt(null); },
       }));
 
       card.appendChild(btns);
@@ -1189,69 +977,43 @@ function showCashTipDeclaration(state) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ server_id: state.employeeId, amount: amount }),
-      }).then(function() {
-        completeFinalizeAfterTips(state);
-      }).catch(function() {
-        completeFinalizeAfterTips(state);
-      });
+      }).then(function() { completeFinalizeAfterTips(state); })
+        .catch(function() { completeFinalizeAfterTips(state); });
     } else {
       completeFinalizeAfterTips(state);
     }
   }).catch(function() {
-    // Cancelled — still finalize (tips are optional)
     completeFinalizeAfterTips(state);
   });
 }
 
 function doFinalize(state) {
-  // Manager approval gate using interrupt
-  interrupt('manager-approval', {
-    reason: 'finalize-checkout',
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '16px';
+  showCashTipDeclaration(state);
+}
 
-      var card = document.createElement('div');
-      card.style.cssText = [
-        'background:' + T.bg + ';',
-        'border:3px solid ' + T.gold + ';',
-        'padding:28px 36px;text-align:center;max-width:400px;',
-        'clip-path:' + chamfer(10) + ';',
-      ].join('');
+// ─────────────────────────────────────────────────
+//  REFRESH SCENE
+// ─────────────────────────────────────────────────
 
-      var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:8px;';
-      msg.textContent = 'Manager approval required';
-      card.appendChild(msg);
+function refreshScene() {
+  if (!_rightCol || !_state) return;
+  fetchServerState({ employeeId: _state.employeeId, employeeName: _state.employeeName }).then(function(newState) {
+    newState.restaurantName = _state.restaurantName;
+    newState.terminalId = _state.terminalId;
+    _state = newState;
+    _expandedIdx = null;
 
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';margin-bottom:24px;';
-      sub.textContent = 'Enter manager PIN to confirm';
-      card.appendChild(sub);
-
-      var btns = document.createElement('div');
-      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
-
-      btns.appendChild(buildButton('Approve', {
-        fill: T.gold, color: '#1a1a1a', fontSize: '20px',
-        width: 150, height: 44,
-        onTap: function() {
-          resolveInterrupt(true);
-          showCashTipDeclaration(state);
-        },
-      }));
-
-      btns.appendChild(buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '20px',
-        width: 120, height: 44,
-        onTap: function() { cancelInterrupt(); },
-      }));
-
-      card.appendChild(btns);
-      el.appendChild(card);
-    },
-  }).catch(function() {
-    // Interrupt cancelled — do nothing
+    if (_receiptScroll) {
+      _receiptScroll.innerHTML = '';
+      _receiptScroll.appendChild(buildReceiptContent(_state));
+    }
+    _rightCol.innerHTML = '';
+    _gridContainer = document.createElement('div');
+    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    _gridContainer.appendChild(buildGridView(_state));
+    _rightCol.appendChild(_gridContainer);
+    _rightCol.appendChild(buildBlockerBanner(_state));
+    _rightCol.appendChild(buildActionBar(_state));
   });
 }
 
@@ -1260,14 +1022,14 @@ function doFinalize(state) {
 // ─────────────────────────────────────────────────
 
 function buildScene(el, params) {
-  collapseOpenCard();
+  _pinUnlocked = false;
+  _expandedIdx = null;
 
   el.style.cssText = [
     'width:100%;height:100%;',
     'display:flex;gap:' + COL_GAP + 'px;',
     'padding:' + SCENE_PAD + 'px;',
-    'box-sizing:border-box;',
-    'overflow:hidden;',
+    'box-sizing:border-box;overflow:hidden;',
   ].join('');
 
   Promise.all([
@@ -1278,10 +1040,21 @@ function buildScene(el, params) {
     var store = results[1];
     _state.restaurantName = (store && store.info && store.info.restaurant_name) || 'KINDpos';
     _state.terminalId     = (store && store.info && store.info.terminal_id)     || 'T-001';
+
     el.appendChild(buildReceiptPanel(_state));
-    _cardsCol = buildCardsColumn(_state, el);
-    el.appendChild(_cardsCol);
-    el.appendChild(buildRightColumn(_state));
+
+    _rightCol = document.createElement('div');
+    _rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+
+    _gridContainer = document.createElement('div');
+    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    _gridContainer.appendChild(buildGridView(_state));
+    _rightCol.appendChild(_gridContainer);
+
+    _rightCol.appendChild(buildBlockerBanner(_state));
+    _rightCol.appendChild(buildActionBar(_state));
+
+    el.appendChild(_rightCol);
   });
 }
 
@@ -1297,12 +1070,12 @@ registerScene('server-checkout', {
   },
   onExit: function() {
     _state         = null;
-    _openCardBody  = null;
-    _openChevron   = null;
-    _finalizeWrap  = null;
-    _alertContent  = null;
+    _expandedIdx   = null;
+    _gridContainer = null;
+    _bannerEl      = null;
     _receiptScroll = null;
-    _cardsCol      = null;
+    _rightCol      = null;
+    _pinUnlocked   = false;
   },
   cache: false,
   timeoutMs: 0,

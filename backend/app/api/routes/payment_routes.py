@@ -17,9 +17,10 @@ from ...core.events import (
     payment_initiated, payment_confirmed, order_closed, tip_adjusted,
     create_event, EventType,
 )
-from ...core.projections import project_order
+from ...core.projections import project_order, project_orders
 from ...core.money import money_round
 from ...config import settings
+from typing import Optional as Opt
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -373,6 +374,55 @@ async def adjust_tip(
         "device_adjusted": device_adjusted,
         "device_warning": device_error,
     }
+
+
+@router.post("/zero-unadjusted")
+async def zero_unadjusted_tips(
+    server_id: Opt[str] = None,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Bulk-zero all unadjusted card tips for the current business day.
+
+    Emits a TIP_ADJUSTED event with tip_amount=0 for every confirmed card
+    payment that has no existing TIP_ADJUSTED event.  Optionally scoped to
+    a single server via ?server_id=.
+    """
+    boundary = await ledger.get_last_day_close_sequence()
+    all_events = await ledger.get_events_since(boundary, limit=50000)
+    orders = project_orders(all_events)
+
+    # Build set of payment_ids that already have a TIP_ADJUSTED event
+    adjusted_pids = set()
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            pid = e.payload.get("payment_id")
+            if pid:
+                adjusted_pids.add(pid)
+
+    zeroed = 0
+    for order in orders.values():
+        if order.status not in ("closed", "paid"):
+            continue
+        if server_id and order.server_id != server_id:
+            continue
+        for p in order.payments:
+            if p.status != "confirmed":
+                continue
+            if p.method == "cash":
+                continue
+            if p.payment_id in adjusted_pids:
+                continue
+            evt = tip_adjusted(
+                terminal_id=settings.terminal_id,
+                order_id=order.order_id,
+                payment_id=p.payment_id,
+                tip_amount=0.0,
+                previous_tip=0.0,
+            )
+            await ledger.append(evt)
+            zeroed += 1
+
+    return {"success": True, "zeroed_count": zeroed}
 
 
 @router.get("/device-status")
