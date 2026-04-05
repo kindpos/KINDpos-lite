@@ -65,7 +65,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
             return self._status
 
         try:
-            xml = self._build_xml("GetStatus")
+            xml = self._build_xml("GetStatus", {"Amount": "0.00"})
             response = await self._send(xml, timeout=5.0)
             if response is not None:
                 resp_msg = response.findtext("RespMSG") or ""
@@ -89,6 +89,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
         xml = self._build_xml("Sale", {
             "Amount": f"{request.amount:.2f}",
             "InvNum": request.transaction_id[:10],
+            "PaymentType": "Credit",
         })
 
         self._status = PaymentDeviceStatus.AWAITING_CARD
@@ -102,6 +103,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
         xml = self._build_xml("Return", {
             "Amount": f"{request.amount:.2f}",
             "InvNum": request.transaction_id[:10],
+            "PaymentType": "Credit",
         })
         try:
             root = await self._send(xml)
