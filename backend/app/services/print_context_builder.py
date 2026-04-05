@@ -353,10 +353,10 @@ class PrintContextBuilder:
                 base_amount = net_sales
             elif basis == "alcohol" or basis == "alcohol_sales":
                 base_amount = float(preset.get("base_override", 0))
-                # TODO: derive alcohol sales from category data when available
+                # Deferred: derive alcohol sales from category data when available
             elif basis == "food" or basis == "food_sales":
                 base_amount = float(preset.get("base_override", 0))
-                # TODO: derive food sales from category data when available
+                # Deferred: derive food sales from category data when available
             else:
                 base_amount = net_sales
 
@@ -387,7 +387,7 @@ class PrintContextBuilder:
 
         # ── Tip pool (if server is in one) ────────────────────────────────────
         tip_pool = None
-        # TODO: Check staff config for pool membership
+        # Deferred: check staff config for pool membership
         # If server is in a pool, set:
         # tip_pool = {
         #     "name": "BAR POOL",
@@ -565,7 +565,7 @@ class PrintContextBuilder:
         tax_lines = [{"label": "Tax", "amount": money_round(float(tax_collected))}]
 
         # ── Daypart breakdown ─────────────────────────────────────────────────
-        # TODO: Implement daypart bucketing once order timestamps are available
+        # Deferred: daypart bucketing once order timestamps are available
         # dayparts = [
         #     {"name": "Breakfast (6a-11a)", "sales": 0.0, "checks": 0},
         #     {"name": "Lunch (11a-3p)",     "sales": 0.0, "checks": 0},

@@ -73,6 +73,7 @@ export const T = {
   scenePad: 20,
   colGap:   20,
   bevel:    7,
+  bevelBtn: 4,
   chamfer:  8,
   shadowX:  3,
   shadowY:  4,
@@ -114,20 +115,21 @@ export function bevelEdges(fillColor) {
 }
 
 export function shadowColor(fillColor) {
-  if (fillColor === T.bg)       return 'rgba(20, 20, 20, 0.8)';
-  if (fillColor === T.darkBtn)  return 'rgba(15, 13, 10, 0.8)';
-  if (fillColor === T.mint)     return 'rgba(60, 100, 50, 0.8)';
-  if (fillColor === T.goGreen)  return 'rgba(30, 55, 15, 0.8)';
-  if (fillColor === T.gold)     return 'rgba(100, 70, 15, 0.8)';
-  if (fillColor === T.red)      return 'rgba(80, 15, 10, 0.8)';
-  if (fillColor === T.cyan)     return 'rgba(15, 70, 70, 0.8)';
-  if (fillColor === T.lavender) return 'rgba(50, 25, 70, 0.8)';
-  if (fillColor === T.catProteins) return 'rgba(100, 20, 30, 0.8)';
-  if (fillColor === T.catBeverages)return 'rgba(25, 40, 80, 0.8)';
-  if (fillColor === T.catSauces)   return 'rgba(100, 55, 0, 0.8)';
-  if (fillColor === T.catStarches) return 'rgba(35, 80, 50, 0.8)';
-  if (fillColor === T.mintB)  return 'rgba(35, 80, 50, 0.8)';
-  if (fillColor === T.redB)   return 'rgba(100, 20, 30, 0.8)';
+  // Style D: dark buttons get mint shadow 55% opacity; colored buttons get dark shadow 80%
+  if (fillColor === T.bg)       return 'rgba(198, 255, 187, 0.55)';
+  if (fillColor === T.darkBtn)  return 'rgba(198, 255, 187, 0.55)';
+  if (fillColor === T.mint)     return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.goGreen)  return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.gold)     return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.red)      return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.cyan)     return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.lavender) return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catProteins) return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catBeverages)return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catSauces)   return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catStarches) return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.mintB)  return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.redB)   return 'rgba(10, 10, 10, 0.8)';
   return 'rgba(10, 10, 10, 0.8)';
 }
 
@@ -141,7 +143,7 @@ export function buildStyledButton(fillColor) {
   var fill = fillColor || T.darkBtn;
   var edges = bevelEdges(fill);
   var shadow = shadowColor(fill);
-  var b = T.bevel;
+  var b = T.bevelBtn;
 
   var wrap = document.createElement('div');
   wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ')';
@@ -169,6 +171,7 @@ export function buildStyledButton(fillColor) {
   wrap._edges = edges;
   wrap._shadow = shadow;
   wrap._inner = inner;
+  wrap._bevel = b;
 
   wrap.addEventListener('pointerdown', _wDown);
   wrap.addEventListener('pointerup', _wUp);
@@ -179,7 +182,7 @@ export function buildStyledButton(fillColor) {
 
 function _wDown(e) {
   var w = e.currentTarget;
-  var b = T.bevel;
+  var b = w._bevel || T.bevelBtn;
   w._inner.style.borderTop    = b + 'px solid ' + w._edges.dark;
   w._inner.style.borderLeft   = b + 'px solid ' + w._edges.dark;
   w._inner.style.borderBottom = b + 'px solid ' + w._edges.light;
@@ -190,7 +193,7 @@ function _wDown(e) {
 
 function _wUp(e) {
   var w = e.currentTarget;
-  var b = T.bevel;
+  var b = w._bevel || T.bevelBtn;
   w._inner.style.borderTop    = b + 'px solid ' + w._edges.light;
   w._inner.style.borderLeft   = b + 'px solid ' + w._edges.light;
   w._inner.style.borderBottom = b + 'px solid ' + w._edges.dark;
