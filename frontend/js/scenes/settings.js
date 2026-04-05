@@ -221,6 +221,25 @@ function buildHardwareCard() {
   });
 
   card.appendChild(btns);
+
+  // Scan Network button at bottom
+  var scanBtn = buildStyledButton(GOLD);
+  scanBtn.inner.style.fontFamily = T.fh;
+  scanBtn.inner.style.fontSize = '28px';
+  scanBtn.inner.style.color = DARK;
+  scanBtn.inner.style.padding = '8px 12px';
+  scanBtn.inner.textContent = '//Scan Network//';
+  scanBtn.wrap.style.cssText = 'width:100%;margin-top:auto;cursor:pointer;';
+  scanBtn.wrap.addEventListener('pointerup', function(e) {
+    e.stopPropagation();
+    state.expandedCard = 'hardware';
+    state.activeTab = 'hardware';
+    state.activeNav = 'add';
+    state.addStep = 'choose';
+    renderCurrentState();
+  });
+  card.appendChild(scanBtn.wrap);
+
   return card;
 }
 
@@ -330,7 +349,8 @@ function buildNavStrip(navItems, accentColor) {
 
 function renderHWContent(card) {
   card.innerHTML = '';  // always clear before render
-  if (state.activeNav === 'printers')      renderDeviceList(card, 'printer');
+  if (state.activeNav === 'add')            renderAddDevice(card);
+  else if (state.activeNav === 'printers') renderDeviceList(card, 'printer');
   else if (state.activeNav === 'readers')  renderDeviceList(card, 'card_reader');
 }
 
