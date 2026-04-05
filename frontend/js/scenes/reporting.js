@@ -18,7 +18,7 @@ var currentEl = null;
 var salesData = null;
 var laborData = null;
 
-function fmt(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmt(n) { return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
 // ═══════════════════════════════════════════════════
 //  FETCH DATA
