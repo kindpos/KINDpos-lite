@@ -114,6 +114,7 @@ var PREFIXES = [
 ];
 
 registerScene('order-entry', {
+  cache: true,
   onEnter: function(el, params) {
     setSceneName('NEW ORDER');
     setHeaderBack(true);
