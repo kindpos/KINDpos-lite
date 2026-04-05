@@ -28,46 +28,44 @@ export function setSceneName(name) {
   updateClock();
 }
 
-export function setHeaderBack(show) {
+export function setHeaderBack({ back = false, x = false } = {}) {
   const nav = document.getElementById('header-nav');
   const logout = document.getElementById('header-logout');
   if (nav) nav.innerHTML = '';
   if (logout) logout.innerHTML = '';
 
-  if (show) {
-    if (nav) {
-      nav.style.display = 'flex';
-      nav.style.gap = '8px';
-      nav.style.alignItems = 'center';
+  // <<<  back button
+  if (back && nav) {
+    nav.style.display = 'flex';
+    nav.style.gap = '8px';
+    nav.style.alignItems = 'center';
+    const backPair = buildStyledButton(T.red);
+    backPair.wrap.style.height = '40px';
+    backPair.wrap.style.width = '72px';
+    backPair.inner.style.fontFamily = T.fb;
+    backPair.inner.style.fontSize = T.fsBtnSm;
+    backPair.inner.style.color = '#fff';
+    backPair.inner.textContent = '<<<';
+    backPair.wrap.addEventListener('pointerup', () => pop());
+    nav.appendChild(backPair.wrap);
+  } else if (nav) {
+    nav.style.display = 'none';
+  }
 
-      // <<<  back button
-      const backPair = buildStyledButton(T.red);
-      backPair.wrap.style.height = '44px';
-      backPair.wrap.style.width = '80px';
-      backPair.inner.style.fontFamily = T.fb;
-      backPair.inner.style.fontSize = T.fsBtn;
-      backPair.inner.style.color = '#fff';
-      backPair.inner.textContent = '<<<';
-      backPair.wrap.addEventListener('pointerup', () => pop());
-      nav.appendChild(backPair.wrap);
-    }
-
-    // X  logout / reset button — far right of header
-    if (logout) {
-      logout.style.display = 'flex';
-      const logoutPair = buildStyledButton(T.red);
-      logoutPair.wrap.style.height = '44px';
-      logoutPair.wrap.style.width = '52px';
-      logoutPair.inner.style.fontFamily = T.fb;
-      logoutPair.inner.style.fontSize = T.fsBtn;
-      logoutPair.inner.style.color = '#fff';
-      logoutPair.inner.textContent = 'X';
-      logoutPair.wrap.addEventListener('pointerup', () => replace('login'));
-      logout.appendChild(logoutPair.wrap);
-    }
-  } else {
-    if (nav) nav.style.display = 'none';
-    if (logout) logout.style.display = 'none';
+  // X  logout / reset button
+  if (x && logout) {
+    logout.style.display = 'flex';
+    const logoutPair = buildStyledButton(T.red);
+    logoutPair.wrap.style.height = '40px';
+    logoutPair.wrap.style.width = '47px';
+    logoutPair.inner.style.fontFamily = T.fb;
+    logoutPair.inner.style.fontSize = T.fsBtnSm;
+    logoutPair.inner.style.color = '#fff';
+    logoutPair.inner.textContent = 'X';
+    logoutPair.wrap.addEventListener('pointerup', () => replace('login'));
+    logout.appendChild(logoutPair.wrap);
+  } else if (logout) {
+    logout.style.display = 'none';
   }
 }
 

@@ -774,7 +774,7 @@ function doPrint() {
 registerScene('tip-adjustment', {
   onEnter: function(el, params) {
     setSceneName('Tip Adjustment: ' + (params.employeeName || 'Server'));
-    setHeaderBack(true);
+    setHeaderBack({ back: true, x: true });
     buildScene(el, params);
   },
   onExit: function() {

@@ -14,7 +14,7 @@ var returnTimer    = null;
 registerScene('change-due', {
   onEnter: function(el, params) {
     setSceneName(null);
-    setHeaderBack(false);
+    setHeaderBack({ x: true });
 
     // params shape:
     // {

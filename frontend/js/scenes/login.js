@@ -77,7 +77,7 @@ function registerActionButton(wrap, action, fill) {
 registerScene('login', {
   onEnter: function(el, params) {
     setSceneName(null);
-    setHeaderBack(false);
+    setHeaderBack();
     selectedAction = null;
     actionButtons = [];
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {

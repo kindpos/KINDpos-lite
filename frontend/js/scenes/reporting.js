@@ -891,7 +891,7 @@ function buildScene(el, params) {
 registerScene('reporting', {
   onEnter: function(el, params) {
     setSceneName('Reporting');
-    setHeaderBack(true);
+    setHeaderBack({ x: true });
     expandedCard = null;
     buildScene(el, params);
   },

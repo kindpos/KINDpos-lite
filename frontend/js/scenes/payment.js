@@ -27,7 +27,7 @@ var confirmProcessing = false;
 registerScene('payment', {
   onEnter: function(el, params) {
     setSceneName(params.checkId || 'ORDER');
-    setHeaderBack(true);
+    setHeaderBack({ back: true, x: true });
 
     sceneEl          = el;
     sceneData        = params;
