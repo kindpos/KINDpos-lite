@@ -163,3 +163,90 @@ class TestKitchenTicket:
 
         # Ends with cut
         assert commands[-1]['type'] == 'cut'
+
+    def test_kitchen_ticket_modifiers_string(self):
+        """String modifiers should render with auto-detected prefixes."""
+        template = KitchenTicketTemplate(80)
+        commands = template.render(_kitchen_ticket_context(items=[
+            {'name': 'Burger', 'qty': 1, 'modifiers': ['No Onion', 'Add Jalapeño', 'Sub GF Bun']},
+        ]))
+
+        text_contents = [c['content'] for c in commands if c.get('type') == 'text']
+        joined = '\n'.join(text_contents)
+
+        # Item line present
+        assert '1x Burger' in joined
+        # Modifiers with detected prefixes
+        assert '[NO] Onion' in joined
+        assert '[ADD] Jalapeño' in joined
+        assert '[SUB] GF Bun' in joined
+
+    def test_kitchen_ticket_modifiers_dict(self):
+        """Dict modifiers (production format) should render with prefixes from 'action' field."""
+        template = KitchenTicketTemplate(80)
+        commands = template.render(_kitchen_ticket_context(items=[
+            {
+                'name': 'Combo Pulled Pork', 'qty': 1,
+                'modifiers': [
+                    {'name': 'Extra Cheese', 'action': 'add', 'modifier_id': 'm1', 'price': 1.5},
+                    {'name': 'Pickles', 'action': 'remove', 'modifier_id': 'm2', 'price': 0},
+                    {'name': 'Wheat Bun', 'action': 'substitute', 'modifier_id': 'm3', 'price': 0},
+                ],
+            },
+        ]))
+
+        text_contents = [c['content'] for c in commands if c.get('type') == 'text']
+        joined = '\n'.join(text_contents)
+
+        # Item line present
+        assert '1x Combo Pulled Pork' in joined
+        # Modifiers with prefixes derived from 'action' field
+        assert '[ADD] Extra Cheese' in joined
+        assert '[NO] Pickles' in joined
+        assert '[SUB] Wheat Bun' in joined
+
+    def test_kitchen_ticket_no_modifiers_clean(self):
+        """Items with empty modifiers should produce no extra blank lines or artifacts."""
+        template = KitchenTicketTemplate(80)
+        commands = template.render(_kitchen_ticket_context(items=[
+            {'name': 'Plain Fries', 'qty': 1, 'modifiers': []},
+        ]))
+
+        text_contents = [c['content'] for c in commands if c.get('type') == 'text']
+
+        # Item line present
+        assert any('1x Plain Fries' in t for t in text_contents)
+        # No indented modifier lines (6-space indent)
+        assert not any(t.startswith('      ') for t in text_contents)
+
+    def test_separator_width_80mm(self):
+        """Divider commands from 80mm template should produce exactly 42 chars."""
+        from app.printing.escpos_formatter import ESCPOSFormatter
+        template = KitchenTicketTemplate(80)
+        commands = template.render(_kitchen_ticket_context())
+
+        dividers = [c for c in commands if c.get('type') == 'divider']
+        assert len(dividers) > 0  # Kitchen tickets have dividers
+
+        fmt = ESCPOSFormatter(paper_width=80)
+        for div in dividers:
+            char = div.get('char', '-')
+            expected = char * 42
+            result = fmt.format([div])
+            assert expected.encode('ascii') in result
+
+    def test_separator_width_58mm(self):
+        """Divider commands from 58mm template should produce exactly 32 chars."""
+        from app.printing.escpos_formatter import ESCPOSFormatter
+        template = KitchenTicketTemplate(58)
+        commands = template.render(_kitchen_ticket_context())
+
+        dividers = [c for c in commands if c.get('type') == 'divider']
+        assert len(dividers) > 0
+
+        fmt = ESCPOSFormatter(paper_width=58)
+        for div in dividers:
+            char = div.get('char', '-')
+            expected = char * 32
+            result = fmt.format([div])
+            assert expected.encode('ascii') in result

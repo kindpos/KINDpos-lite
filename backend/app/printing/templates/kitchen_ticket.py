@@ -274,7 +274,7 @@ class KitchenTicketTemplate(BaseTemplate):
         if isinstance(mod, dict):
             prefix = mod.get('prefix', '')
             text = mod.get('text') or mod.get('kitchen_text') or mod.get('name', '')
-            mod_type = mod.get('type', '')
+            mod_type = mod.get('type') or mod.get('action', '')
             if not prefix and mod_type:
                 prefix = self._default_prefix(mod_type)
         else:

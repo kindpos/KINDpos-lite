@@ -96,8 +96,20 @@ class TestESCPOSFormatter:
 
     def test_divider(self, fmt):
         result = fmt.format([{'type': 'divider', 'char': '='}])
-        # Default 80mm → 48 chars per line
-        assert b'=' * 48 in result
+        # Default 80mm → 42 chars per line (Font A standard)
+        assert b'=' * 42 in result
+        # Must NOT contain 43+ consecutive '=' signs
+        assert b'=' * 43 not in result
+
+    def test_divider_resets_print_mode(self, fmt):
+        """Divider must reset print mode before emitting chars to prevent double-width leakage."""
+        result = fmt.format([{'type': 'divider', 'char': '-'}])
+        divider_bytes = fmt._safe_encode('-' * 42)
+        idx = result.index(divider_bytes)
+        # ESC ! 0x00 (normal mode reset) should appear before the divider chars
+        mode_reset = ESC + b'\x21\x00'
+        preceding = result[:idx]
+        assert mode_reset in preceding
 
     def test_cut_full(self, fmt):
         result = fmt.format([{'type': 'cut'}])

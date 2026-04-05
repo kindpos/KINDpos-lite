@@ -63,7 +63,7 @@ class ESCPOSFormatter:
 
     def __init__(self, paper_width: int = 80):
         self.paper_width = paper_width
-        self.chars_per_line = 48 if paper_width == 80 else 32
+        self.chars_per_line = 42 if paper_width == 80 else 32
 
     def _safe_encode(self, text: str) -> bytes:
         """Encode text to bytes, replacing Unicode characters the printer can't handle."""
@@ -158,6 +158,9 @@ class ESCPOSFormatter:
 
             elif cmd_type == 'divider':
                 char = cmd.get('char', '-')
+                # Reset print mode before divider to prevent double-width leakage
+                out += self._print_mode_byte()
+                out += ALIGN_LEFT
                 out += self._safe_encode(char * self.chars_per_line)
                 out += LF
 
