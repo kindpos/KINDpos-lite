@@ -205,7 +205,8 @@ def get_payment_validator(ledger: EventLedger = Depends(get_ledger)) -> PaymentV
 async def process_sale(
     request: TransactionRequest,
     manager: PaymentManager = Depends(get_payment_manager),
-    validator: PaymentValidator = Depends(get_payment_validator)
+    validator: PaymentValidator = Depends(get_payment_validator),
+    ledger: EventLedger = Depends(get_ledger),
 ):
     """Initiate sale. Returns ValidationResult or TransactionResult."""
     await _ensure_devices(manager)
@@ -233,6 +234,18 @@ async def process_sale(
         if result.status == TransactionStatus.ERROR:
             msg = result.processor_message or (result.error.message if result.error else "Transaction error")
             raise HTTPException(status_code=502, detail=msg)
+
+    # 4. Auto-close order if fully paid (same as cash route)
+    if hasattr(result, 'status') and result.status == TransactionStatus.APPROVED:
+        events = await ledger.get_events_by_correlation(request.order_id)
+        order = project_order(events)
+        if order and order.is_fully_paid and order.status != "closed":
+            close_evt = order_closed(
+                terminal_id=settings.terminal_id,
+                order_id=request.order_id,
+                total=order.total,
+            )
+            await ledger.append(close_evt)
 
     return result
 

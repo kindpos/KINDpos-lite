@@ -384,6 +384,19 @@ async def get_day_summary(
         if order.status == "voided":
             voided_count += 1
             void_total += Decimal(str(order.subtotal))
+            # Add voided orders to checks list for the Void tab
+            check_label = order.check_number if order.check_number else order.order_id
+            checks_list.append({
+                "checkId": order.order_id,
+                "checkLabel": check_label,
+                "paymentId": None,
+                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                "amount": money_round(order.subtotal),
+                "tip": 0,
+                "adjusted": True,
+                "method": None,
+                "status": "voided",
+            })
             continue
         if order.status == "open":
             open_count += 1

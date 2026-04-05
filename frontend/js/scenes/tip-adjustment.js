@@ -13,7 +13,7 @@ import { buildNumpad } from '../numpad.js';
 // ── State ─────────────────────────────────────────
 var checks = [];
 var filter = 'all';         // 'all' | 'unadjusted'
-var statusFilter = 'all';  // 'all' | 'open' | 'closed'
+var statusFilter = 'all';  // 'all' | 'open' | 'closed' | 'voided'
 var editingIndex = -1;      // index into checks[]
 var cents = 0;
 
@@ -25,6 +25,7 @@ var bottomBar     = null;
 var btnUnadj      = null;
 var btnOpen       = null;
 var btnClosed     = null;
+var btnVoided     = null;
 var numpadRef     = null;   // buildNumpad component instance
 var numpadCheckId = null;
 var numpadAmount  = null;
@@ -91,10 +92,14 @@ function renderTable() {
     var checkStatus = c.status || 'closed';
     if (statusFilter === 'open' && checkStatus !== 'open') return;
     if (statusFilter === 'closed' && checkStatus !== 'closed') return;
+    if (statusFilter === 'voided' && checkStatus !== 'voided') return;
+    // Hide voided checks from ALL/Open/Closed views
+    if (statusFilter !== 'voided' && checkStatus === 'voided') return;
     // Cash checks only visible under Closed filter
     if (c.method === 'cash' && statusFilter !== 'closed') return;
 
     var isOpen = checkStatus === 'open';
+    var isVoided = checkStatus === 'voided';
 
     // Group header when method changes (card → cash)
     if (!isOpen && statusFilter === 'closed' && c.method !== lastMethod) {
@@ -115,7 +120,15 @@ function renderTable() {
 
     // Cell data
     var cells;
-    if (isOpen) {
+    if (isVoided) {
+      cells = [
+        { text: c.checkLabel || c.checkId, cls: '' },
+        { text: c.time,    cls: '' },
+        { text: fmt(c.amount), cls: '' },
+        { text: 'VOID',    cls: '' },
+        { text: '—',       cls: '' },
+      ];
+    } else if (isOpen) {
       cells = [
         { text: c.checkLabel || c.checkId, cls: '' },
         { text: c.time,    cls: '' },
@@ -137,7 +150,13 @@ function renderTable() {
       var td = document.createElement('td');
       td.textContent = cell.text;
 
-      if (isOpen) {
+      if (isVoided) {
+        // Voided: dim red text, strikethrough
+        td.style.background = T.bgDark;
+        td.style.border = '2px solid ' + T.dimText;
+        td.style.color = '#cc4444';
+        td.style.textDecoration = 'line-through';
+      } else if (isOpen) {
         // Open: distinct style — dark bg, mint text, dashed border
         td.style.background = T.bgDark;
         td.style.border = '2px dashed ' + T.mint;
@@ -512,6 +531,20 @@ function buildScene(el, params) {
   btnClosed = btnClosedWrap.querySelector('div');
   rightDefault.appendChild(btnClosedWrap);
 
+  var btnVoidedWrap = buildButton('Voided', {
+    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
+    width: 200, height: 44,
+    onTap: function() {
+      statusFilter = statusFilter === 'voided' ? 'all' : 'voided';
+      updateStatusButtons();
+      renderTable();
+    },
+  });
+  btnVoidedWrap.style.marginTop = '8px';
+  btnVoidedWrap.querySelector('div').style.borderColor = T.gold;
+  btnVoided = btnVoidedWrap.querySelector('div');
+  rightDefault.appendChild(btnVoidedWrap);
+
   function updateStatusButtons() {
     if (btnOpen) {
       btnOpen.style.background = statusFilter === 'open' ? T.gold : T.bgDark;
@@ -520,6 +553,10 @@ function buildScene(el, params) {
     if (btnClosed) {
       btnClosed.style.background = statusFilter === 'closed' ? T.gold : T.bgDark;
       btnClosed.style.color = statusFilter === 'closed' ? T.bgDark : T.gold;
+    }
+    if (btnVoided) {
+      btnVoided.style.background = statusFilter === 'voided' ? T.gold : T.bgDark;
+      btnVoided.style.color = statusFilter === 'voided' ? T.bgDark : T.gold;
     }
   }
 
@@ -787,6 +824,7 @@ registerScene('tip-adjustment', {
     btnUnadj      = null;
     btnOpen       = null;
     btnClosed     = null;
+    btnVoided     = null;
     numpadRef     = null;
     numpadCheckId = null;
     numpadAmount  = null;

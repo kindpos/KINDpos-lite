@@ -16,6 +16,7 @@ from .escpos_formatter import ESCPOSFormatter
 from .templates.guest_receipt import GuestReceiptTemplate
 from .templates.kitchen_ticket import KitchenTicketTemplate
 from .templates.clock_hours import ClockHoursTemplate
+from .templates.sales_recap import SalesRecapTemplate
 
 logger = logging.getLogger("kindpos.printing.dispatcher")
 
@@ -53,6 +54,7 @@ class PrintDispatcher:
             "guest_receipt":  GuestReceiptTemplate(paper_width=80),
             "kitchen_ticket": KitchenTicketTemplate(paper_width=80),
             "clock_hours":    ClockHoursTemplate(paper_width=80),
+            "sales_recap":    SalesRecapTemplate(paper_width=80),
         }
 
     async def start(self) -> None:
