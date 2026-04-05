@@ -179,21 +179,20 @@ function buildTicket(parentEl) {
 
   // SAVE / RECALL
   var topRow = document.createElement('div');
-  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;flex-shrink:0;';
+  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;';
 
   saveBtn = buildButton('SAVE', {
-    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H,
+    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H, fontFamily: T.fh,
     onTap: function() { handleSave(); },
   });
 
   var recallBtnEl = buildButton('RECALL', {
-    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H,
+    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H, fontFamily: T.fh,
     onTap: function() { handleRecall(); },
   });
 
   topRow.appendChild(saveBtn);
   topRow.appendChild(recallBtnEl);
-  panel.appendChild(topRow);
 
   // Item list
   var itemList = document.createElement('div');
@@ -213,6 +212,9 @@ function buildTicket(parentEl) {
   summaryTotals.appendChild(buildTotalRow('Total', '$0.00', 'ticket-total'));
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
+
+  // SAVE / RECALL below totals
+  panel.appendChild(topRow);
 
   return panel;
 }
@@ -318,21 +320,22 @@ function buildMain(parentEl, params) {
   bottom.style.cssText = [
     'display:grid;',
     'grid-template-columns:1fr 1fr 1fr 1fr 1.3fr;',
-    'grid-template-rows:' + BTN_H + 'px ' + BTN_H + 'px;',
-    'gap:3px;padding:3px;padding-top:0;',
+    'grid-template-rows:1fr 1fr;',
+    'gap:6px;padding:8px;padding-top:0;',
     'position:relative;z-index:2;',
     'margin-top:-' + OVERLAP + 'px;',
+    'flex:0 0 auto;',
   ].join('');
 
   var tabItems = buildButton('ADD ITEMS', {
-    fill: T.mint, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
+    fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { switchTab('items', canvas, tabItems, tabMods); },
   });
   tabItems.style.gridColumn = '1 / 3';
   tabItems.style.gridRow    = '1';
 
   var tabMods = buildButton('MODIFY ITEMS', {
-    fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
+    fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { switchTab('modifiers', canvas, tabItems, tabMods); },
   });
   tabMods.style.gridColumn = '3 / 5';
@@ -345,14 +348,14 @@ function buildMain(parentEl, params) {
   send.style.gridColumn = '5';
   send.style.gridRow    = '1 / 3';
 
-  var disc  = buildButton('DISC', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H, fontFamily: T.fh });
-  var voidB = buildButton('VOID', { fill: T.red,     color: '#fff', fontSize: '26px', height: BTN_H, fontFamily: T.fh,
+  var disc  = buildButton('DISC', { fill: T.bgLight, color: T.mint, fontSize: '26px', fontFamily: T.fh });
+  var voidB = buildButton('VOID', { fill: T.red,     color: '#fff', fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleVoid(); },
   });
   voidB.id = 'void-btn';
-  var print = buildButton('PRINT',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H, fontFamily: T.fh });
+  var print = buildButton('PRINT',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', fontFamily: T.fh });
 
-  var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
+  var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handlePay(params); },
   });
 
@@ -362,6 +365,7 @@ function buildMain(parentEl, params) {
   pay.style.gridColumn   = '4'; pay.style.gridRow   = '2';
 
   [tabItems, tabMods, send, disc, voidB, print, pay].forEach(function(b) {
+    b.style.height = '100%';
     bottom.appendChild(b);
   });
   main.appendChild(bottom);
