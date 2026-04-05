@@ -157,8 +157,8 @@ export function drawBarChart(svg, data, options) {
   if (hasCompare && options.legend) {
     var legFs = parseInt(fs(20, w));
     var legSz = Math.round(legFs * 0.7);
-    var lx = 12;
-    var ly = padTop + 8;
+    var lx = 2;
+    var ly = padTop + 4;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
     svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
     svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 6, width: legSz, height: legSz, fill: compareColor }));
@@ -295,8 +295,8 @@ export function drawStackedArea(svg, data, options) {
   if (hasCompare && options.legend) {
     var legFs = parseInt(fs(20, w));
     var legSz = Math.round(legFs * 0.7);
-    var lx = 12;
-    var ly = padTop + 8;
+    var lx = 2;
+    var ly = padTop + 4;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
     svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
     svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 6, width: legSz, height: legSz, fill: compareColor }));
