@@ -8,7 +8,9 @@ import { T, chamfer, buildStyledButton, applySunkenStyle, bevelEdges, shadowColo
 import { buildButton, buildGap } from '../components.js';
 import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-import { CHART, createSVG, svgEl, drawBarChart, drawStackedArea, drawParetoChart, drawHorizontalBars, drawTrendLine, drawProgressBar, buildChartPanel, buildChartGrid } from '../chart-helpers.js';
+import { CHART, createSVG, svgEl, drawBarChart, drawStackedArea, drawParetoChart, drawHorizontalBars, drawTrendLine, drawProgressBar, drawStackedColumn, drawHistogram, drawHeatmap, drawParetoHBar, buildChartPanel, buildChartGrid } from '../chart-helpers.js';
+import { DATA } from '../chart-colors.js';
+import { PAT, GLOW } from '../chart-patterns.js';
 
 // ── Module state ────────────────────────────────────
 var expandedCard = null;
@@ -357,121 +359,126 @@ function buildManagerSalesPanels(sales, fullSize) {
   var s = sales || {};
   var hourly = s.hourly_sales || [];
   var lastWeek = s.last_week_hourly || [];
-  var dailyAvg = s.daily_check_avg || [];
+  var topItems = s.top_items || [];
   var svgW = fullSize ? 900 : 400;
   var svgH = fullSize ? 380 : 160;
 
-  // NET SALES — side-by-side bar chart: today (teal) vs last week (orange)
+  // Q1 — Stacked Column + Line: House Sales by Hour (Food/Drink/Other)
   var salesLegend = [
-    { label: 'Today', color: CHART.teal },
-    { label: 'Last Wk', color: CHART.orange },
+    { label: 'Food', color: DATA.orange },
+    { label: 'Drink', color: DATA.pink },
+    { label: 'Other', color: DATA.violet },
   ];
-  var p1 = buildChartPanel('NET SALES', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
+  var p1 = buildChartPanel('SALES BY HOUR', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
       var hr = parseInt(hourly[i].hour);
       var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
-      var cmp = lastWeek[i] ? lastWeek[i].net : 0;
-      data.push({ label: label, value: hourly[i].net, compareValue: cmp });
+      data.push({ label: label, food: hourly[i].food || hourly[i].net || 0, drink: hourly[i].drink || 0, other: hourly[i].other || 0 });
     }
-    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
+    drawStackedColumn(svg, data, {
+      width: svgW, height: svgH, showCumulative: true, lineColor: DATA.coral,
+      series: [
+        { key: 'food', color: DATA.orange, pattern: PAT.orange },
+        { key: 'drink', color: DATA.pink, pattern: PAT.pink },
+        { key: 'other', color: DATA.violet, pattern: PAT.violet },
+      ]
+    });
     body.appendChild(svg);
   }, salesLegend);
 
-  // TOTAL CHECKS — stacked area: today vs last week, 12hr labels
-  var checksLegend = [
-    { label: 'Today', color: CHART.hotPink },
-    { label: 'Last Wk', color: CHART.electricBlue },
+  // Q2 — Heatmap: Peak Hours by Day-of-Week
+  var p2 = buildChartPanel('PEAK HOURS', s.total_checks || '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    // Build heatmap data: 7 rows × hourly columns
+    var peakData = s.peak_hours || [];
+    var colLabels = [];
+    var heatGrid = [];
+    if (peakData.length > 0 && peakData[0].hours) {
+      for (var c = 0; c < peakData[0].hours.length; c++) {
+        var hr = peakData[0].hours[c].hour;
+        colLabels.push(hr > 12 ? (hr - 12) + 'p' : hr + 'a');
+      }
+      for (var r = 0; r < peakData.length; r++) {
+        var row = [];
+        for (var c = 0; c < peakData[r].hours.length; c++) {
+          row.push(peakData[r].hours[c].value || 0);
+        }
+        heatGrid.push(row);
+      }
+    } else {
+      // Fallback: generate from hourly data
+      colLabels = [];
+      for (var i = 0; i < hourly.length; i++) {
+        var hr = parseInt(hourly[i].hour);
+        colLabels.push(hr > 12 ? (hr - 12) + 'p' : hr + 'a');
+      }
+      var dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      for (var r = 0; r < 7; r++) {
+        var row = [];
+        for (var c = 0; c < hourly.length; c++) {
+          row.push(hourly[c].checks || hourly[c].net || 0);
+        }
+        heatGrid.push(row);
+      }
+    }
+    var rowLabels = (peakData.length > 0) ? peakData.map(function(d) { return d.day; }) : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    drawHeatmap(svg, heatGrid, { width: svgW, height: svgH, rows: rowLabels, cols: colLabels });
+    body.appendChild(svg);
+  });
+
+  // Q3 — Multi-Series Line: House Today vs Last Week
+  var trendLegend = [
+    { label: 'Today', color: DATA.orange },
+    { label: 'Last Wk', color: DATA.blue },
   ];
-  var p2 = buildChartPanel('TOTAL CHECKS', s.total_checks || '--', function(body) {
+  var p3 = buildChartPanel('TODAY vs LAST WK', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
+    var compare = [];
     for (var i = 0; i < hourly.length; i++) {
       var hr = parseInt(hourly[i].hour);
       var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
-      var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
-      data.push({ label: label, value: hourly[i].checks, compareValue: cmp });
+      data.push({ label: label, value: hourly[i].net || 0 });
+      compare.push({ label: label, value: lastWeek[i] ? lastWeek[i].net : 0 });
     }
-    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, showCallouts: true, calloutFmt: function(v) { return v; } });
+    drawTrendLine(svg, data, {
+      color: DATA.orange, compareData: compare, compareColor: DATA.blue,
+      width: svgW, height: svgH, shaded: true,
+      areaPatternFill: PAT.coral, compareAreaPatternFill: PAT.blue
+    });
     body.appendChild(svg);
-  }, checksLegend);
+  }, trendLegend);
 
-  // CHECK AVG — pareto: which days are most profitable, sorted descending
-  var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
+  // Q4 — Pareto Bar: House Top Revenue Items
+  var paretoLegend = [
+    { label: 'Food', color: DATA.orange },
+    { label: 'Drink', color: DATA.pink },
+  ];
+  var p4 = buildChartPanel('TOP ITEMS', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
-    for (var i = 0; i < dailyAvg.length; i++) {
-      data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
+    for (var i = 0; i < topItems.length; i++) {
+      var item = topItems[i];
+      var cat = (item.category || '').toLowerCase();
+      var isFood = cat === 'food' || cat === 'combo' || cat === 'ribs' || cat === 'sandwiches' || cat === 'sides';
+      data.push({
+        label: item.name || item.label,
+        value: item.revenue || item.value || 0,
+        color: isFood ? DATA.orange : DATA.pink,
+        pattern: isFood ? PAT.orange : PAT.pink,
+      });
     }
-    drawParetoChart(svg, data, { barColor: CHART.neonYellow, lineColor: CHART.hotPink, width: svgW, height: svgH, showCallouts: true });
+    if (data.length === 0) {
+      // Fallback: use hourly as simple items
+      for (var i = 0; i < hourly.length && i < 8; i++) {
+        data.push({ label: hourly[i].hour + '', value: hourly[i].net || 0, color: DATA.orange, pattern: PAT.orange });
+      }
+    }
+    drawParetoHBar(svg, data, { width: svgW, height: svgH });
     body.appendChild(svg);
-  });
-
-  // CASH / CARD — win98-style combined bar
-  var p4 = buildChartPanel('CASH / CARD', s.cash_total ? fmt((s.cash_total || 0) + (s.card_total || 0)) : '--', function(body) {
-    var total = (s.cash_total || 0) + (s.card_total || 0);
-    var cashPct = total > 0 ? Math.round((s.cash_total || 0) / total * 100) : 0;
-    var cardPct = total > 0 ? 100 - cashPct : 0;
-
-    var wrap = document.createElement('div');
-    var barFs = fullSize ? '45' : '32';
-    var barH = fullSize ? 83 : 55;
-    wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-family:' + T.fb + ';';
-
-    // Labels row — centered over each segment
-    var labels = document.createElement('div');
-    labels.style.cssText = 'display:flex;font-size:' + barFs + 'px;';
-    var cashTitle = document.createElement('div');
-    cashTitle.style.cssText = 'width:' + (total > 0 ? cashPct : 50) + '%;text-align:center;color:' + CHART.gold + ';';
-    cashTitle.textContent = 'Cash (' + cashPct + '%)';
-    var cardTitle = document.createElement('div');
-    cardTitle.style.cssText = 'width:' + (total > 0 ? cardPct : 50) + '%;text-align:center;color:' + CHART.sky + ';';
-    cardTitle.textContent = 'Card (' + cardPct + '%)';
-    labels.appendChild(cashTitle);
-    labels.appendChild(cardTitle);
-    wrap.appendChild(labels);
-
-    // Thick bar with amounts inside
-    var barOuter = document.createElement('div');
-    barOuter.style.cssText = 'width:100%;height:' + barH + 'px;background:' + T.bg + ';border:2px solid;border-color:' + T.bgLight + ' ' + T.bgDark + ' ' + T.bgDark + ' ' + T.bgLight + ';position:relative;';
-
-    var barInner = document.createElement('div');
-    barInner.style.cssText = 'position:absolute;inset:2px;display:flex;border:1px solid;border-color:' + T.bgDark + ' ' + T.bgLight + ' ' + T.bgLight + ' ' + T.bgDark + ';';
-
-    // Always fill 100% — proportional segments
-    var displayCashPct = total > 0 ? cashPct : 50;
-    var displayCardPct = total > 0 ? cardPct : 50;
-
-    // Cash segment with amount inside
-    var cashBar = document.createElement('div');
-    cashBar.style.cssText = 'width:' + displayCashPct + '%;height:100%;background:' + CHART.gold + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
-    var cashLabel = document.createElement('span');
-    cashLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
-    cashLabel.textContent = fmt(s.cash_total || 0);
-    cashBar.appendChild(cashLabel);
-    barInner.appendChild(cashBar);
-
-    // Card segment with amount inside
-    var cardBar = document.createElement('div');
-    cardBar.style.cssText = 'width:' + displayCardPct + '%;height:100%;background:' + CHART.sky + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
-    var cardLabel = document.createElement('span');
-    cardLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
-    cardLabel.textContent = fmt(s.card_total || 0);
-    cardBar.appendChild(cardLabel);
-    barInner.appendChild(cardBar);
-
-    barOuter.appendChild(barInner);
-    wrap.appendChild(barOuter);
-
-    // Total line
-    var totalLine = document.createElement('div');
-    totalLine.style.cssText = 'text-align:center;font-size:' + barFs + 'px;color:' + CHART.mint + ';margin-top:4px;';
-    totalLine.innerHTML = 'Total: <span style="color:' + CHART.gold + '">' + fmt(total) + '</span>';
-    wrap.appendChild(totalLine);
-
-    body.appendChild(wrap);
-  });
+  }, paretoLegend);
 
   return [p1, p2, p3, p4];
 }
@@ -496,7 +503,7 @@ function buildManagerLaborPanels(labor, fullSize) {
     var data = [];
     for (var i = 0; i < employees.length; i++) {
       var emp = employees[i];
-      data.push({ label: emp.name, value: emp.hours, sublabel: emp.hours + 'h (' + emp.clock_in + '-' + emp.clock_out + ')', color: CHART.cyan });
+      data.push({ label: emp.name, value: emp.hours, sublabel: emp.hours + 'h (' + emp.clock_in + '-' + emp.clock_out + ')', color: DATA.orange });
     }
     drawHorizontalBars(svg, data, { width: svgW, height: svgH, labelWidth: lblW });
     body.appendChild(svg);
@@ -508,18 +515,18 @@ function buildManagerLaborPanels(labor, fullSize) {
     var svg = createSVG(svgW, chartH);
     var data = [];
     for (var i = 0; i < employees.length; i++) {
-      data.push({ label: employees[i].name, value: employees[i].tips, sublabel: fmt(employees[i].tips), color: CHART.gold });
+      data.push({ label: employees[i].name, value: employees[i].tips, sublabel: fmt(employees[i].tips), color: DATA.coral });
     }
     drawHorizontalBars(svg, data, { width: svgW, height: chartH, labelWidth: lblW });
     body.appendChild(svg);
 
     // Text breakdown below chart
     var info = document.createElement('div');
-    info.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + CHART.mint + ';';
+    info.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + DATA.coral + ';';
     info.innerHTML =
-      'Card Tips: <span style="color:' + CHART.gold + '">' + fmt(l.card_tips_total || 0) + '</span> ' +
-      '- Tipout: <span style="color:' + CHART.red + '">' + fmt(l.tipout_deducted || 0) + '</span> ' +
-      '= Pool: <span style="color:' + CHART.gold + '">' + fmt(l.tip_pool || 0) + '</span>';
+      'Card Tips: <span style="color:' + DATA.coral + '">' + fmt(l.card_tips_total || 0) + '</span> ' +
+      '- Tipout: <span style="color:' + DATA.critical + '">' + fmt(l.tipout_deducted || 0) + '</span> ' +
+      '= Pool: <span style="color:' + DATA.coral + '">' + fmt(l.tip_pool || 0) + '</span>';
     body.appendChild(info);
   });
 
@@ -531,10 +538,10 @@ function buildManagerLaborPanels(labor, fullSize) {
       data.push({ label: cobTrend[i].day, value: cobTrend[i].percent });
     }
     drawTrendLine(svg, data, {
-      color: CHART.neonPurple, width: svgW, height: svgH,
+      color: DATA.orange, width: svgW, height: svgH,
       thresholds: [
-        { value: 35, color: CHART.yellow },
-        { value: 45, color: CHART.red },
+        { value: 35, color: DATA.warning },
+        { value: 45, color: DATA.critical },
       ],
     });
     body.appendChild(svg);
@@ -542,15 +549,15 @@ function buildManagerLaborPanels(labor, fullSize) {
 
   // OT ALERT — horizontal bars colored by status
   var otStatus = otAlerts.length > 0 ? 'Warning' : 'All clear';
-  var otColor = otAlerts.length > 0 ? CHART.yellow : CHART.cyan;
+  var otColor = otAlerts.length > 0 ? DATA.warning : DATA.orange;
   var p4 = buildChartPanel('OT ALERT', otStatus, function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < employees.length; i++) {
       var wh = employees[i].weekly_hours;
-      var barColor = CHART.cyan;
-      if (wh > 40) barColor = CHART.red;
-      else if (wh >= 35) barColor = CHART.yellow;
+      var barColor = DATA.orange;
+      if (wh > 40) barColor = DATA.critical;
+      else if (wh >= 35) barColor = DATA.warning;
       data.push({ label: employees[i].name, value: wh, sublabel: wh + 'h', color: barColor });
     }
     drawHorizontalBars(svg, data, { width: svgW, height: svgH, labelWidth: lblW });
@@ -562,7 +569,7 @@ function buildManagerLaborPanels(labor, fullSize) {
       }
       if (maxH > 0) {
         var lineX = lblW + (40 / Math.max(maxH, 40)) * (svgW - lblW - 10);
-        svg.appendChild(svgEl('line', { x1: lineX, y1: 0, x2: lineX, y2: svgH, stroke: CHART.yellow, 'stroke-width': 2, 'stroke-dasharray': '4,3' }));
+        svg.appendChild(svgEl('line', { x1: lineX, y1: 0, x2: lineX, y2: svgH, stroke: DATA.warning, 'stroke-width': 2, 'stroke-dasharray': '4,3' }));
       }
     }
     body.appendChild(svg);
@@ -584,83 +591,104 @@ function buildManagerLaborPanels(labor, fullSize) {
 function buildServerShiftPanels(sales, fullSize) {
   var s = sales || {};
   var hourly = s.hourly_sales || [];
-  var hourlyTables = s.hourly_tables || [];
-  var dailyAvg = s.daily_check_avg || [];
+  var lastWeek = s.last_week_hourly || [];
+  var topItems = s.top_items || [];
+  var tipBuckets = s.tip_buckets || [];
   var svgW = fullSize ? 900 : 400;
   var svgH = fullSize ? 380 : 160;
-  var lblW = fullSize ? 60 : 40;
-  var fontSize = fullSize ? T.fsSmall : T.fsBtn;
-  var lgFontSize = fullSize ? '40px' : '28px';
 
-  // TOTAL GUESTS — bar chart per hour
-  var p1 = buildChartPanel('TOTAL GUESTS', s.total_guests || '--', function(body) {
+  // Q1 — Stacked Column + Line: My Sales by Hour (Food/Drink)
+  var salesLegend = [
+    { label: 'Food', color: DATA.orange },
+    { label: 'Drink', color: DATA.pink },
+  ];
+  var p1 = buildChartPanel('SALES BY HOUR', s.net_sales ? fmt(s.net_sales || 0) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
       var hr = parseInt(hourly[i].hour);
       var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
-      data.push({ label: label, value: hourly[i].checks });
+      data.push({ label: label, food: hourly[i].food || hourly[i].net || 0, drink: hourly[i].drink || 0 });
     }
-    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
+    drawStackedColumn(svg, data, {
+      width: svgW, height: svgH, showCumulative: true, lineColor: DATA.coral,
+      series: [
+        { key: 'food', color: DATA.orange, pattern: PAT.orange },
+        { key: 'drink', color: DATA.pink, pattern: PAT.pink },
+      ]
+    });
     body.appendChild(svg);
-  });
+  }, salesLegend);
 
-  // TOTAL TABLES — horizontal bars per hour
-  var p2 = buildChartPanel('TOTAL TABLES', s.total_tables || '--', function(body) {
-    var chartH = fullSize ? 300 : 130;
-    var svg = createSVG(svgW, chartH);
+  // Q2 — Histogram: My Tip Distribution
+  var p2 = buildChartPanel('TIP DISTRIBUTION', s.tips_collected ? fmt(s.tips_collected) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
     var data = [];
-    for (var i = 0; i < hourlyTables.length; i++) {
-      var hr = parseInt(hourlyTables[i].hour);
-      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
-      data.push({ label: label, value: hourlyTables[i].tables, sublabel: hourlyTables[i].tables + ' tbl', color: CHART.teal });
+    if (tipBuckets.length > 0) {
+      for (var i = 0; i < tipBuckets.length; i++) {
+        data.push({ label: tipBuckets[i].range || tipBuckets[i].label, count: tipBuckets[i].count || 0 });
+      }
+    } else {
+      // Default tip range buckets
+      var ranges = ['$0-3', '$3-5', '$5-8', '$8-12', '$12-15', '$15-20', '$20+'];
+      for (var i = 0; i < ranges.length; i++) {
+        data.push({ label: ranges[i], count: 0 });
+      }
     }
-    drawHorizontalBars(svg, data, { width: svgW, height: chartH, labelWidth: lblW });
+    drawHistogram(svg, data, { width: svgW, height: svgH, avgValue: s.tip_avg || 0 });
     body.appendChild(svg);
-
-    var avgText = document.createElement('div');
-    avgText.style.cssText = 'padding:4px 8px;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + CHART.mint + ';';
-    avgText.textContent = 'Avg guests/table: ' + (s.guests_per_table || '--');
-    body.appendChild(avgText);
   });
 
-  // CHECK AVG — trend line: daily avg vs house avg
-  var avgLegend = [
-    { label: 'You', color: CHART.neonOrange },
-    { label: 'House', color: CHART.limeGreen },
+  // Q3 — Multi-Series Line: My Today vs Last Week
+  var trendLegend = [
+    { label: 'Today', color: DATA.orange },
+    { label: 'Last Wk', color: DATA.blue },
   ];
-  var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
+  var p3 = buildChartPanel('TODAY vs LAST WK', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     var compare = [];
-    for (var i = 0; i < dailyAvg.length; i++) {
-      data.push({ label: dailyAvg[i].day, value: dailyAvg[i].avg });
-      compare.push({ label: dailyAvg[i].day, value: dailyAvg[i].house_avg });
+    for (var i = 0; i < hourly.length; i++) {
+      var hr = parseInt(hourly[i].hour);
+      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      data.push({ label: label, value: hourly[i].net || 0 });
+      compare.push({ label: label, value: lastWeek[i] ? lastWeek[i].net : 0 });
     }
-    drawTrendLine(svg, data, { color: CHART.neonOrange, compareData: compare, compareColor: CHART.limeGreen, width: svgW, height: svgH });
+    drawTrendLine(svg, data, {
+      color: DATA.orange, compareData: compare, compareColor: DATA.blue,
+      width: svgW, height: svgH, shaded: true,
+      areaPatternFill: PAT.coral, compareAreaPatternFill: PAT.blue
+    });
     body.appendChild(svg);
-  }, avgLegend);
+  }, trendLegend);
 
-  // TIPS / TIPOUT — styled DOM text panel with win98 bar for breakdown
-  var p4 = buildChartPanel('TIPS / TIPOUT', s.tips_collected ? fmt(s.tips_collected) : '--', function(body) {
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:6px;';
-
-    var tipsTotal = s.tips_collected || 0;
-    var tipout = s.tipout_amount || 0;
-    var takeHome = s.take_home || 0;
-    var cashTips = s.cash_tips || 0;
-
-    wrap.innerHTML =
-      '<div style="font-size:' + fontSize + ';color:' + CHART.gold + '">Card Tips: ' + fmt(tipsTotal) + '</div>' +
-      '<div style="font-size:' + fontSize + ';color:' + CHART.red + '">Tipout: -' + fmt(tipout) + '</div>' +
-      '<div style="height:1px;background:' + T.border + ';margin:4px 0;"></div>' +
-      '<div style="font-size:' + lgFontSize + ';font-weight:bold;color:' + CHART.gold + '">Take-home: ' + fmt(takeHome) + '</div>' +
-      '<div style="font-size:' + lgFontSize + ';color:' + CHART.gold + '">Cash Tips: ' + fmt(cashTips) + '</div>' +
-      '<div style="height:2px;background:' + CHART.gold + ';margin:4px 0;"></div>' +
-      '<div><span style="font-size:' + fontSize + ';color:' + CHART.mint + '">TOTAL EARNED </span><span style="font-size:' + (fullSize ? '28px' : T.fsSmall) + ';color:' + CHART.gold + '">' + fmt(takeHome + cashTips) + '</span></div>';
-    body.appendChild(wrap);
-  });
+  // Q4 — Pareto Bar: My Top Items Sold
+  var paretoLegend = [
+    { label: 'Food', color: DATA.orange },
+    { label: 'Drink', color: DATA.pink },
+  ];
+  var p4 = buildChartPanel('TOP ITEMS', s.net_sales ? fmt(s.net_sales || 0) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = [];
+    for (var i = 0; i < topItems.length; i++) {
+      var item = topItems[i];
+      var cat = (item.category || '').toLowerCase();
+      var isFood = cat === 'food' || cat === 'combo' || cat === 'ribs' || cat === 'sandwiches' || cat === 'sides';
+      data.push({
+        label: item.name || item.label,
+        value: item.revenue || item.value || 0,
+        color: isFood ? DATA.orange : DATA.pink,
+        pattern: isFood ? PAT.orange : PAT.pink,
+      });
+    }
+    if (data.length === 0) {
+      for (var i = 0; i < hourly.length && i < 8; i++) {
+        data.push({ label: hourly[i].hour + '', value: hourly[i].net || 0, color: DATA.orange, pattern: PAT.orange });
+      }
+    }
+    drawParetoHBar(svg, data, { width: svgW, height: svgH });
+    body.appendChild(svg);
+  }, paretoLegend);
 
   return [p1, p2, p3, p4];
 }
@@ -684,17 +712,17 @@ function buildServerHoursPanels(sales, labor, fullSize) {
     wrap.style.cssText = 'padding:8px 12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:4px;';
 
     wrap.innerHTML =
-      '<div style="font-size:' + fontSize + ';color:' + CHART.cyan + '">Time In</div>' +
-      '<div style="font-size:' + lgFontSize + ';color:' + CHART.cyan + '">' + (l.clock_in || '--') + '</div>' +
-      '<div style="font-size:' + fontSize + ';color:' + CHART.mint + '">Time Out</div>' +
-      '<div style="font-size:' + lgFontSize + ';color:' + CHART.mint + '">' + (l.clock_out || 'active') + '</div>' +
+      '<div style="font-size:' + fontSize + ';color:' + DATA.orange + '">Time In</div>' +
+      '<div style="font-size:' + lgFontSize + ';color:' + DATA.orange + '">' + (l.clock_in || '--') + '</div>' +
+      '<div style="font-size:' + fontSize + ';color:' + DATA.coral + '">Time Out</div>' +
+      '<div style="font-size:' + lgFontSize + ';color:' + DATA.coral + '">' + (l.clock_out || 'active') + '</div>' +
       '<div style="height:1px;background:' + T.border + ';margin:2px 0;"></div>' +
-      '<div style="font-size:' + (fullSize ? '28px' : T.fsSmall) + ';color:' + CHART.cyan + '">Today: ' + (l.today_hours || 0) + ' hrs</div>';
+      '<div style="font-size:' + (fullSize ? '28px' : T.fsSmall) + ';color:' + DATA.orange + '">Today: ' + (l.today_hours || 0) + ' hrs</div>';
     body.appendChild(wrap);
 
     // Progress bar for shift span
     var svg = createSVG(progW, fullSize ? 32 : 24);
-    drawProgressBar(svg, l.today_hours || 0, 12, { width: progW, height: fullSize ? 32 : 24, color: CHART.cyan });
+    drawProgressBar(svg, l.today_hours || 0, 12, { width: progW, height: fullSize ? 32 : 24, color: DATA.orange });
     svg.style.marginLeft = '12px';
     body.appendChild(svg);
   });
@@ -708,7 +736,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
       var val = d.hours || 0;
       data.push({ label: d.day, value: val });
     }
-    drawBarChart(svg, data, { color: CHART.electricBlue, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
+    drawBarChart(svg, data, { color: DATA.orange, patternFill: PAT.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
 
     // Draw dashed outline for scheduled-unworked days
     var padLeft = 50;
@@ -725,7 +753,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
         if (maxVal === 0) maxVal = 1;
         var barH = (weekly[i].scheduled / maxVal) * chartH;
         var padTop = fullSize ? 22 : 10;
-        svg.appendChild(svgEl('rect', { x: x, y: padTop + chartH - barH, width: barW, height: barH, fill: 'none', stroke: CHART.electricBlue, 'stroke-width': 1, 'stroke-dasharray': '4,3' }));
+        svg.appendChild(svgEl('rect', { x: x, y: padTop + chartH - barH, width: barW, height: barH, fill: 'none', stroke: DATA.orange, 'stroke-width': 1, 'stroke-dasharray': '4,3' }));
       }
     }
 
@@ -736,7 +764,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
   var p3 = buildChartPanel('TOTAL HRS', l.weekly_hours ? l.weekly_hours + '/40h' : '--', function(body) {
     // Progress bar
     var svg = createSVG(progW, fullSize ? 36 : 28);
-    drawProgressBar(svg, l.weekly_hours || 0, 48, { width: progW, height: fullSize ? 36 : 28, color: CHART.cyan, warnAt: 35, critAt: 40 });
+    drawProgressBar(svg, l.weekly_hours || 0, 48, { width: progW, height: fullSize ? 36 : 28, color: DATA.orange, warnAt: 35, critAt: 40 });
     svg.style.margin = '4px 12px';
     body.appendChild(svg);
 
@@ -751,7 +779,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
       row.style.cssText = 'display:flex;gap:' + (fullSize ? '16' : '8') + 'px;padding:' + (fullSize ? '3' : '1') + 'px 0;';
 
       var dayCol = document.createElement('span');
-      dayCol.style.cssText = 'width:' + (fullSize ? '50' : '35') + 'px;color:' + CHART.mint + ';';
+      dayCol.style.cssText = 'width:' + (fullSize ? '50' : '35') + 'px;color:' + DATA.coral + ';';
       dayCol.textContent = d.day;
       row.appendChild(dayCol);
 
@@ -766,7 +794,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
       row.appendChild(outCol);
 
       var hrsCol = document.createElement('span');
-      hrsCol.style.cssText = 'color:' + CHART.cyan + ';';
+      hrsCol.style.cssText = 'color:' + DATA.orange + ';';
       hrsCol.textContent = d.hours ? d.hours + 'h' : (d.scheduled ? d.scheduled + 'h (sched)' : '--');
       row.appendChild(hrsCol);
 
@@ -788,7 +816,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
   // OT ALERT — custom DOM status box
   var otStatus = l.ot_status || 'clear';
   var statusLabel = otStatus === 'warning' ? 'WARNING' : otStatus === 'over' ? 'OVERTIME' : 'All clear';
-  var statusColor = otStatus === 'warning' ? CHART.yellow : otStatus === 'over' ? CHART.red : CHART.cyan;
+  var statusColor = otStatus === 'warning' ? DATA.warning : otStatus === 'over' ? DATA.critical : DATA.orange;
 
   var p4 = buildChartPanel('OT ALERT', statusLabel, function(body) {
     var wrap = document.createElement('div');
@@ -812,14 +840,14 @@ function buildServerHoursPanels(sales, labor, fullSize) {
       if (weekly[i].scheduled && !weekly[i].hours) scheduledRemain += weekly[i].scheduled;
     }
 
-    var projColor = projected > 40 ? CHART.yellow : CHART.cyan;
+    var projColor = projected > 40 ? DATA.warning : DATA.orange;
 
     wrap.innerHTML +=
-      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + CHART.mint + '">Worked so far</span><span style="color:' + CHART.cyan + '">' + worked + 'h</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + DATA.coral + '">Worked so far</span><span style="color:' + DATA.orange + '">' + worked + 'h</span></div>' +
       '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + T.dimText + '">Scheduled remaining</span><span style="color:' + T.dimText + '">' + scheduledRemain + 'h</span></div>' +
       '<div style="height:1px;background:' + T.border + ';"></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + CHART.mint + ';font-weight:bold">Projected total</span><span style="color:' + projColor + ';font-weight:bold">' + projected + 'h</span></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + CHART.mint + '">Buffer</span><span style="color:' + (buffer <= 0 ? CHART.yellow : CHART.cyan) + '">' + buffer + 'h</span></div>';
+      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + DATA.coral + ';font-weight:bold">Projected total</span><span style="color:' + projColor + ';font-weight:bold">' + projected + 'h</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:' + fontSize + ';"><span style="color:' + DATA.coral + '">Buffer</span><span style="color:' + (buffer <= 0 ? DATA.warning : DATA.orange) + '">' + buffer + 'h</span></div>';
 
     body.appendChild(wrap);
   });
