@@ -45,7 +45,7 @@ class KitchenTicketTemplate(BaseTemplate):
         # Zone 5 — Footer
         commands.extend(self._render_zone5(context, ticket_type))
 
-        commands.append({'type': 'feed', 'lines': 5})
+        commands.append({'type': 'feed', 'lines': 7})
         commands.append({'type': 'cut', 'partial': False})
         return commands
 
