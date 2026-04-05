@@ -1101,45 +1101,53 @@ function renderDeviceList(card, type) {
   }
 
   var list = document.createElement('div');
-  list.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px 16px;overflow-y:auto;flex:1;';
+  list.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:12px 16px;overflow-y:auto;flex:1;';
 
   if (type === 'printer') {
-    // Separate into kitchen and receipt sections
+    // Separate into kitchen and receipt cards on #333 bg
     var kitchenDevices = filtered.filter(function(d) { return d.type === 'kitchen'; });
     var receiptDevices = filtered.filter(function(d) { return d.type === 'receipt'; });
 
     if (kitchenDevices.length > 0) {
-      list.appendChild(makeSectionHeader('Kitchen'));
+      var kitchenCard = buildSectionCard('Kitchen');
       var kitchenRow = document.createElement('div');
       kitchenRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
       kitchenDevices.forEach(function(dev) { kitchenRow.appendChild(buildDeviceCard(dev, card)); });
-      list.appendChild(kitchenRow);
+      kitchenCard.appendChild(kitchenRow);
+      list.appendChild(kitchenCard);
     }
 
     if (receiptDevices.length > 0) {
-      list.appendChild(makeSectionHeader('Receipt'));
+      var receiptCard = buildSectionCard('Receipt');
       var receiptRow = document.createElement('div');
       receiptRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
       receiptDevices.forEach(function(dev) { receiptRow.appendChild(buildDeviceCard(dev, card)); });
-      list.appendChild(receiptRow);
+      receiptCard.appendChild(receiptRow);
+      list.appendChild(receiptCard);
     }
   } else {
-    // Card readers — same narrow card treatment
-    list.appendChild(makeSectionHeader('Card Readers'));
+    // Card readers — same card treatment
+    var readerCard = buildSectionCard('Card Readers');
     var readerRow = document.createElement('div');
     readerRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
     filtered.forEach(function(dev) { readerRow.appendChild(buildDeviceCard(dev, card)); });
-    list.appendChild(readerRow);
+    readerCard.appendChild(readerRow);
+    list.appendChild(readerCard);
   }
 
   inner.appendChild(list);
 }
 
-function makeSectionHeader(text) {
+function buildSectionCard(title) {
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'background:#333333;border:7px solid ' + GOLD + ';clip-path:' + chamfer(10) + ';padding:12px 14px;display:flex;flex-direction:column;gap:10px;';
+
   var hdr = document.createElement('div');
-  hdr.style.cssText = 'font-family:' + T.fh + ';font-size:28px;font-style:italic;color:' + GOLD + ';padding:4px 0 2px;';
-  hdr.textContent = '//' + text + '//';
-  return hdr;
+  hdr.style.cssText = 'font-family:' + T.fh + ';font-size:28px;font-style:italic;color:' + GOLD + ';';
+  hdr.textContent = '//' + title + '//';
+  wrap.appendChild(hdr);
+
+  return wrap;
 }
 
 function buildDeviceCard(dev, card) {
