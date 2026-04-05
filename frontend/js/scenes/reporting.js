@@ -140,8 +140,11 @@ function buildLeftCard(params, sales, labor) {
 
     var closeDayBtn = buildStyledButton(T.red);
     closeDayBtn.inner.textContent = 'Close Day';
-    closeDayBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:32px;color:#fff;padding:10px 16px;text-align:center;';
-    closeDayBtn.wrap.style.cssText = 'align-self:stretch;';
+    closeDayBtn.inner.style.fontFamily = T.fh;
+    closeDayBtn.inner.style.fontSize = '32px';
+    closeDayBtn.inner.style.color = '#fff';
+    closeDayBtn.inner.style.padding = '10px 16px';
+    closeDayBtn.wrap.style.alignSelf = 'stretch';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
       push('close-day', params);
@@ -178,8 +181,11 @@ function buildLeftCard(params, sales, labor) {
 
     var checkoutBtn = buildStyledButton('#33ff99');
     checkoutBtn.inner.textContent = 'Checkout';
-    checkoutBtn.inner.style.cssText = 'font-family:' + T.fh + ';font-size:28px;color:' + T.bgDark + ';padding:8px 16px;text-align:center;';
-    checkoutBtn.wrap.style.cssText = 'align-self:stretch;';
+    checkoutBtn.inner.style.fontFamily = T.fh;
+    checkoutBtn.inner.style.fontSize = '28px';
+    checkoutBtn.inner.style.color = T.bgDark;
+    checkoutBtn.inner.style.padding = '8px 16px';
+    checkoutBtn.wrap.style.alignSelf = 'stretch';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
       push('server-checkout', params);
