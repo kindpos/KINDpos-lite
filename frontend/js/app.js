@@ -45,7 +45,7 @@ export function setHeaderBack(show) {
       backPair.wrap.style.height = '40px';
       backPair.wrap.style.width = '72px';
       backPair.inner.style.fontFamily = T.fb;
-      backPair.inner.style.fontSize = '31.5px';
+      backPair.inner.style.fontSize = '30px';
       backPair.inner.style.color = '#fff';
       backPair.inner.textContent = '<<<';
       backPair.wrap.addEventListener('pointerup', () => pop());
@@ -59,7 +59,7 @@ export function setHeaderBack(show) {
       logoutPair.wrap.style.height = '40px';
       logoutPair.wrap.style.width = '47px';
       logoutPair.inner.style.fontFamily = T.fb;
-      logoutPair.inner.style.fontSize = '31.5px';
+      logoutPair.inner.style.fontSize = '30px';
       logoutPair.inner.style.color = '#fff';
       logoutPair.inner.textContent = 'X';
       logoutPair.wrap.addEventListener('pointerup', () => replace('login'));
