@@ -246,7 +246,7 @@ function buildReceiptPanel(state) {
   header.style.cssText = [
     'flex-shrink:0;padding:6px 12px;',
     'background:' + T.bgEdge + ';',
-    'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';',
+    'font-family:' + T.fb + ';font-size:27px;color:' + T.mint + ';',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
   header.textContent = 'PRINT PREVIEW';
@@ -270,7 +270,7 @@ function getCardDefs(state) {
     {
       title: 'Revenue Summary',
       hero: fmt(state.netSales),
-      heroColor: T.cyan,
+      heroColor: T.gold,
       subtitle: 'Gross / Voids / Comps / Net',
       border: T.border,
       statusColor: null,
@@ -287,7 +287,7 @@ function getCardDefs(state) {
     {
       title: 'Payment Breakdown',
       hero: fmt(state.cardSales),
-      heroColor: T.cyan,
+      heroColor: T.gold,
       subtitle: 'Cash / Card / Tips',
       border: T.border,
       statusColor: null,
@@ -308,7 +308,7 @@ function getCardDefs(state) {
     {
       title: 'Category Sales',
       hero: fmt(state.netSales),
-      heroColor: T.cyan,
+      heroColor: T.gold,
       subtitle: 'by menu category',
       border: T.border,
       statusColor: null,
@@ -317,7 +317,7 @@ function getCardDefs(state) {
           el.appendChild(detailRow(c.name + ' (' + c.count + ')', fmt(c.total)));
         });
         if (!state.categories.length) {
-          el.appendChild(detailRow('No categories', '—', T.mutedText));
+          el.appendChild(detailRow('No categories', '—', T.mint));
         }
       },
     },
@@ -340,7 +340,7 @@ function getCardDefs(state) {
     {
       title: 'Daypart Summary',
       hero: fmt(state.netSales),
-      heroColor: T.cyan,
+      heroColor: T.gold,
       subtitle: 'AM / PM / Late split',
       border: T.border,
       statusColor: null,
@@ -349,14 +349,14 @@ function getCardDefs(state) {
           el.appendChild(detailRow(d.name + ' (' + d.checks + ' chk)', fmt(d.sales)));
         });
         if (!state.dayparts.length) {
-          el.appendChild(detailRow('No daypart data', '—', T.mutedText));
+          el.appendChild(detailRow('No daypart data', '—', T.mint));
         }
       },
     },
     {
       title: 'Tips & Gratuity',
       hero: fmt(state.totalTips),
-      heroColor: T.cyan,
+      heroColor: T.gold,
       subtitle: 'collected • tip-out paid',
       border: T.border,
       statusColor: null,
@@ -386,10 +386,10 @@ function detailRow(label, value, valueColor) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';padding:2px 0;';
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:18px;color:' + T.mutedText + ';';
+  lbl.style.cssText = 'font-size:27px;color:' + T.mint + ';';
   lbl.textContent = label;
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:18px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
+  val.style.cssText = 'font-size:27px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
   val.textContent = value;
   row.appendChild(lbl);
   row.appendChild(val);
@@ -412,7 +412,7 @@ function buildMixBar(cashPct, cardPct) {
   bar.appendChild(cashSeg);
   bar.appendChild(cardSeg);
   var labels = document.createElement('div');
-  labels.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';margin-top:2px;';
+  labels.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:21px;color:' + T.mint + ';margin-top:2px;';
   labels.innerHTML = '<span>Cash ' + cashPct + '%</span><span>Card ' + cardPct + '%</span>';
   var wrap = document.createElement('div');
   wrap.appendChild(bar);
@@ -431,7 +431,7 @@ function buildShortcutRow(state) {
   // UNADJUSTED button
   var uPair = buildStyledButton(T.darkBtn);
   uPair.wrap.style.cssText = 'flex:1;height:34px;';
-  uPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.lavender + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + T.lavender + ';';
+  uPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.lavender + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + T.lavender + ';';
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
     push('tip-adjustment', { filter: 'unadjusted' });
@@ -441,7 +441,7 @@ function buildShortcutRow(state) {
   // $0 ALL button
   var zPair = buildStyledButton(T.darkBtn);
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
-  zPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + RED + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + RED + ';';
+  zPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + RED + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + RED + ';';
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
     doZeroAll(state);
@@ -469,12 +469,12 @@ function doZeroAll(state) {
       card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + RED + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';margin-bottom:12px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.mint + ';margin-bottom:12px;';
       msg.textContent = 'Zero out all ' + count + ' unadjusted tips?';
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';margin-bottom:20px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';margin-bottom:20px;';
       sub.textContent = 'This will set all unadjusted card tips to $0.00';
       card.appendChild(sub);
 
@@ -482,7 +482,7 @@ function doZeroAll(state) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('CONFIRM', {
-        fill: T.red, color: '#fff', fontSize: '18px',
+        fill: T.red, color: '#fff', fontSize: '27px',
         width: 140, height: 44,
         onTap: function() {
           resolveInterrupt(true);
@@ -490,7 +490,7 @@ function doZeroAll(state) {
       }));
 
       btns.appendChild(buildButton('CANCEL', {
-        fill: T.darkBtn, color: T.mint, fontSize: '18px',
+        fill: T.darkBtn, color: T.mint, fontSize: '27px',
         width: 120, height: 44,
         onTap: function() { cancelInterrupt(); },
       }));
@@ -532,7 +532,7 @@ function buildCardTile(def, idx) {
 
   // Title
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + T.gold + ';font-weight:bold;text-align:center;';
+  title.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.gold + ';font-weight:bold;text-align:center;';
   title.textContent = def.title;
   inner.appendChild(title);
 
@@ -543,19 +543,19 @@ function buildCardTile(def, idx) {
 
   // Hero number
   var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + (def.heroColor || T.cyan) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
+  hero.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
   hero.textContent = def.hero;
   inner.appendChild(hero);
 
   // Subtitle
   var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';text-align:center;';
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:27px;color:' + T.mint + ';text-align:center;';
   sub.textContent = def.subtitle;
   inner.appendChild(sub);
 
   // Hint
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.dimText + ';text-align:center;margin-top:2px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';text-align:center;margin-top:2px;';
   hint.textContent = 'tap to expand ▸';
   inner.appendChild(hint);
 
@@ -599,12 +599,12 @@ function buildCardStrip(def, idx) {
   ].join('');
 
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:13px;color:' + T.gold + ';';
+  lbl.style.cssText = 'font-size:20px;color:' + T.gold + ';';
   lbl.textContent = def.title;
   strip.appendChild(lbl);
 
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:13px;color:' + T.cyan + ';';
+  val.style.cssText = 'font-size:20px;color:' + T.cyan + ';';
   val.textContent = def.hero;
   strip.appendChild(val);
 
@@ -671,10 +671,10 @@ function buildExpandedView(state, idx) {
     'user-select:none;-webkit-user-select:none;',
   ].join('');
   var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';font-weight:bold;';
+  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:27px;color:' + T.gold + ';font-weight:bold;';
   hTitle.textContent = defs[idx].title;
   var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
+  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:21px;color:' + T.mint + ';';
   hHint.textContent = 'tap to collapse ▾';
   hdr.appendChild(hTitle);
   hdr.appendChild(hHint);
@@ -724,7 +724,7 @@ function buildBlockerBanner(state) {
   el.style.cssText = [
     'flex-shrink:0;height:' + BANNER_H + 'px;',
     'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:16px;',
+    'font-family:' + T.fb + ';font-size:24px;',
     'clip-path:' + chamfer(4) + ';',
   ].join('');
 
@@ -755,7 +755,7 @@ function buildActionBar(state) {
   // Arrow separator helper
   function arrow() {
     var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:20px;color:' + T.dimText + ';flex-shrink:0;';
+    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';flex-shrink:0;';
     el.textContent = '→';
     return el;
   }
@@ -763,7 +763,7 @@ function buildActionBar(state) {
   // PRINT
   var printPair = buildStyledButton(T.darkBtn);
   printPair.wrap.style.cssText = 'flex:1;height:100%;';
-  printPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:18px;color:' + T.cyan + ';border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+  printPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:27px;color:' + T.cyan + ';border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
     if (state.closedOrders && state.closedOrders.length) {
@@ -779,7 +779,7 @@ function buildActionBar(state) {
   // SUBMIT BATCH
   var batchPair = buildStyledButton(T.darkBtn);
   batchPair.wrap.style.cssText = 'flex:1;height:100%;';
-  batchPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';border:2px solid ' + T.gold + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+  batchPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';border:2px solid ' + T.gold + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
   batchPair.inner.textContent = _batchSettled ? '✓ SETTLED' : '//SUBMIT BATCH//';
   if (_batchSettled) {
     batchPair.wrap.style.pointerEvents = 'none';
@@ -803,12 +803,12 @@ function buildActionBar(state) {
   closePair.wrap.style.cssText = 'flex:1;height:100%;';
 
   if (blocked) {
-    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#555;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#555;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
     closePair.inner.textContent = '🔒 //CLOSE DAY//';
     closePair.wrap.style.pointerEvents = 'none';
     closePair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
-    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#888;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#888;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
     closePair.inner.textContent = '🔒 //CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
       openPinGate(function() {
@@ -821,7 +821,7 @@ function buildActionBar(state) {
       });
     });
   } else {
-    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#1a1a1a;border:2px solid ' + T.gold + ';clip-path:' + chamfer(CHAM) + ';background:' + T.gold + ';';
+    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#1a1a1a;border:2px solid ' + T.gold + ';clip-path:' + chamfer(CHAM) + ';background:' + T.gold + ';';
     closePair.inner.textContent = '//CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
       doCloseDay(state);
@@ -853,7 +853,7 @@ function openPinGate(onSuccess) {
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';margin-bottom:16px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:21px;color:' + T.mint + ';margin-bottom:16px;';
       sub.textContent = 'Enter 4-digit manager PIN';
       card.appendChild(sub);
 
@@ -871,7 +871,7 @@ function openPinGate(onSuccess) {
       card.appendChild(pad);
 
       var cancelBtn = buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '16px',
+        fill: T.darkBtn, color: T.mint, fontSize: '24px',
         width: 120, height: 40,
         onTap: function() { cancelInterrupt(); },
       });
@@ -949,7 +949,7 @@ function openBatchOverlay(state, onSettled) {
       function infoRow(label, value) {
         var row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:20px;';
-        var l = document.createElement('span'); l.style.color = T.mutedText; l.textContent = label;
+        var l = document.createElement('span'); l.style.color = T.mint; l.textContent = label;
         var v = document.createElement('span'); v.style.cssText = 'font-weight:bold;color:' + T.gold + ';'; v.textContent = value;
         row.appendChild(l); row.appendChild(v);
         return row;
@@ -982,7 +982,7 @@ function openBatchOverlay(state, onSettled) {
       progContainer.appendChild(progFill);
 
       var pctEl = document.createElement('div');
-      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:right;margin-top:2px;';
+      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';text-align:right;margin-top:2px;';
       pctEl.textContent = '0%';
 
       var progWrap = document.createElement('div');
