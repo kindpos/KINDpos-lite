@@ -231,7 +231,7 @@ class TestKitchenTicket:
         fmt = ESCPOSFormatter(paper_width=80)
         for div in dividers:
             char = div.get('char', '-')
-            expected = char * 42
+            expected = char * 33
             result = fmt.format([div])
             assert expected.encode('ascii') in result
 

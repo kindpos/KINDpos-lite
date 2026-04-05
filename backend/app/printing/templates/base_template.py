@@ -12,7 +12,7 @@ class BaseTemplate:
 
     def __init__(self, paper_width: int = 80):
         self.paper_width = paper_width
-        self.chars_per_line = 42 if paper_width == 80 else 32
+        self.chars_per_line = 33 if paper_width == 80 else 32
 
     def render(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
