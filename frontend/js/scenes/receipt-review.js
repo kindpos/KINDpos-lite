@@ -52,10 +52,10 @@ function buildReceiptPanel(params) {
     'display:flex;justify-content:space-between;align-items:center;',
   ].join('');
   var hTitle = document.createElement('div');
-  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';letter-spacing:0.08em;';
+  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.gold + ';letter-spacing:0.08em;';
   hTitle.textContent = 'ORDER RECAP';
   var hId = document.createElement('div');
-  hId.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';';
+  hId.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';';
   hId.textContent = params.checkId || '';
   header.appendChild(hTitle);
   header.appendChild(hId);
@@ -66,7 +66,7 @@ function buildReceiptPanel(params) {
   colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 50px 80px;',
     'padding:6px 14px;',
-    'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';letter-spacing:0.08em;',
+    'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
   ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
@@ -93,7 +93,7 @@ function buildReceiptPanel(params) {
     n.textContent = item.name;
     n.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
     var q = document.createElement('div');
-    q.style.cssText = 'text-align:right;color:' + T.mutedText + ';';
+    q.style.cssText = 'text-align:right;color:' + T.mint + ';';
     q.textContent = (item.qty || 1) + '\u00D7';
     var p = document.createElement('div');
     p.style.textAlign = 'right';
@@ -109,8 +109,8 @@ function buildReceiptPanel(params) {
   var footer = document.createElement('div');
   footer.style.cssText = 'flex-shrink:0;padding:8px 14px;border-top:2px solid ' + T.bg3 + ';';
 
-  footer.appendChild(recapRow('Subtotal', '$' + (params.subtotal || 0).toFixed(2), T.mutedText, '18px'));
-  footer.appendChild(recapRow('Tax', '$' + (params.tax || 0).toFixed(2), T.mutedText, '18px'));
+  footer.appendChild(recapRow('Subtotal', '$' + (params.subtotal || 0).toFixed(2), T.mint, T.fsSmall));
+  footer.appendChild(recapRow('Tax', '$' + (params.tax || 0).toFixed(2), T.mint, T.fsSmall));
 
   var hr = document.createElement('hr');
   hr.style.cssText = 'border:none;border-top:1px dashed ' + T.bgLight + ';margin:6px 0;';
