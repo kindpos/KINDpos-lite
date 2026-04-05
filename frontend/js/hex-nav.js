@@ -123,11 +123,11 @@ export function HexNav(container, opts) {
     if (h.locked) {
       poly.setAttribute('fill', h.color);
       poly.setAttribute('stroke', h.color);
-      poly.setAttribute('stroke-width', '5');
+      poly.setAttribute('stroke-width', '7');
     } else {
       poly.setAttribute('fill', 'transparent');
       poly.setAttribute('stroke', h.color);
-      poly.setAttribute('stroke-width', '4');
+      poly.setAttribute('stroke-width', '7');
     }
     g.appendChild(poly);
 
