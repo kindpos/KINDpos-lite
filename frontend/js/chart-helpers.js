@@ -153,17 +153,16 @@ export function drawBarChart(svg, data, options) {
     }
   }
 
-  // Legend — top-left, outside chart area
+  // Legend — left side, stacked vertically descending
   if (hasCompare && options.legend) {
     var legFs = parseInt(fs(16, w));
     var legSz = Math.round(legFs * 0.7);
-    var lx = padLeft + 4;
-    var ly = 2;
+    var lx = 4;
+    var ly = padTop + 8;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
     svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
-    var l2x = lx + legSz + 4 + (options.legend[0] || 'Today').length * legFs * 0.6 + 12;
-    svg.appendChild(svgEl('rect', { x: l2x, y: ly, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: l2x + legSz + 4, y: ly + legSz - 1, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
+    svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 6, width: legSz, height: legSz, fill: compareColor }));
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 5, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
   }
 }
 
@@ -296,13 +295,12 @@ export function drawStackedArea(svg, data, options) {
   if (hasCompare && options.legend) {
     var legFs = parseInt(fs(16, w));
     var legSz = Math.round(legFs * 0.7);
-    var lx = padLeft + 4;
-    var ly = 2;
+    var lx = 4;
+    var ly = padTop + 8;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
     svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
-    var l2x = lx + legSz + 4 + (options.legend[0] || 'Today').length * legFs * 0.6 + 12;
-    svg.appendChild(svgEl('rect', { x: l2x, y: ly, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: l2x + legSz + 4, y: ly + legSz - 1, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
+    svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 6, width: legSz, height: legSz, fill: compareColor }));
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 5, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
   }
 }
 

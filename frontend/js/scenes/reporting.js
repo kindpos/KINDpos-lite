@@ -97,7 +97,7 @@ function buildLeftCard(params, sales, labor) {
   if (params.role === 'manager') {
     // SALES card — title + numbers both gold (title color)
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:75px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
     title.textContent = 'SALES';
     card.appendChild(title);
 
@@ -161,7 +161,7 @@ function buildLeftCard(params, sales, labor) {
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:75px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
     title.textContent = 'SHIFT';
     card.appendChild(title);
 
@@ -208,7 +208,7 @@ function buildLeftCard(params, sales, labor) {
 
 function buildVerticalRail(text, color) {
   var rail = document.createElement('div');
-  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:60px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:10px;';
+  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:75px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:10px;';
   for (var i = 0; i < text.length; i++) {
     var ch = document.createElement('div');
     ch.style.cssText = 'line-height:1;';
@@ -407,16 +407,21 @@ function buildManagerSalesPanels(sales, fullSize) {
     var cardPct = total > 0 ? 100 - cashPct : 0;
 
     var wrap = document.createElement('div');
-    var barFs = fullSize ? '30' : '22';
-    var barH = fullSize ? 72 : 48;
+    var barFs = fullSize ? '45' : '32';
+    var barH = fullSize ? 83 : 55;
     wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-family:' + T.fb + ';';
 
-    // Labels row — "Cash" and "Card" above the bar
+    // Labels row — centered over each segment
     var labels = document.createElement('div');
-    labels.style.cssText = 'display:flex;justify-content:space-between;font-size:' + barFs + 'px;';
-    labels.innerHTML =
-      '<span style="color:' + CHART.gold + '">Cash (' + cashPct + '%)</span>' +
-      '<span style="color:' + CHART.sky + '">Card (' + cardPct + '%)</span>';
+    labels.style.cssText = 'display:flex;font-size:' + barFs + 'px;';
+    var cashTitle = document.createElement('div');
+    cashTitle.style.cssText = 'width:' + (total > 0 ? cashPct : 50) + '%;text-align:center;color:' + CHART.gold + ';';
+    cashTitle.textContent = 'Cash (' + cashPct + '%)';
+    var cardTitle = document.createElement('div');
+    cardTitle.style.cssText = 'width:' + (total > 0 ? cardPct : 50) + '%;text-align:center;color:' + CHART.sky + ';';
+    cardTitle.textContent = 'Card (' + cardPct + '%)';
+    labels.appendChild(cashTitle);
+    labels.appendChild(cardTitle);
     wrap.appendChild(labels);
 
     // Thick bar with amounts inside
