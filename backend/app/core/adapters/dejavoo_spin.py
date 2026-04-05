@@ -92,6 +92,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
             "Tip": f"{request.tip_amount:.2f}",
             "Frequency": "OneTime",
             "RefId": request.transaction_id,
+            "ConfirmAmount": "0",
             "PrintReceipt": "No",
             "SigCapture": "No",
         })
@@ -109,6 +110,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
             "Amount": f"{request.amount:.2f}",
             "Frequency": "OneTime",
             "RefId": request.transaction_id,
+            "ConfirmAmount": "0",
             "PrintReceipt": "No",
             "SigCapture": "No",
         })
