@@ -136,16 +136,16 @@ function buildLeftCard(params, sales, labor) {
       card.appendChild(fallback);
     }
 
-    // Close Day button + active checks
+    // Close Day + Tip Adjustment buttons + active checks
     var btnArea = document.createElement('div');
     btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
 
     var closeDayBtn = buildStyledButton(T.red);
     closeDayBtn.inner.textContent = 'Close Day';
     closeDayBtn.inner.style.fontFamily = T.fh;
-    closeDayBtn.inner.style.fontSize = T.fsBtn;
+    closeDayBtn.inner.style.fontSize = T.fsSmall;
     closeDayBtn.inner.style.color = '#fff';
-    closeDayBtn.inner.style.padding = '10px 16px';
+    closeDayBtn.inner.style.padding = '4px 10px';
     closeDayBtn.wrap.style.alignSelf = 'stretch';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
@@ -153,8 +153,21 @@ function buildLeftCard(params, sales, labor) {
     });
     btnArea.appendChild(closeDayBtn.wrap);
 
+    var tipAdjBtn = buildStyledButton(T.gold);
+    tipAdjBtn.inner.textContent = 'Tip Adjustment';
+    tipAdjBtn.inner.style.fontFamily = T.fh;
+    tipAdjBtn.inner.style.fontSize = T.fsSmall;
+    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.padding = '4px 10px';
+    tipAdjBtn.wrap.style.alignSelf = 'stretch';
+    tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('tip-adjustment', params);
+    });
+    btnArea.appendChild(tipAdjBtn.wrap);
+
     var activeChecks = document.createElement('div');
-    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';text-align:center;';
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
     var checkCount = s ? s.total_checks : 0;
     activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
     btnArea.appendChild(activeChecks);
@@ -177,16 +190,16 @@ function buildLeftCard(params, sales, labor) {
       '<div style="margin-top:4px;font-size:40px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Out: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
 
-    // Checkout button + active checks
+    // Checkout + Tip Adjustment buttons + active checks
     var btnArea = document.createElement('div');
-    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:6px;';
+    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
 
     var checkoutBtn = buildStyledButton('#33ff99');
     checkoutBtn.inner.textContent = 'Checkout';
     checkoutBtn.inner.style.fontFamily = T.fh;
-    checkoutBtn.inner.style.fontSize = '28px';
+    checkoutBtn.inner.style.fontSize = T.fsSmall;
     checkoutBtn.inner.style.color = T.bgDark;
-    checkoutBtn.inner.style.padding = '8px 16px';
+    checkoutBtn.inner.style.padding = '4px 10px';
     checkoutBtn.wrap.style.alignSelf = 'stretch';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
@@ -194,8 +207,21 @@ function buildLeftCard(params, sales, labor) {
     });
     btnArea.appendChild(checkoutBtn.wrap);
 
+    var tipAdjBtn = buildStyledButton(T.gold);
+    tipAdjBtn.inner.textContent = 'Tip Adjustment';
+    tipAdjBtn.inner.style.fontFamily = T.fh;
+    tipAdjBtn.inner.style.fontSize = T.fsSmall;
+    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.padding = '4px 10px';
+    tipAdjBtn.wrap.style.alignSelf = 'stretch';
+    tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('tip-adjustment', params);
+    });
+    btnArea.appendChild(tipAdjBtn.wrap);
+
     var activeChecks = document.createElement('div');
-    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;';
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
     var checkCount = s ? s.total_checks : 0;
     activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
     btnArea.appendChild(activeChecks);
