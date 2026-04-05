@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T } from '../tokens.js';
+import { T, chamfer, applySunkenStyle } from '../tokens.js';
 import { registerScene, replace } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
@@ -46,6 +46,7 @@ registerScene('change-due', {
       'font-family:' + T.fb + ';font-size:26px;letter-spacing:0.18em;',
       'color:' + T.mint + ';margin-bottom:24px;',
     ].join('');
+    topLabel.style.fontFamily = T.fh;
     topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
     el.appendChild(topLabel);
 
@@ -55,10 +56,8 @@ registerScene('change-due', {
       'display:flex;flex-direction:column;align-items:center;',
       'padding:40px 80px;',
       'background:' + T.bgDark + ';',
-      'border:2px solid ' + T.bgLight + ';',
-      'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',
-      'clip-path:polygon(12px 0%,calc(100% - 12px) 0%,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0% calc(100% - 12px),0% 12px);',
     ].join('');
+    applySunkenStyle(amountBlock);
 
     if (hasChange) {
       // Change due label
