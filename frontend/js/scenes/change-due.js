@@ -43,7 +43,7 @@ registerScene('change-due', {
     // ── Top label ────────────────────────────────
     var topLabel = document.createElement('div');
     topLabel.style.cssText = [
-      'font-family:' + T.fh + ';font-size:28px;letter-spacing:0.18em;',
+      'font-family:' + T.fh + ';font-size:30px;letter-spacing:0.18em;',
       'color:' + T.mint + ';margin-bottom:24px;',
     ].join('');
     topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
@@ -96,7 +96,7 @@ registerScene('change-due', {
     // Charged amount sub-line
     var chargedLine = document.createElement('div');
     chargedLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';',
       'margin-top:16px;letter-spacing:0.06em;',
     ].join('');
     chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + params.total.toFixed(2);
@@ -107,7 +107,7 @@ registerScene('change-due', {
     // ── Receipt printing indicator ────────────────
     var printLine = document.createElement('div');
     printLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';',
       'letter-spacing:0.12em;margin-top:32px;',
     ].join('');
     printLine.textContent = 'RECEIPT PRINTING...';
@@ -133,7 +133,7 @@ registerScene('change-due', {
     // ── Tap to dismiss hint ───────────────────────
     var hint = document.createElement('div');
     hint.style.cssText = [
-      'font-family:' + T.fb + ';font-size:24px;color:' + T.mutedText + ';',
+      'font-family:' + T.fb + ';font-size:30px;color:' + T.mutedText + ';',
       'letter-spacing:0.1em;margin-top:12px;',
     ].join('');
     hint.textContent = 'tap anywhere to continue';

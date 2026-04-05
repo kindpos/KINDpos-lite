@@ -116,7 +116,7 @@ function buildLeftCard(params, sales, labor) {
       var cashPct = total > 0 ? (s.cash_total / total * 100).toFixed(0) : 0;
       var cardPct = total > 0 ? (s.card_total / total * 100).toFixed(0) : 0;
       var breakdown = document.createElement('div');
-      breakdown.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';';
+      breakdown.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';';
       breakdown.innerHTML =
         '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">' +
           '<span>Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></span>' +
@@ -129,7 +129,7 @@ function buildLeftCard(params, sales, labor) {
       card.appendChild(breakdown);
     } else {
       var fallback = document.createElement('div');
-      fallback.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';';
+      fallback.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';';
       fallback.textContent = 'Cash: --   Card: --';
       card.appendChild(fallback);
     }
@@ -152,7 +152,7 @@ function buildLeftCard(params, sales, labor) {
     btnArea.appendChild(closeDayBtn.wrap);
 
     var activeChecks = document.createElement('div');
-    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';text-align:center;';
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';text-align:center;';
     var checkCount = s ? s.total_checks : 0;
     activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
     btnArea.appendChild(activeChecks);
@@ -172,7 +172,7 @@ function buildLeftCard(params, sales, labor) {
       '<div>Guests: <span style="color:' + g + '">' + (s ? (s.total_guests || '--') : '--') + '</span></div>' +
       '<div>Tables: <span style="color:' + g + '">' + (s ? (s.total_tables || '--') : '--') + '</span></div>' +
       '<div>Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>' +
-      '<div style="margin-top:4px;font-size:28px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Out: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
+      '<div style="margin-top:4px;font-size:30px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Out: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
 
     // Checkout button + active checks
@@ -193,7 +193,7 @@ function buildLeftCard(params, sales, labor) {
     btnArea.appendChild(checkoutBtn.wrap);
 
     var activeChecks = document.createElement('div');
-    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';text-align:center;';
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';text-align:center;';
     var checkCount = s ? s.total_checks : 0;
     activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
     btnArea.appendChild(activeChecks);
@@ -243,7 +243,7 @@ function buildRightCard(params, sales, labor) {
       '<div>Hrs: <span style="color:' + lc + '">' + (l ? l.total_hours : '--') + '</span></div>' +
       '<div>Tips: <span style="color:' + T.gold + '">' + (l ? fmt(l.tip_pool) : '--') + '</span></div>' +
       '<div>COB: <span style="color:' + lc + '">' + (l ? l.cob_percent + '%' : '--') + '</span></div>' +
-      '<div style="margin-top:4px;font-size:18px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:4px;font-size:22px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   } else {
     // HOURS card — numbers in #33ff99 (same as LABOR), money in gold
@@ -265,7 +265,7 @@ function buildRightCard(params, sales, labor) {
       '<div>Out: <span style="color:' + hc + '">' + (l ? (l.clock_out || 'active') : '--') + '</span></div>'  +
       '<div>Today: <span style="color:' + hc + '">' + (l ? l.today_hours + 'h' : '--') + '</span></div>' +
       '<div>Week: <span style="color:' + hc + '">' + (l ? l.weekly_hours + 'h' : '--') + '</span></div>' +
-      '<div style="margin-top:4px;font-size:18px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:4px;font-size:22px">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   }
 

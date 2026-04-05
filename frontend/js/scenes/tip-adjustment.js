@@ -103,7 +103,7 @@ function renderTable() {
       var hdrTd = document.createElement('td');
       hdrTd.colSpan = 5;
       hdrTd.textContent = (c.method === 'card' ? 'Card' : 'Cash');
-      hdrTd.style.cssText = 'font-family:' + T.fh + ';font-size:24px;color:' + T.gold + ';padding:10px 8px 4px;text-align:left;border:none;background:transparent;';
+      hdrTd.style.cssText = 'font-family:' + T.fh + ';font-size:30px;color:' + T.gold + ';padding:10px 8px 4px;text-align:left;border:none;background:transparent;';
       hdr.appendChild(hdrTd);
       tableBody.appendChild(hdr);
     }
@@ -535,7 +535,7 @@ function buildScene(el, params) {
 
   function addSummaryLine(label, valueKey, valueColor) {
     var line = document.createElement('div');
-    line.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:24px;';
+    line.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:30px;';
     var lbl = document.createElement('span');
     lbl.textContent = label;
     lbl.style.color = T.mint;
@@ -617,7 +617,7 @@ function doBatchZero() {
       card.style.clipPath = chamfer(10);
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';margin-bottom:20px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';margin-bottom:20px;';
       msg.textContent = 'Set ' + n + ' unadjusted tip' + (n > 1 ? 's' : '') + ' to $0.00?';
       card.appendChild(msg);
 
@@ -663,7 +663,7 @@ function doCheckout(params) {
         card.style.clipPath = chamfer(10);
 
         var msg = document.createElement('div');
-        msg.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';margin-bottom:20px;';
+        msg.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';margin-bottom:20px;';
         msg.textContent = n + ' tip' + (n > 1 ? 's' : '') + ' not adjusted. Set to $0 or go back and adjust.';
         card.appendChild(msg);
 
@@ -714,7 +714,7 @@ function doReopen(c) {
       card.style.clipPath = chamfer(10);
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';margin-bottom:20px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';margin-bottom:20px;';
       msg.textContent = 'Reopen check ' + (c.checkLabel || c.checkId) + '?';
       card.appendChild(msg);
 

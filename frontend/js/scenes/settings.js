@@ -480,7 +480,7 @@ function renderEnterIP(card) {
     'width:90px;height:48px;',
     'background:' + DARK + ';',
     'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:28px;color:' + GOLD + ';',
+    'font-family:' + T.fb + ';font-size:30px;color:' + GOLD + ';',
   ].join('');
   applySunkenStyle(octetDisplay);
   octetDisplay.textContent = '—';
@@ -685,7 +685,7 @@ function renderManualAdd(ip, card) {
 
   form.appendChild(makeLabel('Device Name', GOLD, '22px'));
   var nameDisplay = document.createElement('div');
-  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
+  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
   var deviceName = '';
   nameDisplay.textContent = '—';
@@ -704,7 +704,7 @@ function renderManualAdd(ip, card) {
   // Register ID field (card readers only)
   var regIdLabel = makeLabel('SPIn Register ID', GOLD, '22px');
   var regIdDisplay = document.createElement('div');
-  regIdDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  regIdDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(regIdDisplay);
   var registerId = '';
   regIdDisplay.textContent = 'Tap to enter';
@@ -723,7 +723,7 @@ function renderManualAdd(ip, card) {
   // TPN field (card readers only)
   var tpnLabel = makeLabel('SPIn TPN', GOLD, '22px');
   var tpnDisplay = document.createElement('div');
-  tpnDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  tpnDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(tpnDisplay);
   var tpnVal = '';
   tpnDisplay.textContent = 'Tap to enter';
@@ -742,7 +742,7 @@ function renderManualAdd(ip, card) {
   // AuthKey field (card readers only)
   var authLabel = makeLabel('SPIn Auth Key', GOLD, '22px');
   var authDisplay = document.createElement('div');
-  authDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  authDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(authDisplay);
   var authVal = '';
   authDisplay.textContent = 'Tap to enter';
@@ -955,7 +955,7 @@ function renderConfirmDevice(card) {
   // Name
   form.appendChild(makeLabel('Device Name', GOLD, '22px'));
   var nameDisplay = document.createElement('div');
-  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
+  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
   var deviceName = dev.name || '';
   nameDisplay.textContent = deviceName || '—';
@@ -982,7 +982,7 @@ function renderConfirmDevice(card) {
   // Register ID field (card readers only)
   var regLabel2 = makeLabel('SPIn Register ID', GOLD, '22px');
   var regInput2 = document.createElement('div');
-  regInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  regInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(regInput2);
   var registerId2 = dev.register_id || '';
   regInput2.textContent = registerId2 || 'Tap to enter';
@@ -1001,7 +1001,7 @@ function renderConfirmDevice(card) {
   // TPN field (card readers only)
   var tpnLabel2 = makeLabel('SPIn TPN', GOLD, '22px');
   var tpnInput2 = document.createElement('div');
-  tpnInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  tpnInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(tpnInput2);
   var tpnVal2 = dev.tpn || '';
   tpnInput2.textContent = tpnVal2 || 'Tap to enter';
@@ -1020,7 +1020,7 @@ function renderConfirmDevice(card) {
   // AuthKey field (card readers only)
   var authLabel2 = makeLabel('SPIn Auth Key', GOLD, '22px');
   var authInput2 = document.createElement('div');
-  authInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:24px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  authInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:30px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(authInput2);
   var authVal2 = dev.auth_key || '';
   authInput2.textContent = authVal2 || 'Tap to enter';

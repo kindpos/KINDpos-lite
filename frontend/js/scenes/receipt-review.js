@@ -52,10 +52,10 @@ function buildReceiptPanel(params) {
     'display:flex;justify-content:space-between;align-items:center;',
   ].join('');
   var hTitle = document.createElement('div');
-  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.gold + ';letter-spacing:0.08em;';
+  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:30px;color:' + T.gold + ';letter-spacing:0.08em;';
   hTitle.textContent = 'ORDER RECAP';
   var hId = document.createElement('div');
-  hId.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';';
+  hId.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mutedText + ';';
   hId.textContent = params.checkId || '';
   header.appendChild(hTitle);
   header.appendChild(hId);
@@ -66,7 +66,7 @@ function buildReceiptPanel(params) {
   colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 50px 80px;',
     'padding:6px 14px;',
-    'font-family:' + T.fh + ';font-size:16px;color:' + T.mutedText + ';letter-spacing:0.08em;',
+    'font-family:' + T.fh + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
   ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
@@ -86,7 +86,7 @@ function buildReceiptPanel(params) {
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 50px 80px;',
       'padding:4px 0;',
-      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var n = document.createElement('div');
@@ -124,7 +124,7 @@ function buildReceiptPanel(params) {
     var saveLine = document.createElement('div');
     saveLine.style.cssText = [
       'text-align:center;padding:4px 0 0;',
-      'font-family:' + T.fb + ';font-size:16px;color:' + T.cyan + ';letter-spacing:0.06em;',
+      'font-family:' + T.fb + ';font-size:20px;color:' + T.cyan + ';letter-spacing:0.06em;',
     ].join('');
     saveLine.textContent = 'Cash saves $' + savings.toFixed(2);
     footer.appendChild(saveLine);
@@ -169,10 +169,10 @@ function buildMethodPanel(params) {
   ].join('');
   applySunkenStyle(prompt);
   var pLabel = document.createElement('div');
-  pLabel.style.cssText = 'font-family:' + T.fh + ';font-size:24px;color:' + T.gold + ';letter-spacing:0.1em;';
+  pLabel.style.cssText = 'font-family:' + T.fh + ';font-size:30px;color:' + T.gold + ';letter-spacing:0.1em;';
   pLabel.textContent = 'PAYMENT METHOD';
   var pText = document.createElement('div');
-  pText.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';margin-top:2px;';
+  pText.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mutedText + ';margin-top:2px;';
   pText.textContent = 'Select card or cash to continue';
   prompt.appendChild(pLabel);
   prompt.appendChild(pText);
@@ -234,7 +234,7 @@ function buildMethodCard(opts) {
   // Label
   var label = document.createElement('div');
   label.style.cssText = [
-    'font-family:' + T.fh + ';font-size:24px;',
+    'font-family:' + T.fh + ';font-size:30px;',
     'color:' + opts.textColor + ';letter-spacing:0.12em;',
   ].join('');
   label.textContent = opts.label;
@@ -253,7 +253,7 @@ function buildMethodCard(opts) {
   if (opts.subtitle) {
     var sub = document.createElement('div');
     sub.style.cssText = [
-      'font-family:' + T.fb + ';font-size:18px;',
+      'font-family:' + T.fb + ';font-size:22px;',
       'color:' + opts.textColor + ';letter-spacing:0.06em;opacity:0.7;',
     ].join('');
     sub.textContent = opts.subtitle;

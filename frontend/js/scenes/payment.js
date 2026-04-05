@@ -81,10 +81,10 @@ function buildReceiptPanel(params) {
     'display:flex;justify-content:space-between;align-items:center;',
   ].join('');
   var hTitle = document.createElement('div');
-  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.gold + ';letter-spacing:0.08em;';
+  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:30px;color:' + T.gold + ';letter-spacing:0.08em;';
   hTitle.textContent = 'ORDER';
   var hId = document.createElement('div');
-  hId.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';';
+  hId.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mutedText + ';';
   hId.textContent = params.checkId || '';
   header.appendChild(hTitle);
   header.appendChild(hId);
@@ -95,7 +95,7 @@ function buildReceiptPanel(params) {
   colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 50px 80px;',
     'padding:6px 14px;',
-    'font-family:' + T.fh + ';font-size:16px;color:' + T.mutedText + ';letter-spacing:0.08em;',
+    'font-family:' + T.fh + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';',
   ].join('');
   ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
@@ -117,7 +117,7 @@ function buildReceiptPanel(params) {
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 50px 80px;',
       'padding:4px 0;',
-      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var name = document.createElement('div');
@@ -173,7 +173,7 @@ function buildReceiptPanel(params) {
   strip.style.cssText = [
     'height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;',
     'background:' + (isCash ? T.mint : T.gold) + ';',
-    'font-family:' + T.fh + ';font-size:18px;color:' + T.bgDark + ';',
+    'font-family:' + T.fh + ';font-size:22px;color:' + T.bgDark + ';',
     'letter-spacing:0.1em;',
   ].join('');
   strip.textContent = isCash ? '$ CASH' : '◈ CARD';
@@ -285,7 +285,7 @@ function buildCashPanel(params) {
   changeStrip.style.cssText = [
     'flex-shrink:0;display:none;padding:8px 16px;',
     'background:' + T.bgDark + ';',
-    'font-family:' + T.fb + ';font-size:24px;color:' + T.cyan + ';',
+    'font-family:' + T.fb + ';font-size:30px;color:' + T.cyan + ';',
     'text-align:center;letter-spacing:0.08em;',
   ].join('');
   applySunkenStyle(changeStrip);
@@ -330,7 +330,7 @@ function buildCardPanel(params) {
   // Heading
   var heading = document.createElement('div');
   heading.style.cssText = [
-    'font-family:' + T.fh + ';font-size:24px;color:' + T.mint + ';',
+    'font-family:' + T.fh + ';font-size:30px;color:' + T.mint + ';',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
   heading.textContent = 'CARD READER';
@@ -338,7 +338,7 @@ function buildCardPanel(params) {
 
   // Animated dots
   var dotsEl = document.createElement('div');
-  dotsEl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';letter-spacing:0.3em;height:30px;';
+  dotsEl.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.gold + ';letter-spacing:0.3em;height:30px;';
   dotsEl.textContent = '●○○';
   panel.appendChild(dotsEl);
   var dotFrame = 0;
@@ -351,7 +351,7 @@ function buildCardPanel(params) {
   // Status text
   var status = document.createElement('div');
   status.style.cssText = [
-    'font-family:' + T.fb + ';font-size:24px;color:' + T.mutedText + ';',
+    'font-family:' + T.fb + ';font-size:30px;color:' + T.mutedText + ';',
     'text-align:center;line-height:1.6;letter-spacing:0.05em;',
     'white-space:pre-line;',
   ].join('');
@@ -431,7 +431,7 @@ function activateResult(params, change) {
   // Heading
   var heading = document.createElement('div');
   heading.style.cssText = [
-    'font-family:' + T.fh + ';font-size:28px;',
+    'font-family:' + T.fh + ';font-size:30px;',
     'color:' + T.mint + ';letter-spacing:0.1em;text-align:center;',
   ].join('');
   if (hasChange) {
@@ -456,13 +456,13 @@ function activateResult(params, change) {
 
   // Charged line
   var charged = document.createElement('div');
-  charged.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mutedText + ';letter-spacing:0.06em;';
+  charged.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mutedText + ';letter-spacing:0.06em;';
   charged.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + amount.toFixed(2);
   panel.appendChild(charged);
 
   // Receipt printing
   var printLine = document.createElement('div');
-  printLine.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';letter-spacing:0.1em;margin-top:12px;';
+  printLine.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mutedText + ';letter-spacing:0.1em;margin-top:12px;';
   printLine.textContent = 'RECEIPT PRINTING...';
   panel.appendChild(printLine);
 
@@ -485,7 +485,7 @@ function activateResult(params, change) {
 
   // Tap hint
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.dimText + ';letter-spacing:0.08em;margin-top:4px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.dimText + ';letter-spacing:0.08em;margin-top:4px;';
   hint.textContent = 'tap to continue';
   panel.appendChild(hint);
 
@@ -549,7 +549,7 @@ function showErrorResult(params, message, errorType) {
   // Heading
   var heading = document.createElement('div');
   heading.style.cssText = [
-    'font-family:' + T.fh + ';font-size:28px;',
+    'font-family:' + T.fh + ';font-size:30px;',
     'color:' + T.red + ';letter-spacing:0.1em;text-align:center;',
   ].join('');
   var headingMap = {
@@ -661,10 +661,10 @@ function showProcessingOverlay(amount, onDone) {
       var titleBar = document.createElement('div');
       titleBar.style.cssText = 'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');padding:5px 8px;display:flex;align-items:center;gap:8px;';
       var icon = document.createElement('div');
-      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
+      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
       icon.textContent = '◈';
       var titleText = document.createElement('span');
-      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
+      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
       titleText.textContent = 'Card Payment — $' + amount.toFixed(2);
       titleBar.appendChild(icon);
       titleBar.appendChild(titleText);
@@ -676,7 +676,7 @@ function showProcessingOverlay(amount, onDone) {
 
       // Status text
       statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';min-height:24px;';
+      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';min-height:24px;';
       statusEl.textContent = statusMessages[0];
       body.appendChild(statusEl);
 
@@ -696,7 +696,7 @@ function showProcessingOverlay(amount, onDone) {
       body.appendChild(progContainer);
 
       var hint = document.createElement('div');
-      hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';text-align:center;';
+      hint.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;';
       hint.textContent = 'Present card on terminal...';
       body.appendChild(hint);
 
