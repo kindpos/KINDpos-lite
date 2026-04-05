@@ -21,7 +21,6 @@ var ACTION_H    = 48;
 var BANNER_H    = 36;
 var BEVEL       = 4;
 var CHAM        = 8;
-var MANAGER_PIN = '1234';
 var RED         = '#ff3355';
 
 // ── Scene state ──────────────────────────────────
@@ -762,11 +761,18 @@ function openPinGate(onSuccess) {
         maxDigits: 4,
         masked: true,
         onSubmit: function(pin) {
-          if (pin === MANAGER_PIN) {
-            resolveInterrupt(true);
-          } else {
-            pad.setError('WRONG PIN');
-          }
+          fetch('/api/v1/config/employees').then(function(r) { return r.json(); }).then(function(emps) {
+            var match = emps.some(function(e) {
+              return e.pin === pin && e.role_id === 'manager' && e.active !== false;
+            });
+            if (match) {
+              resolveInterrupt(true);
+            } else {
+              pad.setError('WRONG PIN');
+            }
+          }).catch(function() {
+            pad.setError('ERROR');
+          });
         },
       });
       card.appendChild(pad);

@@ -22,7 +22,6 @@ var ACTION_H   = 48;
 var BANNER_H   = 36;
 var BEVEL      = 4;
 var CHAM       = 8;
-var MANAGER_PIN = '1234';
 var RED        = '#ff3355';
 
 // ── Scene state ───────────────────────────────────
@@ -55,9 +54,11 @@ function fetchDayState(params) {
   return Promise.all([
     fetch('/api/v1/orders/day-summary').then(function(r) { return r.json(); }),
     fetch('/api/v1/config/tipout').then(function(r) { return r.json(); }).catch(function() { return []; }),
+    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).catch(function() { return {}; }),
   ]).then(function(results) {
     var d = results[0];
     var rules = results[1];
+    var store = results[2];
     var today = new Date();
 
     // Calculate total tipout from rules
@@ -74,13 +75,12 @@ function fetchDayState(params) {
 
     return {
       date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
-      terminalId: 'T-001',
+      terminalId: (store.info && store.info.restaurant_name) || 'Terminal',
       printedBy:  params.managerName || 'Manager',
 
       // Revenue
       grossSales:    d.gross_sales   || 0,
       voidsTotal:    d.void_total    || 0,  voidsCount: d.void_count || 0,
-      compsTotal:    0,                     compsCount: 0,   // comps not tracked separately yet
       discTotal:     d.discount_total || 0, discCount:  d.discount_count || 0,
       netSales:      netSales,
       taxCollected:  d.tax_total     || 0,
@@ -181,7 +181,7 @@ function buildReceiptContent(state) {
   wrap.appendChild(sectionHeader('REVENUE'));
   wrap.appendChild(row('Gross Sales',  fmt(state.grossSales)));
   wrap.appendChild(row('Voids (' + state.voidsCount + ')',  '− ' + fmt(state.voidsTotal)));
-  wrap.appendChild(row('Comps (' + state.compsCount + ')',  '− ' + fmt(state.compsTotal)));
+
   wrap.appendChild(row('Discounts (' + state.discCount + ')', '− ' + fmt(state.discTotal)));
   wrap.appendChild(divider());
   wrap.appendChild(row('NET SALES',    fmt(state.netSales)));
@@ -271,14 +271,13 @@ function getCardDefs(state) {
       title: 'Revenue Summary',
       hero: fmt(state.netSales),
       heroColor: T.gold,
-      subtitle: 'Gross / Voids / Comps / Net',
+      subtitle: 'Gross / Voids / Disc / Net',
       border: T.border,
       statusColor: null,
       buildExpanded: function(el) {
         el.appendChild(detailRow('Gross Sales',  fmt(state.grossSales)));
         el.appendChild(detailRow('Voids (' + state.voidsCount + ')', '− ' + fmt(state.voidsTotal), RED));
-        el.appendChild(detailRow('Comps (' + state.compsCount + ')', '− ' + fmt(state.compsTotal), RED));
-        el.appendChild(detailRow('Discounts',    '− ' + fmt(state.discTotal), RED));
+        el.appendChild(detailRow('Discounts (' + state.discCount + ')', '− ' + fmt(state.discTotal), RED));
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Net Sales',    fmt(state.netSales), T.gold));
         el.appendChild(detailRow('Tax Collected', fmt(state.taxCollected), T.mint));
@@ -875,11 +874,18 @@ function openPinGate(onSuccess) {
         maxDigits: 4,
         masked: true,
         onSubmit: function(pin) {
-          if (pin === MANAGER_PIN) {
-            resolveInterrupt(true);
-          } else {
-            pad.setError('WRONG PIN');
-          }
+          fetch('/api/v1/config/employees').then(function(r) { return r.json(); }).then(function(emps) {
+            var match = emps.some(function(e) {
+              return e.pin === pin && e.role_id === 'manager' && e.active !== false;
+            });
+            if (match) {
+              resolveInterrupt(true);
+            } else {
+              pad.setError('WRONG PIN');
+            }
+          }).catch(function() {
+            pad.setError('ERROR');
+          });
         },
       });
       card.appendChild(pad);
