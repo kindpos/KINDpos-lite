@@ -1024,7 +1024,7 @@ function updateBottomBar() {
   if (!voidBtn) return;
   var selected = ticket.filter(function(i) { return i.selected; });
   var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
-  var inner = voidBtn.firstElementChild && voidBtn.firstElementChild.firstElementChild;
+  var inner = voidBtn.firstElementChild;
   if (inner) inner.textContent = unsentSelected ? '//DELETE//' : '//VOID//';
 }
 
