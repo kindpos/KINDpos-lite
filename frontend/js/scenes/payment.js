@@ -515,7 +515,7 @@ function doReturn(returnScene) {
   replace(returnScene || 'order-entry', {});
 }
 
-function showErrorResult(params, message) {
+function showErrorResult(params, message, errorType) {
   if (!rightCol || !sceneEl) return;
 
   // Stop dot timer
@@ -552,7 +552,12 @@ function showErrorResult(params, message) {
     'font-family:' + T.fh + ';font-size:28px;',
     'color:' + T.red + ';letter-spacing:0.1em;text-align:center;',
   ].join('');
-  heading.textContent = 'DECLINED';
+  var headingMap = {
+    'DECLINED':  'DECLINED',
+    'CANCELLED': 'CANCELLED',
+    'ERROR':     'CONNECTION ERROR',
+  };
+  heading.textContent = headingMap[errorType] || 'ERROR';
   panel.appendChild(heading);
 
   // Error message
@@ -760,7 +765,7 @@ async function handleConfirm(params) {
         var err = await res.json().catch(function() { return {}; });
         console.error('[KINDpos] Cash payment failed:', err);
         confirmProcessing = false;
-        showErrorResult(params, err.detail || 'Cash payment failed');
+        showErrorResult(params, err.detail || 'Cash payment failed', 'ERROR');
         return;
       }
     }
@@ -783,9 +788,12 @@ async function handleConfirm(params) {
       if (!res.ok) {
         var err = await res.json().catch(function() { return {}; });
         var errMsg = err.detail || 'Card payment failed';
+        var errType = res.status === 402 ? 'DECLINED'
+                    : res.status === 400 ? 'CANCELLED'
+                    : 'ERROR';
         console.error('[KINDpos] Card payment failed:', errMsg);
         confirmProcessing = false;
-        showErrorResult(params, errMsg);
+        showErrorResult(params, errMsg, errType);
         return;
       }
     }
@@ -803,7 +811,7 @@ async function handleConfirm(params) {
     if (proc) proc.dismiss();
     console.error('[KINDpos] Confirm error:', err);
     confirmProcessing = false;
-    showErrorResult(params, 'Connection error — check terminal');
+    showErrorResult(params, 'Connection error — check terminal', 'ERROR');
     return;
   }
 
