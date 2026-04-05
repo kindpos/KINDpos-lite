@@ -87,9 +87,13 @@ class DejavooSPInAdapter(BasePaymentDevice):
 
     async def initiate_sale(self, request: TransactionRequest) -> TransactionResult:
         xml = self._build_xml("Sale", {
-            "Amount": f"{request.amount:.2f}",
-            "InvNum": request.transaction_id[:10],
             "PaymentType": "Credit",
+            "Amount": f"{request.amount:.2f}",
+            "Tip": f"{request.tip_amount:.2f}",
+            "Frequency": "OneTime",
+            "RefId": request.transaction_id,
+            "PrintReceipt": "No",
+            "SigCapture": "No",
         })
 
         self._status = PaymentDeviceStatus.AWAITING_CARD
@@ -101,9 +105,12 @@ class DejavooSPInAdapter(BasePaymentDevice):
 
     async def initiate_refund(self, request: TransactionRequest) -> TransactionResult:
         xml = self._build_xml("Return", {
-            "Amount": f"{request.amount:.2f}",
-            "InvNum": request.transaction_id[:10],
             "PaymentType": "Credit",
+            "Amount": f"{request.amount:.2f}",
+            "Frequency": "OneTime",
+            "RefId": request.transaction_id,
+            "PrintReceipt": "No",
+            "SigCapture": "No",
         })
         try:
             root = await self._send(xml)
@@ -113,7 +120,8 @@ class DejavooSPInAdapter(BasePaymentDevice):
 
     async def initiate_void(self, request: TransactionRequest) -> TransactionResult:
         xml = self._build_xml("Void", {
-            "InvNum": request.transaction_id[:10],
+            "RefId": request.transaction_id,
+            "PrintReceipt": "No",
         })
         try:
             root = await self._send(xml)
@@ -134,8 +142,8 @@ class DejavooSPInAdapter(BasePaymentDevice):
 
     async def adjust_tip(self, transaction_id: str, tip_amount: Decimal) -> TransactionResult:
         xml = self._build_xml("TipAdjust", {
-            "InvNum": transaction_id[:10],
-            "TipAmount": f"{tip_amount:.2f}",
+            "RefId": transaction_id,
+            "Tip": f"{tip_amount:.2f}",
         })
         try:
             root = await self._send(xml)
@@ -194,10 +202,19 @@ class DejavooSPInAdapter(BasePaymentDevice):
 
     # ── Protocol layer ────────────────────────────────────────────────────────
 
-    def _build_xml(self, function: str, params: Dict[str, str] = None) -> str:
-        """Build SPIn XML with auth fields inside the body."""
-        parts = [f"<request><function>{function}</function>"]
+    def _build_xml(self, trans_type: str, params: Dict[str, str] = None) -> str:
+        """Build DVSPIn XML with TransType and auth fields."""
+        parts = ["<request>"]
 
+        # Transaction params first (matches working first_transaction.py order)
+        if params:
+            for k, v in params.items():
+                parts.append(f"<{k}>{v}</{k}>")
+
+        # TransType (not <function>)
+        parts.append(f"<TransType>{trans_type}</TransType>")
+
+        # Auth fields
         if self._config:
             if self._config.register_id:
                 parts.append(f"<RegisterId>{self._config.register_id}</RegisterId>")
@@ -207,10 +224,6 @@ class DejavooSPInAdapter(BasePaymentDevice):
             auth_key = getattr(self._config, 'auth_key', None) or ''
             if auth_key:
                 parts.append(f"<AuthKey>{auth_key}</AuthKey>")
-
-        if params:
-            for k, v in params.items():
-                parts.append(f"<{k}>{v}</{k}>")
 
         parts.append("</request>")
         return "".join(parts)
@@ -287,8 +300,9 @@ class DejavooSPInAdapter(BasePaymentDevice):
             # URL-decode response message
             resp_msg = urllib.parse.unquote(resp_msg)
 
+            result_code = root.findtext("ResultCode") or ""
             status = TransactionStatus.ERROR
-            if "Approved" in resp_msg:
+            if result_code == "0" or "Approved" in resp_msg or "Approval" in resp_msg:
                 status = TransactionStatus.APPROVED
             elif "Declined" in resp_msg:
                 status = TransactionStatus.DECLINED
@@ -303,15 +317,27 @@ class DejavooSPInAdapter(BasePaymentDevice):
             }
             entry_mode = entry_map.get(root.findtext("EntryMode") or "", EntryMethod.TAP)
 
+            # Card details may be in ExtData (e.g. "CardType=VISA,AcntLast4=0049,Amount=0.01")
+            card_brand = root.findtext("CardBrand") or root.findtext("CardType") or ""
+            last_four = root.findtext("LastFour") or root.findtext("AcntLast4") or ""
+            ext_data = root.findtext("ExtData") or ""
+            if ext_data:
+                for pair in ext_data.split(","):
+                    pair = pair.strip()
+                    if pair.startswith("CardType=") and not card_brand:
+                        card_brand = pair.split("=", 1)[1]
+                    elif pair.startswith("AcntLast4=") and not last_four:
+                        last_four = pair.split("=", 1)[1]
+
             return TransactionResult(
-                transaction_id=root.findtext("InvNum") or expected_inv,
+                transaction_id=root.findtext("RefId") or root.findtext("InvNum") or expected_inv,
                 status=status,
                 authorization_code=root.findtext("AuthCode"),
                 reference_number=root.findtext("Token"),
-                card_brand=root.findtext("CardBrand"),
-                last_four=root.findtext("LastFour"),
+                card_brand=card_brand or None,
+                last_four=last_four or None,
                 entry_method=entry_mode,
-                processor_response_code=root.findtext("ResultCode"),
+                processor_response_code=result_code,
                 processor_message=resp_msg,
                 timestamp=datetime.now()
             )

@@ -46,46 +46,43 @@ def make_config(device_id="deja-01"):
 
 
 def test_build_xml_sale():
-    """_build_xml('sale', {...}) produces valid XML with correct structure."""
+    """_build_xml('Sale', {...}) produces valid DVSPIn XML with TransType."""
     adapter = DejavooSPInAdapter()
-    # Set config so RegisterId and AuthKey are included
     adapter._config = make_config()
 
-    xml_str = adapter._build_xml("sale", {"Amount": "50.00", "PaymentType": "Credit"})
+    xml_str = adapter._build_xml("Sale", {
+        "PaymentType": "Credit",
+        "Amount": "50.00",
+        "Tip": "0.00",
+        "Frequency": "OneTime",
+        "RefId": "test_001",
+    })
 
-    # Must be parseable XML
     root = ET.fromstring(xml_str)
     assert root.tag == "request"
-    assert root.findtext("function") == "sale"
+    assert root.findtext("TransType") == "Sale"
     assert root.findtext("Amount") == "50.00"
+    assert root.findtext("PaymentType") == "Credit"
+    assert root.findtext("Tip") == "0.00"
+    assert root.findtext("Frequency") == "OneTime"
+    assert root.findtext("RefId") == "test_001"
+    # Auth fields
     assert root.findtext("RegisterId") == "REG001"
     assert root.findtext("TPN") == "TPN001"
     assert root.findtext("AuthKey") == "AUTH_KEY_123"
-    assert root.findtext("PaymentType") == "Credit"
+    # Must NOT have old <function> element
+    assert root.findtext("function") is None
 
 
 def test_build_xml_no_params():
-    """_build_xml('status') produces valid XML without extra params."""
+    """_build_xml('GetStatus') produces valid XML with TransType."""
     adapter = DejavooSPInAdapter()
-    xml_str = adapter._build_xml("status")
+    xml_str = adapter._build_xml("GetStatus")
 
     root = ET.fromstring(xml_str)
     assert root.tag == "request"
-    assert root.findtext("function") == "status"
-    # No Amount or other param elements
+    assert root.findtext("TransType") == "GetStatus"
     assert root.findtext("Amount") is None
-
-
-def test_build_xml_getstatus_with_amount():
-    """GetStatus with Amount=0.00 suppresses 'Invalid Amount' on some firmware."""
-    adapter = DejavooSPInAdapter()
-    adapter._config = make_config()
-    xml_str = adapter._build_xml("GetStatus", {"Amount": "0.00"})
-
-    root = ET.fromstring(xml_str)
-    assert root.findtext("function") == "GetStatus"
-    assert root.findtext("Amount") == "0.00"
-    assert root.findtext("RegisterId") == "REG001"
 
 
 def test_parse_response_approved():
