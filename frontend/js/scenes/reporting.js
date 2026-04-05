@@ -407,11 +407,11 @@ function buildManagerSalesPanels(sales, fullSize) {
     var cardPct = total > 0 ? 100 - cashPct : 0;
 
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-family:' + T.fb + ';';
+    wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-family:' + T.fb + ';align-items:center;';
 
     // Labels row
     var labels = document.createElement('div');
-    labels.style.cssText = 'display:flex;justify-content:space-between;font-size:' + (fullSize ? '20' : '16') + 'px;';
+    labels.style.cssText = 'display:flex;justify-content:space-between;width:100%;font-size:' + (fullSize ? '30' : '22') + 'px;';
     labels.innerHTML =
       '<span style="color:' + CHART.gold + '">Cash: ' + fmt(s.cash_total || 0) + ' (' + cashPct + '%)</span>' +
       '<span style="color:' + CHART.sky + '">Card: ' + fmt(s.card_total || 0) + ' (' + cardPct + '%)</span>';
@@ -419,7 +419,7 @@ function buildManagerSalesPanels(sales, fullSize) {
 
     // Win98-style bar — beveled raised look
     var barOuter = document.createElement('div');
-    barOuter.style.cssText = 'height:' + (fullSize ? '28' : '20') + 'px;background:' + T.bg + ';border:2px solid;border-color:' + T.bgLight + ' ' + T.bgDark + ' ' + T.bgDark + ' ' + T.bgLight + ';position:relative;';
+    barOuter.style.cssText = 'width:100%;height:' + (fullSize ? '28' : '20') + 'px;background:' + T.bg + ';border:2px solid;border-color:' + T.bgLight + ' ' + T.bgDark + ' ' + T.bgDark + ' ' + T.bgLight + ';position:relative;';
 
     // Inner sunken bar area
     var barInner = document.createElement('div');
@@ -440,7 +440,7 @@ function buildManagerSalesPanels(sales, fullSize) {
 
     // Total line
     var totalLine = document.createElement('div');
-    totalLine.style.cssText = 'text-align:center;font-size:' + (fullSize ? '22' : '16') + 'px;color:' + CHART.mint + ';margin-top:4px;';
+    totalLine.style.cssText = 'text-align:center;font-size:' + (fullSize ? '30' : '22') + 'px;color:' + CHART.mint + ';margin-top:4px;';
     totalLine.innerHTML = 'Total: <span style="color:' + CHART.gold + '">' + fmt(total) + '</span>';
     wrap.appendChild(totalLine);
 

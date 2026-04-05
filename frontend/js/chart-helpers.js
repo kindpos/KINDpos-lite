@@ -17,9 +17,9 @@ export var CHART = {
   axisStroke:  '#666666',
   gridStroke:  '#444444',
   font:        FONT,
-  axisFont:    '10px ' + FONT,
-  labelFont:   '11px ' + FONT,
-  valueFont:   '12px ' + FONT,
+  axisFont:    '22px ' + FONT,
+  labelFont:   '24px ' + FONT,
+  valueFont:   '26px ' + FONT,
   cyan:        T.cyan,
   lavender:    T.lavender,
   gold:        T.gold,
@@ -118,7 +118,7 @@ export function drawBarChart(svg, data, options) {
   for (var g = 0; g <= 4; g++) {
     var gy = padTop + chartH - (g / 4) * chartH;
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
   }
 
   for (var i = 0; i < n; i++) {
@@ -148,7 +148,7 @@ export function drawBarChart(svg, data, options) {
     }
 
     if (showLabels) {
-      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 3, fill: CHART.axisFill, 'font-size': fs(15, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 3, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
     }
   }
 
@@ -158,9 +158,9 @@ export function drawBarChart(svg, data, options) {
     var lx = 4;
     var ly = padTop + 4;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz, fill: color, 'font-size': fs(12, w), 'font-family': FONT })).textContent = options.legend[0] || 'Today';
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz, fill: color, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[0] || 'Today';
     svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 8, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 8, fill: compareColor, 'font-size': fs(12, w), 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 8, fill: compareColor, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
   }
 }
 
@@ -210,7 +210,7 @@ export function drawStackedArea(svg, data, options) {
   for (var g = 0; g <= 4; g++) {
     var gy = padTop + chartH - (g / 4) * chartH;
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
   }
 
   // Compare area (behind)
@@ -276,15 +276,15 @@ export function drawStackedArea(svg, data, options) {
 
   // X labels
   for (var i = 0; i < n; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(15, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 
   // Axis labels
   if (options.xLabel) {
-    svg.appendChild(svgEl('text', { x: padLeft + chartW / 2, y: h, fill: CHART.axisFill, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = options.xLabel;
+    svg.appendChild(svgEl('text', { x: padLeft + chartW / 2, y: h, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = options.xLabel;
   }
   if (options.yLabel) {
-    var yt = svgEl('text', { x: 8, y: padTop + chartH / 2, fill: CHART.axisFill, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'middle', transform: 'rotate(-90, 8, ' + (padTop + chartH / 2) + ')' });
+    var yt = svgEl('text', { x: 8, y: padTop + chartH / 2, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'middle', transform: 'rotate(-90, 8, ' + (padTop + chartH / 2) + ')' });
     yt.textContent = options.yLabel;
     svg.appendChild(yt);
   }
@@ -295,9 +295,9 @@ export function drawStackedArea(svg, data, options) {
     var lx = 4;
     var ly = padTop + 10;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz, fill: color, 'font-size': fs(12, w), 'font-family': FONT })).textContent = options.legend[0] || 'Today';
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz, fill: color, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[0] || 'Today';
     svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 8, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 8, fill: compareColor, 'font-size': fs(12, w), 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 8, fill: compareColor, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
   }
 }
 
@@ -342,14 +342,14 @@ export function drawParetoChart(svg, data, options) {
   for (var g = 0; g <= 4; g++) {
     var gy = padTop + chartH - (g / 4) * chartH;
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
   }
 
   // Bars + cumulative line
   var cumPts = [];
   var cumPcts = [];
   var cumul = 0;
-  var coFs = parseInt(fs(14, w));
+  var coFs = parseInt(fs(22, w));
   for (var i = 0; i < n; i++) {
     var x = padLeft + i * groupW;
     var barH = (sorted[i].value / maxVal) * chartH;
@@ -368,7 +368,7 @@ export function drawParetoChart(svg, data, options) {
     }
 
     // X label
-    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': fs(15, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = sorted[i].label;
+    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = sorted[i].label;
 
     // Cumulative
     cumul += sorted[i].value;
@@ -389,7 +389,7 @@ export function drawParetoChart(svg, data, options) {
   for (var p = 0; p <= 4; p++) {
     var pct = p * 25;
     var py = padTop + chartH - (pct / 100) * chartH;
-    svg.appendChild(svgEl('text', { x: w - padRight + 4, y: py + 3, fill: lineColor, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'start' })).textContent = pct + '%';
+    svg.appendChild(svgEl('text', { x: w - padRight + 4, y: py + 3, fill: lineColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'start' })).textContent = pct + '%';
   }
 }
 
@@ -422,11 +422,11 @@ export function drawHorizontalBars(svg, data, options) {
     var barColor = data[i].color || options.color || CHART.cyan;
     var barWidth = (data[i].value / maxVal) * chartW;
 
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: CHART.mint, 'font-size': fs(17, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: CHART.mint, 'font-size': fs(26, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = data[i].label;
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barWidth, height: barH, fill: barColor }));
 
     if (data[i].sublabel) {
-      svg.appendChild(svgEl('text', { x: padLeft + 6, y: y + rowH / 2 + 4, fill: '#333333', 'font-size': fs(15, w), 'font-family': FONT, 'text-anchor': 'start', 'font-weight': 'bold' })).textContent = data[i].sublabel;
+      svg.appendChild(svgEl('text', { x: padLeft + 6, y: y + rowH / 2 + 4, fill: '#333333', 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'start', 'font-weight': 'bold' })).textContent = data[i].sublabel;
     }
   }
 }
@@ -498,7 +498,7 @@ export function drawTrendLine(svg, data, options) {
     var gv = yMin + (g / 4) * yRange;
     var gy = toY(gv);
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(14, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = gv.toFixed(1);
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = gv.toFixed(1);
   }
 
   // Threshold lines
@@ -543,7 +543,7 @@ export function drawTrendLine(svg, data, options) {
 
   // X labels
   for (var i = 0; i < data.length; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(15, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 }
 
@@ -597,12 +597,12 @@ export function buildChartPanel(title, value, contentFn) {
   header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:' + CHART.headerBg + ';flex-shrink:0;border-bottom:1px solid ' + CHART.gridStroke + ';';
 
   var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-family:' + FONT + ';font-size:14px;color:' + CHART.mint + ';font-weight:bold;letter-spacing:1px;';
+  titleEl.style.cssText = 'font-family:' + FONT + ';font-size:30px;color:' + CHART.mint + ';font-weight:bold;letter-spacing:1px;';
   titleEl.textContent = title;
   header.appendChild(titleEl);
 
   var valueEl = document.createElement('div');
-  valueEl.style.cssText = 'font-family:' + FONT + ';font-size:16px;color:' + CHART.gold + ';font-weight:bold;';
+  valueEl.style.cssText = 'font-family:' + FONT + ';font-size:32px;color:' + CHART.gold + ';font-weight:bold;';
   valueEl.textContent = value;
   header.appendChild(valueEl);
 
