@@ -4,6 +4,8 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
+import { T } from './tokens.js';
+
 var CAT_R    = 80;
 var SUBCAT_R = 80;
 var ITEM_R   = 60;
@@ -150,7 +152,7 @@ export function HexNav(container, opts) {
       text.setAttribute('y', h.y + offset);
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'central');
-      text.setAttribute('font-family', 'Sevastopol Interface, monospace');
+      text.setAttribute('font-family', T.fb);
       text.setAttribute('font-size', fontSize);
       text.setAttribute('font-weight', 'bold');
       text.setAttribute('fill', h.locked ? h.textColor : h.color);
