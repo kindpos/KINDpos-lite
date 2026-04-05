@@ -149,15 +149,15 @@ export function drawBarChart(svg, data, options) {
     }
 
     if (showLabels) {
-      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 3, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 3, fill: CHART.gold, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
     }
   }
 
   // Legend — left side, stacked vertically descending
   if (hasCompare && options.legend) {
-    var legFs = parseInt(fs(16, w));
+    var legFs = parseInt(fs(20, w));
     var legSz = Math.round(legFs * 0.7);
-    var lx = 4;
+    var lx = 12;
     var ly = padTop + 8;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
     svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
@@ -278,7 +278,7 @@ export function drawStackedArea(svg, data, options) {
 
   // X labels
   for (var i = 0; i < n; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.gold, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 
   // Axis labels
@@ -293,9 +293,9 @@ export function drawStackedArea(svg, data, options) {
 
   // Legend — top-left, horizontal
   if (hasCompare && options.legend) {
-    var legFs = parseInt(fs(16, w));
+    var legFs = parseInt(fs(20, w));
     var legSz = Math.round(legFs * 0.7);
-    var lx = 4;
+    var lx = 12;
     var ly = padTop + 8;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
     svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
@@ -371,7 +371,7 @@ export function drawParetoChart(svg, data, options) {
     }
 
     // X label
-    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = sorted[i].label;
+    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: CHART.gold, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = sorted[i].label;
 
     // Cumulative
     cumul += sorted[i].value;
@@ -546,7 +546,7 @@ export function drawTrendLine(svg, data, options) {
 
   // X labels
   for (var i = 0; i < data.length; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.gold, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 }
 
