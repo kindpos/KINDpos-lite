@@ -291,6 +291,17 @@ export function HexNav(container, opts) {
     render();
   }
 
+  function showItemsDirect(catHex) {
+    resize();
+    state.level = 2; state.cat = catHex; state.subcat = null;
+    catHex.locked = true;
+    var items = catHex.data.subcats[0].items;
+    var placed = placeChain(catHex, items, SUBCAT_R, [catHex], catHex);
+    placed.forEach(function(h) { h.type = 'item'; });
+    state.hexes = [catHex].concat(placed);
+    render();
+  }
+
   function onHexTap(h) {
     if (h.locked) {
       if (h.type === 'cat')    showCats();
@@ -299,9 +310,7 @@ export function HexNav(container, opts) {
     }
     if (h.type === 'cat') {
       if (h.data.subcats.length === 1) {
-        showSubcats(h);
-        var singleSubcat = state.hexes[1];
-        showItems(singleSubcat);
+        showItemsDirect(h);
       } else {
         showSubcats(h);
       }
