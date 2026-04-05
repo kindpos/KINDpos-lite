@@ -248,7 +248,7 @@ function buildTicket(parentEl) {
 
 function buildSummaryRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';line-height:1.6;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:26px;color:' + T.mint + ';line-height:1.6;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
