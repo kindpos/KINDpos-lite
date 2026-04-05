@@ -21,7 +21,7 @@ var OVERLAP  = 18;
 // ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
 var TAX_RATE      = 0.07;
 var CASH_DISCOUNT = 0.04;
-var STUB_PRICE    = 0.01;  // TODO: replace with real menu item prices
+var STUB_PRICE    = 0;
 
 // Fetch canonical rates from backend so FE/BE always agree
 fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {

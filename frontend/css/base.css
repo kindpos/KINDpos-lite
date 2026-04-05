@@ -104,6 +104,8 @@ html, body {
   border-radius: 0 !important;
 }
 
-#ticket-list::-webkit-scrollbar {
+#ticket-list::-webkit-scrollbar,
+#receipt-scroll::-webkit-scrollbar,
+#closeday-right::-webkit-scrollbar {
   display: none;
 }

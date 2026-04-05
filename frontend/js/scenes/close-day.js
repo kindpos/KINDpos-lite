@@ -254,7 +254,8 @@ function buildReceiptPanel(state) {
   panel.appendChild(header);
 
   _receiptScroll = document.createElement('div');
-  _receiptScroll.style.cssText = 'flex:1;overflow-y:auto;background:' + T.mint + ';';
+  _receiptScroll.id = 'receipt-scroll';
+  _receiptScroll.style.cssText = 'flex:1;overflow-y:auto;background:' + T.mint + ';scrollbar-width:none;-ms-overflow-style:none;';
   _receiptScroll.appendChild(buildReceiptContent(state));
   panel.appendChild(_receiptScroll);
 
@@ -525,9 +526,9 @@ function buildCardTile(def, idx) {
   inner.style.flexDirection = 'column';
   inner.style.alignItems = 'stretch';
   inner.style.justifyContent = 'flex-start';
-  inner.style.padding = '10px 12px';
+  inner.style.padding = '6px 8px';
   inner.style.position = 'relative';
-  inner.style.gap = '2px';
+  inner.style.gap = '1px';
 
   // Border override for special cards
   if (def.border && def.border !== T.border) {
@@ -536,7 +537,7 @@ function buildCardTile(def, idx) {
 
   // Title
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';font-weight:bold;text-align:center;';
+  title.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';font-weight:bold;text-align:center;';
   title.textContent = def.title;
   inner.appendChild(title);
 
@@ -547,19 +548,19 @@ function buildCardTile(def, idx) {
 
   // Hero number
   var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
+  hero.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
   hero.textContent = def.hero;
   inner.appendChild(hero);
 
   // Subtitle
   var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;';
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
   sub.textContent = def.subtitle;
   inner.appendChild(sub);
 
   // Hint
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;margin-top:2px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;margin-top:1px;';
   hint.textContent = '▸';
   inner.appendChild(hint);
 
@@ -1155,10 +1156,11 @@ function buildScene(el, params) {
 
     // Right column: grid + banner + action bar
     _rightCol = document.createElement('div');
-    _rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+    _rightCol.id = 'closeday-right';
+    _rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;';
 
     _gridContainer = document.createElement('div');
-    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:visible;';
     _gridContainer.appendChild(buildGridView(_state));
     _rightCol.appendChild(_gridContainer);
 
