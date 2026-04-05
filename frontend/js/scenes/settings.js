@@ -180,7 +180,7 @@ function buildHardwareCard() {
   card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
   title.textContent = 'HARDWARE';
   card.appendChild(title);
 
@@ -247,7 +247,7 @@ function buildTerminalCard() {
   card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.mint + ';margin-bottom:6px;';
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.mint + ';margin-bottom:6px;';
   title.textContent = 'TERMINAL';
   card.appendChild(title);
 
