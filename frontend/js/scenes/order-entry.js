@@ -142,6 +142,10 @@ registerScene('order-entry', {
     el.appendChild(mainArea);
   },
 
+  onResume: function() {
+    var el = document.querySelector('[data-scene="order-entry"]');
+    if (el) el.style.display = 'flex';
+  },
   onExit: function() {
     if (hexNav) { hexNav.destroy(); hexNav = null; }
   },
