@@ -655,13 +655,13 @@ function showProcessingOverlay(amount, onDone) {
       frame.style.cssText = 'background:' + T.gold + ';padding:7px;clip-path:' + chamfer(12) + ';filter:drop-shadow(4px 6px 0px rgba(0,0,0,0.7));';
 
       var dialog = document.createElement('div');
-      dialog.style.cssText = 'background:#333;width:420px;border-top:2px solid #5a5a5a;border-left:2px solid #5a5a5a;border-bottom:2px solid #0a0a0a;border-right:2px solid #0a0a0a;font-family:' + T.fb + ';';
+      dialog.style.cssText = 'background:' + T.bg + ';width:420px;border-top:2px solid ' + T.bgLight + ';border-left:2px solid ' + T.bgLight + ';border-bottom:2px solid ' + T.bgEdge + ';border-right:2px solid ' + T.bgEdge + ';font-family:' + T.fb + ';';
 
       // Title bar
       var titleBar = document.createElement('div');
-      titleBar.style.cssText = 'background:linear-gradient(to right,#1a1a1a,#2a2a2a);padding:5px 8px;display:flex;align-items:center;gap:8px;';
+      titleBar.style.cssText = 'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');padding:5px 8px;display:flex;align-items:center;gap:8px;';
       var icon = document.createElement('div');
-      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#1a1a1a;clip-path:' + chamfer(3) + ';';
+      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
       icon.textContent = '◈';
       var titleText = document.createElement('span');
       titleText.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
@@ -682,7 +682,7 @@ function showProcessingOverlay(amount, onDone) {
 
       // Chunky progress bar
       var progContainer = document.createElement('div');
-      progContainer.style.cssText = 'border-top:2px solid #0a0a0a;border-left:2px solid #0a0a0a;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;height:26px;background:#1a1a1a;padding:3px;overflow:hidden;';
+      progContainer.style.cssText = 'border-top:2px solid ' + T.bgEdge + ';border-left:2px solid ' + T.bgEdge + ';border-bottom:2px solid ' + T.bgLight + ';border-right:2px solid ' + T.bgLight + ';height:26px;background:' + T.bgDark + ';padding:3px;overflow:hidden;';
       var progFill = document.createElement('div');
       progFill.style.cssText = 'height:100%;display:flex;gap:2px;align-items:stretch;';
 

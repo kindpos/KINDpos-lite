@@ -43,10 +43,9 @@ registerScene('change-due', {
     // ── Top label ────────────────────────────────
     var topLabel = document.createElement('div');
     topLabel.style.cssText = [
-      'font-family:' + T.fb + ';font-size:26px;letter-spacing:0.18em;',
+      'font-family:' + T.fh + ';font-size:28px;letter-spacing:0.18em;',
       'color:' + T.mint + ';margin-bottom:24px;',
     ].join('');
-    topLabel.style.fontFamily = T.fh;
     topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
     el.appendChild(topLabel);
 
@@ -63,7 +62,7 @@ registerScene('change-due', {
       // Change due label
       var changeLabel = document.createElement('div');
       changeLabel.style.cssText = [
-        'font-family:' + T.fb + ';font-size:28px;letter-spacing:0.14em;',
+        'font-family:' + T.fh + ';font-size:32px;letter-spacing:0.14em;',
         'color:' + T.mint + ';margin-bottom:8px;',
       ].join('');
       changeLabel.textContent = 'CHANGE DUE';
@@ -87,7 +86,7 @@ registerScene('change-due', {
 
       var paidLabel = document.createElement('div');
       paidLabel.style.cssText = [
-        'font-family:' + T.fb + ';font-size:36px;font-weight:bold;letter-spacing:0.1em;',
+        'font-family:' + T.fh + ';font-size:36px;font-weight:bold;letter-spacing:0.1em;',
         'color:' + T.mint + ';',
       ].join('');
       paidLabel.textContent = isCash ? 'EXACT CHANGE' : 'PAYMENT APPROVED';
@@ -97,7 +96,7 @@ registerScene('change-due', {
     // Charged amount sub-line
     var chargedLine = document.createElement('div');
     chargedLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';',
       'margin-top:16px;letter-spacing:0.06em;',
     ].join('');
     chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + params.total.toFixed(2);
@@ -118,8 +117,8 @@ registerScene('change-due', {
     var progressTrack = document.createElement('div');
     progressTrack.style.cssText = [
       'width:320px;height:4px;margin-top:20px;',
-      'background:' + T.bgLight + ';',
-      'box-shadow:inset 1px 1px 0 #151515;',
+      'background:' + T.bg3 + ';',
+      'clip-path:' + chamfer(2) + ';',
     ].join('');
 
     var progressFill = document.createElement('div');

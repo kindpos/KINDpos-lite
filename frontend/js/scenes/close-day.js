@@ -937,22 +937,22 @@ function openBatchOverlay(state, onSettled) {
       frame.style.cssText = 'background:' + T.gold + ';padding:7px;clip-path:' + chamfer(12) + ';filter:drop-shadow(4px 6px 0px rgba(0,0,0,0.7));';
 
       var dialog = document.createElement('div');
-      dialog.style.cssText = 'background:#333;width:480px;border-top:2px solid #5a5a5a;border-left:2px solid #5a5a5a;border-bottom:2px solid #0a0a0a;border-right:2px solid #0a0a0a;font-family:' + T.fb + ';';
+      dialog.style.cssText = 'background:' + T.bg + ';width:480px;border-top:2px solid ' + T.bgLight + ';border-left:2px solid ' + T.bgLight + ';border-bottom:2px solid ' + T.bgEdge + ';border-right:2px solid ' + T.bgEdge + ';font-family:' + T.fb + ';';
 
       // Title bar
       var titleBar = document.createElement('div');
-      titleBar.style.cssText = 'background:linear-gradient(to right,#1a1a1a,#2a2a2a);padding:5px 8px;display:flex;align-items:center;justify-content:space-between;';
+      titleBar.style.cssText = 'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');padding:5px 8px;display:flex;align-items:center;justify-content:space-between;';
 
       var titleLeft = document.createElement('div');
       titleLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
       var icon = document.createElement('div');
-      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#1a1a1a;clip-path:' + chamfer(3) + ';';
+      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
       icon.textContent = '$';
       var titleText = document.createElement('span');
-      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
+      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
       titleText.textContent = 'Batch Settlement — KINDpos/lite';
       var closeBtn = document.createElement('div');
-      closeBtn.style.cssText = 'width:18px;height:16px;background:' + T.red + ';border-top:1px solid #f26858;border-left:1px solid #f26858;border-bottom:1px solid #5e160c;border-right:1px solid #5e160c;display:flex;align-items:center;justify-content:center;font-size:20px;color:' + T.mint + ';cursor:pointer;font-weight:bold;clip-path:' + chamfer(3) + ';';
+      closeBtn.style.cssText = 'width:18px;height:16px;background:' + T.red + ';border-top:1px solid ' + T.redL + ';border-left:1px solid ' + T.redL + ';border-bottom:1px solid ' + T.redD + ';border-right:1px solid ' + T.redD + ';display:flex;align-items:center;justify-content:center;font-size:20px;color:' + T.mint + ';cursor:pointer;font-weight:bold;clip-path:' + chamfer(3) + ';';
       closeBtn.textContent = '✕';
 
       titleLeft.appendChild(icon);
@@ -966,7 +966,7 @@ function openBatchOverlay(state, onSettled) {
       body.style.cssText = 'padding:16px 20px 14px;display:flex;flex-direction:column;gap:12px;';
 
       var infoPanel = document.createElement('div');
-      infoPanel.style.cssText = 'background:#1a1a1a;border-top:2px solid #0a0a0a;border-left:2px solid #0a0a0a;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;padding:10px 14px;display:flex;flex-direction:column;gap:6px;';
+      infoPanel.style.cssText = 'background:' + T.bgDark + ';border-top:2px solid ' + T.bgEdge + ';border-left:2px solid ' + T.bgEdge + ';border-bottom:2px solid ' + T.bgLight + ';border-right:2px solid ' + T.bgLight + ';padding:10px 14px;display:flex;flex-direction:column;gap:6px;';
 
       function infoRow(label, value) {
         var row = document.createElement('div');
@@ -989,7 +989,7 @@ function openBatchOverlay(state, onSettled) {
 
       // Progress bar
       var progContainer = document.createElement('div');
-      progContainer.style.cssText = 'border-top:2px solid #0a0a0a;border-left:2px solid #0a0a0a;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;height:26px;background:#1a1a1a;padding:3px;overflow:hidden;';
+      progContainer.style.cssText = 'border-top:2px solid ' + T.bgEdge + ';border-left:2px solid ' + T.bgEdge + ';border-bottom:2px solid ' + T.bgLight + ';border-right:2px solid ' + T.bgLight + ';height:26px;background:' + T.bgDark + ';padding:3px;overflow:hidden;';
       var progFill = document.createElement('div');
       progFill.style.cssText = 'height:100%;display:flex;gap:2px;align-items:stretch;';
 

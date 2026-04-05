@@ -183,7 +183,7 @@ function renderTable() {
 
     // Sync error indicator — tip failed to save to backend
     if (c.syncError) {
-      tr.style.outline = '2px solid #ff4444';
+      tr.style.outline = '2px solid ' + T.red;
       tr.title = 'Tip failed to save — tap tip cell to retry';
     }
 
@@ -203,7 +203,7 @@ function renderTable() {
         // Selected row: cyan left accent
         tr.style.opacity = '1';
         var firstTd = tr.querySelector('td');
-        if (firstTd) firstTd.style.borderLeft = '4px solid ' + T.cyan;
+        if (firstTd) firstTd.style.borderLeft = T.bevel + 'px solid ' + T.cyan;
       } else {
         tr.style.opacity = '0.3';
         tr.style.pointerEvents = 'none';
