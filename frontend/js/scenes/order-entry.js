@@ -43,7 +43,7 @@ var MENU_DATA = [
   {
     id: 'combo', label: 'COMBO', color: T.catColor('COMBO'), textColor: '#1a1a00',
     subcats: [
-      { id: 'combo-items', label: 'Combo', items: ['Half Rack Combo', 'Pulled Pork Combo'] },
+      { id: 'combo-items', label: 'Combo', items: ['Half Rack', 'Pulled Pork'] },
     ]
   },
   {
@@ -416,12 +416,11 @@ function handleItemSelect(item) {
     }
   }
 
-  // ── Start combo flow ──
-  var comboCat = getMenuCat('combo');
-  if (comboCat && comboCat.subcats[0].items.indexOf(name) >= 0) {
+  // ── Start combo flow if selected from COMBO category ──
+  if (hexNav && hexNav.getCatId() === 'combo') {
     var ticketItem = {
       id:        ++ticketSeq,
-      name:      name,
+      name:      'Combo ' + name,
       unitPrice: STUB_PRICE,
       mods:      [],
       selected:  false,

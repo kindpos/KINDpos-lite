@@ -348,6 +348,10 @@ export function HexNav(container, opts) {
     render();
   };
 
+  this.getCatId = function() {
+    return state.cat ? state.cat.id : null;
+  };
+
   this.destroy = function() {
     svg.remove();
   };
