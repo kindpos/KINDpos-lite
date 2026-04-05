@@ -515,6 +515,78 @@ function doReturn(returnScene) {
   replace(returnScene || 'order-entry', {});
 }
 
+function showErrorResult(params, message) {
+  if (!rightCol || !sceneEl) return;
+
+  // Stop dot timer
+  if (dotTimer) { clearInterval(dotTimer); dotTimer = null; }
+
+  var newRight = document.createElement('div');
+  newRight.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:' + GAP + 'px;';
+
+  var panel = document.createElement('div');
+  panel.style.cssText = [
+    'flex:1;background:' + T.bgDark + ';',
+    'display:flex;flex-direction:column;',
+    'align-items:center;justify-content:center;gap:16px;',
+    'padding:24px;',
+  ].join('');
+  applySunkenStyle(panel);
+  panel.style.borderColor = T.red;
+
+  // Error icon
+  var icon = document.createElement('div');
+  icon.style.cssText = [
+    'width:80px;height:80px;',
+    'background:' + T.red + ';',
+    'display:flex;align-items:center;justify-content:center;',
+    'font-size:40px;color:#fff;font-weight:bold;',
+    'clip-path:' + chamfer(8) + ';',
+  ].join('');
+  icon.textContent = '✕';
+  panel.appendChild(icon);
+
+  // Heading
+  var heading = document.createElement('div');
+  heading.style.cssText = [
+    'font-family:' + T.fh + ';font-size:28px;',
+    'color:' + T.red + ';letter-spacing:0.1em;text-align:center;',
+  ].join('');
+  heading.textContent = 'DECLINED';
+  panel.appendChild(heading);
+
+  // Error message
+  var msgEl = document.createElement('div');
+  msgEl.style.cssText = [
+    'font-family:' + T.fb + ';font-size:22px;',
+    'color:' + T.mutedText + ';text-align:center;',
+    'max-width:400px;line-height:1.4;letter-spacing:0.04em;',
+  ].join('');
+  msgEl.textContent = message;
+  panel.appendChild(msgEl);
+
+  // Retry hint
+  var hint = document.createElement('div');
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.dimText + ';letter-spacing:0.08em;margin-top:8px;';
+  hint.textContent = 'tap to try again';
+  panel.appendChild(hint);
+
+  newRight.appendChild(panel);
+
+  // Tap to dismiss back to payment input
+  panel.addEventListener('pointerup', function() {
+    // Rebuild the right column for another attempt
+    sceneEl.removeChild(newRight);
+    rightCol = params.paymentMode === 'cash'
+      ? buildCashPanel(params)
+      : buildCardPanel(params);
+    sceneEl.appendChild(rightCol);
+  });
+
+  sceneEl.replaceChild(newRight, rightCol);
+  rightCol = newRight;
+}
+
 
 // ═══════════════════════════════════════════════════
 //  CASH HELPERS
@@ -688,6 +760,7 @@ async function handleConfirm(params) {
         var err = await res.json().catch(function() { return {}; });
         console.error('[KINDpos] Cash payment failed:', err);
         confirmProcessing = false;
+        showErrorResult(params, err.detail || 'Cash payment failed');
         return;
       }
     }
@@ -709,8 +782,10 @@ async function handleConfirm(params) {
 
       if (!res.ok) {
         var err = await res.json().catch(function() { return {}; });
-        console.error('[KINDpos] Card payment failed:', err);
+        var errMsg = err.detail || 'Card payment failed';
+        console.error('[KINDpos] Card payment failed:', errMsg);
         confirmProcessing = false;
+        showErrorResult(params, errMsg);
         return;
       }
     }
@@ -728,6 +803,7 @@ async function handleConfirm(params) {
     if (proc) proc.dismiss();
     console.error('[KINDpos] Confirm error:', err);
     confirmProcessing = false;
+    showErrorResult(params, 'Connection error — check terminal');
     return;
   }
 
