@@ -625,6 +625,10 @@ function buildServerShiftPanels(sales, fullSize) {
   });
 
   // CHECK AVG — trend line: daily avg vs house avg
+  var avgLegend = [
+    { label: 'You', color: CHART.neonOrange },
+    { label: 'House', color: CHART.limeGreen },
+  ];
   var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
@@ -635,7 +639,7 @@ function buildServerShiftPanels(sales, fullSize) {
     }
     drawTrendLine(svg, data, { color: CHART.neonOrange, compareData: compare, compareColor: CHART.limeGreen, width: svgW, height: svgH });
     body.appendChild(svg);
-  });
+  }, avgLegend);
 
   // TIPS / TIPOUT — styled DOM text panel with win98 bar for breakdown
   var p4 = buildChartPanel('TIPS / TIPOUT', s.tips_collected ? fmt(s.tips_collected) : '--', function(body) {
