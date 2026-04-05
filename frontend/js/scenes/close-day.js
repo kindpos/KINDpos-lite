@@ -126,8 +126,8 @@ function fetchDayState(params) {
 
 function buildReceiptContent(state) {
   var BASE   = '28px';
-  var HEADER = '30px';
-  var SMALL  = '20px';
+  var HEADER = T.fsBtn;
+  var SMALL  = T.fsSmall;
   var COL    = '#1a1a1a';
   var DIM    = '#447744';
 
@@ -432,7 +432,7 @@ function buildShortcutRow(state) {
   var uPair = buildStyledButton(T.darkBtn);
   uPair.wrap.style.cssText = 'flex:1;height:34px;';
   uPair.inner.style.fontFamily = T.fb;
-  uPair.inner.style.fontSize = '24px';
+  uPair.inner.style.fontSize = T.fsSmall;
   uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
@@ -444,7 +444,7 @@ function buildShortcutRow(state) {
   var zPair = buildStyledButton(T.darkBtn);
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
   zPair.inner.style.fontFamily = T.fb;
-  zPair.inner.style.fontSize = '24px';
+  zPair.inner.style.fontSize = T.fsSmall;
   zPair.inner.style.color = RED;
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
@@ -473,7 +473,7 @@ function doZeroAll(state) {
       card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + RED + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.mint + ';margin-bottom:12px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
       msg.textContent = 'Zero out all ' + count + ' unadjusted tips?';
       card.appendChild(msg);
 
@@ -536,7 +536,7 @@ function buildCardTile(def, idx) {
 
   // Title
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.mint + ';font-weight:bold;text-align:center;';
+  title.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';font-weight:bold;text-align:center;';
   title.textContent = def.title;
   inner.appendChild(title);
 
@@ -786,7 +786,7 @@ function buildActionBar(state) {
   var batchPair = buildStyledButton(T.darkBtn);
   batchPair.wrap.style.cssText = 'flex:1;height:100%;';
   batchPair.inner.style.fontFamily = T.fb;
-  batchPair.inner.style.fontSize = '24px';
+  batchPair.inner.style.fontSize = T.fsSmall;
   batchPair.inner.style.color = T.gold;
   batchPair.inner.textContent = _batchSettled ? '✓ SETTLED' : '//SUBMIT BATCH//';
   if (_batchSettled) {
@@ -812,14 +812,14 @@ function buildActionBar(state) {
 
   if (blocked) {
     closePair.inner.style.fontFamily = T.fb;
-    closePair.inner.style.fontSize = '24px';
+    closePair.inner.style.fontSize = T.fsSmall;
     closePair.inner.style.color = '#555';
     closePair.inner.textContent = '🔒 //CLOSE DAY//';
     closePair.wrap.style.pointerEvents = 'none';
     closePair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
     closePair.inner.style.fontFamily = T.fb;
-    closePair.inner.style.fontSize = '24px';
+    closePair.inner.style.fontSize = T.fsSmall;
     closePair.inner.style.color = '#888';
     closePair.inner.textContent = '🔒 //CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
@@ -834,7 +834,7 @@ function buildActionBar(state) {
     });
   } else {
     closePair.inner.style.fontFamily = T.fb;
-    closePair.inner.style.fontSize = '24px';
+    closePair.inner.style.fontSize = T.fsSmall;
     closePair.inner.style.color = '#1a1a1a';
     closePair.inner.textContent = '//CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
@@ -893,7 +893,7 @@ function openPinGate(onSuccess) {
       card.appendChild(pad);
 
       var cancelBtn = buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '24px',
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
         width: 120, height: 40,
         onTap: function() { cancelInterrupt(); },
       });

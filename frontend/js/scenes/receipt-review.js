@@ -55,7 +55,7 @@ function buildReceiptPanel(params) {
   hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';letter-spacing:0.08em;';
   hTitle.textContent = 'ORDER RECAP';
   var hId = document.createElement('div');
-  hId.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.mutedText + ';';
+  hId.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';';
   hId.textContent = params.checkId || '';
   header.appendChild(hTitle);
   header.appendChild(hId);
@@ -116,8 +116,8 @@ function buildReceiptPanel(params) {
   hr.style.cssText = 'border:none;border-top:1px dashed ' + T.bgLight + ';margin:6px 0;';
   footer.appendChild(hr);
 
-  footer.appendChild(recapRow('Card Total', '$' + (params.cardTotal || 0).toFixed(2), T.gold, '22px', true));
-  footer.appendChild(recapRow('Cash Price', '$' + (params.cashPrice || 0).toFixed(2), T.mint, '22px', true));
+  footer.appendChild(recapRow('Card Total', '$' + (params.cardTotal || 0).toFixed(2), T.gold, T.fsSmall, true));
+  footer.appendChild(recapRow('Cash Price', '$' + (params.cashPrice || 0).toFixed(2), T.mint, T.fsSmall, true));
 
   var savings = ((params.cardTotal || 0) - (params.cashPrice || 0));
   if (savings > 0.001) {
@@ -138,7 +138,7 @@ function recapRow(label, value, color, size, bold) {
   var row = document.createElement('div');
   row.style.cssText = [
     'display:flex;justify-content:space-between;padding:2px 0;',
-    'font-family:' + T.fb + ';font-size:' + (size || '20px') + ';color:' + (color || T.mint) + ';',
+    'font-family:' + T.fb + ';font-size:' + (size || T.fsSmall) + ';color:' + (color || T.mint) + ';',
     bold ? 'font-weight:bold;' : '',
   ].join('');
   var l = document.createElement('span');
@@ -172,7 +172,7 @@ function buildMethodPanel(params) {
   pLabel.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';letter-spacing:0.1em;';
   pLabel.textContent = 'PAYMENT METHOD';
   var pText = document.createElement('div');
-  pText.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.mutedText + ';margin-top:2px;';
+  pText.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';margin-top:2px;';
   pText.textContent = 'Select card or cash to continue';
   prompt.appendChild(pLabel);
   prompt.appendChild(pText);
@@ -209,7 +209,7 @@ function buildMethodPanel(params) {
 
   // Back button
   var back = buildButton('\u2190 BACK', {
-    fill: T.bg, color: T.mint, fontSize: '22px',
+    fill: T.bg, color: T.mint, fontSize: T.fsSmall,
     height: 48,
     onTap: function() { history.go(-1); },
   });
@@ -253,7 +253,7 @@ function buildMethodCard(opts) {
   if (opts.subtitle) {
     var sub = document.createElement('div');
     sub.style.cssText = [
-      'font-family:' + T.fb + ';font-size:32px;',
+      'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';',
       'color:' + opts.textColor + ';letter-spacing:0.06em;opacity:0.7;',
     ].join('');
     sub.textContent = opts.subtitle;

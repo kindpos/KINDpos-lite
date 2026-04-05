@@ -553,7 +553,7 @@ async function runNavChaos() {
       SM.overlay('test-overlay', { onBuild: function(el) {
         var d = document.createElement('div');
         d.textContent = 'TEST OVERLAY';
-        d.style.cssText = 'color:white;font-size:24px;';
+        d.style.cssText = 'color:white;font-size:25px;';
         el.appendChild(d);
       }});
       await wait(100);

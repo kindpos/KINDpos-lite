@@ -182,12 +182,12 @@ function buildTicket(parentEl) {
   topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;flex-shrink:0;';
 
   saveBtn = buildButton('//SAVE//', {
-    fill: T.bgLight, color: T.mint, fontSize: '30px', height: BTN_H,
+    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H,
     onTap: function() { handleSave(); },
   });
 
   var recallBtnEl = buildButton('//RECALL//', {
-    fill: T.bgLight, color: T.mint, fontSize: '30px', height: BTN_H,
+    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H,
     onTap: function() { handleRecall(); },
   });
 
@@ -340,7 +340,7 @@ function buildMain(parentEl, params) {
   tabMods.style.gridRow    = '1';
 
   var send = buildButton('//SEND//', {
-    fill: T.goGreen, color: T.bg, fontSize: '36px',
+    fill: T.goGreen, color: T.bg, fontSize: '40px',
     onTap: function() { handleSend(); },
   });
   send.style.gridColumn = '5';
@@ -722,7 +722,7 @@ function showVoidReasons(targets, isFullVoid) {
       });
 
       var cancelBtn = buildButton('CANCEL', {
-        fill: T.bgLight, color: T.red, fontSize: '22px', height: 40,
+        fill: T.bgLight, color: T.red, fontSize: T.fsSmall, height: 40,
         onTap: function() { cancelInterrupt(); },
       });
       cancelBtn.style.width = '240px';
@@ -764,7 +764,7 @@ function buildPinOverlay(el, cb) {
   panel.appendChild(numpad);
 
   var cancelBtn = buildButton('CANCEL', {
-    fill: T.bgLight, color: T.mint, fontSize: '22px', height: 40,
+    fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 40,
     onTap: function() { cb(false); },
   });
   cancelBtn.style.width = '332px'; // matches numpad component width
@@ -971,7 +971,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
         panel.appendChild(nameLbl);
       }
       var checkLbl = document.createElement('div');
-      checkLbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + (tab.label ? '16px' : '20px') + ';color:' + (tab.label ? T.mutedText : T.mint) + ';letter-spacing:1px;margin-bottom:6px;';
+      checkLbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + (tab.label ? '16px' : T.fsSmall) + ';color:' + (tab.label ? T.mutedText : T.mint) + ';letter-spacing:1px;margin-bottom:6px;';
       checkLbl.textContent = tab.checkNum;
       panel.appendChild(checkLbl);
 
@@ -989,12 +989,12 @@ function recallTabInterrupt(tab, grid, overlayEl) {
                 clbl.textContent = 'Clear current ticket?';
                 cpanel.appendChild(clbl);
                 var yesBtn = buildButton('YES — CLEAR', {
-                  fill: T.red, color: '#fff', fontSize: '24px', height: 46,
+                  fill: T.red, color: '#fff', fontSize: T.fsSmall, height: 46,
                   onTap: function() { resolveInterrupt(); doLoad(); },
                 });
                 yesBtn.style.width = '240px';
                 var noBtn = buildButton('CANCEL', {
-                  fill: T.bgLight, color: T.mint, fontSize: '24px', height: 46,
+                  fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 46,
                   onTap: function() { cancelInterrupt(); },
                 });
                 noBtn.style.width = '240px';
@@ -1017,7 +1017,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       deleteBtn.style.width = '280px';
 
       var cancelBtn = buildButton('CANCEL', {
-        fill: T.bgLight, color: T.mint, fontSize: '22px', height: 40,
+        fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 40,
         onTap: function() { cancelInterrupt(); },
       });
       cancelBtn.style.width = '280px';

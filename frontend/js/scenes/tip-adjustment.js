@@ -155,7 +155,7 @@ function renderTable() {
       }
 
       td.style.fontFamily = T.fb;
-      td.style.fontSize = '22px';
+      td.style.fontSize = T.fsSmall;
       td.style.padding = '10px 8px';
       td.style.textAlign = 'center';
 
@@ -389,7 +389,7 @@ function buildScene(el, params) {
     var th = document.createElement('th');
     th.textContent = label;
     th.style.fontFamily = T.fh;
-    th.style.fontSize = '22px';
+    th.style.fontSize = T.fsSmall;
     th.style.color = T.gold;
     th.style.padding = '8px 6px';
     th.style.textAlign = 'center';
@@ -422,13 +422,13 @@ function buildScene(el, params) {
   bottomBar.style.cssText = 'display:flex;gap:12px;flex-shrink:0;';
 
   bottomBar.appendChild(buildButton('//Checkout//', {
-    fill: T.mint, color: T.bgDark, fontSize: '22px',
+    fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
     width: 180, height: 48,
     onTap: function() { doCheckout(params); },
   }));
 
   bottomBar.appendChild(buildButton('//Print//', {
-    fill: T.darkBtn, color: T.subtleText, fontSize: '22px',
+    fill: T.darkBtn, color: T.subtleText, fontSize: T.fsSmall,
     width: 140, height: 48,
     onTap: function() { doPrint(); },
   }));
@@ -444,7 +444,7 @@ function buildScene(el, params) {
 
   // ALL button — narrower, touches top of area
   var btnAll = buildButton('ALL', {
-    fill: T.mint, color: T.bgDark, fontSize: '24px',
+    fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
     width: 200, height: 48,
     onTap: function() {
       filter = 'all';

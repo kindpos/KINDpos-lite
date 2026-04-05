@@ -207,7 +207,7 @@ function buildHardwareCard() {
   items.forEach(function(item) {
     var btn = buildStyledButton(BG);
     btn.inner.style.fontFamily = T.fb;
-    btn.inner.style.fontSize = '36px';
+    btn.inner.style.fontSize = '40px';
     btn.inner.style.color = T.mint;
     btn.inner.style.padding = '8px 12px';
     btn.inner.style.justifyContent = 'space-between';
@@ -270,7 +270,7 @@ function buildTerminalCard() {
   items.forEach(function(item) {
     var btn = buildStyledButton(BG);
     btn.inner.style.fontFamily = T.fb;
-    btn.inner.style.fontSize = '36px';
+    btn.inner.style.fontSize = '40px';
     btn.inner.style.color = T.mint;
     btn.inner.style.padding = '8px 12px';
     btn.inner.style.justifyContent = 'space-between';
@@ -393,7 +393,7 @@ function renderAddChoose(card) {
   wrap.appendChild(title);
 
   wrap.appendChild(buildButton('Scan Network', {
-    fill: GOLD, color: DARK, fontSize: '24px', width: 280, height: 60,
+    fill: GOLD, color: DARK, fontSize: T.fsSmall, width: 280, height: 60,
     onTap: function() {
       state.addStep = 'scanning';
       state.scanResults = [];
@@ -401,7 +401,7 @@ function renderAddChoose(card) {
     },
   }));
   wrap.appendChild(buildButton('Enter IP Address', {
-    fill: BG, color: GOLD, fontSize: '24px', width: 280, height: 60,
+    fill: BG, color: GOLD, fontSize: T.fsSmall, width: 280, height: 60,
     onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); },
   }));
 }
@@ -426,7 +426,7 @@ function renderScanning(card) {
   statusRow.style.cssText = 'display:flex;align-items:center;gap:12px;';
 
   var spinner = document.createElement('div');
-  spinner.style.cssText = 'font-family:' + T.fb + ';font-size:36px;color:' + GOLD + ';display:inline-block;flex-shrink:0;';
+  spinner.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + GOLD + ';display:inline-block;flex-shrink:0;';
   spinner.textContent = '◈';
   var angle = 0;
   var anim = setInterval(function() {
@@ -435,8 +435,8 @@ function renderScanning(card) {
   }, 100);
 
   var statusCol = document.createElement('div');
-  var scanLbl = makeLabel('Scanning network...', GOLD, '22px');
-  var subLbl   = makeLabel('Probing 254 hosts on ports 9100 · 443 · 8080', T.subtleText, '20px');
+  var scanLbl = makeLabel('Scanning network...', GOLD, T.fsSmall);
+  var subLbl   = makeLabel('Probing 254 hosts on ports 9100 · 443 · 8080', T.subtleText, T.fsSmall);
   statusCol.appendChild(scanLbl);
   statusCol.appendChild(subLbl);
 
@@ -464,14 +464,14 @@ function renderEnterIP(card) {
   inner.style.gap = '10px';
   inner.style.padding = '16px';
 
-  var title = makeLabel('Enter IP Address', GOLD, '20px');
+  var title = makeLabel('Enter IP Address', GOLD, T.fsSmall);
   inner.appendChild(title);
 
   // IP prefix + octet display in one row
   var ipRow = document.createElement('div');
   ipRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
 
-  var prefix = makeLabel('10 . 0 . 0 .', GOLD, '22px');
+  var prefix = makeLabel('10 . 0 . 0 .', GOLD, T.fsSmall);
   prefix.style.letterSpacing = '3px';
   ipRow.appendChild(prefix);
 
@@ -645,7 +645,7 @@ function renderManualAdd(ip, card) {
   hdr.style.fontWeight = 'bold';
   inner.appendChild(hdr);
 
-  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.mint, '22px');
+  var sub = makeLabel(ip + ' did not respond on known ports. Add manually?', T.mint, T.fsSmall);
   sub.style.padding = '4px 20px 16px';
   inner.appendChild(sub);
 
@@ -653,7 +653,7 @@ function renderManualAdd(ip, card) {
   form.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:0 20px;flex:1;';
 
   // Type selector
-  form.appendChild(makeLabel('Device Type', GOLD, '22px'));
+  form.appendChild(makeLabel('Device Type', GOLD, T.fsSmall));
   var typeRow = document.createElement('div');
   typeRow.style.cssText = 'display:flex;gap:8px;';
   var TYPES = [
@@ -683,7 +683,7 @@ function renderManualAdd(ip, card) {
   });
   form.appendChild(typeRow);
 
-  form.appendChild(makeLabel('Device Name', GOLD, '22px'));
+  form.appendChild(makeLabel('Device Name', GOLD, T.fsSmall));
   var nameDisplay = document.createElement('div');
   nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
@@ -702,7 +702,7 @@ function renderManualAdd(ip, card) {
   form.appendChild(presetRow);
 
   // Register ID field (card readers only)
-  var regIdLabel = makeLabel('SPIn Register ID', GOLD, '22px');
+  var regIdLabel = makeLabel('SPIn Register ID', GOLD, T.fsSmall);
   var regIdDisplay = document.createElement('div');
   regIdDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(regIdDisplay);
@@ -721,7 +721,7 @@ function renderManualAdd(ip, card) {
   form.appendChild(regIdDisplay);
 
   // TPN field (card readers only)
-  var tpnLabel = makeLabel('SPIn TPN', GOLD, '22px');
+  var tpnLabel = makeLabel('SPIn TPN', GOLD, T.fsSmall);
   var tpnDisplay = document.createElement('div');
   tpnDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(tpnDisplay);
@@ -740,7 +740,7 @@ function renderManualAdd(ip, card) {
   form.appendChild(tpnDisplay);
 
   // AuthKey field (card readers only)
-  var authLabel = makeLabel('SPIn Auth Key', GOLD, '22px');
+  var authLabel = makeLabel('SPIn Auth Key', GOLD, T.fsSmall);
   var authDisplay = document.createElement('div');
   authDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(authDisplay);
@@ -825,12 +825,12 @@ function buildLiveDeviceRow(dev, card) {
   }
 
   var info = document.createElement('div');
-  info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, '20px'));
-  info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '20px'));
+  info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, T.fsSmall));
+  info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, T.fsSmall));
   row.appendChild(info);
 
   if (saved) {
-    row.appendChild(makeLabel('Saved ✓', GOLD, '20px'));
+    row.appendChild(makeLabel('Saved ✓', GOLD, T.fsSmall));
   } else {
     // We keep a reference to card via closure — but card may have been replaced.
     // Use a dataset attribute so the confirm step can find the device.
@@ -852,7 +852,7 @@ function renderScanResults(card) {
   var inner = cardInner(card);
   var hdr = makeLabel(
     state.scanResults.length === 0 ? 'No devices found' : state.scanResults.length + ' device' + (state.scanResults.length > 1 ? 's' : '') + ' found',
-    GOLD, '20px'
+    GOLD, T.fsSmall
   );
   hdr.style.padding = '16px 20px 8px';
   inner.appendChild(hdr);
@@ -861,10 +861,10 @@ function renderScanResults(card) {
   list.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:8px 16px;overflow-y:auto;flex:1;';
 
   if (state.scanResults.length === 0) {
-    var empty = makeLabel('No devices responded on ports 9100, 443, 8080.', T.subtleText, '20px');
+    var empty = makeLabel('No devices responded on ports 9100, 443, 8080.', T.subtleText, T.fsSmall);
     empty.style.padding = '8px 0';
     list.appendChild(empty);
-    var tip = makeLabel('Try "Enter IP" to probe a specific address directly.', T.subtleText, '20px');
+    var tip = makeLabel('Try "Enter IP" to probe a specific address directly.', T.subtleText, T.fsSmall);
     tip.style.opacity = '0.6';
     list.appendChild(tip);
   }
@@ -875,12 +875,12 @@ function renderScanResults(card) {
     row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:' + DARK + ';border:2px solid ' + (saved ? GOLD : T.border) + ';clip-path:' + chamfer(5) + ';';
 
     var info = document.createElement('div');
-    info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, '20px'));
-    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '20px'));
+    info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, T.fsSmall));
+    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, T.fsSmall));
     row.appendChild(info);
 
     if (saved) {
-      row.appendChild(makeLabel('Saved ✓', GOLD, '20px'));
+      row.appendChild(makeLabel('Saved ✓', GOLD, T.fsSmall));
     } else {
       row.appendChild(buildButton('+ Add', {
         fill: GOLD, color: DARK, fontSize: T.fsBtn, width: 80, height: 36,
@@ -905,10 +905,10 @@ function renderConfirmDevice(card) {
 
   var inner = cardInner(card);
 
-  var hdr = makeLabel('Configure Device', GOLD, '22px');
+  var hdr = makeLabel('Configure Device', GOLD, T.fsSmall);
   hdr.style.padding = '16px 20px 2px';
   inner.appendChild(hdr);
-  var sub = makeLabel(dev.ip + '  ·  ' + dev.mac, T.subtleText, '20px');
+  var sub = makeLabel(dev.ip + '  ·  ' + dev.mac, T.subtleText, T.fsSmall);
   sub.style.padding = '0 20px 12px';
   inner.appendChild(sub);
 
@@ -916,7 +916,7 @@ function renderConfirmDevice(card) {
   form.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:0 20px;flex:1;overflow:hidden;';
 
   // Type selector
-  form.appendChild(makeLabel('Device Type', GOLD, '22px'));
+  form.appendChild(makeLabel('Device Type', GOLD, T.fsSmall));
   var typeRow = document.createElement('div');
   typeRow.style.cssText = 'display:flex;gap:8px;';
 
@@ -953,7 +953,7 @@ function renderConfirmDevice(card) {
   form.appendChild(typeRow);
 
   // Name
-  form.appendChild(makeLabel('Device Name', GOLD, '22px'));
+  form.appendChild(makeLabel('Device Name', GOLD, T.fsSmall));
   var nameDisplay = document.createElement('div');
   nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';';
   applySunkenStyle(nameDisplay);
@@ -980,7 +980,7 @@ function renderConfirmDevice(card) {
   form.appendChild(presetRow);
 
   // Register ID field (card readers only)
-  var regLabel2 = makeLabel('SPIn Register ID', GOLD, '22px');
+  var regLabel2 = makeLabel('SPIn Register ID', GOLD, T.fsSmall);
   var regInput2 = document.createElement('div');
   regInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(regInput2);
@@ -999,7 +999,7 @@ function renderConfirmDevice(card) {
   form.appendChild(regInput2);
 
   // TPN field (card readers only)
-  var tpnLabel2 = makeLabel('SPIn TPN', GOLD, '22px');
+  var tpnLabel2 = makeLabel('SPIn TPN', GOLD, T.fsSmall);
   var tpnInput2 = document.createElement('div');
   tpnInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(tpnInput2);
@@ -1018,7 +1018,7 @@ function renderConfirmDevice(card) {
   form.appendChild(tpnInput2);
 
   // AuthKey field (card readers only)
-  var authLabel2 = makeLabel('SPIn Auth Key', GOLD, '22px');
+  var authLabel2 = makeLabel('SPIn Auth Key', GOLD, T.fsSmall);
   var authInput2 = document.createElement('div');
   authInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
   applySunkenStyle(authInput2);
@@ -1052,7 +1052,7 @@ function renderConfirmDevice(card) {
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex;gap:10px;padding:12px 20px;flex-shrink:0;';
   footer.appendChild(buildButton('//SAVE//', {
-    fill: GOLD, color: DARK, fontSize: '22px', height: 48,
+    fill: GOLD, color: DARK, fontSize: T.fsSmall, height: 48,
     onTap: async function() {
       await saveDevice({
         mac: dev.mac, ip: dev.ip, type: selectedType,
@@ -1081,13 +1081,13 @@ function renderDeviceList(card, type) {
   });
 
   var inner = cardInner(card);
-  var hdr = makeLabel(type === 'card_reader' ? 'Card Readers' : 'Printers', GOLD, '20px');
+  var hdr = makeLabel(type === 'card_reader' ? 'Card Readers' : 'Printers', GOLD, T.fsSmall);
   hdr.style.padding = '16px 20px 10px';
   inner.appendChild(hdr);
 
   if (filtered.length === 0) {
     var emptyWrap = centeredWrap(card);
-    emptyWrap.appendChild(makeLabel('No devices saved', T.bgLight, '20px'));
+    emptyWrap.appendChild(makeLabel('No devices saved', T.bgLight, T.fsSmall));
     return;
   }
 
@@ -1100,9 +1100,9 @@ function renderDeviceList(card, type) {
 
     var info = document.createElement('div');
     info.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
-    info.appendChild(makeLabel(dev.name, GOLD, '20px'));
-    info.appendChild(makeLabel(typeLabel(dev.type), T.bgLight, '20px'));
-    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, '20px'));
+    info.appendChild(makeLabel(dev.name, GOLD, T.fsSmall));
+    info.appendChild(makeLabel(typeLabel(dev.type), T.bgLight, T.fsSmall));
+    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, T.fsSmall));
     row.appendChild(info);
 
     var actions = document.createElement('div');
@@ -1179,7 +1179,7 @@ function renderTermContent(card) {
     pair.inner.style.gap = '4px';
     pair.inner.style.padding = '10px';
 
-    var lbl = makeLabel(item.label, item.key ? GOLD : DARK, '20px');
+    var lbl = makeLabel(item.label, item.key ? GOLD : DARK, T.fsSmall);
     lbl.style.opacity = '0.8';
     var val = makeLabel(item.value, item.key ? MINT : DARK, '28px');
     pair.inner.appendChild(lbl);

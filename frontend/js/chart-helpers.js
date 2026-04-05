@@ -580,7 +580,7 @@ export function buildChartPanel(title, value, contentFn, legend) {
   header.style.cssText = 'display:flex;align-items:center;padding:6px 10px;background:' + CHART.headerBg + ';flex-shrink:0;border-bottom:1px solid ' + CHART.gridStroke + ';gap:8px;';
 
   var titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-family:' + FONT + ';font-size:30px;color:' + CHART.mint + ';font-weight:bold;letter-spacing:1px;';
+  titleEl.style.cssText = 'font-family:' + FONT + ';font-size:' + T.fsBtn + ';color:' + CHART.mint + ';font-weight:bold;letter-spacing:1px;';
   titleEl.textContent = title;
   header.appendChild(titleEl);
 
@@ -588,7 +588,7 @@ export function buildChartPanel(title, value, contentFn, legend) {
   if (legend && legend.length) {
     legend.forEach(function(item) {
       var swatch = document.createElement('span');
-      swatch.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-family:' + FONT + ';font-size:22px;';
+      swatch.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-family:' + FONT + ';font-size:' + T.fsSmall + ';';
       var dot = document.createElement('span');
       dot.style.cssText = 'width:10px;height:10px;background:' + item.color + ';display:inline-block;';
       var label = document.createElement('span');
@@ -601,7 +601,7 @@ export function buildChartPanel(title, value, contentFn, legend) {
   }
 
   var valueEl = document.createElement('div');
-  valueEl.style.cssText = 'font-family:' + FONT + ';font-size:32px;color:' + CHART.gold + ';font-weight:bold;margin-left:auto;';
+  valueEl.style.cssText = 'font-family:' + FONT + ';font-size:' + T.fsBtn + ';color:' + CHART.gold + ';font-weight:bold;margin-left:auto;';
   valueEl.textContent = value;
   header.appendChild(valueEl);
 

@@ -153,13 +153,13 @@ function _buildKeyboard() {
 
   _inputText = document.createElement('span');
   _inputText.style.fontFamily = T.fb;
-  _inputText.style.fontSize = '31px';
+  _inputText.style.fontSize = T.fsBtn;
   _inputText.style.color = T.mint;
   _inputText.style.whiteSpace = 'nowrap';
 
   _cursor = document.createElement('span');
   _cursor.style.fontFamily = T.fb;
-  _cursor.style.fontSize = '31px';
+  _cursor.style.fontSize = T.fsBtn;
   _cursor.style.color = T.gold;
   _cursor.textContent = '|';
 
@@ -216,7 +216,7 @@ function _buildRow(keys) {
     pair.wrap.style.height = KB.keyH + 'px';
     pair.wrap.style.minWidth = '0';
     pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize = '31px';
+    pair.inner.style.fontSize = T.fsBtn;
     pair.inner.style.color = color;
     pair.inner.textContent = def.label;
 

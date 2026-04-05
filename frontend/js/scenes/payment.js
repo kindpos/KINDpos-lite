@@ -84,7 +84,7 @@ function buildReceiptPanel(params) {
   hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';letter-spacing:0.08em;';
   hTitle.textContent = 'ORDER';
   var hId = document.createElement('div');
-  hId.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.mutedText + ';';
+  hId.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';';
   hId.textContent = params.checkId || '';
   header.appendChild(hTitle);
   header.appendChild(hId);
@@ -173,7 +173,7 @@ function buildReceiptPanel(params) {
   strip.style.cssText = [
     'height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;',
     'background:' + (isCash ? T.mint : T.gold) + ';',
-    'font-family:' + T.fh + ';font-size:32px;color:' + T.bgDark + ';',
+    'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.bgDark + ';',
     'letter-spacing:0.1em;',
   ].join('');
   strip.textContent = isCash ? '$ CASH' : '◈ CARD';
@@ -187,7 +187,7 @@ function totalsRow(label, value, bold, color) {
   row.style.cssText = [
     'display:flex;justify-content:space-between;padding:2px 0;',
     'font-family:' + T.fb + ';',
-    'font-size:' + (bold ? '22px' : '18px') + ';',
+    'font-size:' + (bold ? T.fsSmall : '18px') + ';',
     'color:' + (color || T.mint) + ';',
     bold ? 'font-weight:bold;' : '',
   ].join('');
@@ -224,7 +224,7 @@ function buildCashPanel(params) {
 
   [5, 10, 15, 20, 50, 100].forEach(function(val) {
     var btn = buildButton('$' + val, {
-      fill: T.mint, color: T.bgDark, fontSize: '24px',
+      fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
       onTap: function() { addTendered(val, params); },
     });
     grid.appendChild(btn);
@@ -320,7 +320,7 @@ function buildCardPanel(params) {
     'width:80px;height:80px;',
     'background:' + T.bg4 + ';',
     'display:flex;align-items:center;justify-content:center;',
-    'font-size:36px;color:' + T.gold + ';',
+    'font-size:40px;color:' + T.gold + ';',
     'clip-path:' + chamfer(8) + ';',
     'border:3px solid ' + T.gold + ';',
   ].join('');
@@ -365,7 +365,7 @@ function buildCardPanel(params) {
     'background:' + T.bg4 + ';',
     'clip-path:' + chamfer(6) + ';',
     'border:2px solid ' + T.gold + ';',
-    'font-family:' + T.fb + ';font-size:32px;color:' + T.gold + ';',
+    'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.gold + ';',
     'text-align:center;letter-spacing:0.08em;',
   ].join('');
   amtBox.textContent = '$' + params.cardTotal.toFixed(2);
@@ -375,7 +375,7 @@ function buildCardPanel(params) {
 
   // ── Charge button ──
   var chargeBtn = buildButton('CHARGE  $' + params.cardTotal.toFixed(2), {
-    fill: T.gold, color: T.bgDark, fontSize: '22px',
+    fill: T.gold, color: T.bgDark, fontSize: T.fsSmall,
     height: 56,
     onTap: function() { handleConfirm(params); },
   });
@@ -462,7 +462,7 @@ function activateResult(params, change) {
 
   // Receipt printing
   var printLine = document.createElement('div');
-  printLine.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.mutedText + ';letter-spacing:0.1em;margin-top:12px;';
+  printLine.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';letter-spacing:0.1em;margin-top:12px;';
   printLine.textContent = 'RECEIPT PRINTING...';
   panel.appendChild(printLine);
 
@@ -563,7 +563,7 @@ function showErrorResult(params, message, errorType) {
   // Error message
   var msgEl = document.createElement('div');
   msgEl.style.cssText = [
-    'font-family:' + T.fb + ';font-size:35px;',
+    'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';',
     'color:' + T.mint + ';text-align:center;',
     'max-width:400px;line-height:1.4;letter-spacing:0.04em;',
   ].join('');

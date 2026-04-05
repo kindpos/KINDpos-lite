@@ -62,7 +62,7 @@ registerScene('change-due', {
       // Change due label
       var changeLabel = document.createElement('div');
       changeLabel.style.cssText = [
-        'font-family:' + T.fh + ';font-size:32px;letter-spacing:0.14em;',
+        'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';letter-spacing:0.14em;',
         'color:' + T.mint + ';margin-bottom:8px;',
       ].join('');
       changeLabel.textContent = 'CHANGE DUE';
@@ -86,7 +86,7 @@ registerScene('change-due', {
 
       var paidLabel = document.createElement('div');
       paidLabel.style.cssText = [
-        'font-family:' + T.fh + ';font-size:36px;font-weight:bold;letter-spacing:0.1em;',
+        'font-family:' + T.fh + ';font-size:40px;font-weight:bold;letter-spacing:0.1em;',
         'color:' + T.mint + ';',
       ].join('');
       paidLabel.textContent = isCash ? 'EXACT CHANGE' : 'PAYMENT APPROVED';

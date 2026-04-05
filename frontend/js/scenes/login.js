@@ -296,7 +296,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
       title.textContent = '// CLOCK IN/OUT //';
 
       var closeBtn = buildButton('\u2715', {
-        fill: T.red, color: '#ffffff', fontSize: '22px',
+        fill: T.red, color: '#ffffff', fontSize: T.fsSmall,
         width: 38, height: 38,
         onTap: function() { dismissOverlay(); },
       });
@@ -307,7 +307,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
 
       // Employee name
       var nameEl = document.createElement('div');
-      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:36px;color:' + T.gold + ';text-align:center;';
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';text-align:center;';
       nameEl.textContent = emp.name;
       panel.appendChild(nameEl);
 
@@ -326,7 +326,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
         panel.appendChild(infoEl);
 
         var outBtn = buildButton('CLOCK OUT', {
-          fill: T.red, color: '#ffffff', fontSize: '36px',
+          fill: T.red, color: '#ffffff', fontSize: '40px',
           width: 340, height: 70,
           onTap: function() { doClockOut(emp, empRoleObjects[0].name, statusEl); },
         });

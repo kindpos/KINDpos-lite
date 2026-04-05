@@ -127,9 +127,9 @@ function fetchServerState(params) {
 // ─────────────────────────────────────────────────
 
 function buildReceiptContent(state) {
-  var BASE   = '30px';
-  var HEADER = '32px';
-  var SMALL  = '20px';
+  var BASE   = T.fsBtn;
+  var HEADER = T.fsBtn;
+  var SMALL  = T.fsSmall;
   var COL    = '#1a1a1a';
   var DIM    = '#447744';
 
@@ -198,14 +198,14 @@ function buildReceiptContent(state) {
   // Take-home
   var thRow = row('TAKE-HOME', fmt(state.takeHome));
   thRow.querySelector('span:last-child').style.color = T.cyan;
-  thRow.querySelector('span:last-child').style.fontSize = '34px';
+  thRow.querySelector('span:last-child').style.fontSize = T.fsBtn;
   wrap.appendChild(thRow);
   wrap.appendChild(divider());
 
   // Cash expected
   var ceRow = row('CASH EXPECTED', fmt(state.cashExpected));
   ceRow.querySelector('span:last-child').style.color = T.gold;
-  ceRow.querySelector('span:last-child').style.fontSize = '34px';
+  ceRow.querySelector('span:last-child').style.fontSize = T.fsBtn;
   wrap.appendChild(ceRow);
   wrap.appendChild(divider());
 
@@ -279,7 +279,7 @@ function buildShortcutRow(state) {
   var uPair = buildStyledButton(T.darkBtn);
   uPair.wrap.style.cssText = 'flex:1;height:34px;';
   uPair.inner.style.fontFamily = T.fb;
-  uPair.inner.style.fontSize = '24px';
+  uPair.inner.style.fontSize = T.fsSmall;
   uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
@@ -290,7 +290,7 @@ function buildShortcutRow(state) {
   var zPair = buildStyledButton(T.darkBtn);
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
   zPair.inner.style.fontFamily = T.fb;
-  zPair.inner.style.fontSize = '24px';
+  zPair.inner.style.fontSize = T.fsSmall;
   zPair.inner.style.color = RED;
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
@@ -319,7 +319,7 @@ function doZeroAll(state) {
       card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + RED + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.mint + ';margin-bottom:12px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
       msg.textContent = 'Zero out all ' + count + ' unadjusted tips?';
       card.appendChild(msg);
 
@@ -423,7 +423,7 @@ function getCardDefs(state) {
         var adjPair = buildStyledButton(T.gold);
         adjPair.wrap.style.cssText = 'width:100%;height:36px;margin-top:8px;';
         adjPair.inner.style.fontFamily = T.fb;
-        adjPair.inner.style.fontSize = '24px';
+        adjPair.inner.style.fontSize = T.fsSmall;
         adjPair.inner.style.color = '#1a1a1a';
         adjPair.inner.textContent = 'Adjust %';
         adjPair.wrap.addEventListener('pointerup', function() {
@@ -703,14 +703,14 @@ function buildActionBar(state) {
 
   if (blocked) {
     finPair.inner.style.fontFamily = T.fb;
-    finPair.inner.style.fontSize = '24px';
+    finPair.inner.style.fontSize = T.fsSmall;
     finPair.inner.style.color = '#555';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.style.pointerEvents = 'none';
     finPair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
     finPair.inner.style.fontFamily = T.fb;
-    finPair.inner.style.fontSize = '24px';
+    finPair.inner.style.fontSize = T.fsSmall;
     finPair.inner.style.color = '#888';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
@@ -724,7 +724,7 @@ function buildActionBar(state) {
     });
   } else {
     finPair.inner.style.fontFamily = T.fb;
-    finPair.inner.style.fontSize = '24px';
+    finPair.inner.style.fontSize = T.fsSmall;
     finPair.inner.style.color = '#1a1a1a';
     finPair.inner.textContent = '//FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
@@ -783,7 +783,7 @@ function openPinGate(onSuccess) {
       card.appendChild(pad);
 
       var cancelBtn = buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '24px',
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
         width: 120, height: 40,
         onTap: function() { cancelInterrupt(); },
       });
@@ -973,12 +973,12 @@ function showCashTipDeclaration(state) {
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:33px;color:' + T.mint + ';margin-bottom:16px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:16px;';
       sub.textContent = 'Enter cash tips received (optional)';
       card.appendChild(sub);
 
       var display = document.createElement('div');
-      display.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.mint + ';background:' + T.darkBtn + ';padding:12px 24px;margin-bottom:16px;clip-path:' + chamfer(6) + ';min-width:180px;';
+      display.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';background:' + T.darkBtn + ';padding:12px 24px;margin-bottom:16px;clip-path:' + chamfer(6) + ';min-width:180px;';
       display.textContent = '$0.00';
       card.appendChild(display);
 
