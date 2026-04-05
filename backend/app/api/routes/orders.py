@@ -68,6 +68,13 @@ class CreateOrderRequest(BaseModel):
     customer_name: Optional[str] = None
 
 
+class InlineModifier(BaseModel):
+    """Modifier sent inline with an item from the frontend."""
+    name: str
+    price: float = 0.0
+    charged: Optional[bool] = True
+
+
 class AddItemRequest(BaseModel):
     """Request to add an item to an order."""
     menu_item_id: str
@@ -77,6 +84,7 @@ class AddItemRequest(BaseModel):
     category: Optional[str] = None
     notes: Optional[str] = None
     seat_number: Optional[int] = None
+    modifiers: Optional[list[InlineModifier]] = None
 
 
 class ModifyItemRequest(BaseModel):
@@ -616,6 +624,19 @@ async def add_item(
         seat_number=request.seat_number,
     )
     await ledger.append(event)
+
+    # Emit MODIFIER_APPLIED events for inline modifiers from the frontend
+    for mod in (request.modifiers or []):
+        mod_event = modifier_applied(
+            terminal_id=settings.terminal_id,
+            order_id=order_id,
+            item_id=item_id,
+            modifier_id=f"mod_{uuid.uuid4().hex[:8]}",
+            modifier_name=mod.name,
+            modifier_price=mod.price if mod.charged else 0.0,
+            action="add",
+        )
+        await ledger.append(mod_event)
 
     # Return updated order
     order = await get_order_or_404(ledger, order_id)
