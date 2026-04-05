@@ -101,6 +101,56 @@ async def print_clock_hours(
     return {"status": "queued", "job_id": job_id}
 
 
+class SalesRecapRequest(BaseModel):
+    printed_by: str = "Manager"
+
+
+@router.post("/sales-recap")
+async def print_sales_recap(
+    request: SalesRecapRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Print end-of-day sales recap report."""
+    builder = PrintContextBuilder(ledger)
+    context = await builder.build_sales_recap_context(printed_by=request.printed_by)
+    job_id = await print_queue.enqueue(
+        order_id="sales-recap",
+        template_id="sales_recap",
+        printer_mac="DEFAULT_RECEIPT",
+        ticket_number="RPT",
+        context=context,
+    )
+    return {"status": "queued", "job_id": job_id}
+
+
+class ServerCheckoutPrintRequest(BaseModel):
+    server_name: str = ""
+    declared_cash_tips: Optional[float] = None
+
+
+@router.post("/server-checkout/{server_id}")
+async def print_server_checkout(
+    server_id: str,
+    request: ServerCheckoutPrintRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Print server checkout report."""
+    builder = PrintContextBuilder(ledger)
+    context = await builder.build_server_checkout_context(
+        server_id=server_id,
+        server_name=request.server_name,
+        declared_cash_tips=request.declared_cash_tips,
+    )
+    job_id = await print_queue.enqueue(
+        order_id=f"checkout-{server_id}",
+        template_id="server_checkout",
+        printer_mac="DEFAULT_RECEIPT",
+        ticket_number="CHK",
+        context=context,
+    )
+    return {"status": "queued", "job_id": job_id}
+
+
 @router.post("/test")
 async def print_test(template_name: str = Body(..., embed=True), printer_mac: str = Body(..., embed=True)):
     """Fire a fixture template to a printer (test panel)."""

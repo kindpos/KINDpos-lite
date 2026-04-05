@@ -686,12 +686,11 @@ function buildActionBar(state) {
   printPair.inner.style.color = T.cyan;
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
-    if (state.closedOrders && state.closedOrders.length) {
-      state.closedOrders.forEach(function(oid) {
-        fetch('/api/v1/print/receipt/' + oid + '?copy_type=itemized', { method: 'POST' })
-          .catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
-      });
-    }
+    fetch('/api/v1/print/server-checkout/' + encodeURIComponent(state.employeeId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server_name: state.employeeName || '' }),
+    }).catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
   });
   bar.appendChild(printPair.wrap);
   bar.appendChild(arrow());
