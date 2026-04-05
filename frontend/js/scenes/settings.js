@@ -169,6 +169,13 @@ function buildCardWrap(cardInner) {
   btn.wrap.style.maxHeight = '85%';
   btn.wrap.style.maxWidth = '46%';
   btn.wrap.style.height = '100%';
+  // Thicker bevel for main cards
+  var thick = 10;
+  var edges = btn.wrap._edges;
+  btn.inner.style.borderTopWidth = thick + 'px';
+  btn.inner.style.borderLeftWidth = thick + 'px';
+  btn.inner.style.borderBottomWidth = thick + 'px';
+  btn.inner.style.borderRightWidth = thick + 'px';
   var shadow = shadowColor(T.mint);
   btn.wrap.style.filter = 'drop-shadow(6px 8px 2px ' + shadow + ')';
   btn.wrap._shadow = shadow;
@@ -180,7 +187,7 @@ function buildHardwareCard() {
   card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;text-align:center;';
   title.textContent = 'HARDWARE';
   card.appendChild(title);
 
@@ -195,7 +202,7 @@ function buildHardwareCard() {
   ];
 
   var btns = document.createElement('div');
-  btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:4px;';
+  btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:4px;align-items:center;';
 
   items.forEach(function(item) {
     var btn = buildStyledButton(BG);
@@ -205,7 +212,7 @@ function buildHardwareCard() {
     btn.inner.style.padding = '8px 12px';
     btn.inner.style.justifyContent = 'space-between';
     btn.inner.innerHTML = item.label + ' <span style="color:' + T.gold + '">' + item.count + '</span>';
-    btn.wrap.style.width = '100%';
+    btn.wrap.style.width = '85%';
     if (item.nav) {
       btn.wrap.style.cursor = 'pointer';
       btn.wrap.addEventListener('pointerup', function(e) {
@@ -228,7 +235,7 @@ function buildHardwareCard() {
   scanBtn.inner.style.color = DARK;
   scanBtn.inner.style.padding = '8px 12px';
   scanBtn.inner.textContent = '//Scan Network//';
-  scanBtn.wrap.style.cssText = 'width:100%;margin-top:auto;cursor:pointer;';
+  scanBtn.wrap.style.cssText = 'width:85%;margin-top:auto;cursor:pointer;align-self:center;';
   scanBtn.wrap.addEventListener('pointerup', function(e) {
     e.stopPropagation();
     state.expandedCard = 'hardware';
@@ -247,7 +254,7 @@ function buildTerminalCard() {
   card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.mint + ';margin-bottom:6px;';
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.mint + ';margin-bottom:6px;text-align:center;';
   title.textContent = 'TERMINAL';
   card.appendChild(title);
 
@@ -258,7 +265,7 @@ function buildTerminalCard() {
   ];
 
   var btns = document.createElement('div');
-  btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:4px;';
+  btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:4px;align-items:center;';
 
   items.forEach(function(item) {
     var btn = buildStyledButton(BG);
@@ -268,7 +275,7 @@ function buildTerminalCard() {
     btn.inner.style.padding = '8px 12px';
     btn.inner.style.justifyContent = 'space-between';
     btn.inner.innerHTML = item.label + ' <span style="color:' + T.cyan + '">' + item.value + '</span>';
-    btn.wrap.style.width = '100%';
+    btn.wrap.style.width = '85%';
     btn.wrap.style.cursor = 'pointer';
     btn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
