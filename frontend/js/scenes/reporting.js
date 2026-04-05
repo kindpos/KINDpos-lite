@@ -408,7 +408,7 @@ function buildManagerSalesPanels(sales, fullSize) {
 
     var wrap = document.createElement('div');
     var barFs = fullSize ? '30' : '22';
-    var barH = fullSize ? 60 : 40;
+    var barH = fullSize ? 72 : 48;
     wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-family:' + T.fb + ';';
 
     // Labels row — "Cash" and "Card" above the bar
@@ -426,26 +426,26 @@ function buildManagerSalesPanels(sales, fullSize) {
     var barInner = document.createElement('div');
     barInner.style.cssText = 'position:absolute;inset:2px;display:flex;border:1px solid;border-color:' + T.bgDark + ' ' + T.bgLight + ' ' + T.bgLight + ' ' + T.bgDark + ';';
 
+    // Always fill 100% — proportional segments
+    var displayCashPct = total > 0 ? cashPct : 50;
+    var displayCardPct = total > 0 ? cardPct : 50;
+
     // Cash segment with amount inside
     var cashBar = document.createElement('div');
-    cashBar.style.cssText = 'width:' + Math.max(cashPct, 1) + '%;height:100%;background:' + CHART.gold + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
-    if (cashPct > 15) {
-      var cashLabel = document.createElement('span');
-      cashLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
-      cashLabel.textContent = fmt(s.cash_total || 0);
-      cashBar.appendChild(cashLabel);
-    }
+    cashBar.style.cssText = 'width:' + displayCashPct + '%;height:100%;background:' + CHART.gold + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
+    var cashLabel = document.createElement('span');
+    cashLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
+    cashLabel.textContent = fmt(s.cash_total || 0);
+    cashBar.appendChild(cashLabel);
     barInner.appendChild(cashBar);
 
     // Card segment with amount inside
     var cardBar = document.createElement('div');
-    cardBar.style.cssText = 'width:' + Math.max(cardPct, 1) + '%;height:100%;background:' + CHART.sky + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
-    if (cardPct > 15) {
-      var cardLabel = document.createElement('span');
-      cardLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
-      cardLabel.textContent = fmt(s.card_total || 0);
-      cardBar.appendChild(cardLabel);
-    }
+    cardBar.style.cssText = 'width:' + displayCardPct + '%;height:100%;background:' + CHART.sky + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
+    var cardLabel = document.createElement('span');
+    cardLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
+    cardLabel.textContent = fmt(s.card_total || 0);
+    cardBar.appendChild(cardLabel);
     barInner.appendChild(cardBar);
 
     barOuter.appendChild(barInner);

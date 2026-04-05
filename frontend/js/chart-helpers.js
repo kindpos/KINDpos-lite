@@ -83,7 +83,7 @@ export function drawBarChart(svg, data, options) {
     if (data[i].compareValue !== undefined && data[i].compareValue !== null) { hasCompare = true; break; }
   }
 
-  var padLeft = Math.round(50 * w / 400);
+  var padLeft = Math.round(70 * w / 400);
   var padRight = 8;
   var padTop = showValueAbove ? Math.round(28 * h / 160) : 10;
   var padBottom = showLabels ? Math.round(32 * h / 160) : 10;
@@ -177,7 +177,7 @@ export function drawStackedArea(svg, data, options) {
   var w = options.width || 300;
   var h = options.height || 150;
 
-  var padLeft = Math.round(55 * w / 400);
+  var padLeft = Math.round(70 * w / 400);
   var padRight = 12;
   var padTop = Math.round(14 * h / 160);
   var padBottom = Math.round(32 * h / 160);
