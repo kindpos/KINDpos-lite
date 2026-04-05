@@ -275,7 +275,9 @@ function buildShortcutRow(state) {
 
   var uPair = buildStyledButton(T.darkBtn);
   uPair.wrap.style.cssText = 'flex:1;height:34px;';
-  uPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.lavender + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + T.lavender + ';';
+  uPair.inner.style.fontFamily = T.fb;
+  uPair.inner.style.fontSize = '24px';
+  uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
     push('tip-adjustment', { filter: 'unadjusted', employeeId: state.employeeId, employeeName: state.employeeName });
@@ -284,7 +286,9 @@ function buildShortcutRow(state) {
 
   var zPair = buildStyledButton(T.darkBtn);
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
-  zPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + RED + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + RED + ';';
+  zPair.inner.style.fontFamily = T.fb;
+  zPair.inner.style.fontSize = '24px';
+  zPair.inner.style.color = RED;
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
     doZeroAll(state);
@@ -415,7 +419,9 @@ function getCardDefs(state) {
         // Adjust % button
         var adjPair = buildStyledButton(T.gold);
         adjPair.wrap.style.cssText = 'width:100%;height:36px;margin-top:8px;';
-        adjPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:#1a1a1a;display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.gold + ';';
+        adjPair.inner.style.fontFamily = T.fb;
+        adjPair.inner.style.fontSize = '24px';
+        adjPair.inner.style.color = '#1a1a1a';
         adjPair.inner.textContent = 'Adjust %';
         adjPair.wrap.addEventListener('pointerup', function() {
           openAdjustOverlay(state);
@@ -672,7 +678,9 @@ function buildActionBar(state) {
   // PRINT
   var printPair = buildStyledButton(T.darkBtn);
   printPair.wrap.style.cssText = 'flex:1;height:100%;';
-  printPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:27px;color:' + T.cyan + ';border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+  printPair.inner.style.fontFamily = T.fb;
+  printPair.inner.style.fontSize = '27px';
+  printPair.inner.style.color = T.cyan;
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
     if (state.closedOrders && state.closedOrders.length) {
@@ -691,12 +699,16 @@ function buildActionBar(state) {
   finPair.wrap.style.cssText = 'flex:1;height:100%;';
 
   if (blocked) {
-    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#555;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    finPair.inner.style.fontFamily = T.fb;
+    finPair.inner.style.fontSize = '24px';
+    finPair.inner.style.color = '#555';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.style.pointerEvents = 'none';
     finPair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
-    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#888;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    finPair.inner.style.fontFamily = T.fb;
+    finPair.inner.style.fontSize = '24px';
+    finPair.inner.style.color = '#888';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       openPinGate(function() {
@@ -708,7 +720,9 @@ function buildActionBar(state) {
       });
     });
   } else {
-    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#1a1a1a;border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.cyan + ';';
+    finPair.inner.style.fontFamily = T.fb;
+    finPair.inner.style.fontSize = '24px';
+    finPair.inner.style.color = '#1a1a1a';
     finPair.inner.textContent = '//FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       doFinalize(state);

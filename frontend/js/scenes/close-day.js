@@ -431,7 +431,9 @@ function buildShortcutRow(state) {
   // UNADJUSTED button
   var uPair = buildStyledButton(T.darkBtn);
   uPair.wrap.style.cssText = 'flex:1;height:34px;';
-  uPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.lavender + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + T.lavender + ';';
+  uPair.inner.style.fontFamily = T.fb;
+  uPair.inner.style.fontSize = '24px';
+  uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
     push('tip-adjustment', { filter: 'unadjusted' });
@@ -441,7 +443,9 @@ function buildShortcutRow(state) {
   // $0 ALL button
   var zPair = buildStyledButton(T.darkBtn);
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
-  zPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + RED + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + RED + ';';
+  zPair.inner.style.fontFamily = T.fb;
+  zPair.inner.style.fontSize = '24px';
+  zPair.inner.style.color = RED;
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
     doZeroAll(state);
@@ -763,7 +767,9 @@ function buildActionBar(state) {
   // PRINT
   var printPair = buildStyledButton(T.darkBtn);
   printPair.wrap.style.cssText = 'flex:1;height:100%;';
-  printPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:27px;color:' + T.cyan + ';border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+  printPair.inner.style.fontFamily = T.fb;
+  printPair.inner.style.fontSize = '27px';
+  printPair.inner.style.color = T.cyan;
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
     if (state.closedOrders && state.closedOrders.length) {
@@ -779,7 +785,9 @@ function buildActionBar(state) {
   // SUBMIT BATCH
   var batchPair = buildStyledButton(T.darkBtn);
   batchPair.wrap.style.cssText = 'flex:1;height:100%;';
-  batchPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';border:2px solid ' + T.gold + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+  batchPair.inner.style.fontFamily = T.fb;
+  batchPair.inner.style.fontSize = '24px';
+  batchPair.inner.style.color = T.gold;
   batchPair.inner.textContent = _batchSettled ? '✓ SETTLED' : '//SUBMIT BATCH//';
   if (_batchSettled) {
     batchPair.wrap.style.pointerEvents = 'none';
@@ -803,12 +811,16 @@ function buildActionBar(state) {
   closePair.wrap.style.cssText = 'flex:1;height:100%;';
 
   if (blocked) {
-    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#555;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    closePair.inner.style.fontFamily = T.fb;
+    closePair.inner.style.fontSize = '24px';
+    closePair.inner.style.color = '#555';
     closePair.inner.textContent = '🔒 //CLOSE DAY//';
     closePair.wrap.style.pointerEvents = 'none';
     closePair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
-    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#888;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    closePair.inner.style.fontFamily = T.fb;
+    closePair.inner.style.fontSize = '24px';
+    closePair.inner.style.color = '#888';
     closePair.inner.textContent = '🔒 //CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
       openPinGate(function() {
@@ -821,7 +833,9 @@ function buildActionBar(state) {
       });
     });
   } else {
-    closePair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#1a1a1a;border:2px solid ' + T.gold + ';clip-path:' + chamfer(CHAM) + ';background:' + T.gold + ';';
+    closePair.inner.style.fontFamily = T.fb;
+    closePair.inner.style.fontSize = '24px';
+    closePair.inner.style.color = '#1a1a1a';
     closePair.inner.textContent = '//CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
       doCloseDay(state);
