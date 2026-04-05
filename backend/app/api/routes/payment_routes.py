@@ -231,7 +231,7 @@ async def process_sale(
         if result.status == TransactionStatus.CANCELLED:
             raise HTTPException(status_code=400, detail=result.processor_message or "Cancelled")
         if result.status == TransactionStatus.ERROR:
-            msg = result.error.message if result.error else "Transaction error"
+            msg = result.processor_message or (result.error.message if result.error else "Transaction error")
             raise HTTPException(status_code=502, detail=msg)
 
     return result
