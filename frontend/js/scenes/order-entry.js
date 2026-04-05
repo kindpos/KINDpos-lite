@@ -34,6 +34,7 @@ var API = '/api/v1';
 
 // ── Order ID — one per transaction, reset on fresh enter ──
 var currentOrderId = null;
+var currentCheckNumber = null;
 
 // ── Void reasons ──────────────────────────────────
 var VOID_REASONS = ['Wrong Order', 'Customer Request', 'Manager Comp', 'Other'];
@@ -124,6 +125,7 @@ registerScene('order-entry', {
     prefixCard     = null;
     saveBtn        = null;
     currentOrderId = null;   // soft reset — ID assigned on first SEND
+    currentCheckNumber = null;
     customerName   = '';     // reset tab name
 
     el.style.cssText = [
@@ -697,10 +699,12 @@ function showVoidReasons(targets, isFullVoid) {
                 console.error('[KINDpos] Void API error:', err);
               }).then(function() {
                 currentOrderId = null;
+                currentCheckNumber = null;
                 replace('login');
               });
             } else if (isFullVoid) {
               currentOrderId = null;
+              currentCheckNumber = null;
               replace('login');
             } else {
               renderTicket();
@@ -784,7 +788,8 @@ async function handleSend() {
       if (!createRes.ok) throw new Error('Order create failed: ' + createRes.status);
       var created = await createRes.json();
       currentOrderId = created.order_id;   // use the backend-generated ID
-      setSceneName(currentOrderId.replace('order_', 'OS-').slice(0, 9).toUpperCase());
+      currentCheckNumber = created.check_number;
+      setSceneName('#' + currentCheckNumber);
     }
 
     // Step 2 — post only unsent instances, each with their own modifiers
@@ -933,6 +938,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
     savedTabs = savedTabs.filter(function(t) { return t.id !== tab.id; });
     ticketSeq = ticket.reduce(function(mx, i) { return Math.max(mx, i.id); }, 0);
     currentOrderId = null;
+    currentCheckNumber = null;
     customerName = tab.label || '';
     dismissOverlay();
     renderTicket();
@@ -1048,7 +1054,7 @@ async function handlePay(params) {
 
   push('receipt-review', {
     orderId:     currentOrderId,
-    checkId:     currentOrderId.replace('order_', 'OS-').slice(0, 9).toUpperCase(),
+    checkId:     '#' + currentCheckNumber,
     items:       items,
     subtotal:    totals.subtotal,
     tax:         totals.tax,

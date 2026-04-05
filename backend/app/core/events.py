@@ -284,6 +284,7 @@ def order_created(
         order_type: str = "dine_in",  # dine_in, takeout, delivery
         guest_count: int = 1,
         customer_name: Optional[str] = None,
+        check_number: Optional[int] = None,
         **kwargs
 ) -> Event:
     """Create an ORDER_CREATED event."""
@@ -292,6 +293,7 @@ def order_created(
         terminal_id=terminal_id,
         payload={
             "order_id": order_id,
+            "check_number": check_number,
             "table": table,
             "server_id": server_id,
             "server_name": server_name,
