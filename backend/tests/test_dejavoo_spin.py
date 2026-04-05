@@ -50,7 +50,7 @@ def test_build_xml_sale():
     # Set config so RegisterId and AuthKey are included
     adapter._config = make_config()
 
-    xml_str = adapter._build_xml("sale", {"Amount": "50.00"})
+    xml_str = adapter._build_xml("sale", {"Amount": "50.00", "PaymentType": "Credit"})
 
     # Must be parseable XML
     root = ET.fromstring(xml_str)
@@ -59,6 +59,7 @@ def test_build_xml_sale():
     assert root.findtext("Amount") == "50.00"
     assert root.findtext("RegisterId") == "REG001"
     assert root.findtext("AuthKey") == "AUTH_KEY_123"
+    assert root.findtext("PaymentType") == "Credit"
 
 
 def test_build_xml_no_params():
@@ -71,6 +72,18 @@ def test_build_xml_no_params():
     assert root.findtext("function") == "status"
     # No Amount or other param elements
     assert root.findtext("Amount") is None
+
+
+def test_build_xml_getstatus_with_amount():
+    """GetStatus with Amount=0.00 suppresses 'Invalid Amount' on some firmware."""
+    adapter = DejavooSPInAdapter()
+    adapter._config = make_config()
+    xml_str = adapter._build_xml("GetStatus", {"Amount": "0.00"})
+
+    root = ET.fromstring(xml_str)
+    assert root.findtext("function") == "GetStatus"
+    assert root.findtext("Amount") == "0.00"
+    assert root.findtext("RegisterId") == "REG001"
 
 
 def test_parse_response_approved():
