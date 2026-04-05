@@ -513,11 +513,11 @@ function renderTicket() {
       gRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
 
       var gName = document.createElement('span');
-      gName.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';';
+      gName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.mint + ';';
       gName.textContent = (instances.length > 1 ? instances.length + '\u00d7 ' : '') + name;
 
       var gPrice = document.createElement('span');
-      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';';
+      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.mint + ';';
       gPrice.textContent = '$' + groupPrice.toFixed(2);
 
       gRow.appendChild(gName);
@@ -568,11 +568,11 @@ function renderTicket() {
         iRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
 
         var iName = document.createElement('span');
-        iName.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + fg + ';';
+        iName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + fg + ';';
         iName.textContent = inst.name;
 
         var iPrice = document.createElement('span');
-        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + fg + ';';
+        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + fg + ';';
         var total = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
         iPrice.textContent = '$' + total.toFixed(2);
 
@@ -623,7 +623,7 @@ function renderTicket() {
 // ── SEPARATOR + MOD ROW helpers ───────────────────
 function buildSeparator() {
   var sep = document.createElement('div');
-  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:40px;color:' + T.mintEdgeD + ';letter-spacing:2px;overflow:hidden;white-space:nowrap;line-height:1;';
+  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:' + T.fsMod + ';color:' + T.mintEdgeD + ';letter-spacing:2px;overflow:hidden;white-space:nowrap;line-height:1;';
   sep.textContent = '- - - - - - - - - - - - - - - - - -';
   return sep;
 }
@@ -633,7 +633,7 @@ function buildModRow(name, price, dark, showPrice) {
   row.style.cssText = [
     'display:flex;justify-content:space-between;',
     'padding:2px 8px 2px 20px;',
-    'font-family:' + T.fb + ';font-size:40px;font-weight:bold;',
+    'font-family:' + T.fb + ';font-size:' + T.fsMod + ';font-weight:bold;',
     'color:' + (dark ? '#1a1a1a' : T.gold) + ';',
   ].join('');
   var n = document.createElement('span');

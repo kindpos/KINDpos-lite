@@ -62,6 +62,8 @@ export const T = {
   fsNumpad: '100px',
   fsHeader: '70px',
   fsClr:    '70px',
+  fsItem:   '35px',
+  fsMod:    '30px',
   appW:     1024,
   appH:     600,
   headerH:  52,
