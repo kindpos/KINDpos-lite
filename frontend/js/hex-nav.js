@@ -332,6 +332,22 @@ export function HexNav(container, opts) {
     showCats();
   };
 
+  this.showPickList = function(label, color, textColor, items) {
+    resize();
+    state.level = 2; state.subcat = null;
+    var centerHex = {
+      id: 'pick-center', label: label,
+      x: CAT_R + 20, y: svgH / 2, r: CAT_R,
+      color: color, textColor: textColor || '#1a1a1a',
+      locked: true, type: 'cat', data: { subcats: [] },
+    };
+    state.cat = centerHex;
+    var placed = placeChain(centerHex, items, SUBCAT_R, [centerHex], centerHex);
+    placed.forEach(function(h) { h.type = 'item'; });
+    state.hexes = [centerHex].concat(placed);
+    render();
+  };
+
   this.destroy = function() {
     svg.remove();
   };

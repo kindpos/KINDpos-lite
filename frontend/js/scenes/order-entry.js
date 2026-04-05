@@ -87,6 +87,9 @@ var MOD_DATA = [
   },
 ];
 
+// ── Combo flow state ─────────────────────────────
+var comboFlow    = null;  // { step: 'side'|'soda', ticketItem: ref }
+
 // ── Scene state ───────────────────────────────────
 var hexNav       = null;
 var activeTab    = 'items';
@@ -360,7 +363,7 @@ function buildMain(parentEl, params) {
   requestAnimationFrame(function() {
     hexNav = new HexNav(canvas, {
       data: MENU_DATA,
-      onSelect: function(item) { addToTicket(item); },
+      onSelect: function(item) { handleItemSelect(item); },
     });
   });
 
@@ -385,6 +388,57 @@ function switchTab(tab, canvas, tabItems, tabMods) {
 }
 
 // ── TICKET ────────────────────────────────────────
+function getMenuCat(id) {
+  return MENU_DATA.find(function(c) { return c.id === id; });
+}
+
+function handleItemSelect(item) {
+  var name = item.label || item;
+
+  // ── Combo flow: picking side or soda ──
+  if (comboFlow) {
+    if (comboFlow.step === 'side') {
+      comboFlow.ticketItem.mods.push({ name: name, price: 0, charged: false });
+      comboFlow.step = 'soda';
+      var sodaCat = getMenuCat('soda');
+      hexNav.showPickList('SODA', sodaCat.color, sodaCat.textColor, sodaCat.subcats[0].items);
+      renderTicket();
+      updateBottomBar();
+      return;
+    }
+    if (comboFlow.step === 'soda') {
+      comboFlow.ticketItem.mods.push({ name: name, price: 0, charged: false });
+      comboFlow = null;
+      hexNav.reset();
+      renderTicket();
+      updateBottomBar();
+      return;
+    }
+  }
+
+  // ── Start combo flow ──
+  var comboCat = getMenuCat('combo');
+  if (comboCat && comboCat.subcats[0].items.indexOf(name) >= 0) {
+    var ticketItem = {
+      id:        ++ticketSeq,
+      name:      name,
+      unitPrice: STUB_PRICE,
+      mods:      [],
+      selected:  false,
+      sent:      false,
+    };
+    ticket.push(ticketItem);
+    comboFlow = { step: 'side', ticketItem: ticketItem };
+    var sidesCat = getMenuCat('sides');
+    hexNav.showPickList('SIDES', sidesCat.color, sidesCat.textColor, sidesCat.subcats[0].items);
+    renderTicket();
+    updateBottomBar();
+    return;
+  }
+
+  addToTicket(item);
+}
+
 function addToTicket(item) {
   var name = item.label || item;
 
