@@ -23,7 +23,6 @@ var BANNER_H   = 36;
 var BEVEL      = 4;
 var CHAM       = 8;
 var RED        = '#ff3355';
-var GREY       = '#555555';
 
 // ── Scene state ───────────────────────────────────
 var _state         = null;
@@ -129,8 +128,8 @@ function buildReceiptContent(state) {
   var BASE   = '28px';
   var HEADER = T.fsBtn;
   var SMALL  = T.fsSmall;
-  var COL    = '#555555';
-  var DIM    = '#447744';
+  var COL    = '#333';
+  var DIM    = '#999';
 
   var wrap = document.createElement('div');
   wrap.style.cssText = 'padding:12px 14px;font-family:' + T.fb + ';color:' + COL + ';display:flex;flex-direction:column;gap:0;';
@@ -275,7 +274,7 @@ function getCardDefs(state) {
     {
       title: 'Revenue Summary',
       hero: fmt(state.netSales),
-      heroColor: state.netSales > 0 ? T.gold : GREY,
+      heroColor: T.gold,
       subtitle: 'Gross / Voids / Disc / Net',
       border: T.border,
       statusColor: null,
@@ -291,7 +290,7 @@ function getCardDefs(state) {
     {
       title: 'Payment Breakdown',
       hero: fmt(state.cardSales),
-      heroColor: state.cardSales > 0 ? T.gold : GREY,
+      heroColor: T.gold,
       subtitle: 'Cash / Card / Tips',
       border: T.border,
       statusColor: null,
@@ -312,7 +311,7 @@ function getCardDefs(state) {
     {
       title: 'Category Sales',
       hero: fmt(state.netSales),
-      heroColor: state.netSales > 0 ? T.gold : GREY,
+      heroColor: T.gold,
       subtitle: 'by menu category',
       border: T.border,
       statusColor: null,
@@ -344,7 +343,7 @@ function getCardDefs(state) {
     {
       title: 'Daypart Summary',
       hero: fmt(state.netSales),
-      heroColor: state.netSales > 0 ? T.gold : GREY,
+      heroColor: T.gold,
       subtitle: 'AM / PM / Late split',
       border: T.border,
       statusColor: null,
@@ -360,7 +359,7 @@ function getCardDefs(state) {
     {
       title: 'Tips & Gratuity',
       hero: fmt(state.totalTips),
-      heroColor: state.totalTips > 0 ? T.gold : GREY,
+      heroColor: T.gold,
       subtitle: 'collected • tip-out paid',
       border: T.border,
       statusColor: null,
