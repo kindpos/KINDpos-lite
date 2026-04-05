@@ -168,12 +168,28 @@ function _buildKeyboard() {
   inputShadow.appendChild(inputWrap);
   panel.appendChild(inputShadow);
 
-  // Key rows
-  panel.appendChild(_buildRow(ROW1));
-  panel.appendChild(_buildRow(ROW2));
-  panel.appendChild(_buildRow(ROW3));
-  panel.appendChild(_buildRow(ROW4));
+  // Key rows + numpad side by side
+  var body = document.createElement('div');
+  body.style.display = 'flex';
+  body.style.gap = KB.gap + 'px';
 
+  // Left: letter rows
+  var letters = document.createElement('div');
+  letters.style.display = 'flex';
+  letters.style.flexDirection = 'column';
+  letters.style.gap = KB.rowGap + 'px';
+  letters.style.flex = '1';
+  letters.style.minWidth = '0';
+  letters.appendChild(_buildRow(ROW1));
+  letters.appendChild(_buildRow(ROW2));
+  letters.appendChild(_buildRow(ROW3));
+  letters.appendChild(_buildRow(ROW4));
+  body.appendChild(letters);
+
+  // Right: numpad
+  body.appendChild(_buildNumpadColumn());
+
+  panel.appendChild(body);
   _kbRoot.appendChild(panel);
 }
 
@@ -211,6 +227,46 @@ function _buildRow(keys) {
   });
 
   return row;
+}
+
+// ── Internal: Build Numpad Column ──
+
+function _buildNumpadColumn() {
+  var col = document.createElement('div');
+  col.style.display = 'grid';
+  col.style.gridTemplateColumns = 'repeat(3, 1fr)';
+  col.style.gridTemplateRows = 'repeat(4, 1fr)';
+  col.style.gap = KB.gap + 'px';
+  col.style.width = '160px';
+  col.style.flexShrink = '0';
+
+  var layout = [
+    '7','8','9',
+    '4','5','6',
+    '1','2','3',
+    '.','0',{ label: '\u232B', key: 'BKSP' },
+  ];
+
+  layout.forEach(function(k) {
+    var isObj = typeof k !== 'string';
+    var label = isObj ? k.label : k;
+    var key   = isObj ? k.key   : k;
+    var fill  = isObj ? T.bg : T.darkBtn;
+    var color = isObj ? T.cyan : T.gold;
+
+    var pair = buildStyledButton(fill);
+    pair.wrap.style.minWidth = '0';
+    pair.wrap.style.height = '100%';
+    pair.inner.style.fontFamily = T.fb;
+    pair.inner.style.fontSize = '28px';
+    pair.inner.style.color = color;
+    pair.inner.textContent = label;
+
+    pair.wrap.addEventListener('pointerup', function() { _handleKey(key); });
+    col.appendChild(pair.wrap);
+  });
+
+  return col;
 }
 
 // ── Internal: Key Handler ──
