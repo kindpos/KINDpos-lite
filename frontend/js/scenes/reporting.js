@@ -407,32 +407,45 @@ function buildManagerSalesPanels(sales, fullSize) {
     var cardPct = total > 0 ? 100 - cashPct : 0;
 
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-family:' + T.fb + ';align-items:center;';
+    var barFs = fullSize ? '30' : '22';
+    var barH = fullSize ? 60 : 40;
+    wrap.style.cssText = 'padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-family:' + T.fb + ';';
 
-    // Labels row
+    // Labels row — "Cash" and "Card" above the bar
     var labels = document.createElement('div');
-    labels.style.cssText = 'display:flex;justify-content:space-between;width:100%;font-size:' + (fullSize ? '30' : '22') + 'px;';
+    labels.style.cssText = 'display:flex;justify-content:space-between;font-size:' + barFs + 'px;';
     labels.innerHTML =
-      '<span style="color:' + CHART.gold + '">Cash: ' + fmt(s.cash_total || 0) + ' (' + cashPct + '%)</span>' +
-      '<span style="color:' + CHART.sky + '">Card: ' + fmt(s.card_total || 0) + ' (' + cardPct + '%)</span>';
+      '<span style="color:' + CHART.gold + '">Cash (' + cashPct + '%)</span>' +
+      '<span style="color:' + CHART.sky + '">Card (' + cardPct + '%)</span>';
     wrap.appendChild(labels);
 
-    // Win98-style bar — beveled raised look
+    // Thick bar with amounts inside
     var barOuter = document.createElement('div');
-    barOuter.style.cssText = 'width:100%;height:' + (fullSize ? '28' : '20') + 'px;background:' + T.bg + ';border:2px solid;border-color:' + T.bgLight + ' ' + T.bgDark + ' ' + T.bgDark + ' ' + T.bgLight + ';position:relative;';
+    barOuter.style.cssText = 'width:100%;height:' + barH + 'px;background:' + T.bg + ';border:2px solid;border-color:' + T.bgLight + ' ' + T.bgDark + ' ' + T.bgDark + ' ' + T.bgLight + ';position:relative;';
 
-    // Inner sunken bar area
     var barInner = document.createElement('div');
     barInner.style.cssText = 'position:absolute;inset:2px;display:flex;border:1px solid;border-color:' + T.bgDark + ' ' + T.bgLight + ' ' + T.bgLight + ' ' + T.bgDark + ';';
 
-    // Cash segment
+    // Cash segment with amount inside
     var cashBar = document.createElement('div');
-    cashBar.style.cssText = 'width:' + cashPct + '%;height:100%;background:' + CHART.gold + ';';
+    cashBar.style.cssText = 'width:' + Math.max(cashPct, 1) + '%;height:100%;background:' + CHART.gold + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
+    if (cashPct > 15) {
+      var cashLabel = document.createElement('span');
+      cashLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
+      cashLabel.textContent = fmt(s.cash_total || 0);
+      cashBar.appendChild(cashLabel);
+    }
     barInner.appendChild(cashBar);
 
-    // Card segment
+    // Card segment with amount inside
     var cardBar = document.createElement('div');
-    cardBar.style.cssText = 'width:' + cardPct + '%;height:100%;background:' + CHART.sky + ';';
+    cardBar.style.cssText = 'width:' + Math.max(cardPct, 1) + '%;height:100%;background:' + CHART.sky + ';display:flex;align-items:center;justify-content:center;overflow:hidden;';
+    if (cardPct > 15) {
+      var cardLabel = document.createElement('span');
+      cardLabel.style.cssText = 'font-size:' + barFs + 'px;color:' + T.bgDark + ';font-weight:bold;white-space:nowrap;';
+      cardLabel.textContent = fmt(s.card_total || 0);
+      cardBar.appendChild(cardLabel);
+    }
     barInner.appendChild(cardBar);
 
     barOuter.appendChild(barInner);
@@ -440,7 +453,7 @@ function buildManagerSalesPanels(sales, fullSize) {
 
     // Total line
     var totalLine = document.createElement('div');
-    totalLine.style.cssText = 'text-align:center;font-size:' + (fullSize ? '30' : '22') + 'px;color:' + CHART.mint + ';margin-top:4px;';
+    totalLine.style.cssText = 'text-align:center;font-size:' + barFs + 'px;color:' + CHART.mint + ';margin-top:4px;';
     totalLine.innerHTML = 'Total: <span style="color:' + CHART.gold + '">' + fmt(total) + '</span>';
     wrap.appendChild(totalLine);
 

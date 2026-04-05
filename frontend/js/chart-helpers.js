@@ -139,11 +139,12 @@ export function drawBarChart(svg, data, options) {
       var valStr = '' + data[i].value;
       var vFs = parseInt(fs(13, w));
       var vTw = valStr.length * vFs * 0.6 + 10;
-      var vTh = vFs + 4;
-      var vX = x + groupW / 2;
-      var vY = barY + vTh + 4;
-      if (vY > padTop + chartH - 2) vY = barY + vTh;
-      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: '#111111' }));
+      var vTh = vFs + 6;
+      var vX = hasCompare ? x + barW / 2 + gap : x + groupW / 2;
+      // Center inside the bar
+      var vY = barY + barH / 2 + vFs / 3;
+      if (barH < vTh + 4) vY = barY - 2; // fallback above if bar too short
+      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: T.bgDark, rx: 2 }));
       svg.appendChild(svgEl('text', { x: vX, y: vY - 1, fill: color, 'font-size': '' + vFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valStr;
     }
 
@@ -152,15 +153,17 @@ export function drawBarChart(svg, data, options) {
     }
   }
 
-  // Legend — stacked vertically on the left side
+  // Legend — top-left, outside chart area
   if (hasCompare && options.legend) {
-    var legSz = Math.round(8 * w / 400);
-    var lx = 4;
-    var ly = padTop + 4;
+    var legFs = parseInt(fs(16, w));
+    var legSz = Math.round(legFs * 0.7);
+    var lx = padLeft + 4;
+    var ly = 2;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz, fill: color, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[0] || 'Today';
-    svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 8, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 8, fill: compareColor, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
+    var l2x = lx + legSz + 4 + (options.legend[0] || 'Today').length * legFs * 0.6 + 12;
+    svg.appendChild(svgEl('rect', { x: l2x, y: ly, width: legSz, height: legSz, fill: compareColor }));
+    svg.appendChild(svgEl('text', { x: l2x + legSz + 4, y: ly + legSz - 1, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
   }
 }
 
@@ -289,15 +292,17 @@ export function drawStackedArea(svg, data, options) {
     svg.appendChild(yt);
   }
 
-  // Legend — stacked vertically on the left side
+  // Legend — top-left, horizontal
   if (hasCompare && options.legend) {
-    var legSz = Math.round(8 * w / 400);
-    var lx = 4;
-    var ly = padTop + 10;
+    var legFs = parseInt(fs(16, w));
+    var legSz = Math.round(legFs * 0.7);
+    var lx = padLeft + 4;
+    var ly = 2;
     svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz, fill: color, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[0] || 'Today';
-    svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 8, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 8, fill: compareColor, 'font-size': fs(22, w), 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
+    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
+    var l2x = lx + legSz + 4 + (options.legend[0] || 'Today').length * legFs * 0.6 + 12;
+    svg.appendChild(svgEl('rect', { x: l2x, y: ly, width: legSz, height: legSz, fill: compareColor }));
+    svg.appendChild(svgEl('text', { x: l2x + legSz + 4, y: ly + legSz - 1, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
   }
 }
 
