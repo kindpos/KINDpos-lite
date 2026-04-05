@@ -1104,7 +1104,7 @@ function buildScene(el, params) {
 registerScene('server-checkout', {
   onEnter: function(el, params) {
     setSceneName('Checkout: ' + (params.employeeName || ''));
-    setHeaderBack(true);
+    setHeaderBack({ back: true, x: true });
     buildScene(el, params);
   },
   onExit: function() {

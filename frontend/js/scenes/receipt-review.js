@@ -15,7 +15,7 @@ var GAP = T.colGap;
 registerScene('receipt-review', {
   onEnter: function(el, params) {
     setSceneName(params.checkId || 'ORDER');
-    setHeaderBack(true);
+    setHeaderBack({ back: true, x: true });
 
     el.style.cssText = [
       'width:100%;height:100%;',

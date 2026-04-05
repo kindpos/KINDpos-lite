@@ -81,7 +81,7 @@ registerScene('settings', {
     state.scanning    = false;
 
     setSceneName('Configuration');
-    setHeaderBack(true);
+    setHeaderBack({ x: true });
 
     el.style.cssText = 'width:100%;height:100%;position:relative;background:' + T.bg + ';';
 

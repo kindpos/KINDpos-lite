@@ -1176,7 +1176,7 @@ function buildScene(el, params) {
 registerScene('close-day', {
   onEnter: function(el, params) {
     setSceneName('Close Day');
-    setHeaderBack(true);
+    setHeaderBack({ back: true, x: true });
     buildScene(el, params);
   },
   onExit: function() {
