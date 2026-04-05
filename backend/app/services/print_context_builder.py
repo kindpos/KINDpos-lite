@@ -225,6 +225,15 @@ class PrintContextBuilder:
         boundary = await self.ledger.get_last_day_close_sequence()
         all_events = await self.ledger.get_events_since(boundary, limit=50000)
 
+        # ── Collect TIP_ADJUSTED events keyed by payment_id (last wins) ────────
+        tip_map: Dict[str, float] = {}
+        for e in all_events:
+            if e.event_type == EventType.TIP_ADJUSTED:
+                payload = e.payload or {}
+                pid = payload.get("payment_id")
+                if pid is not None:
+                    tip_map[pid] = float(payload.get("tip_amount", 0.0))
+
         # ── Filter to this server's orders ────────────────────────────────────
         # Collect order IDs where this server is the owner
         server_order_ids = set()
@@ -282,7 +291,7 @@ class PrintContextBuilder:
                 if p.status != "confirmed":
                     continue
                 amount = Decimal(str(getattr(p, "amount", 0) or 0))
-                tip = float(getattr(p, "tip_amount", 0) or 0)
+                tip = float(tip_map.get(p.payment_id, getattr(p, "tip_amount", 0) or 0))
 
                 if p.method == "cash":
                     cash_sales += amount
@@ -454,6 +463,15 @@ class PrintContextBuilder:
         boundary = await self.ledger.get_last_day_close_sequence()
         all_events = await self.ledger.get_events_since(boundary, limit=50000)
 
+        # ── Collect TIP_ADJUSTED events keyed by payment_id (last wins) ────────
+        tip_map: Dict[str, float] = {}
+        for e in all_events:
+            if e.event_type == EventType.TIP_ADJUSTED:
+                payload = e.payload or {}
+                pid = payload.get("payment_id")
+                if pid is not None:
+                    tip_map[pid] = float(payload.get("tip_amount", 0.0))
+
         # ── Collect all order IDs created today ────────────────────────────────
         order_ids = []
         for e in all_events:
@@ -532,7 +550,7 @@ class PrintContextBuilder:
                 if p.status != "confirmed":
                     continue
                 amount = Decimal(str(getattr(p, "amount", 0) or 0))
-                tip = Decimal(str(getattr(p, "tip_amount", 0) or 0))
+                tip = Decimal(str(tip_map.get(p.payment_id, getattr(p, "tip_amount", 0) or 0)))
                 total_tips += tip
 
                 if p.method == "cash":
