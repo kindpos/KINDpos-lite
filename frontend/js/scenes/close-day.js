@@ -247,7 +247,7 @@ function buildReceiptPanel(state) {
   header.style.cssText = [
     'flex-shrink:0;padding:6px 12px;',
     'background:' + T.bgEdge + ';',
-    'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';',
+    'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
   header.textContent = 'PRINT PREVIEW';
@@ -386,10 +386,10 @@ function detailRow(label, value, valueColor) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';padding:2px 0;';
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:30px;color:' + T.mint + ';';
+  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
   lbl.textContent = label;
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:30px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
+  val.style.cssText = 'font-size:40px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
   val.textContent = value;
   row.appendChild(lbl);
   row.appendChild(val);
@@ -412,7 +412,7 @@ function buildMixBar(cashPct, cardPct) {
   bar.appendChild(cashSeg);
   bar.appendChild(cardSeg);
   var labels = document.createElement('div');
-  labels.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';margin-top:2px;';
+  labels.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-top:2px;';
   labels.innerHTML = '<span>Cash ' + cashPct + '%</span><span>Card ' + cardPct + '%</span>';
   var wrap = document.createElement('div');
   wrap.appendChild(bar);
@@ -478,7 +478,7 @@ function doZeroAll(state) {
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';margin-bottom:20px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:20px;';
       sub.textContent = 'This will set all unadjusted card tips to $0.00';
       card.appendChild(sub);
 
@@ -553,13 +553,13 @@ function buildCardTile(def, idx) {
 
   // Subtitle
   var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';text-align:center;';
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;';
   sub.textContent = def.subtitle;
   inner.appendChild(sub);
 
   // Hint
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';text-align:center;margin-top:2px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;margin-top:2px;';
   hint.textContent = '▸';
   inner.appendChild(hint);
 
@@ -603,12 +603,12 @@ function buildCardStrip(def, idx) {
   ].join('');
 
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:30px;color:' + T.mint + ';';
+  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
   lbl.textContent = def.title;
   strip.appendChild(lbl);
 
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:30px;color:' + T.cyan + ';';
+  val.style.cssText = 'font-size:40px;color:' + T.cyan + ';';
   val.textContent = def.hero;
   strip.appendChild(val);
 
@@ -675,10 +675,10 @@ function buildExpandedView(state, idx) {
     'user-select:none;-webkit-user-select:none;',
   ].join('');
   var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';font-weight:bold;';
+  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;';
   hTitle.textContent = defs[idx].title;
   var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';';
+  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
   hHint.textContent = '▾';
   hdr.appendChild(hTitle);
   hdr.appendChild(hHint);
@@ -728,7 +728,7 @@ function buildBlockerBanner(state) {
   el.style.cssText = [
     'flex-shrink:0;height:' + BANNER_H + 'px;',
     'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:30px;',
+    'font-family:' + T.fb + ';font-size:40px;',
     'clip-path:' + chamfer(4) + ';',
   ].join('');
 
@@ -759,7 +759,7 @@ function buildActionBar(state) {
   // Arrow separator helper
   function arrow() {
     var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';flex-shrink:0;';
+    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';flex-shrink:0;';
     el.textContent = '→';
     return el;
   }
@@ -862,12 +862,12 @@ function openPinGate(onSuccess) {
       card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:24px 32px;text-align:center;clip-path:' + chamfer(10) + ';';
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';margin-bottom:4px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:4px;';
       msg.textContent = 'Manager PIN Required';
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';margin-bottom:16px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:16px;';
       sub.textContent = 'Enter 4-digit manager PIN';
       card.appendChild(sub);
 
@@ -946,13 +946,13 @@ function openBatchOverlay(state, onSettled) {
       var titleLeft = document.createElement('div');
       titleLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
       var icon = document.createElement('div');
-      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
+      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
       icon.textContent = '$';
       var titleText = document.createElement('span');
-      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
+      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
       titleText.textContent = 'Batch Settlement — KINDpos/lite';
       var closeBtn = document.createElement('div');
-      closeBtn.style.cssText = 'width:18px;height:16px;background:' + T.red + ';border-top:1px solid ' + T.redL + ';border-left:1px solid ' + T.redL + ';border-bottom:1px solid ' + T.redD + ';border-right:1px solid ' + T.redD + ';display:flex;align-items:center;justify-content:center;font-size:30px;color:' + T.mint + ';cursor:pointer;font-weight:bold;clip-path:' + chamfer(3) + ';';
+      closeBtn.style.cssText = 'width:18px;height:16px;background:' + T.red + ';border-top:1px solid ' + T.redL + ';border-left:1px solid ' + T.redL + ';border-bottom:1px solid ' + T.redD + ';border-right:1px solid ' + T.redD + ';display:flex;align-items:center;justify-content:center;font-size:40px;color:' + T.mint + ';cursor:pointer;font-weight:bold;clip-path:' + chamfer(3) + ';';
       closeBtn.textContent = '✕';
 
       titleLeft.appendChild(icon);
@@ -970,7 +970,7 @@ function openBatchOverlay(state, onSettled) {
 
       function infoRow(label, value) {
         var row = document.createElement('div');
-        row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:30px;';
+        row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;';
         var l = document.createElement('span'); l.style.color = T.mint; l.textContent = label;
         var v = document.createElement('span'); v.style.cssText = 'font-weight:bold;color:' + T.gold + ';'; v.textContent = value;
         row.appendChild(l); row.appendChild(v);
@@ -983,7 +983,7 @@ function openBatchOverlay(state, onSettled) {
       body.appendChild(infoPanel);
 
       var statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';min-height:20px;';
+      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';min-height:20px;';
       statusEl.textContent = 'Ready to submit batch to processor.';
       body.appendChild(statusEl);
 
@@ -1004,7 +1004,7 @@ function openBatchOverlay(state, onSettled) {
       progContainer.appendChild(progFill);
 
       var pctEl = document.createElement('div');
-      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';text-align:right;margin-top:2px;';
+      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:right;margin-top:2px;';
       pctEl.textContent = '0%';
 
       var progWrap = document.createElement('div');

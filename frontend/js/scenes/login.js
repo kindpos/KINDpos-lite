@@ -142,7 +142,7 @@ registerScene('login', {
 
     // PIN prompt — hidden until an action button is tapped
     var pinPrompt = document.createElement('div');
-    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';text-align:center;padding:2px 0;min-height:26px;';
+    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;padding:2px 0;min-height:26px;';
     pinPrompt.textContent = '';
     _pinPromptEl = pinPrompt;
     right.appendChild(pinPrompt);
@@ -161,7 +161,7 @@ registerScene('login', {
 
     // Version label at bottom-right with multi-color spans
     var version = document.createElement('div');
-    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:30px;padding:4px 0;margin-right:0;';
+    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:40px;padding:4px 0;margin-right:0;';
     var parts = [
       { text: 'KIND', color: T.gold },
       { text: 'pos', color: T.red },
@@ -292,7 +292,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
       hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;';
 
       var title = document.createElement('span');
-      title.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.cyan + ';letter-spacing:2px;';
+      title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.cyan + ';letter-spacing:2px;';
       title.textContent = '// CLOCK IN/OUT //';
 
       var closeBtn = buildButton('\u2715', {
@@ -313,7 +313,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
 
       // Status message area
       var statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';text-align:center;min-height:28px;';
+      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;min-height:28px;';
       statusEl.textContent = '';
 
       if (isClockedIn && clockRecord) {
@@ -321,7 +321,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
         var t = new Date(clockRecord.clocked_in_at);
         var timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         var infoEl = document.createElement('div');
-        infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.cyan + ';text-align:center;';
+        infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.cyan + ';text-align:center;';
         infoEl.textContent = 'Clocked in since ' + timeStr;
         panel.appendChild(infoEl);
 
@@ -335,7 +335,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
         // Single role — auto clock in immediately
         var singleRole = empRoleObjects[0];
         var infoEl = document.createElement('div');
-        infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.cyan + ';text-align:center;';
+        infoEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.cyan + ';text-align:center;';
         infoEl.textContent = 'Role: ' + singleRole.name;
         panel.appendChild(infoEl);
         panel.appendChild(statusEl);
@@ -345,7 +345,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
       } else {
         // Multiple roles — show selection buttons
         var selectLabel = document.createElement('div');
-        selectLabel.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mutedText + ';text-align:center;';
+        selectLabel.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mutedText + ';text-align:center;';
         selectLabel.textContent = 'Select role to clock in:';
         panel.appendChild(selectLabel);
 
