@@ -201,26 +201,24 @@ function buildTicket(parentEl) {
   itemList.style.cssText = 'flex:1;overflow:hidden;display:flex;flex-direction:column;gap:4px;';
   panel.appendChild(itemList);
 
-  // Summary — IDs for live update
-  var summary = document.createElement('div');
-  summary.style.cssText = 'padding:3px 4px;border-top:1px solid ' + T.bgLight + ';flex-shrink:0;';
-  summary.appendChild(buildSummaryRow('Subtotal', '$0.00', 'ticket-subtotal'));
-  summary.appendChild(buildSummaryRow('Tax',      '$0.00', 'ticket-tax'));
-  panel.appendChild(summary);
-
-  // Totals — IDs for live update
-  var totals = document.createElement('div');
-  totals.style.cssText = 'background:' + T.bgDark + ';padding:4px;border-top:2px solid ' + T.bgLight + ';flex-shrink:0;';
-  totals.appendChild(buildTotalRow('Total', '$0.00', 'ticket-total'));
-  totals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
-  panel.appendChild(totals);
+  // Summary + Totals — combined card
+  var summaryTotals = document.createElement('div');
+  summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;border-top:2px solid ' + T.bgLight + ';flex-shrink:0;';
+  summaryTotals.appendChild(buildSummaryRow('Subtotal', '$0.00', 'ticket-subtotal'));
+  summaryTotals.appendChild(buildSummaryRow('Tax',      '$0.00', 'ticket-tax'));
+  var mintSep = document.createElement('div');
+  mintSep.style.cssText = 'height:2px;background:' + T.mint + ';margin:2px 0;';
+  summaryTotals.appendChild(mintSep);
+  summaryTotals.appendChild(buildTotalRow('Total', '$0.00', 'ticket-total'));
+  summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
+  panel.appendChild(summaryTotals);
 
   return panel;
 }
 
 function buildSummaryRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';line-height:1.6;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';line-height:1.15;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
@@ -231,7 +229,7 @@ function buildSummaryRow(label, value, id) {
 
 function buildTotalRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.gold + ';line-height:1.7;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.gold + ';line-height:1.15;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
@@ -325,35 +323,35 @@ function buildMain(parentEl, params) {
     'margin-top:-' + OVERLAP + 'px;',
   ].join('');
 
-  var tabItems = buildButton('< items >', {
-    fill: T.mint, color: T.bg, fontSize: '26px', height: BTN_H,
+  var tabItems = buildButton('ADD ITEM', {
+    fill: T.mint, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
     onTap: function() { switchTab('items', canvas, tabItems, tabMods); },
   });
   tabItems.style.gridColumn = '1 / 3';
   tabItems.style.gridRow    = '1';
 
-  var tabMods = buildButton('< modifiers >', {
-    fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H,
+  var tabMods = buildButton('MODIFY ITEMS', {
+    fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
     onTap: function() { switchTab('modifiers', canvas, tabItems, tabMods); },
   });
   tabMods.style.gridColumn = '3 / 5';
   tabMods.style.gridRow    = '1';
 
   var send = buildButton('//SEND//', {
-    fill: T.goGreen, color: T.bg, fontSize: '40px',
+    fill: T.goGreen, color: T.bg, fontSize: '40px', fontFamily: T.fh,
     onTap: function() { handleSend(); },
   });
   send.style.gridColumn = '5';
   send.style.gridRow    = '1 / 3';
 
-  var disc  = buildButton('//DISC//', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H });
-  var voidB = buildButton('//VOID//', { fill: T.red,     color: '#fff', fontSize: '26px', height: BTN_H,
+  var disc  = buildButton('//DISC//', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H, fontFamily: T.fh });
+  var voidB = buildButton('//VOID//', { fill: T.red,     color: '#fff', fontSize: '26px', height: BTN_H, fontFamily: T.fh,
     onTap: function() { handleVoid(); },
   });
   voidB.id = 'void-btn';
-  var print = buildButton('//PRINT//',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H });
+  var print = buildButton('//PRINT//',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H, fontFamily: T.fh });
 
-  var pay = buildButton('//PAY//', { fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H,
+  var pay = buildButton('//PAY//', { fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H, fontFamily: T.fh,
     onTap: function() { handlePay(params); },
   });
 
