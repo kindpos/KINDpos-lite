@@ -66,7 +66,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
 
         try:
             xml = self._build_xml("GetStatus", {"Amount": "0.00"})
-            response = await self._send(xml, timeout=5.0)
+            response = await self._send(xml, timeout=3.0)
             if response is not None:
                 resp_msg = response.findtext("RespMSG") or ""
                 if "Approved" in resp_msg or resp_msg == "Ready":
@@ -201,6 +201,9 @@ class DejavooSPInAdapter(BasePaymentDevice):
         if self._config:
             if self._config.register_id:
                 parts.append(f"<RegisterId>{self._config.register_id}</RegisterId>")
+            tpn = getattr(self._config, 'tpn', None) or ''
+            if tpn:
+                parts.append(f"<TPN>{tpn}</TPN>")
             auth_key = getattr(self._config, 'auth_key', None) or ''
             if auth_key:
                 parts.append(f"<AuthKey>{auth_key}</AuthKey>")
@@ -230,7 +233,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
             print(f"  SPIn → {self._config.ip_address}:{self._config.port}")
             print(f"  SPIn XML: {xml_body}")
 
-            request_timeout = timeout or 90.0
+            request_timeout = timeout or 120.0
             async with httpx.AsyncClient(timeout=request_timeout) as client:
                 resp = await client.get(url)
             resp.raise_for_status()

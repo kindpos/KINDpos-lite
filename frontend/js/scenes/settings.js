@@ -720,11 +720,53 @@ function renderManualAdd(ip, card) {
   form.appendChild(regIdLabel);
   form.appendChild(regIdDisplay);
 
-  // Show/hide register ID based on type selection
+  // TPN field (card readers only)
+  var tpnLabel = makeLabel('SPIn TPN', GOLD, '22px');
+  var tpnDisplay = document.createElement('div');
+  tpnDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  applySunkenStyle(tpnDisplay);
+  var tpnVal = '';
+  tpnDisplay.textContent = 'Tap to enter';
+  tpnDisplay.addEventListener('pointerup', function() {
+    showKeyboard({
+      placeholder: 'Terminal Processing Number',
+      initialValue: tpnVal,
+      maxLength: 20,
+      onDone: function(val) { tpnVal = val; tpnDisplay.textContent = val || 'Tap to enter'; },
+      dismissOnDone: true,
+    });
+  });
+  form.appendChild(tpnLabel);
+  form.appendChild(tpnDisplay);
+
+  // AuthKey field (card readers only)
+  var authLabel = makeLabel('SPIn Auth Key', GOLD, '22px');
+  var authDisplay = document.createElement('div');
+  authDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  applySunkenStyle(authDisplay);
+  var authVal = '';
+  authDisplay.textContent = 'Tap to enter';
+  authDisplay.addEventListener('pointerup', function() {
+    showKeyboard({
+      placeholder: 'SPIn Auth Key',
+      initialValue: authVal,
+      maxLength: 30,
+      onDone: function(val) { authVal = val; authDisplay.textContent = val || 'Tap to enter'; },
+      dismissOnDone: true,
+    });
+  });
+  form.appendChild(authLabel);
+  form.appendChild(authDisplay);
+
+  // Show/hide SPIn fields based on type selection
   function refreshRegIdVisibility() {
     var show = selectedType === 'card_reader';
     regIdLabel.style.display = show ? '' : 'none';
     regIdDisplay.style.display = show ? '' : 'none';
+    tpnLabel.style.display = show ? '' : 'none';
+    tpnDisplay.style.display = show ? '' : 'none';
+    authLabel.style.display = show ? '' : 'none';
+    authDisplay.style.display = show ? '' : 'none';
   }
   // Patch type button taps to also toggle register ID visibility
   var origRefresh = refreshTypeBtns;
@@ -746,6 +788,8 @@ function renderManualAdd(ip, card) {
         name: deviceName || selectedType,
         port: selectedType === 'card_reader' ? 9000 : 9100,
         register_id: selectedType === 'card_reader' ? registerId : '',
+        tpn: selectedType === 'card_reader' ? tpnVal : '',
+        auth_key: selectedType === 'card_reader' ? authVal : '',
       });
       state.addStep = 'choose';
       renderCurrentState();
@@ -953,10 +997,53 @@ function renderConfirmDevice(card) {
   });
   form.appendChild(regLabel2);
   form.appendChild(regInput2);
+
+  // TPN field (card readers only)
+  var tpnLabel2 = makeLabel('SPIn TPN', GOLD, '22px');
+  var tpnInput2 = document.createElement('div');
+  tpnInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  applySunkenStyle(tpnInput2);
+  var tpnVal2 = dev.tpn || '';
+  tpnInput2.textContent = tpnVal2 || 'Tap to enter';
+  tpnInput2.addEventListener('pointerup', function() {
+    showKeyboard({
+      placeholder: 'Terminal Processing Number',
+      initialValue: tpnVal2,
+      maxLength: 20,
+      onDone: function(val) { tpnVal2 = val; tpnInput2.textContent = val || 'Tap to enter'; },
+      dismissOnDone: true,
+    });
+  });
+  form.appendChild(tpnLabel2);
+  form.appendChild(tpnInput2);
+
+  // AuthKey field (card readers only)
+  var authLabel2 = makeLabel('SPIn Auth Key', GOLD, '22px');
+  var authInput2 = document.createElement('div');
+  authInput2.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:20px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  applySunkenStyle(authInput2);
+  var authVal2 = dev.auth_key || '';
+  authInput2.textContent = authVal2 || 'Tap to enter';
+  authInput2.addEventListener('pointerup', function() {
+    showKeyboard({
+      placeholder: 'SPIn Auth Key',
+      initialValue: authVal2,
+      maxLength: 30,
+      onDone: function(val) { authVal2 = val; authInput2.textContent = val || 'Tap to enter'; },
+      dismissOnDone: true,
+    });
+  });
+  form.appendChild(authLabel2);
+  form.appendChild(authInput2);
+
   function refreshRegId2() {
     var show = selectedType === 'card_reader';
     regLabel2.style.display = show ? '' : 'none';
     regInput2.style.display = show ? '' : 'none';
+    tpnLabel2.style.display = show ? '' : 'none';
+    tpnInput2.style.display = show ? '' : 'none';
+    authLabel2.style.display = show ? '' : 'none';
+    authInput2.style.display = show ? '' : 'none';
   }
   refreshRegId2();
 
@@ -972,6 +1059,8 @@ function renderConfirmDevice(card) {
         name: deviceName || selectedType,
         port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
         register_id: selectedType === 'card_reader' ? registerId2 : '',
+        tpn: selectedType === 'card_reader' ? tpnVal2 : '',
+        auth_key: selectedType === 'card_reader' ? authVal2 : '',
       });
       state.addStep = 'choose'; state.foundDevice = null; renderCurrentState();
     },

@@ -37,6 +37,7 @@ def make_config(device_id="deja-01"):
         protocol="spin",
         processor_id="dejavoo",
         register_id="REG001",
+        tpn="TPN001",
         auth_key="AUTH_KEY_123",
     )
 
@@ -58,6 +59,7 @@ def test_build_xml_sale():
     assert root.findtext("function") == "sale"
     assert root.findtext("Amount") == "50.00"
     assert root.findtext("RegisterId") == "REG001"
+    assert root.findtext("TPN") == "TPN001"
     assert root.findtext("AuthKey") == "AUTH_KEY_123"
     assert root.findtext("PaymentType") == "Credit"
 

@@ -35,7 +35,8 @@ class PaymentDeviceConfig(BaseModel):
     enabled: bool = True
     processor_id: str
     register_id: Optional[str] = None  # SPIn Register ID for Dejavoo devices
-    auth_key: Optional[str] = None     # SPIn Auth Key for Dejavoo cloud mode
+    tpn: Optional[str] = None          # SPIn Terminal Processing Number
+    auth_key: Optional[str] = None     # SPIn Auth Key
 
 # 1.4 TransactionRequest
 class PaymentType(str, Enum):
