@@ -73,10 +73,10 @@ class SalesRecapTemplate(BaseTemplate):
         cmds: List[Dict] = []
         cpl = self.chars_per_line
 
-        cmds.append({'type': 'text', 'content': '  REVENUE  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  REVENUE  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         gross_sales = ctx.get('gross_sales', 0.0)
-        cmds.append({'type': 'text', 'content': self._money_line('Gross Sales', gross_sales, cpl), 'bold': True})
+        cmds.append({'type': 'text', 'content': self._money_line('Gross Sales', gross_sales, cpl), 'bold': True, 'double_height': True})
 
         # Deductions
         voids_total = ctx.get('voids_total', 0.0)
@@ -100,7 +100,7 @@ class SalesRecapTemplate(BaseTemplate):
         cmds.append({'type': 'divider'})
 
         net_sales = ctx.get('net_sales', 0.0)
-        cmds.append({'type': 'text', 'content': self._money_line('NET SALES', net_sales, cpl), 'bold': True, 'double_height': True})
+        cmds.append({'type': 'text', 'content': self._money_line('NET SALES', net_sales, cpl), 'bold': True, 'double_width': True, 'double_height': True})
 
         tax_collected = ctx.get('tax_collected', 0.0)
         cmds.append({'type': 'text', 'content': self._money_line('Tax Collected', tax_collected, cpl)})
@@ -122,7 +122,7 @@ class SalesRecapTemplate(BaseTemplate):
         cmds: List[Dict] = []
         cpl = self.chars_per_line
 
-        cmds.append({'type': 'text', 'content': '  PAYMENTS  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  PAYMENTS  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         cash_sales = ctx.get('cash_sales', 0.0)
         cash_count = ctx.get('cash_count', 0)
@@ -141,17 +141,17 @@ class SalesRecapTemplate(BaseTemplate):
 
         total_payments = ctx.get('total_payments', cash_sales + card_sales)
         cmds.append({'type': 'divider'})
-        cmds.append({'type': 'text', 'content': self._money_line('Total Payments', total_payments, cpl), 'bold': True})
+        cmds.append({'type': 'text', 'content': self._money_line('Total Payments', total_payments, cpl), 'bold': True, 'double_width': True, 'double_height': True})
 
         # Cash expected (cash sales + cash tips)
         cash_expected = ctx.get('cash_expected', cash_sales + ctx.get('cash_tips', 0.0))
-        cmds.append({'type': 'text', 'content': self._money_line('Cash Expected', cash_expected, cpl)})
+        cmds.append({'type': 'text', 'content': self._money_line('CASH EXPECTED', cash_expected, cpl), 'bold': True, 'double_width': True, 'double_height': True})
 
         # Tip total
         total_tips = ctx.get('total_tips', 0.0)
         if total_tips > 0:
             cmds.append({'type': 'feed', 'lines': 1})
-            cmds.append({'type': 'text', 'content': self._money_line('Tip Total', total_tips, cpl), 'bold': True})
+            cmds.append({'type': 'text', 'content': self._money_line('Tip Total', total_tips, cpl), 'bold': True, 'double_width': True, 'double_height': True})
 
         cmds.append({'type': 'divider', 'char': '='})
         return cmds
@@ -168,7 +168,7 @@ class SalesRecapTemplate(BaseTemplate):
         cmds: List[Dict] = []
         cpl = self.chars_per_line
 
-        cmds.append({'type': 'text', 'content': '  SALES BY CATEGORY  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  SALES BY CATEGORY  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         for cat in categories:
             name = cat.get('name', 'Unknown')
@@ -188,7 +188,7 @@ class SalesRecapTemplate(BaseTemplate):
         cmds: List[Dict] = []
         cpl = self.chars_per_line
 
-        cmds.append({'type': 'text', 'content': '  CHECK STATS  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  CHECK STATS  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         total_checks = ctx.get('total_checks', 0)
         cmds.append({'type': 'text', 'content': f"{'Total Checks:':<{cpl - 10}}{total_checks:>10}"})
@@ -218,7 +218,7 @@ class SalesRecapTemplate(BaseTemplate):
         cmds: List[Dict] = []
         cpl = self.chars_per_line
 
-        cmds.append({'type': 'text', 'content': '  DAYPART BREAKDOWN  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  DAYPART BREAKDOWN  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         for dp in dayparts:
             name = dp.get('name', '')

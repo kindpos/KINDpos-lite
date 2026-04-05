@@ -77,7 +77,7 @@ class ServerCheckoutTemplate(BaseTemplate):
         cmds: List[Dict] = []
         cpl = self.chars_per_line
 
-        cmds.append({'type': 'text', 'content': '  SALES SUMMARY  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  SALES SUMMARY  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         checks_closed = ctx.get('checks_closed', 0)
         cmds.append({'type': 'text', 'content': f"Checks Closed: {checks_closed}"})
@@ -99,7 +99,7 @@ class ServerCheckoutTemplate(BaseTemplate):
 
         net_sales = ctx.get('net_sales', 0.0)
         cmds.append({'type': 'divider'})
-        cmds.append({'type': 'text', 'content': self._money_line('Net Sales', net_sales, cpl), 'bold': True})
+        cmds.append({'type': 'text', 'content': self._money_line('Net Sales', net_sales, cpl), 'bold': True, 'double_width': True, 'double_height': True})
 
         tax_collected = ctx.get('tax_collected', 0.0)
         cmds.append({'type': 'text', 'content': self._money_line('Tax Collected', tax_collected, cpl)})
@@ -124,7 +124,7 @@ class ServerCheckoutTemplate(BaseTemplate):
         show_detail = ctx.get('show_cc_detail', True)
         cc_transactions = ctx.get('cc_transactions', [])
 
-        cmds.append({'type': 'text', 'content': '  CC DETAIL  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  CC DETAIL  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         if not cc_transactions:
             cmds.append({'type': 'text', 'content': 'No credit card transactions this shift.', 'align': 'center'})
@@ -168,12 +168,12 @@ class ServerCheckoutTemplate(BaseTemplate):
         cmds: List[Dict] = []
         cpl = self.chars_per_line
 
-        cmds.append({'type': 'text', 'content': '  TIP SUMMARY  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  TIP SUMMARY  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         cc_tips = ctx.get('cc_tips_total', 0.0)
         declared_cash_tips = ctx.get('declared_cash_tips')
 
-        cmds.append({'type': 'text', 'content': self._money_line('Credit Card Tips', cc_tips, cpl)})
+        cmds.append({'type': 'text', 'content': self._money_line('Credit Card Tips', cc_tips, cpl), 'bold': True, 'double_height': True})
 
         if declared_cash_tips is None:
             cmds.append({'type': 'text', 'content': f"{'Declared Cash Tips:':<{cpl-12}} NOT DECLARED", 'bold': True})
@@ -183,7 +183,7 @@ class ServerCheckoutTemplate(BaseTemplate):
         cmds.append({'type': 'divider'})
 
         gross_tips = ctx.get('gross_tips', 0.0)
-        cmds.append({'type': 'text', 'content': self._money_line('Gross Tips', gross_tips, cpl), 'bold': True})
+        cmds.append({'type': 'text', 'content': self._money_line('Gross Tips', gross_tips, cpl), 'bold': True, 'double_width': True, 'double_height': True})
 
         cmds.append({'type': 'divider', 'char': '='})
         return cmds
@@ -200,7 +200,7 @@ class ServerCheckoutTemplate(BaseTemplate):
         if tip_pool:
             return self._render_tip_out_pool(ctx)
 
-        cmds.append({'type': 'text', 'content': '  TIP OUT  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  TIP OUT  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         tip_outs = ctx.get('tip_outs', [])
         for to in tip_outs:
@@ -223,10 +223,10 @@ class ServerCheckoutTemplate(BaseTemplate):
 
         total_tip_out = ctx.get('total_tip_out', 0.0)
         cmds.append({'type': 'divider'})
-        cmds.append({'type': 'text', 'content': self._money_line('Total Tip Out', total_tip_out, cpl), 'bold': True})
+        cmds.append({'type': 'text', 'content': self._money_line('Total Tip Out', total_tip_out, cpl), 'bold': True, 'double_height': True})
 
         net_tips = ctx.get('net_tips', 0.0)
-        cmds.append({'type': 'text', 'content': self._money_line('Net Tips', net_tips, cpl), 'bold': True})
+        cmds.append({'type': 'text', 'content': self._money_line('Net Tips', net_tips, cpl), 'bold': True, 'double_width': True, 'double_height': True})
 
         cmds.append({'type': 'divider', 'char': '='})
         return cmds
@@ -273,7 +273,7 @@ class ServerCheckoutTemplate(BaseTemplate):
         tip_pool = ctx.get('tip_pool')
         cc_tips_payout = ctx.get('cc_tips_payout', 'cash')  # 'cash' | 'payroll'
 
-        cmds.append({'type': 'text', 'content': '  CASH RECONCILIATION  ', 'bold': True, 'reverse': True, 'align': 'center'})
+        cmds.append({'type': 'text', 'content': '  CASH RECONCILIATION  ', 'bold': True, 'reverse': True, 'align': 'center', 'double_height': True})
 
         cash_collected = ctx.get('cash_collected', 0.0)
         declared_cash_tips = ctx.get('declared_cash_tips', 0.0) or 0.0
@@ -311,7 +311,7 @@ class ServerCheckoutTemplate(BaseTemplate):
         cmds.append({
             'type': 'text',
             'content': f"{label}: {amount_str}",
-            'bold': True, 'double_width': True, 'align': 'center',
+            'bold': True, 'double_width': True, 'double_height': True, 'align': 'center',
         })
 
         cmds.append({'type': 'divider', 'char': '='})

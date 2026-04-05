@@ -17,6 +17,7 @@ from .templates.guest_receipt import GuestReceiptTemplate
 from .templates.kitchen_ticket import KitchenTicketTemplate
 from .templates.clock_hours import ClockHoursTemplate
 from .templates.sales_recap import SalesRecapTemplate
+from .templates.server_checkout import ServerCheckoutTemplate
 
 logger = logging.getLogger("kindpos.printing.dispatcher")
 
@@ -57,7 +58,7 @@ class PrintDispatcher:
             "guest_receipt":  GuestReceiptTemplate(paper_width=80, chars_per_line=48),
             "clock_hours":    ClockHoursTemplate(paper_width=80, chars_per_line=48),
             "sales_recap":    SalesRecapTemplate(paper_width=80, chars_per_line=48),
-            "server_checkout": None,  # loaded lazily if needed
+            "server_checkout": ServerCheckoutTemplate(paper_width=80, chars_per_line=48),
         }
         self._templates_kitchen = {
             "kitchen_ticket": KitchenTicketTemplate(paper_width=80, chars_per_line=33),
