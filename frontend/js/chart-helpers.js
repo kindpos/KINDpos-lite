@@ -153,17 +153,7 @@ export function drawBarChart(svg, data, options) {
     }
   }
 
-  // Legend — left side, stacked vertically descending
-  if (hasCompare && options.legend) {
-    var legFs = parseInt(fs(20, w));
-    var legSz = Math.round(legFs * 0.7);
-    var lx = 2;
-    var ly = 2;
-    svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
-    svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 6, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 5, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
-  }
+  // Legend removed from SVG — now rendered in panel header via buildChartPanel
 }
 
 // ═══════════════════════════════════════════════════
@@ -291,17 +281,7 @@ export function drawStackedArea(svg, data, options) {
     svg.appendChild(yt);
   }
 
-  // Legend — top-left, horizontal
-  if (hasCompare && options.legend) {
-    var legFs = parseInt(fs(20, w));
-    var legSz = Math.round(legFs * 0.7);
-    var lx = 2;
-    var ly = 2;
-    svg.appendChild(svgEl('rect', { x: lx, y: ly, width: legSz, height: legSz, fill: color }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz - 1, fill: color, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[0] || 'Today';
-    svg.appendChild(svgEl('rect', { x: lx, y: ly + legSz + 6, width: legSz, height: legSz, fill: compareColor }));
-    svg.appendChild(svgEl('text', { x: lx + legSz + 4, y: ly + legSz * 2 + 5, fill: compareColor, 'font-size': '' + legFs, 'font-family': FONT })).textContent = options.legend[1] || 'Last Wk';
-  }
+  // Legend removed from SVG — now rendered in panel header via buildChartPanel
 }
 
 // ═══════════════════════════════════════════════════
@@ -591,21 +571,37 @@ export function drawProgressBar(svg, value, max, options) {
 //  CHART PANEL — sunken panel with header bar
 // ═══════════════════════════════════════════════════
 
-export function buildChartPanel(title, value, contentFn) {
+export function buildChartPanel(title, value, contentFn, legend) {
   var panel = document.createElement('div');
   panel.style.cssText = 'display:flex;flex-direction:column;min-height:0;overflow:hidden;';
 
   // Header bar
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:' + CHART.headerBg + ';flex-shrink:0;border-bottom:1px solid ' + CHART.gridStroke + ';';
+  header.style.cssText = 'display:flex;align-items:center;padding:6px 10px;background:' + CHART.headerBg + ';flex-shrink:0;border-bottom:1px solid ' + CHART.gridStroke + ';gap:8px;';
 
   var titleEl = document.createElement('div');
   titleEl.style.cssText = 'font-family:' + FONT + ';font-size:30px;color:' + CHART.mint + ';font-weight:bold;letter-spacing:1px;';
   titleEl.textContent = title;
   header.appendChild(titleEl);
 
+  // Legend swatches next to title
+  if (legend && legend.length) {
+    legend.forEach(function(item) {
+      var swatch = document.createElement('span');
+      swatch.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-family:' + FONT + ';font-size:22px;';
+      var dot = document.createElement('span');
+      dot.style.cssText = 'width:10px;height:10px;background:' + item.color + ';display:inline-block;';
+      var label = document.createElement('span');
+      label.style.cssText = 'color:' + item.color + ';';
+      label.textContent = item.label;
+      swatch.appendChild(dot);
+      swatch.appendChild(label);
+      header.appendChild(swatch);
+    });
+  }
+
   var valueEl = document.createElement('div');
-  valueEl.style.cssText = 'font-family:' + FONT + ';font-size:32px;color:' + CHART.gold + ';font-weight:bold;';
+  valueEl.style.cssText = 'font-family:' + FONT + ';font-size:32px;color:' + CHART.gold + ';font-weight:bold;margin-left:auto;';
   valueEl.textContent = value;
   header.appendChild(valueEl);
 

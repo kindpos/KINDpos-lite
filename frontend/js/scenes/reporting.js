@@ -362,6 +362,10 @@ function buildManagerSalesPanels(sales, fullSize) {
   var svgH = fullSize ? 380 : 160;
 
   // NET SALES — side-by-side bar chart: today (teal) vs last week (orange)
+  var salesLegend = [
+    { label: 'Today', color: CHART.teal },
+    { label: 'Last Wk', color: CHART.orange },
+  ];
   var p1 = buildChartPanel('NET SALES', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
@@ -371,11 +375,15 @@ function buildManagerSalesPanels(sales, fullSize) {
       var cmp = lastWeek[i] ? lastWeek[i].net : 0;
       data.push({ label: label, value: hourly[i].net, compareValue: cmp });
     }
-    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: true, legend: ['Today', 'Last Wk'] });
+    drawBarChart(svg, data, { color: CHART.teal, compareColor: CHART.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
     body.appendChild(svg);
-  });
+  }, salesLegend);
 
   // TOTAL CHECKS — stacked area: today vs last week, 12hr labels
+  var checksLegend = [
+    { label: 'Today', color: CHART.hotPink },
+    { label: 'Last Wk', color: CHART.electricBlue },
+  ];
   var p2 = buildChartPanel('TOTAL CHECKS', s.total_checks || '--', function(body) {
     var svg = createSVG(svgW, svgH);
     var data = [];
@@ -385,9 +393,9 @@ function buildManagerSalesPanels(sales, fullSize) {
       var cmp = lastWeek[i] ? lastWeek[i].checks : 0;
       data.push({ label: label, value: hourly[i].checks, compareValue: cmp });
     }
-    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, legend: ['Today', 'Last Wk'], showCallouts: true, calloutFmt: function(v) { return v; } });
+    drawStackedArea(svg, data, { color: CHART.hotPink, compareColor: CHART.electricBlue, width: svgW, height: svgH, showCallouts: true, calloutFmt: function(v) { return v; } });
     body.appendChild(svg);
-  });
+  }, checksLegend);
 
   // CHECK AVG — pareto: which days are most profitable, sorted descending
   var p3 = buildChartPanel('CHECK AVG', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
