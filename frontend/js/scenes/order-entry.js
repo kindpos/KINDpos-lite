@@ -173,7 +173,6 @@ function buildTicket(parentEl) {
   panel.style.cssText = [
     'width:' + TICKET_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'border-right:7px solid ' + T.mint + ';',
     'padding-right:' + GAP + 'px;',
   ].join('');
 
@@ -182,12 +181,12 @@ function buildTicket(parentEl) {
   topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;';
 
   saveBtn = buildButton('SAVE', {
-    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H, fontFamily: T.fh,
+    fill: T.bgLight, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleSave(); },
   });
 
   var recallBtnEl = buildButton('RECALL', {
-    fill: T.bgLight, color: T.mint, fontSize: T.fsBtn, height: BTN_H, fontFamily: T.fh,
+    fill: T.bgLight, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleRecall(); },
   });
 
@@ -321,10 +320,9 @@ function buildMain(parentEl, params) {
     'display:grid;',
     'grid-template-columns:1fr 1fr 1fr 1fr 1.3fr;',
     'grid-template-rows:1fr 1fr;',
-    'gap:6px;padding:8px;padding-top:0;',
+    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;',
     'position:relative;z-index:2;',
     'margin-top:-' + OVERLAP + 'px;',
-    'flex:0 0 auto;',
   ].join('');
 
   var tabItems = buildButton('ADD ITEMS', {
