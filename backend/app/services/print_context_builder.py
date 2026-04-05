@@ -475,6 +475,8 @@ class PrintContextBuilder:
         card_sales = _ZERO
         card_count = 0
         total_tips = _ZERO
+        cash_tips = _ZERO
+        card_tips = _ZERO
         covers = 0
         category_totals = {}  # {category_name: {"total": float, "count": int}}
 
@@ -538,9 +540,11 @@ class PrintContextBuilder:
                 if p.method == "cash":
                     cash_sales += amount
                     cash_count += 1
+                    cash_tips += tip
                 elif p.method == "card":
                     card_sales += amount
                     card_count += 1
+                    card_tips += tip
 
         net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
         total_payments = float(cash_sales + card_sales)
@@ -597,6 +601,9 @@ class PrintContextBuilder:
             "other_payments": [],
             "total_payments": money_round(total_payments),
             "total_tips": money_round(float(total_tips)),
+            "cash_tips": money_round(float(cash_tips)),
+            "card_tips": money_round(float(card_tips)),
+            "cash_expected": money_round(float(cash_sales + cash_tips)),
             "category_sales": category_sales,
             "total_checks": total_checks,
             "avg_check": avg_check,

@@ -128,7 +128,7 @@ function buildReceiptContent(state) {
   var BASE   = '28px';
   var HEADER = T.fsBtn;
   var SMALL  = T.fsSmall;
-  var COL    = '#1a1a1a';
+  var COL    = '#555555';
   var DIM    = '#447744';
 
   var wrap = document.createElement('div');
@@ -195,7 +195,7 @@ function buildReceiptContent(state) {
   wrap.appendChild(row('Card (' + state.cardCount + ')',  fmt(state.cardSales)));
   wrap.appendChild(divider());
   wrap.appendChild(row('Total Payments', fmt(state.totalPayments)));
-  wrap.appendChild(row('Total Tips (CC)', fmt(state.totalTips)));
+  wrap.appendChild(row('Cash Expected',  fmt(state.cashSales + state.cashTips)));
   wrap.appendChild(divider());
 
   // Categories
@@ -221,12 +221,14 @@ function buildReceiptContent(state) {
 
   // Tips
   wrap.appendChild(sectionHeader('TIPS'));
-  wrap.appendChild(row('Total Tips (CC)', fmt(state.totalTips)));
+  wrap.appendChild(row('Tip Total',       fmt(state.totalTips)));
+  wrap.appendChild(row('Card Tips',       fmt(state.cardTips)));
+  wrap.appendChild(row('Cash Tips',       fmt(state.cashTips)));
   wrap.appendChild(row('Total Tip-Out',   '− ' + fmt(state.totalTipOut)));
   wrap.appendChild(divider());
 
   var footer = document.createElement('div');
-  footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:' + T.mutedText + ';';
+  footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:' + COL + ';';
   footer.textContent = '** MANAGER REPORT — CONFIDENTIAL **';
   wrap.appendChild(footer);
 
