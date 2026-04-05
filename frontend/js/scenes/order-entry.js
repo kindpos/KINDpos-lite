@@ -181,12 +181,12 @@ function buildTicket(parentEl) {
   topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;';
 
   saveBtn = buildButton('SAVE', {
-    fill: T.bgLight, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
+    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleSave(); },
   });
 
   var recallBtnEl = buildButton('RECALL', {
-    fill: T.bgLight, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
+    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleRecall(); },
   });
 
@@ -346,7 +346,7 @@ function buildMain(parentEl, params) {
   send.style.gridColumn = '5';
   send.style.gridRow    = '1 / 3';
 
-  var disc  = buildButton('DISC', { fill: T.bgLight, color: T.mint, fontSize: '26px', fontFamily: T.fh });
+  var disc  = buildButton('DISC', { fill: T.mint, color: T.bgDark, fontSize: '26px', fontFamily: T.fh });
   var voidB = buildButton('VOID', { fill: T.red,     color: '#fff', fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleVoid(); },
   });
