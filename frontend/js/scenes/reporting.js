@@ -97,7 +97,7 @@ function buildLeftCard(params, sales, labor) {
   if (params.role === 'manager') {
     // SALES card — title + numbers both gold (title color)
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
     title.textContent = 'SALES';
     card.appendChild(title);
 
@@ -158,7 +158,7 @@ function buildLeftCard(params, sales, labor) {
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:60px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
     title.textContent = 'SHIFT';
     card.appendChild(title);
 
@@ -202,7 +202,7 @@ function buildLeftCard(params, sales, labor) {
 
 function buildVerticalRail(text, color) {
   var rail = document.createElement('div');
-  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:42px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:10px;';
+  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:60px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:10px;';
   for (var i = 0; i < text.length; i++) {
     var ch = document.createElement('div');
     ch.style.cssText = 'line-height:1;';
