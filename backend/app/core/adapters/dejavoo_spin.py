@@ -65,7 +65,7 @@ class DejavooSPInAdapter(BasePaymentDevice):
             return self._status
 
         try:
-            xml = self._build_xml("GetStatus", {"Amount": "0.00"})
+            xml = self._build_xml("GetStatus")
             response = await self._send(xml, timeout=3.0)
             if response is not None:
                 resp_msg = response.findtext("RespMSG") or ""
