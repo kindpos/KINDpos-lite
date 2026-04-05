@@ -488,7 +488,7 @@ function buildManagerLaborPanels(labor, fullSize) {
   var svgW = fullSize ? 900 : 400;
   var svgH = fullSize ? 380 : 160;
   var lblW = fullSize ? 80 : 55;
-  var fontSize = fullSize ? '24px' : '20px';
+  var fontSize = fullSize ? '24px' : T.fsBtn;
 
   // TOTAL HRS — horizontal bars: employees by hours
   var p1 = buildChartPanel('TOTAL HRS', l.total_hours ? l.total_hours + 'h' : '--', function(body) {
@@ -589,7 +589,7 @@ function buildServerShiftPanels(sales, fullSize) {
   var svgW = fullSize ? 900 : 400;
   var svgH = fullSize ? 380 : 160;
   var lblW = fullSize ? 60 : 40;
-  var fontSize = fullSize ? '24px' : '20px';
+  var fontSize = fullSize ? '24px' : T.fsBtn;
   var lgFontSize = fullSize ? '36px' : '28px';
 
   // TOTAL GUESTS — bar chart per hour
@@ -674,7 +674,7 @@ function buildServerHoursPanels(sales, labor, fullSize) {
   var weekly = l.weekly_breakdown || [];
   var svgW = fullSize ? 900 : 400;
   var svgH = fullSize ? 380 : 160;
-  var fontSize = fullSize ? '24px' : '20px';
+  var fontSize = fullSize ? '24px' : T.fsBtn;
   var lgFontSize = fullSize ? '44px' : '36px';
   var progW = fullSize ? 860 : 380;
 

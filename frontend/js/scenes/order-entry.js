@@ -266,7 +266,7 @@ function buildPrefixCard() {
     pair.wrap.style.height = '40px';
     pair.wrap.style.flex   = '1';
     pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize   = '20px';
+    pair.inner.style.fontSize   = T.fsBtn;
     pair.inner.style.color      = activePrefix === p.id ? p.textColor : p.color;
     pair.inner.textContent = p.label;
     // Shadow always matches the prefix color
@@ -897,7 +897,7 @@ function handleRecall() {
       title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
       title.textContent = '// RECALL //';
       var closeBtn = buildButton('\u2715', {
-        fill: T.red, color: T.mint, fontSize: '20px', height: 30,
+        fill: T.red, color: T.mint, fontSize: T.fsBtn, height: 30,
         onTap: function() { dismissOverlay(); },
       });
       closeBtn.style.width = '30px';
@@ -924,7 +924,7 @@ function handleRecall() {
             ? tab.label + '\n' + tab.checkNum + '\n$' + total.toFixed(2)
             : tab.checkNum + '\n$' + total.toFixed(2);
           var card = buildButton(cardLabel, {
-            fill: '#333333', color: T.mint, fontSize: '20px', height: 90,
+            fill: '#333333', color: T.mint, fontSize: T.fsBtn, height: 90,
             onTap: function() { recallTabInterrupt(tab, grid, panel); },
           });
           grid.appendChild(card);

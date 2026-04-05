@@ -348,7 +348,7 @@ function buildNavStrip(navItems, accentColor) {
     var btn = buildStyledButton(isActive ? accentColor : BG);
     btn.wrap.style.width = '100%';
     btn.inner.style.fontFamily = T.fb;
-    btn.inner.style.fontSize = '20px';
+    btn.inner.style.fontSize = T.fsBtn;
     btn.inner.style.fontWeight = 'bold';
     btn.inner.style.color = isActive ? DARK : accentColor;
     btn.inner.style.padding = '10px 8px';
@@ -446,7 +446,7 @@ function renderScanning(card) {
 
   // Enter IP shortcut — larger
   var shortcut = buildButton('Know the IP? Enter it directly →', {
-    fill: BG, color: GOLD, fontSize: '20px', height: 44, width: 380,
+    fill: BG, color: GOLD, fontSize: T.fsBtn, height: 44, width: 380,
     onTap: function() {
       if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
       state.addStep = 'enter-ip';
@@ -512,7 +512,7 @@ function renderEnterIP(card) {
     pair.wrap.style.width = '72px';
     pair.wrap.style.height = '56px';
     pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize = key.t === 'digit' ? '26px' : '20px';
+    pair.inner.style.fontSize = key.t === 'digit' ? '26px' : T.fsBtn;
     pair.inner.style.color = color;
     pair.inner.textContent = key.l;
 
@@ -540,7 +540,7 @@ function renderEnterIP(card) {
   inner.appendChild(padGrid);
 
   inner.appendChild(buildButton('CANCEL', {
-    fill: BG, color: GOLD, fontSize: '20px', width: 200, height: 36,
+    fill: BG, color: GOLD, fontSize: T.fsBtn, width: 200, height: 36,
     onTap: function() { state.addStep = 'choose'; renderHWContent(card); },
   }));
 }
@@ -675,7 +675,7 @@ function renderManualAdd(ip, card) {
     var btn = buildButton(t.label, {
       fill: selectedType === t.id ? GOLD : BG,
       color: selectedType === t.id ? DARK : GOLD,
-      fontSize: '20px', height: 44,
+      fontSize: T.fsBtn, height: 44,
       onTap: function() { selectedType = t.id; refreshTypeBtns(); },
     });
     typeBtnEls[t.id] = btn;
@@ -695,7 +695,7 @@ function renderManualAdd(ip, card) {
   presetRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
   ['Kitchen', 'Receipt', 'Bar Kitchen', 'Card Reader'].forEach(function(p) {
     presetRow.appendChild(buildButton(p, {
-      fill: BG, color: GOLD, fontSize: '20px', height: 40,
+      fill: BG, color: GOLD, fontSize: T.fsBtn, height: 40,
       onTap: function() { deviceName = p; nameDisplay.textContent = p; },
     }));
   });
@@ -779,7 +779,7 @@ function renderManualAdd(ip, card) {
   footer.style.cssText = 'display:flex;gap:10px;padding:12px 20px;flex-shrink:0;';
 
   footer.appendChild(buildButton('//ADD ANYWAY//', {
-    fill: GOLD, color: DARK, fontSize: '20px', height: 48,
+    fill: GOLD, color: DARK, fontSize: T.fsBtn, height: 48,
     onTap: async function() {
       await saveDevice({
         mac:  'MANUAL-' + ip.replace(/\./g, '-'),
@@ -797,7 +797,7 @@ function renderManualAdd(ip, card) {
   }));
 
   footer.appendChild(buildButton('Try Again', {
-    fill: BG, color: GOLD, fontSize: '20px', height: 48,
+    fill: BG, color: GOLD, fontSize: T.fsBtn, height: 48,
     onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); },
   }));
 
@@ -835,7 +835,7 @@ function buildLiveDeviceRow(dev, card) {
     // We keep a reference to card via closure — but card may have been replaced.
     // Use a dataset attribute so the confirm step can find the device.
     var addBtn = buildButton('+ Add', {
-      fill: GOLD, color: DARK, fontSize: '20px', width: 76, height: 32,
+      fill: GOLD, color: DARK, fontSize: T.fsBtn, width: 76, height: 32,
       onTap: function() {
         state.foundDevice = Object.assign({}, dev);
         state.addStep = 'confirm';
@@ -883,7 +883,7 @@ function renderScanResults(card) {
       row.appendChild(makeLabel('Saved ✓', GOLD, '20px'));
     } else {
       row.appendChild(buildButton('+ Add', {
-        fill: GOLD, color: DARK, fontSize: '20px', width: 80, height: 36,
+        fill: GOLD, color: DARK, fontSize: T.fsBtn, width: 80, height: 36,
         onTap: function() { state.foundDevice = Object.assign({}, dev); state.addStep = 'confirm'; renderHWContent(card); },
       }));
     }
@@ -893,9 +893,9 @@ function renderScanResults(card) {
 
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex;gap:10px;padding:10px 16px;flex-shrink:0;';
-  footer.appendChild(buildButton('Scan Again', { fill: GOLD, color: DARK, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'scanning'; state.scanResults = []; renderHWContent(card); doScan(null, card); } }));
-  footer.appendChild(buildButton('Enter IP',   { fill: BG,   color: GOLD, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); } }));
-  footer.appendChild(buildButton('Cancel',     { fill: BG,   color: T.subtleText, fontSize: '20px', height: 40, onTap: function() { state.addStep = 'choose'; renderHWContent(card); } }));
+  footer.appendChild(buildButton('Scan Again', { fill: GOLD, color: DARK, fontSize: T.fsBtn, height: 40, onTap: function() { state.addStep = 'scanning'; state.scanResults = []; renderHWContent(card); doScan(null, card); } }));
+  footer.appendChild(buildButton('Enter IP',   { fill: BG,   color: GOLD, fontSize: T.fsBtn, height: 40, onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); } }));
+  footer.appendChild(buildButton('Cancel',     { fill: BG,   color: T.subtleText, fontSize: T.fsBtn, height: 40, onTap: function() { state.addStep = 'choose'; renderHWContent(card); } }));
   inner.appendChild(footer);
 }
 
@@ -944,7 +944,7 @@ function renderConfirmDevice(card) {
     var btn = buildButton(t.label, {
       fill: selectedType === t.id ? GOLD : BG,
       color: selectedType === t.id ? DARK : GOLD,
-      fontSize: '20px', height: 44,
+      fontSize: T.fsBtn, height: 44,
       onTap: function() { selectedType = t.id; refreshTypeBtns(); },
     });
     typeBtnEls[t.id] = btn;
@@ -971,7 +971,7 @@ function renderConfirmDevice(card) {
                 :                                  ['Card Reader', 'Dejavoo'];
     presets.forEach(function(p) {
       presetRow.appendChild(buildButton(p, {
-        fill: BG, color: GOLD, fontSize: '20px', height: 32,
+        fill: BG, color: GOLD, fontSize: T.fsBtn, height: 32,
         onTap: function() { deviceName = p; nameDisplay.textContent = p; },
       }));
     });
@@ -1066,7 +1066,7 @@ function renderConfirmDevice(card) {
     },
   }));
   footer.appendChild(buildButton('Back', {
-    fill: BG, color: GOLD, fontSize: '20px', height: 48,
+    fill: BG, color: GOLD, fontSize: T.fsBtn, height: 48,
     onTap: function() { state.addStep = 'results'; renderHWContent(card); },
   }));
   inner.appendChild(footer);
@@ -1109,13 +1109,13 @@ function renderDeviceList(card, type) {
     actions.style.cssText = 'display:flex;gap:8px;';
 
     var testBtn = buildButton('Test', {
-      fill: BG, color: T.cyan, fontSize: '20px', width: 70, height: 36,
+      fill: BG, color: T.cyan, fontSize: T.fsBtn, width: 70, height: 36,
       onTap: function() { testDevice(dev, testBtn); },
     });
     actions.appendChild(testBtn);
 
     actions.appendChild(buildButton('Remove', {
-      fill: T.red, color: '#fff', fontSize: '20px', width: 80, height: 36,
+      fill: T.red, color: '#fff', fontSize: T.fsBtn, width: 80, height: 36,
       onTap: async function() { await deleteDevice(dev.mac); renderCurrentState(); },
     }));
 

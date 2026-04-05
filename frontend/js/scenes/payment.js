@@ -95,7 +95,7 @@ function buildReceiptPanel(params) {
   colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 50px 80px;',
     'padding:6px 14px;',
-    'font-family:' + T.fh + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.08em;',
+    'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';',
   ].join('');
   ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
@@ -233,7 +233,7 @@ function buildCashPanel(params) {
 
   // Exact button
   var exact = buildButton('EXACT\n$' + params.cashPrice.toFixed(2), {
-    fill: T.gold, color: T.bgDark, fontSize: '20px',
+    fill: T.gold, color: T.bgDark, fontSize: T.fsBtn,
     height: 56,
     onTap: function() {
       tendered  = params.cashPrice;
@@ -485,7 +485,7 @@ function activateResult(params, change) {
 
   // Tap hint
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.dimText + ';letter-spacing:0.08em;margin-top:4px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.dimText + ';letter-spacing:0.08em;margin-top:4px;';
   hint.textContent = 'tap to continue';
   panel.appendChild(hint);
 
@@ -696,7 +696,7 @@ function showProcessingOverlay(amount, onDone) {
       body.appendChild(progContainer);
 
       var hint = document.createElement('div');
-      hint.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;';
+      hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';text-align:center;';
       hint.textContent = 'Present card on terminal...';
       body.appendChild(hint);
 

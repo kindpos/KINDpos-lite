@@ -895,7 +895,7 @@ function buildAdjustRow(role) {
 
   var decBtn = buildStyledButton(T.bgDark);
   decBtn.wrap.style.width = '36px'; decBtn.wrap.style.height = '36px';
-  decBtn.inner.style.fontFamily = T.fb; decBtn.inner.style.fontSize = '20px'; decBtn.inner.style.color = T.mint;
+  decBtn.inner.style.fontFamily = T.fb; decBtn.inner.style.fontSize = T.fsBtn; decBtn.inner.style.color = T.mint;
   decBtn.inner.textContent = '−';
   decBtn.wrap.addEventListener('pointerup', function() {
     if (role.percent > 0) { role.percent = parseFloat((role.percent - 0.5).toFixed(1)); pctEl.textContent = role.percent + '%'; }
@@ -907,7 +907,7 @@ function buildAdjustRow(role) {
 
   var incBtn = buildStyledButton(T.bgDark);
   incBtn.wrap.style.width = '36px'; incBtn.wrap.style.height = '36px';
-  incBtn.inner.style.fontFamily = T.fb; incBtn.inner.style.fontSize = '20px'; incBtn.inner.style.color = T.mint;
+  incBtn.inner.style.fontFamily = T.fb; incBtn.inner.style.fontSize = T.fsBtn; incBtn.inner.style.color = T.mint;
   incBtn.inner.textContent = '+';
   incBtn.wrap.addEventListener('pointerup', function() {
     if (role.percent < 20) { role.percent = parseFloat((role.percent + 0.5).toFixed(1)); pctEl.textContent = role.percent + '%'; }

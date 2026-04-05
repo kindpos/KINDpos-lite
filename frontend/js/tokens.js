@@ -64,6 +64,7 @@ export const T = {
   fsClr:    '70px',
   fsItem:   '35px',
   fsMod:    '30px',
+  fsBtn:    '30px',
   appW:     1024,
   appH:     600,
   headerH:  52,

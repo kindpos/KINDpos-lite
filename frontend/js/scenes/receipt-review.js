@@ -66,7 +66,7 @@ function buildReceiptPanel(params) {
   colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 50px 80px;',
     'padding:6px 14px;',
-    'font-family:' + T.fh + ';font-size:20px;color:' + T.mutedText + ';letter-spacing:0.08em;',
+    'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
   ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
@@ -124,7 +124,7 @@ function buildReceiptPanel(params) {
     var saveLine = document.createElement('div');
     saveLine.style.cssText = [
       'text-align:center;padding:4px 0 0;',
-      'font-family:' + T.fb + ';font-size:20px;color:' + T.cyan + ';letter-spacing:0.06em;',
+      'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.cyan + ';letter-spacing:0.06em;',
     ].join('');
     saveLine.textContent = 'Cash saves $' + savings.toFixed(2);
     footer.appendChild(saveLine);

@@ -1021,7 +1021,7 @@ function openBatchOverlay(state, onSettled) {
         pair.wrap.style.width = '100px';
         pair.wrap.style.height = '36px';
         pair.inner.style.fontFamily = T.fb;
-        pair.inner.style.fontSize = '20px';
+        pair.inner.style.fontSize = T.fsBtn;
         pair.inner.style.color = textColor;
         pair.inner.textContent = label;
         return pair;

@@ -408,7 +408,7 @@ function buildScene(el, params) {
 
   // ── Batch zero button ──
   batchBar = buildButton('Set all unadjusted tips to $0?', {
-    fill: T.darkBtn, color: T.cyan, fontSize: '20px',
+    fill: T.darkBtn, color: T.cyan, fontSize: T.fsBtn,
     height: 40,
     onTap: function() { doBatchZero(); },
   });
@@ -461,7 +461,7 @@ function buildScene(el, params) {
 
   // Unadjusted button — narrower, overlaps slightly
   var btnUnadjWrap = buildButton('Unadjusted: ' + unadjCount(), {
-    fill: T.bgDark, color: T.cyan, fontSize: '20px',
+    fill: T.bgDark, color: T.cyan, fontSize: T.fsBtn,
     width: 200, height: 48,
     onTap: function() {
       filter = 'unadjusted';
@@ -486,7 +486,7 @@ function buildScene(el, params) {
   rightDefault.appendChild(statusSpacer);
 
   var btnOpenWrap = buildButton('Open', {
-    fill: T.bgDark, color: T.gold, fontSize: '20px',
+    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
     width: 200, height: 44,
     onTap: function() {
       statusFilter = statusFilter === 'open' ? 'all' : 'open';
@@ -499,7 +499,7 @@ function buildScene(el, params) {
   rightDefault.appendChild(btnOpenWrap);
 
   var btnClosedWrap = buildButton('Closed', {
-    fill: T.bgDark, color: T.gold, fontSize: '20px',
+    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
     width: 200, height: 44,
     onTap: function() {
       statusFilter = statusFilter === 'closed' ? 'all' : 'closed';
@@ -581,7 +581,7 @@ function buildScene(el, params) {
 
   // Cancel button
   var cancelBtn = buildButton('CANCEL', {
-    fill: T.red, color: '#fff', fontSize: '20px',
+    fill: T.red, color: '#fff', fontSize: T.fsBtn,
     height: 44,
     onTap: function() { deactivateEdit(); },
   });
@@ -625,7 +625,7 @@ function doBatchZero() {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Confirm', {
-        fill: T.red, color: '#fff', fontSize: '20px',
+        fill: T.red, color: '#fff', fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() {
           checks.forEach(function(c) {
@@ -638,7 +638,7 @@ function doBatchZero() {
       }));
 
       btns.appendChild(buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '20px',
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() { cancelInterrupt(); },
       }));
@@ -671,7 +671,7 @@ function doCheckout(params) {
         btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
         btns.appendChild(buildButton('Set to $0', {
-          fill: T.red, color: '#fff', fontSize: '20px',
+          fill: T.red, color: '#fff', fontSize: T.fsBtn,
           width: 130, height: 44,
           onTap: function() {
             checks.forEach(function(c) {
@@ -686,7 +686,7 @@ function doCheckout(params) {
         }));
 
         btns.appendChild(buildButton('Go Back', {
-          fill: T.darkBtn, color: T.mint, fontSize: '20px',
+          fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
           width: 130, height: 44,
           onTap: function() { cancelInterrupt(); },
         }));
@@ -722,7 +722,7 @@ function doReopen(c) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Reopen', {
-        fill: T.gold, color: T.bgDark, fontSize: '20px',
+        fill: T.gold, color: T.bgDark, fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() {
           fetch('/api/v1/orders/' + c.checkId + '/reopen', { method: 'POST' })
@@ -749,7 +749,7 @@ function doReopen(c) {
       }));
 
       btns.appendChild(buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '20px',
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() { cancelInterrupt(); },
       }));
