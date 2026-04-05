@@ -10,9 +10,12 @@ class BaseTemplate:
     Provides shared building blocks for rendering.
     """
 
-    def __init__(self, paper_width: int = 80):
+    def __init__(self, paper_width: int = 80, chars_per_line: int = None):
         self.paper_width = paper_width
-        self.chars_per_line = 33 if paper_width == 80 else 32
+        if chars_per_line is not None:
+            self.chars_per_line = chars_per_line
+        else:
+            self.chars_per_line = 33 if paper_width == 80 else 32
 
     def render(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """

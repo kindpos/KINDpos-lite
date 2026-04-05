@@ -49,12 +49,18 @@ class PrintDispatcher:
         self._running       = False
         self._task: Optional[asyncio.Task] = None
 
-        self._formatter = ESCPOSFormatter(paper_width=80)
-        self._templates = {
-            "guest_receipt":  GuestReceiptTemplate(paper_width=80),
-            "kitchen_ticket": KitchenTicketTemplate(paper_width=80),
-            "clock_hours":    ClockHoursTemplate(paper_width=80),
-            "sales_recap":    SalesRecapTemplate(paper_width=80),
+        # Receipt printer: 48 chars per line
+        # Kitchen printer: 33 chars per line
+        self._formatter_receipt = ESCPOSFormatter(paper_width=80, chars_per_line=48)
+        self._formatter_kitchen = ESCPOSFormatter(paper_width=80, chars_per_line=33)
+        self._templates_receipt = {
+            "guest_receipt":  GuestReceiptTemplate(paper_width=80, chars_per_line=48),
+            "clock_hours":    ClockHoursTemplate(paper_width=80, chars_per_line=48),
+            "sales_recap":    SalesRecapTemplate(paper_width=80, chars_per_line=48),
+            "server_checkout": None,  # loaded lazily if needed
+        }
+        self._templates_kitchen = {
+            "kitchen_ticket": KitchenTicketTemplate(paper_width=80, chars_per_line=33),
         }
 
     async def start(self) -> None:
@@ -108,7 +114,7 @@ class PrintDispatcher:
 
         try:
             context = json.loads(job["context_json"])
-            raw     = self._render(template_id, context)
+            raw     = self._render(template_id, context, printer_mac)
             ip      = await self._resolve_ip(printer_mac)
             await self._send(ip, raw)
             await self._queue.mark_completed(job_id)
@@ -132,12 +138,20 @@ class PrintDispatcher:
 
     # ── Render ────────────────────────────────────────────────────────────────
 
-    def _render(self, template_id: str, context: dict) -> bytes:
-        template = self._templates.get(template_id)
+    def _render(self, template_id: str, context: dict, printer_mac: str = "") -> bytes:
+        is_kitchen = (printer_mac == "DEFAULT_KITCHEN")
+        templates = self._templates_kitchen if is_kitchen else self._templates_receipt
+        formatter = self._formatter_kitchen if is_kitchen else self._formatter_receipt
+
+        template = templates.get(template_id)
+        if not template:
+            # Fall back to the other set in case template is registered there
+            other = self._templates_receipt if is_kitchen else self._templates_kitchen
+            template = other.get(template_id)
         if not template:
             raise ValueError(f"Unknown template: {template_id}")
         commands = template.render(context)
-        return self._formatter.format(commands)
+        return formatter.format(commands)
 
     # ── IP resolution ─────────────────────────────────────────────────────────
 
