@@ -109,8 +109,8 @@ function buildReceiptPanel(params) {
   var footer = document.createElement('div');
   footer.style.cssText = 'flex-shrink:0;padding:8px 14px;border-top:2px solid ' + T.bg3 + ';';
 
-  footer.appendChild(recapRow('Subtotal', '$' + (params.subtotal || 0).toFixed(2), T.gold, T.fsSmall));
-  footer.appendChild(recapRow('Tax', '$' + (params.tax || 0).toFixed(2), T.gold, T.fsSmall));
+  footer.appendChild(recapRow('Subtotal', '$' + (params.subtotal || 0).toFixed(2), T.mint, T.fsSmall));
+  footer.appendChild(recapRow('Tax', '$' + (params.tax || 0).toFixed(2), T.mint, T.fsSmall));
 
   var hr = document.createElement('hr');
   hr.style.cssText = 'border:none;border-top:1px dashed ' + T.bgLight + ';margin:6px 0;';
@@ -144,6 +144,7 @@ function recapRow(label, value, color, size, bold) {
   var l = document.createElement('span');
   l.textContent = label;
   var v = document.createElement('span');
+  v.style.color = T.gold;
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
