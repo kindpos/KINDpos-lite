@@ -22,6 +22,7 @@ var MGMT_W     = 250;
 var selectedAction = null;
 var employees = [];  // loaded from /api/v1/servers on scene enter
 var actionButtons = [];  // track buttons for highlight
+var _numpadRef = null;
 
 function clearHighlights() {
   var b = T.bevel;
@@ -146,7 +147,7 @@ registerScene('login', {
     _pinPromptEl = pinPrompt;
     right.appendChild(pinPrompt);
 
-    right.appendChild(buildNumpad({
+    _numpadRef = buildNumpad({
       maxDigits: 6,
       masked: true,
       displayH: 60,
@@ -155,7 +156,8 @@ registerScene('login', {
       keyGap: 12,
       cardPad: 18,
       onSubmit: function(pin) { handlePinSubmit(pin, pinPrompt); },
-    }));
+    });
+    right.appendChild(_numpadRef);
 
     // Version label at bottom-right with multi-color spans
     var version = document.createElement('div');
@@ -193,6 +195,16 @@ var actionLabels = {
 function handleAction(action) {
   selectedAction = action;
   setTimeout(function() { highlightButton(action); }, 0);
+
+  // If PIN already entered, submit immediately
+  if (_numpadRef) {
+    var existingPin = _numpadRef.getPin();
+    if (existingPin.length > 0) {
+      handlePinSubmit(existingPin, _pinPromptEl);
+      return;
+    }
+  }
+
   if (_pinPromptEl) {
     _pinPromptEl.textContent = 'Enter PIN for ' + (actionLabels[action] || action);
     _pinPromptEl.style.color = T.mint;
