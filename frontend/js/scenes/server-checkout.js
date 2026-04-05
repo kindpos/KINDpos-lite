@@ -68,10 +68,30 @@ function recalcTipOut(state) {
 // ─────────────────────────────────────────────────
 
 function fetchServerState(params) {
-  var url = '/api/v1/orders/day-summary';
-  if (params.employeeId) url += '?server_id=' + encodeURIComponent(params.employeeId);
-  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+  var summaryUrl = '/api/v1/orders/day-summary';
+  if (params.employeeId) summaryUrl += '?server_id=' + encodeURIComponent(params.employeeId);
+  var tipoutUrl = '/api/v1/config/tipout';
+
+  return Promise.all([
+    fetch(summaryUrl).then(function(r) { return r.json(); }),
+    fetch(tipoutUrl).then(function(r) { return r.json(); }).catch(function() { return []; }),
+  ]).then(function(results) {
+    var d = results[0];
+    var rules = results[1];
     var today = new Date();
+
+    // Map TipoutRule {role_from, role_to, percentage, calculation_base} to UI format
+    var tipOutRoles = [];
+    if (Array.isArray(rules)) {
+      tipOutRoles = rules.map(function(r) {
+        return {
+          label: r.role_to || r.role_from || 'Tipout',
+          percent: r.percentage || 0,
+          basis: r.calculation_base || 'Net Sales',
+        };
+      });
+    }
+
     var state = {
       employeeId:    params.employeeId   || '',
       employeeName:  params.employeeName || '',
@@ -86,12 +106,12 @@ function fetchServerState(params) {
       cardTips:      d.card_tips    || 0,
       cashTips:      d.cash_tips    || 0,
       unadjustedTips: d.unadjusted_tips || 0,
-      tipOutRoles:   [],
+      tipOutRoles:   tipOutRoles,
       oneTimeRole:   null,
       tipOutTotal:   0,
       takeHome:      d.card_tips    || 0,
       cashReceived:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
-      cashExpected:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0) - (d.card_tips || 0)).toFixed(2)),
+      cashExpected:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
       closedOrders:  d.closed_order_ids || [],
     };
     recalcTipOut(state);
@@ -230,10 +250,10 @@ function detailRow(label, value, valueColor) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';padding:2px 0;';
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:27px;color:' + T.mutedText + ';';
+  lbl.style.cssText = 'font-size:18px;color:' + T.mutedText + ';';
   lbl.textContent = label;
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:27px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
+  val.style.cssText = 'font-size:18px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
   val.textContent = value;
   row.appendChild(lbl); row.appendChild(val);
   return row;
@@ -255,7 +275,7 @@ function buildShortcutRow(state) {
 
   var uPair = buildStyledButton(T.darkBtn);
   uPair.wrap.style.cssText = 'flex:1;height:34px;';
-  uPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.lavender + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + T.lavender + ';';
+  uPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.lavender + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + T.lavender + ';';
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
     push('tip-adjustment', { filter: 'unadjusted', employeeId: state.employeeId, employeeName: state.employeeName });
@@ -264,7 +284,7 @@ function buildShortcutRow(state) {
 
   var zPair = buildStyledButton(T.darkBtn);
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
-  zPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + RED + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + RED + ';';
+  zPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + RED + ';display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';border:2px solid ' + RED + ';';
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
     doZeroAll(state);
@@ -395,7 +415,7 @@ function getCardDefs(state) {
         // Adjust % button
         var adjPair = buildStyledButton(T.gold);
         adjPair.wrap.style.cssText = 'width:100%;height:36px;margin-top:8px;';
-        adjPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:#1a1a1a;display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.gold + ';';
+        adjPair.inner.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:#1a1a1a;display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;clip-path:' + chamfer(CHAM) + ';background:' + T.gold + ';';
         adjPair.inner.textContent = 'Adjust %';
         adjPair.wrap.addEventListener('pointerup', function() {
           openAdjustOverlay(state);
@@ -445,7 +465,7 @@ function buildCardTile(def, idx) {
   }
 
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:24px;color:' + T.gold + ';font-weight:bold;text-align:center;';
+  title.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;text-align:center;';
   title.textContent = def.title;
   inner.appendChild(title);
 
@@ -454,17 +474,17 @@ function buildCardTile(def, idx) {
   inner.appendChild(hr);
 
   var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:45px;color:' + (def.heroColor || T.cyan) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
+  hero.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + (def.heroColor || T.cyan) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
   hero.textContent = def.hero;
   inner.appendChild(hero);
 
   var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';text-align:center;';
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.mutedText + ';text-align:center;';
   sub.textContent = def.subtitle;
   inner.appendChild(sub);
 
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.dimText + ';text-align:center;margin-top:2px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.dimText + ';text-align:center;margin-top:2px;';
   hint.textContent = 'tap to expand ▸';
   inner.appendChild(hint);
 
@@ -504,12 +524,12 @@ function buildCardStrip(def, idx) {
   ].join('');
 
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:20px;color:' + T.gold + ';';
+  lbl.style.cssText = 'font-size:13px;color:' + T.gold + ';';
   lbl.textContent = def.title;
   strip.appendChild(lbl);
 
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:20px;color:' + T.cyan + ';';
+  val.style.cssText = 'font-size:13px;color:' + T.cyan + ';';
   val.textContent = def.hero;
   strip.appendChild(val);
 
@@ -562,10 +582,10 @@ function buildExpandedView(state, idx) {
   var hdr = document.createElement('div');
   hdr.style.cssText = 'flex-shrink:0;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:' + T.bg3 + ';cursor:pointer;user-select:none;-webkit-user-select:none;';
   var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:27px;color:' + T.gold + ';font-weight:bold;';
+  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';font-weight:bold;';
   hTitle.textContent = defs[idx].title;
   var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:21px;color:' + T.mutedText + ';';
+  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
   hHint.textContent = 'tap to collapse ▾';
   hdr.appendChild(hTitle); hdr.appendChild(hHint);
   hdr.addEventListener('pointerup', function() { collapseToGrid(); });
@@ -610,7 +630,7 @@ function buildBlockerBanner(state) {
   el.style.cssText = [
     'flex-shrink:0;height:' + BANNER_H + 'px;',
     'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:24px;',
+    'font-family:' + T.fb + ';font-size:16px;',
     'clip-path:' + chamfer(4) + ';',
   ].join('');
 
@@ -644,7 +664,7 @@ function buildActionBar(state) {
 
   function arrow() {
     var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:30px;color:' + T.dimText + ';flex-shrink:0;';
+    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:20px;color:' + T.dimText + ';flex-shrink:0;';
     el.textContent = '→';
     return el;
   }
@@ -652,7 +672,7 @@ function buildActionBar(state) {
   // PRINT
   var printPair = buildStyledButton(T.darkBtn);
   printPair.wrap.style.cssText = 'flex:1;height:100%;';
-  printPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:27px;color:' + T.cyan + ';border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+  printPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:18px;color:' + T.cyan + ';border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
     if (state.closedOrders && state.closedOrders.length) {
@@ -671,12 +691,12 @@ function buildActionBar(state) {
   finPair.wrap.style.cssText = 'flex:1;height:100%;';
 
   if (blocked) {
-    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#555;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#555;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.style.pointerEvents = 'none';
     finPair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
-    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#888;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
+    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#888;border:2px solid #555;clip-path:' + chamfer(CHAM) + ';background:' + T.darkBtn + ';';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       openPinGate(function() {
@@ -688,7 +708,7 @@ function buildActionBar(state) {
       });
     });
   } else {
-    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:24px;color:#1a1a1a;border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.cyan + ';';
+    finPair.inner.style.cssText += ';font-family:' + T.fb + ';font-size:16px;color:#1a1a1a;border:2px solid ' + T.cyan + ';clip-path:' + chamfer(CHAM) + ';background:' + T.cyan + ';';
     finPair.inner.textContent = '//FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       doFinalize(state);
@@ -720,7 +740,7 @@ function openPinGate(onSuccess) {
       card.appendChild(msg);
 
       var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:21px;color:' + T.mutedText + ';margin-bottom:16px;';
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';margin-bottom:16px;';
       sub.textContent = 'Enter 4-digit manager PIN';
       card.appendChild(sub);
 
