@@ -6,8 +6,7 @@
 
 import { T, chamfer, buildStyledButton, applySunkenStyle, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { buildNumpad } from '../numpad.js';
-import { registerScene, pop, overlay, dismissOverlay } from '../scene-manager.js';
+import { registerScene, pop } from '../scene-manager.js';
 import { showKeyboard } from '../keyboard.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
@@ -1084,25 +1083,16 @@ function renderTermContent(card) {
 }
 
 function openSettingEditor(item, valEl) {
-  overlay('setting-edit', {
-    onBuild: function(el) {
-      var panel = document.createElement('div');
-      panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;background:' + BG + ';border:4px solid ' + MINT + ';padding:20px;clip-path:' + chamfer(10) + ';';
-      panel.appendChild(makeLabel(item.label, GOLD, '22px'));
-      panel.appendChild(buildNumpad({
-        maxDigits: 6, masked: false,
-        onSubmit: function(val) {
-          state[item.key] = val;
-          if (valEl) valEl.textContent = val + (item.label.includes('Rate') || item.label.includes('Discount') ? '%' : '');
-          dismissOverlay();
-        },
-      }));
-      panel.appendChild(buildButton('CANCEL', {
-        fill: BG, color: MINT, fontSize: '20px', width: 200, height: 40,
-        onTap: function() { dismissOverlay(); },
-      }));
-      el.appendChild(panel);
+  var suffix = (item.label.includes('Rate') || item.label.includes('Discount')) ? '%' : '';
+  showKeyboard({
+    placeholder: item.label,
+    initialValue: state[item.key],
+    maxLength: 6,
+    onDone: function(val) {
+      state[item.key] = val;
+      if (valEl) valEl.textContent = val + suffix;
     },
+    dismissOnDone: true,
   });
 }
 
