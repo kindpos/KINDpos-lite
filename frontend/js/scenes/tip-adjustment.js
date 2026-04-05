@@ -117,7 +117,7 @@ function renderTable() {
     var cells;
     if (isOpen) {
       cells = [
-        { text: c.checkId, cls: '' },
+        { text: c.checkLabel || c.checkId, cls: '' },
         { text: c.time,    cls: '' },
         { text: fmt(c.amount), cls: '' },
         { text: '—',       cls: '' },
@@ -125,7 +125,7 @@ function renderTable() {
       ];
     } else {
       cells = [
-        { text: c.checkId, cls: '' },
+        { text: c.checkLabel || c.checkId, cls: '' },
         { text: c.time,    cls: '' },
         { text: fmt(c.amount), cls: '' },
         { text: c.adjusted ? fmt(c.tip) : '$0.00', cls: c.adjusted ? '' : 'tip-cell' },
@@ -236,7 +236,7 @@ function activateEdit(idx) {
 
   // Update numpad context
   var c = checks[idx];
-  if (numpadCheckId) numpadCheckId.textContent = c.checkId;
+  if (numpadCheckId) numpadCheckId.textContent = c.checkLabel || c.checkId;
   if (numpadAmount)  numpadAmount.textContent  = fmt(c.amount);
   updateNumpadDisplay();
 
@@ -715,7 +715,7 @@ function doReopen(c) {
 
       var msg = document.createElement('div');
       msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:20px;';
-      msg.textContent = 'Reopen check ' + c.checkId + '?';
+      msg.textContent = 'Reopen check ' + (c.checkLabel || c.checkId) + '?';
       card.appendChild(msg);
 
       var btns = document.createElement('div');

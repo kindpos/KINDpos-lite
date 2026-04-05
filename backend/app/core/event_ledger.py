@@ -425,6 +425,15 @@ class EventLedger:
         row = await cursor.fetchone()
         return row[0]
 
+    async def count_events_by_type(self, event_type: EventType) -> int:
+        """Get count of events of a specific type."""
+        cursor = await self._db.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type = ?",
+            (event_type.value,)
+        )
+        row = await cursor.fetchone()
+        return row[0]
+
     # =========================================================================
     # INTEGRITY VERIFICATION
     # =========================================================================

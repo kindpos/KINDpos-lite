@@ -144,6 +144,7 @@ class PaymentResponse(BaseModel):
 class OrderResponse(BaseModel):
     """Response model for an order."""
     order_id: str
+    check_number: Optional[int] = None
     table: Optional[str]
     server_id: Optional[str]
     server_name: Optional[str]
@@ -166,6 +167,7 @@ class OrderResponse(BaseModel):
         """Convert an Order projection to a response."""
         return cls(
             order_id=order.order_id,
+            check_number=order.check_number,
             table=order.table,
             server_id=order.server_id,
             server_name=order.server_name,
@@ -241,6 +243,10 @@ async def create_order(
     """Create a new order."""
     order_id = f"order_{uuid.uuid4().hex[:12]}"
 
+    # Generate sequential check number
+    order_count = await ledger.count_events_by_type(EventType.ORDER_CREATED)
+    check_number = order_count + 1
+
     event = order_created(
         terminal_id=settings.terminal_id,
         order_id=order_id,
@@ -250,6 +256,7 @@ async def create_order(
         order_type=request.order_type,
         guest_count=request.guest_count,
         customer_name=request.customer_name,
+        check_number=check_number,
     )
     # Set correlation_id for ORDER_CREATED
     event = event.model_copy(update={"correlation_id": order_id})
@@ -429,8 +436,10 @@ async def get_day_summary(
                     (p for p in order.payments if p.method != "cash" and p.status == "confirmed"),
                     None,
                 )
+                check_label = '#' + str(order.check_number) if order.check_number else order.order_id
                 checks_list.append({
                     "checkId": order.order_id,
+                    "checkLabel": check_label,
                     "paymentId": card_payment.payment_id if card_payment else None,
                     "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
                     "amount": money_round(order.total),
@@ -441,8 +450,10 @@ async def get_day_summary(
                 })
             else:
                 # Cash-only closed orders — no tip adjustment needed
+                check_label = '#' + str(order.check_number) if order.check_number else order.order_id
                 checks_list.append({
                     "checkId": order.order_id,
+                    "checkLabel": check_label,
                     "paymentId": None,
                     "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
                     "amount": money_round(order.total),
@@ -452,8 +463,10 @@ async def get_day_summary(
                     "status": "closed",
                 })
         elif order.status == "open":
+            check_label = '#' + str(order.check_number) if order.check_number else order.order_id
             checks_list.append({
                 "checkId": order.order_id,
+                "checkLabel": check_label,
                 "paymentId": None,
                 "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
                 "amount": money_round(order.subtotal),

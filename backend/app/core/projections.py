@@ -63,6 +63,7 @@ class Order:
     This is NOT stored - it's computed by replaying events.
     """
     order_id: str
+    check_number: Optional[int] = None
     table: Optional[str] = None
     server_id: Optional[str] = None
     server_name: Optional[str] = None
@@ -156,6 +157,7 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
         if event.event_type == EventType.ORDER_CREATED:
             order = Order(
                 order_id=payload["order_id"],
+                check_number=payload.get("check_number"),
                 table=payload.get("table"),
                 server_id=payload.get("server_id"),
                 server_name=payload.get("server_name"),
