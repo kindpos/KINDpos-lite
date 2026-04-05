@@ -297,7 +297,16 @@ export function HexNav(container, opts) {
       if (h.type === 'subcat') showSubcats(state.cat);
       return;
     }
-    if (h.type === 'cat')    { showSubcats(h); return; }
+    if (h.type === 'cat') {
+      if (h.data.subcats.length === 1) {
+        showSubcats(h);
+        var singleSubcat = state.hexes[1];
+        showItems(singleSubcat);
+      } else {
+        showSubcats(h);
+      }
+      return;
+    }
     if (h.type === 'subcat') { showItems(h);   return; }
     if (h.type === 'item')   { onSelect(h.data); return; }
   }
