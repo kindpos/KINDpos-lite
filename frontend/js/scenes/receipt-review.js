@@ -64,7 +64,7 @@ function buildReceiptPanel(params) {
   // Column headers
   var colHead = document.createElement('div');
   colHead.style.cssText = [
-    'display:grid;grid-template-columns:1fr 50px 80px;',
+    'display:grid;grid-template-columns:1fr 60px 90px;gap:0 12px;',
     'padding:6px 14px;',
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
@@ -84,7 +84,7 @@ function buildReceiptPanel(params) {
   (params.items || []).forEach(function(item) {
     var row = document.createElement('div');
     row.style.cssText = [
-      'display:grid;grid-template-columns:1fr 50px 80px;',
+      'display:grid;grid-template-columns:1fr 60px 90px;gap:0 12px;',
       'padding:4px 0;',
       'font-family:' + T.fb + ';font-size:' + T.fsItem + ';color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
