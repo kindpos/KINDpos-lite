@@ -173,7 +173,7 @@ function buildTicket(parentEl) {
   panel.style.cssText = [
     'width:' + TICKET_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'border-right:2px solid ' + T.mint + ';',
+    'border-right:7px solid ' + T.mint + ';',
     'padding-right:' + GAP + 'px;',
   ].join('');
 
@@ -198,7 +198,7 @@ function buildTicket(parentEl) {
   // Item list
   var itemList = document.createElement('div');
   itemList.id = 'ticket-list';
-  itemList.style.cssText = 'flex:1;overflow:hidden;display:flex;flex-direction:column;gap:4px;';
+  itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
   panel.appendChild(itemList);
 
   // Summary + Totals — combined card with sunken bevel

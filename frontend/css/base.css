@@ -103,3 +103,7 @@ html, body {
 * {
   border-radius: 0 !important;
 }
+
+#ticket-list::-webkit-scrollbar {
+  display: none;
+}
