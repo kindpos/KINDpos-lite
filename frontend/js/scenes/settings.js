@@ -33,6 +33,7 @@ var state = {
   addStep:      'choose',
   foundDevice:  null,
   expandedCard: null,   // null = collapsed dashboard, 'hardware' or 'terminal'
+  editingDevice:null,   // device being edited inline, or null
   eventSource:  null,   // active EventSource — prevent double-open
   terminalId:   'T-001',
   terminalName: 'KIND BBQ',
@@ -63,6 +64,11 @@ var TERM_NAVS = [
 registerScene('settings', {
   cache: false,
   canExit: function() {
+    if (state.editingDevice) {
+      state.editingDevice = null;
+      renderCurrentState();
+      return Promise.resolve(false);
+    }
     if (state.expandedCard) {
       state.expandedCard = null;
       renderCurrentState();
@@ -77,6 +83,7 @@ registerScene('settings', {
     state.activeNav   = 'printers';
     state.addStep     = 'choose';
     state.foundDevice = null;
+    state.editingDevice = null;
     state.scanResults = [];
     state.scanning    = false;
 
@@ -357,6 +364,7 @@ function buildNavStrip(navItems, accentColor) {
     btn.wrap.style.cursor = 'pointer';
     btn.wrap.addEventListener('pointerup', function() {
       state.activeNav = nav.id;
+      state.editingDevice = null;
       renderCurrentState();
     });
     strip.appendChild(btn.wrap);
@@ -826,14 +834,12 @@ function buildLiveDeviceRow(dev, card) {
 
   var info = document.createElement('div');
   info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, T.fsSmall));
-  info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, T.fsSmall));
+  info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), MINT, T.fsSmall));
   row.appendChild(info);
 
   if (saved) {
     row.appendChild(makeLabel('Saved ✓', GOLD, T.fsSmall));
   } else {
-    // We keep a reference to card via closure — but card may have been replaced.
-    // Use a dataset attribute so the confirm step can find the device.
     var addBtn = buildButton('+ Add', {
       fill: GOLD, color: DARK, fontSize: T.fsBtn, width: 76, height: 32,
       onTap: function() {
@@ -876,7 +882,7 @@ function renderScanResults(card) {
 
     var info = document.createElement('div');
     info.appendChild(makeLabel(dev.name || guessName(dev), GOLD, T.fsSmall));
-    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, T.fsSmall));
+    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), MINT, T.fsSmall));
     row.appendChild(info);
 
     if (saved) {
@@ -1075,54 +1081,260 @@ function renderConfirmDevice(card) {
 // ── Device lists ──────────────────────────────────
 
 function renderDeviceList(card, type) {
+  // If editing a device, show the edit form instead
+  if (state.editingDevice) {
+    renderEditDevice(card);
+    return;
+  }
+
   var filtered = state.savedDevices.filter(function(d) {
     if (type === 'printer') return d.type === 'kitchen' || d.type === 'receipt';
     return d.type === type;
   });
 
   var inner = cardInner(card);
-  var hdr = makeLabel(type === 'card_reader' ? 'Card Readers' : 'Printers', GOLD, T.fsSmall);
-  hdr.style.padding = '16px 20px 10px';
-  inner.appendChild(hdr);
 
   if (filtered.length === 0) {
     var emptyWrap = centeredWrap(card);
-    emptyWrap.appendChild(makeLabel('No devices saved', T.bgLight, T.fsSmall));
+    emptyWrap.appendChild(makeLabel('No devices saved', MINT, T.fsSmall));
     return;
   }
 
   var list = document.createElement('div');
-  list.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:0 16px;overflow-y:auto;flex:1;';
+  list.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px 16px;overflow-y:auto;flex:1;';
 
-  filtered.forEach(function(dev) {
-    var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:' + DARK + ';border:2px solid ' + GOLD + ';clip-path:' + chamfer(5) + ';';
+  if (type === 'printer') {
+    // Separate into kitchen and receipt sections
+    var kitchenDevices = filtered.filter(function(d) { return d.type === 'kitchen'; });
+    var receiptDevices = filtered.filter(function(d) { return d.type === 'receipt'; });
 
-    var info = document.createElement('div');
-    info.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
-    info.appendChild(makeLabel(dev.name, GOLD, T.fsSmall));
-    info.appendChild(makeLabel(typeLabel(dev.type), T.bgLight, T.fsSmall));
-    info.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), T.bgLight, T.fsSmall));
-    row.appendChild(info);
+    if (kitchenDevices.length > 0) {
+      list.appendChild(makeSectionHeader('Kitchen'));
+      var kitchenRow = document.createElement('div');
+      kitchenRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+      kitchenDevices.forEach(function(dev) { kitchenRow.appendChild(buildDeviceCard(dev, card)); });
+      list.appendChild(kitchenRow);
+    }
 
-    var actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;gap:8px;';
+    if (receiptDevices.length > 0) {
+      list.appendChild(makeSectionHeader('Receipt'));
+      var receiptRow = document.createElement('div');
+      receiptRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+      receiptDevices.forEach(function(dev) { receiptRow.appendChild(buildDeviceCard(dev, card)); });
+      list.appendChild(receiptRow);
+    }
+  } else {
+    // Card readers — same narrow card treatment
+    list.appendChild(makeSectionHeader('Card Readers'));
+    var readerRow = document.createElement('div');
+    readerRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+    filtered.forEach(function(dev) { readerRow.appendChild(buildDeviceCard(dev, card)); });
+    list.appendChild(readerRow);
+  }
 
-    var testBtn = buildButton('Test', {
-      fill: BG, color: T.cyan, fontSize: T.fsBtn, width: 70, height: 36,
-      onTap: function() { testDevice(dev, testBtn); },
-    });
-    actions.appendChild(testBtn);
-
-    actions.appendChild(buildButton('Remove', {
-      fill: T.red, color: '#fff', fontSize: T.fsBtn, width: 80, height: 36,
-      onTap: async function() { await deleteDevice(dev.mac); renderCurrentState(); },
-    }));
-
-    row.appendChild(actions);
-    list.appendChild(row);
-  });
   inner.appendChild(list);
+}
+
+function makeSectionHeader(text) {
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'font-family:' + T.fh + ';font-size:28px;font-style:italic;color:' + GOLD + ';padding:4px 0 2px;';
+  hdr.textContent = '//' + text + '//';
+  return hdr;
+}
+
+function buildDeviceCard(dev, card) {
+  var pair = buildStyledButton(BG);
+  pair.wrap.style.width = '220px';
+  pair.wrap.style.height = '120px';
+  pair.wrap.style.cursor = 'pointer';
+
+  pair.inner.style.flexDirection = 'column';
+  pair.inner.style.alignItems = 'flex-start';
+  pair.inner.style.justifyContent = 'center';
+  pair.inner.style.gap = '3px';
+  pair.inner.style.padding = '10px 14px';
+
+  var name = makeLabel(dev.name, GOLD, T.fsSmall);
+  name.style.fontWeight = 'bold';
+  pair.inner.appendChild(name);
+
+  pair.inner.appendChild(makeLabel(typeLabel(dev.type), MINT, '20px'));
+  pair.inner.appendChild(makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), MINT, '18px'));
+
+  // Tap to edit
+  pair.wrap.addEventListener('pointerup', function(e) {
+    e.stopPropagation();
+    state.editingDevice = Object.assign({}, dev);
+    renderCurrentState();
+  });
+
+  return pair.wrap;
+}
+
+function renderEditDevice(card) {
+  var dev = state.editingDevice;
+  if (!dev) return;
+
+  var inner = cardInner(card);
+
+  var hdr = makeLabel('Edit Device', GOLD, '28px');
+  hdr.style.padding = '12px 20px 2px';
+  hdr.style.fontWeight = 'bold';
+  inner.appendChild(hdr);
+  var sub = makeLabel(dev.ip + '  ·  ' + shortenMac(dev.mac), MINT, T.fsSmall);
+  sub.style.padding = '0 20px 10px';
+  inner.appendChild(sub);
+
+  var form = document.createElement('div');
+  form.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:0 20px;flex:1;overflow-y:auto;';
+
+  // Type selector
+  form.appendChild(makeLabel('Device Type', GOLD, T.fsSmall));
+  var typeRow = document.createElement('div');
+  typeRow.style.cssText = 'display:flex;gap:8px;';
+
+  var TYPES = dev.type === 'card_reader'
+    ? [{ id: 'card_reader', label: 'Card Reader' }]
+    : [
+        { id: 'kitchen', label: 'Kitchen' },
+        { id: 'receipt', label: 'Receipt' },
+      ];
+  var selectedType = dev.type;
+  var typeBtnEls = {};
+
+  function refreshEditTypeBtns() {
+    TYPES.forEach(function(t) {
+      var b = typeBtnEls[t.id] && typeBtnEls[t.id].querySelector('div');
+      if (b) { b.style.background = selectedType === t.id ? GOLD : BG; b.style.color = selectedType === t.id ? DARK : GOLD; }
+    });
+  }
+
+  TYPES.forEach(function(t) {
+    var btn = buildButton(t.label, {
+      fill: selectedType === t.id ? GOLD : BG,
+      color: selectedType === t.id ? DARK : GOLD,
+      fontSize: T.fsBtn, height: 40,
+      onTap: function() { selectedType = t.id; refreshEditTypeBtns(); },
+    });
+    typeBtnEls[t.id] = btn;
+    typeRow.appendChild(btn);
+  });
+  form.appendChild(typeRow);
+
+  // Name
+  form.appendChild(makeLabel('Device Name', GOLD, T.fsSmall));
+  var nameDisplay = document.createElement('div');
+  nameDisplay.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+  applySunkenStyle(nameDisplay);
+  var deviceName = dev.name || '';
+  nameDisplay.textContent = deviceName || '—';
+  nameDisplay.addEventListener('pointerup', function() {
+    showKeyboard({
+      placeholder: 'Device Name',
+      initialValue: deviceName,
+      maxLength: 20,
+      onDone: function(val) { deviceName = val; nameDisplay.textContent = val || '—'; },
+      dismissOnDone: true,
+    });
+  });
+  form.appendChild(nameDisplay);
+
+  // SPIn fields for card readers
+  var regLabel, regInput, tpnLabel3, tpnInput3, authLabel3, authInput3;
+  var registerId3 = dev.register_id || '';
+  var tpnVal3 = dev.tpn || '';
+  var authVal3 = dev.auth_key || '';
+
+  if (dev.type === 'card_reader') {
+    regLabel = makeLabel('SPIn Register ID', GOLD, T.fsSmall);
+    regInput = document.createElement('div');
+    regInput.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+    applySunkenStyle(regInput);
+    regInput.textContent = registerId3 || 'Tap to enter';
+    regInput.addEventListener('pointerup', function() {
+      showKeyboard({
+        placeholder: 'SPIn Register ID',
+        initialValue: registerId3,
+        maxLength: 20,
+        onDone: function(val) { registerId3 = val; regInput.textContent = val || 'Tap to enter'; },
+        dismissOnDone: true,
+      });
+    });
+    form.appendChild(regLabel);
+    form.appendChild(regInput);
+
+    tpnLabel3 = makeLabel('SPIn TPN', GOLD, T.fsSmall);
+    tpnInput3 = document.createElement('div');
+    tpnInput3.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+    applySunkenStyle(tpnInput3);
+    tpnInput3.textContent = tpnVal3 || 'Tap to enter';
+    tpnInput3.addEventListener('pointerup', function() {
+      showKeyboard({
+        placeholder: 'Terminal Processing Number',
+        initialValue: tpnVal3,
+        maxLength: 20,
+        onDone: function(val) { tpnVal3 = val; tpnInput3.textContent = val || 'Tap to enter'; },
+        dismissOnDone: true,
+      });
+    });
+    form.appendChild(tpnLabel3);
+    form.appendChild(tpnInput3);
+
+    authLabel3 = makeLabel('SPIn Auth Key', GOLD, T.fsSmall);
+    authInput3 = document.createElement('div');
+    authInput3.style.cssText = 'height:40px;background:' + DARK + ';display:flex;align-items:center;padding:0 12px;font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';clip-path:' + chamfer(5) + ';cursor:pointer;';
+    applySunkenStyle(authInput3);
+    authInput3.textContent = authVal3 || 'Tap to enter';
+    authInput3.addEventListener('pointerup', function() {
+      showKeyboard({
+        placeholder: 'SPIn Auth Key',
+        initialValue: authVal3,
+        maxLength: 30,
+        onDone: function(val) { authVal3 = val; authInput3.textContent = val || 'Tap to enter'; },
+        dismissOnDone: true,
+      });
+    });
+    form.appendChild(authLabel3);
+    form.appendChild(authInput3);
+  }
+
+  inner.appendChild(form);
+
+  // Footer with Save, Remove, Cancel
+  var footer = document.createElement('div');
+  footer.style.cssText = 'display:flex;gap:10px;padding:10px 20px;flex-shrink:0;';
+
+  footer.appendChild(buildButton('//SAVE//', {
+    fill: GOLD, color: DARK, fontSize: T.fsBtn, height: 44,
+    onTap: async function() {
+      await saveDevice({
+        mac: dev.mac, ip: dev.ip, type: selectedType,
+        name: deviceName || selectedType,
+        port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
+        register_id: selectedType === 'card_reader' ? registerId3 : '',
+        tpn: selectedType === 'card_reader' ? tpnVal3 : '',
+        auth_key: selectedType === 'card_reader' ? authVal3 : '',
+      });
+      state.editingDevice = null;
+      renderCurrentState();
+    },
+  }));
+
+  footer.appendChild(buildButton('Remove', {
+    fill: T.red, color: '#fff', fontSize: T.fsBtn, height: 44,
+    onTap: async function() {
+      await deleteDevice(dev.mac);
+      state.editingDevice = null;
+      renderCurrentState();
+    },
+  }));
+
+  footer.appendChild(buildButton('Cancel', {
+    fill: BG, color: MINT, fontSize: T.fsBtn, height: 44,
+    onTap: function() { state.editingDevice = null; renderCurrentState(); },
+  }));
+
+  inner.appendChild(footer);
 }
 
 async function testDevice(dev, btn) {
