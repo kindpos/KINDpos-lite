@@ -244,20 +244,43 @@ function buildHardwareCard() {
 
 function buildTerminalCard() {
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
 
   var title = document.createElement('div');
   title.style.cssText = 'font-family:' + T.fh + ';font-size:42px;font-weight:bold;font-style:italic;color:' + T.mint + ';margin-bottom:6px;';
   title.textContent = 'TERMINAL';
   card.appendChild(title);
 
-  var kpis = document.createElement('div');
-  kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:36px;color:' + T.mint + ';';
-  kpis.innerHTML =
-    '<div>Network:</div>' +
-    '<div>IP: <span style="color:' + T.cyan + '">' + state.ipAddress + '</span></div>';
-  card.appendChild(kpis);
+  var items = [
+    { label: 'Identity', value: state.terminalName, nav: 'identity' },
+    { label: 'Network',  value: state.ipAddress,    nav: 'network'  },
+    { label: 'Business', value: state.taxRate + '%', nav: 'business' },
+  ];
 
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:4px;';
+
+  items.forEach(function(item) {
+    var btn = buildStyledButton(BG);
+    btn.inner.style.fontFamily = T.fb;
+    btn.inner.style.fontSize = '36px';
+    btn.inner.style.color = T.mint;
+    btn.inner.style.padding = '8px 12px';
+    btn.inner.style.justifyContent = 'space-between';
+    btn.inner.innerHTML = item.label + ' <span style="color:' + T.cyan + '">' + item.value + '</span>';
+    btn.wrap.style.width = '100%';
+    btn.wrap.style.cursor = 'pointer';
+    btn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      state.expandedCard = 'terminal';
+      state.activeTab = 'terminal';
+      state.activeNav = item.nav;
+      renderCurrentState();
+    });
+    btns.appendChild(btn.wrap);
+  });
+
+  card.appendChild(btns);
   return card;
 }
 
@@ -270,13 +293,6 @@ function buildCollapsedView(el) {
 
   var leftWrap = buildCardWrap(leftCard);
   var rightWrap = buildCardWrap(rightCard);
-
-  rightWrap.addEventListener('pointerup', function() {
-    state.expandedCard = 'terminal';
-    state.activeTab = 'terminal';
-    state.activeNav = 'identity';
-    renderCurrentState();
-  });
 
   el.appendChild(leftWrap);
   el.appendChild(rightWrap);
