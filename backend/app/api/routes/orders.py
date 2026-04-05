@@ -345,6 +345,7 @@ async def get_day_summary(
     gross_sales = _ZERO
     void_total = _ZERO
     discount_total = _ZERO
+    discount_count = 0
     tax_total = _ZERO
     cash_total = _ZERO
     card_total = _ZERO
@@ -353,10 +354,12 @@ async def get_day_summary(
     total_tips = _ZERO
     card_tips = _ZERO
     cash_tips = _ZERO
+    guest_count = 0
     categories = {}
     payments_list = []
     checks_list = []
     closed_order_ids = []
+    hourly = {}
 
     for order in orders:
         if order.status == "voided":
@@ -370,8 +373,20 @@ async def get_day_summary(
             closed_order_ids.append(order.order_id)
 
         gross_sales += Decimal(str(order.subtotal))
-        discount_total += Decimal(str(order.discount_total))
+        order_disc = Decimal(str(order.discount_total))
+        discount_total += order_disc
+        if order_disc > 0:
+            discount_count += 1
         tax_total += Decimal(str(order.tax))
+        guest_count += order.guest_count
+
+        # Hourly bucket for daypart breakdown
+        if order.created_at:
+            h = order.created_at.hour
+            if h not in hourly:
+                hourly[h] = {"net": _ZERO, "checks": 0}
+            hourly[h]["net"] += Decimal(str(order.subtotal)) - order_disc
+            hourly[h]["checks"] += 1
 
         # Category breakdown from items
         for item in order.items:
@@ -453,6 +468,25 @@ async def get_day_summary(
     avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
     unadjusted = sum(1 for c in checks_list if not c["adjusted"])
 
+    # Build daypart breakdown from hourly buckets
+    dayparts = []
+    am_net, am_chk = _ZERO, 0
+    pm_net, pm_chk = _ZERO, 0
+    late_net, late_chk = _ZERO, 0
+    for h, bucket in hourly.items():
+        if h < 12:
+            am_net += bucket["net"]; am_chk += bucket["checks"]
+        elif h < 17:
+            pm_net += bucket["net"]; pm_chk += bucket["checks"]
+        else:
+            late_net += bucket["net"]; late_chk += bucket["checks"]
+    if am_chk:
+        dayparts.append({"name": "AM", "sales": money_round(float(am_net)), "checks": am_chk})
+    if pm_chk:
+        dayparts.append({"name": "PM", "sales": money_round(float(pm_net)), "checks": pm_chk})
+    if late_chk:
+        dayparts.append({"name": "Late", "sales": money_round(float(late_net)), "checks": late_chk})
+
     return {
         "date": __import__("datetime").date.today().isoformat(),
         "open_orders": open_count,
@@ -462,6 +496,7 @@ async def get_day_summary(
         "void_total": money_round(float(void_total)),
         "void_count": voided_count,
         "discount_total": money_round(float(discount_total)),
+        "discount_count": discount_count,
         "net_sales": money_round(net_sales),
         "tax_total": money_round(float(tax_total)),
         "cash_total": money_round(float(cash_total)),
@@ -474,7 +509,9 @@ async def get_day_summary(
         "cash_tips": money_round(float(cash_tips)),
         "total_checks": total_checks,
         "avg_check": avg_check,
+        "guest_count": guest_count,
         "unadjusted_tips": unadjusted,
+        "dayparts": dayparts,
         "categories": [
             {**c, "total": money_round(float(c["total"]))} for c in categories.values()
         ],

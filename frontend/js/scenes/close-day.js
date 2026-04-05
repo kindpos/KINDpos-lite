@@ -52,8 +52,26 @@ function isBlocked(state) {
 // ─────────────────────────────────────────────────
 
 function fetchDayState(params) {
-  return fetch('/api/v1/orders/day-summary').then(function(r) { return r.json(); }).then(function(d) {
+  return Promise.all([
+    fetch('/api/v1/orders/day-summary').then(function(r) { return r.json(); }),
+    fetch('/api/v1/config/tipout').then(function(r) { return r.json(); }).catch(function() { return []; }),
+  ]).then(function(results) {
+    var d = results[0];
+    var rules = results[1];
     var today = new Date();
+
+    // Calculate total tipout from rules
+    var totalTipOut = 0;
+    var cardTips = d.card_tips || 0;
+    var netSales = d.net_sales || 0;
+    if (Array.isArray(rules)) {
+      rules.forEach(function(r) {
+        var basis = r.calculation_base === 'Net Sales' ? netSales : cardTips;
+        totalTipOut += basis * (r.percentage || 0) / 100;
+      });
+    }
+    totalTipOut = parseFloat(totalTipOut.toFixed(2));
+
     return {
       date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
       terminalId: 'T-001',
@@ -62,9 +80,9 @@ function fetchDayState(params) {
       // Revenue
       grossSales:    d.gross_sales   || 0,
       voidsTotal:    d.void_total    || 0,  voidsCount: d.void_count || 0,
-      compsTotal:    0,                     compsCount: 0,
-      discTotal:     d.discount_total || 0, discCount:  0,
-      netSales:      d.net_sales     || 0,
+      compsTotal:    0,                     compsCount: 0,   // comps not tracked separately yet
+      discTotal:     d.discount_total || 0, discCount:  d.discount_count || 0,
+      netSales:      netSales,
       taxCollected:  d.tax_total     || 0,
 
       // Payments
@@ -72,7 +90,7 @@ function fetchDayState(params) {
       cardSales:     d.card_total  || 0, cardCount: d.card_count || 0,
       totalPayments: (d.cash_total || 0) + (d.card_total || 0),
       totalTips:     d.total_tips  || 0,
-      cardTips:      d.card_tips   || 0,
+      cardTips:      cardTips,
       cashTips:      d.cash_tips   || 0,
 
       // Categories
@@ -81,14 +99,14 @@ function fetchDayState(params) {
       // Check stats
       totalChecks:   d.total_checks || 0,
       avgCheck:      d.avg_check    || 0,
-      covers:        0,
+      covers:        d.guest_count || 0,
       openChecks:    d.open_orders || 0,
 
       // Dayparts
-      dayparts:      [],
+      dayparts:      d.dayparts || [],
 
       // Tips
-      totalTipOut:   0,
+      totalTipOut:   totalTipOut,
       unadjustedTips: d.unadjusted_tips || 0,
 
       // Batch

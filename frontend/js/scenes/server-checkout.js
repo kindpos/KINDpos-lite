@@ -68,10 +68,30 @@ function recalcTipOut(state) {
 // ─────────────────────────────────────────────────
 
 function fetchServerState(params) {
-  var url = '/api/v1/orders/day-summary';
-  if (params.employeeId) url += '?server_id=' + encodeURIComponent(params.employeeId);
-  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+  var summaryUrl = '/api/v1/orders/day-summary';
+  if (params.employeeId) summaryUrl += '?server_id=' + encodeURIComponent(params.employeeId);
+  var tipoutUrl = '/api/v1/config/tipout';
+
+  return Promise.all([
+    fetch(summaryUrl).then(function(r) { return r.json(); }),
+    fetch(tipoutUrl).then(function(r) { return r.json(); }).catch(function() { return []; }),
+  ]).then(function(results) {
+    var d = results[0];
+    var rules = results[1];
     var today = new Date();
+
+    // Map TipoutRule {role_from, role_to, percentage, calculation_base} to UI format
+    var tipOutRoles = [];
+    if (Array.isArray(rules)) {
+      tipOutRoles = rules.map(function(r) {
+        return {
+          label: r.role_to || r.role_from || 'Tipout',
+          percent: r.percentage || 0,
+          basis: r.calculation_base || 'Net Sales',
+        };
+      });
+    }
+
     var state = {
       employeeId:    params.employeeId   || '',
       employeeName:  params.employeeName || '',
@@ -86,12 +106,12 @@ function fetchServerState(params) {
       cardTips:      d.card_tips    || 0,
       cashTips:      d.cash_tips    || 0,
       unadjustedTips: d.unadjusted_tips || 0,
-      tipOutRoles:   [],
+      tipOutRoles:   tipOutRoles,
       oneTimeRole:   null,
       tipOutTotal:   0,
       takeHome:      d.card_tips    || 0,
       cashReceived:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
-      cashExpected:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0) - (d.card_tips || 0)).toFixed(2)),
+      cashExpected:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
       closedOrders:  d.closed_order_ids || [],
     };
     recalcTipOut(state);
