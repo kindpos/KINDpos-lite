@@ -76,13 +76,11 @@ export const T = {
 // Default palette: Terminal Glow
 // This will become operator-configurable via Overseer settings
 T.categoryPalette = {
-  'SMOKED MEATS': '#ff4757',
-  'SANDWICHES':   '#C6FFBB',
-  'COMBOS':       '#ffd93d',
-  'SIDES':        '#70a1ff',
-  'DRINKS':       '#ffa502',
-  'DESSERTS':     '#b48efa',
-  'EXTRAS':       '#7bed9f',
+  'COMBO':      '#ffd93d',
+  'RIBS':       '#ff4757',
+  'SANDWICHES': '#C6FFBB',
+  'SIDES':      '#70a1ff',
+  'SODA':       '#ffa502',
 };
 
 T.catColor = (category) => T.categoryPalette[category] || T.mint;

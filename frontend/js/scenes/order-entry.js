@@ -41,86 +41,48 @@ var VOID_REASONS = ['Wrong Order', 'Customer Request', 'Manager Comp', 'Other'];
 // ── Menu data ─────────────────────────────────────
 var MENU_DATA = [
   {
-    id: 'smoked-meats', label: 'SMOKED MEATS', color: T.catColor('SMOKED MEATS'), textColor: '#1a0a0a',
+    id: 'combo', label: 'COMBO', color: T.catColor('COMBO'), textColor: '#1a1a00',
     subcats: [
-      { id: 'brisket',  label: 'Brisket',  items: ['Sliced', 'Chopped', 'Burnt Ends', 'Lean', 'Moist'] },
-      { id: 'ribs',     label: 'Ribs',     items: ['St. Louis', 'Baby Back', 'Beef Rib', 'Half Rack', 'Full Rack'] },
-      { id: 'pork',     label: 'Pork',     items: ['Pulled Pork', 'Pork Belly', 'Pork Chop', 'Sausage Link'] },
-      { id: 'poultry',  label: 'Poultry',  items: ['Smoked Chicken', 'Turkey Breast', 'Smoked Wings', 'Half Bird'] },
+      { id: 'combo-items', label: 'Combo', items: ['Half Rack Combo', 'Pulled Pork Combo'] },
+    ]
+  },
+  {
+    id: 'ribs', label: 'RIBS', color: T.catColor('RIBS'), textColor: '#1a0a0a',
+    subcats: [
+      { id: 'ribs-items', label: 'Ribs', items: ['Full Rack', 'Half Rack'] },
     ]
   },
   {
     id: 'sandwiches', label: 'SANDWICHES', color: T.catColor('SANDWICHES'), textColor: '#1a2a1a',
     subcats: [
-      { id: 'classics', label: 'Classics', items: ['Brisket', 'Pulled Pork', 'Sausage', 'Turkey', 'Combo'] },
-      { id: 'specials', label: 'Specials', items: ['The KIND', 'Burnt Ends', 'Rib Tips', 'Veggie BBQ'] },
-    ]
-  },
-  {
-    id: 'combos', label: 'COMBOS', color: T.catColor('COMBOS'), textColor: '#1a1a00',
-    subcats: [
-      { id: 'plates',  label: 'Plates',  items: ['1 Meat', '2 Meat', '3 Meat', 'Family Pack', 'Party Tray'] },
-      { id: 'baskets', label: 'Baskets', items: ['Sandwich Combo', 'Wing Combo', 'Tender Combo', 'Kids Combo'] },
+      { id: 'sandwich-items', label: 'Sandwiches', items: ['Pulled Pork', 'Sliced Brisket'] },
     ]
   },
   {
     id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: '#001a1a',
     subcats: [
-      { id: 'hot-sides',  label: 'Hot',  items: ['Mac & Cheese', 'Baked Beans', 'Collards', 'Corn Bread', 'Fried Okra'] },
-      { id: 'cold-sides', label: 'Cold', items: ['Slaw', 'Potato Salad', 'Pickles', 'White Bread', 'Side Salad'] },
+      { id: 'side-items', label: 'Sides', items: ['Fries', 'Baked Potato', 'Slaw'] },
     ]
   },
   {
-    id: 'drinks', label: 'DRINKS', color: T.catColor('DRINKS'), textColor: '#001a1a',
+    id: 'soda', label: 'SODA', color: T.catColor('SODA'), textColor: '#001a1a',
     subcats: [
-      { id: 'sodas',   label: 'Sodas',   items: ['Coke', 'Sprite', 'Diet', 'Root Beer', 'Lemonade', 'Iced Tea'] },
-      { id: 'beer',    label: 'Beer',    items: ['Lager', 'IPA', 'Stout', 'Ale', 'Sour', 'Wheat', 'Pilsner'] },
-      { id: 'na',      label: 'Non-Alc', items: ['Water', 'Juice', 'Tea', 'Coffee', 'Sparkling', 'Kombucha'] },
-    ]
-  },
-  {
-    id: 'desserts', label: 'DESSERTS', color: T.catColor('DESSERTS'), textColor: '#1a0030',
-    subcats: [
-      { id: 'house',  label: 'House',  items: ['Banana Pudding', 'Peach Cobbler', 'Pecan Pie', 'Bread Pudding'] },
-      { id: 'frozen', label: 'Frozen', items: ['Ice Cream', 'Shake', 'Float', 'Sundae'] },
-    ]
-  },
-  {
-    id: 'extras', label: 'EXTRAS', color: T.catColor('EXTRAS'), textColor: '#1a2a1a',
-    subcats: [
-      { id: 'sauces',    label: 'Sauces',    items: ['Original', 'Spicy', 'Vinegar', 'Mustard', 'White'] },
-      { id: 'add-meats', label: 'Add Meats', items: ['Extra Brisket', 'Extra Pork', 'Extra Sausage', 'Extra Rib'] },
+      { id: 'soda-items', label: 'Soda', items: ['Coke', 'Sprite', 'Diet Coke', 'Fanta'] },
     ]
   },
 ];
 
 var MOD_DATA = [
   {
-    id: 'proteins', label: 'PROTEINS', color: T.catColor('PROTEINS'), textColor: '#1a1000',
+    id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff',
     subcats: [
-      { id: 'meat',  label: 'Meat',  items: ['Bacon', 'Chicken', 'Beef', 'Shrimp', 'Egg'] },
-      { id: 'other', label: 'Other', items: ['Tofu', 'Tempeh', 'Anchovy'] },
+      { id: 'sauce-items', label: 'Sauce', items: ['Sweet', 'Hot', 'Mild', 'Vinegar', 'Mustard'] },
     ]
   },
   {
-    id: 'toppings', label: 'TOPPINGS', color: T.catColor('TOPPINGS'), textColor: '#1a2a1a',
+    id: 'extras', label: 'EXTRAS', color: T.lavender, textColor: '#1a0030',
     subcats: [
-      { id: 'veggies', label: 'Veggies', items: ['Lettuce', 'Tomato', 'Onion', 'Jalapeño', 'Avocado', 'Pickle'] },
-      { id: 'cheese',  label: 'Cheese',  items: ['Cheddar', 'Swiss', 'Gouda', 'Brie', 'Parm', 'Blue'] },
-    ]
-  },
-  {
-    id: 'sauces', label: 'SAUCES', color: T.catColor('SAUCES'), textColor: '#001a1a',
-    subcats: [
-      { id: 'hot',  label: 'Hot',  items: ['Sriracha', 'Chipotle', 'Habanero', 'Buffalo'] },
-      { id: 'mild', label: 'Mild', items: ['Ranch', 'Mayo', 'Mustard', 'Ketchup', 'BBQ', 'Aioli'] },
-    ]
-  },
-  {
-    id: 'prep', label: 'PREP', color: T.catColor('PREP'), textColor: '#1a0030',
-    subcats: [
-      { id: 'temp',  label: 'Temp',  items: ['Rare', 'Med Rare', 'Medium', 'Well Done'] },
-      { id: 'style', label: 'Style', items: ['Fried', 'Grilled', 'Baked', 'Steamed', 'Raw'] },
+      { id: 'extras-items', label: 'Extras', items: ['Extra Meat', 'Cheese', 'Jalapeños', 'Onions'] },
     ]
   },
 ];

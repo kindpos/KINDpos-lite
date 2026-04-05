@@ -204,6 +204,41 @@ function findHexItem(label) {
   return null;
 }
 
+// Return all visible hex labels in the current SVG view
+function getAllHexLabels() {
+  var canvas = document.getElementById('hex-canvas');
+  if (!canvas) return [];
+  var svg = canvas.querySelector('svg');
+  if (!svg) return [];
+  var labels = [];
+  var groups = svg.querySelectorAll('g');
+  for (var i = 0; i < groups.length; i++) {
+    var texts = groups[i].querySelectorAll('text');
+    if (texts.length === 0) continue;
+    var combined = '';
+    for (var j = 0; j < texts.length; j++) {
+      if (combined) combined += ' ';
+      combined += texts[j].textContent.trim();
+    }
+    if (combined) labels.push(combined);
+  }
+  return labels;
+}
+
+// Navigate into first category > first subcat, return available item labels
+async function getFirstCategoryItems() {
+  var cats = getAllHexLabels();
+  if (cats.length === 0) return { cat: null, subcat: null, items: [] };
+  var cat = cats[0];
+  tapHex(cat); await wait(100);
+  var subcats = getAllHexLabels();
+  if (subcats.length === 0) return { cat: cat, subcat: null, items: [] };
+  var subcat = subcats[0];
+  tapHex(subcat); await wait(100);
+  var items = getAllHexLabels();
+  return { cat: cat, subcat: subcat, items: items };
+}
+
 function tapHex(label) {
   var g = findHexItem(label);
   if (!g) throw new Error('Hex item not found: ' + label);
@@ -267,34 +302,27 @@ async function runRapidFire() {
     // RF-01: Tap same menu item 20 times in 500ms
     await it('RF-01', 'Tap same menu item 20x in 500ms — verify quantity', async function() {
       await navigateToOrderEntry();
-      // Navigate to SMOKED MEATS > Brisket
-      tapHex('SMOKED MEATS');
-      await wait(100);
-      tapHex('Brisket');
-      await wait(100);
-      // Tap Classic 20 times rapidly
-      await tapN(findHexItem('Sliced').querySelector('polygon'), 20, 25);
+      var info = await getFirstCategoryItems();
+      assert(info.items.length > 0, 'Menu has items');
+      await tapN(findHexItem(info.items[0]).querySelector('polygon'), 20, 25);
       await wait(100);
       var count = countTicketItems();
       assertEqual(count, 20, 'Item count after 20 rapid taps');
       await resetToLogin();
     });
 
-    // RF-02: Tap 6 different menu items in under 1 second
-    await it('RF-02', 'Tap 5 different items in <1s — all appear in check', async function() {
+    // RF-02: Tap all available items in first category — all appear in check
+    await it('RF-02', 'Tap all items in category — all appear in check', async function() {
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS');
-      await wait(100);
-      tapHex('Brisket');
-      await wait(100);
-      var items = ['Sliced', 'Chopped', 'Burnt Ends', 'Lean', 'Moist'];
-      items.forEach(function(name) {
+      var info = await getFirstCategoryItems();
+      assert(info.items.length > 0, 'Menu has items');
+      info.items.forEach(function(name) {
         var g = findHexItem(name);
         if (g) tap(g.querySelector('polygon') || g);
       });
       await wait(100);
       var count = countTicketItems();
-      assertEqual(count, 5, 'All 5 items should appear');
+      assertEqual(count, info.items.length, 'All ' + info.items.length + ' items should appear');
       await resetToLogin();
     });
 
@@ -322,9 +350,8 @@ async function runRapidFire() {
       installFetchMock();
       try {
         await navigateToOrderEntry();
-        tapHex('SMOKED MEATS'); await wait(100);
-        tapHex('Brisket'); await wait(100);
-        tapHex('Sliced'); await wait(100);
+        var info = await getFirstCategoryItems();
+        tapHex(info.items[0]); await wait(100);
         // Find SEND button and tap 5 times
         var sendBtn = findButtonByText('//SEND//', findSceneEl('order-entry'));
         assert(sendBtn, 'SEND button not found');
@@ -350,9 +377,8 @@ async function runRapidFire() {
       installFetchMock();
       try {
         await navigateToOrderEntry();
-        tapHex('SMOKED MEATS'); await wait(100);
-        tapHex('Brisket'); await wait(100);
-        tapHex('Sliced'); await wait(100);
+        var info = await getFirstCategoryItems();
+        tapHex(info.items[0]); await wait(100);
         var payBtn = findButtonByText('//PAY//', findSceneEl('order-entry'));
         assert(payBtn, 'PAY button not found');
         tap(payBtn); tap(payBtn); tap(payBtn);
@@ -369,10 +395,9 @@ async function runRapidFire() {
     // RF-06: Tap VOID on same item 3 times — voided once
     await it('RF-06', 'VOID 3x rapid on item — single void', async function() {
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
-      tapHex('Sliced'); await wait(50);
-      tapHex('Sliced'); await wait(50);
+      var info = await getFirstCategoryItems();
+      tapHex(info.items[0]); await wait(50);
+      tapHex(info.items[0]); await wait(50);
       // Select first item by tapping in ticket list
       var list = getTicketList();
       if (list && list.children.length > 0) {
@@ -392,12 +417,15 @@ async function runRapidFire() {
     // RF-07: Tap category then different category before bloom completes
     await it('RF-07', 'Switch categories mid-bloom — no crash', async function() {
       await navigateToOrderEntry();
-      // Tap FOOD — this opens the FOOD bloom showing subcategories
-      tapHex('SMOKED MEATS');
+      var cats = getAllHexLabels();
+      assert(cats.length > 0, 'Categories visible');
+      // Tap first category — this opens the bloom showing subcategories
+      tapHex(cats[0]);
       await wait(50);
       // Immediately tap again on one of the subcats — rapid interaction during bloom
-      try { tapHex('Brisket'); } catch(e) { /* may not be rendered yet */ }
-      tapHex('SMOKED MEATS'); // Tap back if still visible
+      var subcats = getAllHexLabels();
+      try { if (subcats.length > 0) tapHex(subcats[0]); } catch(e) { /* may not be rendered yet */ }
+      try { tapHex(cats[0]); } catch(e) { /* may not be visible */ }
       await wait(200);
       // The key test: no crash, scene is intact
       assert(SM.getActiveScene() === 'order-entry', 'Still on order-entry');
@@ -448,27 +476,26 @@ async function runRapidFire() {
       await resetToLogin();
     });
 
-    // RF-10: 3 items, SEND, then 2 more before response — second round queues
+    // RF-10: Add items, SEND, then add more before response — second round queues
     await it('RF-10', 'Items after SEND — second-round queues', async function() {
       installFetchMock();
       try {
         await navigateToOrderEntry();
-        tapHex('SMOKED MEATS'); await wait(100);
-        tapHex('Brisket'); await wait(100);
-        tapHex('Sliced'); await wait(20);
-        tapHex('Chopped'); await wait(20);
-        tapHex('Burnt Ends'); await wait(20);
+        var info = await getFirstCategoryItems();
+        // Add all items in this category
+        var allItems = info.items;
+        for (var ri = 0; ri < allItems.length; ri++) {
+          tapHex(allItems[ri]); await wait(20);
+        }
         // SEND
         var sendBtn = findButtonByText('//SEND//', findSceneEl('order-entry'));
         if (sendBtn) tap(sendBtn);
-        // Immediately add 2 more items before response
+        // Immediately add first item again before response
         await wait(10);
-        tapHex('Lean'); await wait(10);
-        tapHex('Moist');
+        tapHex(allItems[0]); await wait(10);
         await wait(300);
-        // Should have 5 items total
         var count = countTicketItems();
-        assertEqual(count, 5, 'All 5 items present');
+        assertEqual(count, allItems.length + 1, 'All items present including post-SEND add');
         await resetToLogin();
       } finally { removeFetchMock(); }
     });
@@ -626,10 +653,10 @@ async function runDataIntegrity() {
     // DI-01: Add 50 items — verify total calculates correctly to 2dp
     await it('DI-01', '50 items — total correct to 2dp, no lag', async function() {
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
+      var info = await getFirstCategoryItems();
+      var itemName = info.items[0];
       for (var i = 0; i < 50; i++) {
-        tapHex('Sliced');
+        tapHex(itemName);
         if (i % 10 === 9) await wait(30); // Brief yield every 10 items
       }
       await wait(200);
@@ -650,12 +677,12 @@ async function runDataIntegrity() {
     // DI-02: Add items, navigate away and back — each check has own items
     await it('DI-02', 'State isolation between scene entries', async function() {
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
-      tapHex('Sliced'); await wait(50);
-      tapHex('Chopped'); await wait(50);
+      var info = await getFirstCategoryItems();
+      tapHex(info.items[0]); await wait(50);
+      if (info.items.length > 1) tapHex(info.items[1]); await wait(50);
+      var expectedCount = Math.min(info.items.length, 2);
       var count1 = countTicketItems();
-      assertEqual(count1, 2, '2 items in first entry');
+      assertEqual(count1, expectedCount, expectedCount + ' items in first entry');
       // Navigate away (onExit destroys state)
       await resetToLogin();
       // Re-enter
@@ -671,9 +698,8 @@ async function runDataIntegrity() {
       installFetchMock();
       try {
         await navigateToOrderEntry();
-        tapHex('SMOKED MEATS'); await wait(100);
-        tapHex('Brisket'); await wait(100);
-        tapHex('Sliced'); await wait(100);
+        var info = await getFirstCategoryItems();
+        tapHex(info.items[0]); await wait(100);
         // Navigate to payment would need the full flow — just verify scene state resets
         await resetToLogin();
         await navigateToOrderEntry();
@@ -686,12 +712,12 @@ async function runDataIntegrity() {
     // DI-04: Tip amount with many decimal places — rounds to 2dp
     await it('DI-04', 'Totals always 2dp precision', async function() {
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
+      var info = await getFirstCategoryItems();
+      var itemName = info.items[0];
       // Add 3 items to get non-round subtotal with tax
-      tapHex('Sliced'); await wait(20);
-      tapHex('Sliced'); await wait(20);
-      tapHex('Sliced'); await wait(100);
+      tapHex(itemName); await wait(20);
+      tapHex(itemName); await wait(20);
+      tapHex(itemName); await wait(100);
       // $30 subtotal, $2.40 tax, $32.40 total
       var sub = getSubtotal();
       var tax = getTax();
@@ -710,9 +736,8 @@ async function runDataIntegrity() {
       installFailingFetch();
       try {
         await navigateToOrderEntry();
-        tapHex('SMOKED MEATS'); await wait(100);
-        tapHex('Brisket'); await wait(100);
-        tapHex('Sliced'); await wait(100);
+        var info = await getFirstCategoryItems();
+        tapHex(info.items[0]); await wait(100);
         var sendBtn = findButtonByText('//SEND//', findSceneEl('order-entry'));
         if (sendBtn) tap(sendBtn);
         await wait(500);
@@ -726,10 +751,9 @@ async function runDataIntegrity() {
     // DI-06: Concurrent check state — tabs don't leak
     await it('DI-06', 'SAVE/RECALL tab isolation', async function() {
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
-      tapHex('Sliced'); await wait(50);
-      tapHex('Chopped'); await wait(50);
+      var info = await getFirstCategoryItems();
+      tapHex(info.items[0]); await wait(50);
+      if (info.items.length > 1) tapHex(info.items[1]); await wait(50);
       // SAVE this ticket
       var saveBtn = findButtonByText('//SAVE//', findSceneEl('order-entry'));
       if (saveBtn) tap(saveBtn);
@@ -746,9 +770,8 @@ async function runDataIntegrity() {
       // In the frontend, there's no 86 check — items come from the hex nav
       // This test verifies the hex nav renders cleanly and items add without crash
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
-      tapHex('Sliced'); await wait(100);
+      var info = await getFirstCategoryItems();
+      tapHex(info.items[0]); await wait(100);
       assertEqual(countTicketItems(), 1, 'Item added successfully');
       assert(SM.getActiveScene() === 'order-entry', 'No crash');
       await resetToLogin();
@@ -758,18 +781,16 @@ async function runDataIntegrity() {
     await it('DI-08', '5 order lifecycles — last is clean as 1st', async function() {
       for (var cycle = 0; cycle < 5; cycle++) {
         await navigateToOrderEntry();
-        tapHex('SMOKED MEATS'); await wait(80);
-        tapHex('Brisket'); await wait(80);
-        tapHex('Sliced'); await wait(50);
+        var info = await getFirstCategoryItems();
+        tapHex(info.items[0]); await wait(50);
         assertEqual(countTicketItems(), 1, 'Cycle ' + (cycle+1) + ': 1 item');
         await resetToLogin();
       }
       // Final cycle verification
       await navigateToOrderEntry();
       assertEqual(countTicketItems(), 0, 'Final cycle starts clean');
-      tapHex('SMOKED MEATS'); await wait(80);
-      tapHex('Brisket'); await wait(80);
-      tapHex('Sliced'); await wait(50);
+      var info2 = await getFirstCategoryItems();
+      tapHex(info2.items[0]); await wait(50);
       assertEqual(countTicketItems(), 1, 'Final: 1 item works');
       await resetToLogin();
     }, 30000);
@@ -824,9 +845,8 @@ async function runEdgeCombos() {
     await it('EC-04', 'VOID last item — empty check, no crash', async function() {
       if (SM.getActiveScene() !== 'login') await resetToLogin();
       await navigateToOrderEntry();
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
-      tapHex('Sliced'); await wait(100);
+      var info = await getFirstCategoryItems();
+      tapHex(info.items[0]); await wait(100);
       assertEqual(countTicketItems(), 1, 'Start with 1 item');
       // Select the item by tapping in ticket list
       var list = getTicketList();
@@ -881,12 +901,19 @@ async function runEdgeCombos() {
       await wait(200);
       // Tap a modifier hex — should be ignored (no selected items)
       try {
-        tapHex('PROTEINS');
-        await wait(100);
-        tapHex('Meat');
-        await wait(100);
-        tapHex('Burnt Ends');
-        await wait(100);
+        var modCats = getAllHexLabels();
+        if (modCats.length > 0) {
+          tapHex(modCats[0]);
+          await wait(100);
+          var modSubs = getAllHexLabels();
+          if (modSubs.length > 0) {
+            tapHex(modSubs[0]);
+            await wait(100);
+            var modItems = getAllHexLabels();
+            if (modItems.length > 0) tapHex(modItems[0]);
+            await wait(100);
+          }
+        }
       } catch(e) {
         // If hex items not found, that's ok — the important thing is no crash
       }
@@ -1030,10 +1057,9 @@ async function runTouchDebounce() {
       await wait(210);
       await SM.push('order-entry', { mode: 'service', pin: '1234' });
       await wait(250);
-      tapHex('SMOKED MEATS'); await wait(100);
-      tapHex('Brisket'); await wait(100);
+      var info = await getFirstCategoryItems();
       // Simulate two simultaneous pointerdown on the same hex
-      var classic = findHexItem('Sliced');
+      var classic = findHexItem(info.items[0]);
       if (classic) {
         var poly = classic.querySelector('polygon') || classic;
         // Two pointerdown events with different pointerId
