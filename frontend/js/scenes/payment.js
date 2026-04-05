@@ -558,8 +558,8 @@ function showErrorResult(params, message) {
   // Error message
   var msgEl = document.createElement('div');
   msgEl.style.cssText = [
-    'font-family:' + T.fb + ';font-size:22px;',
-    'color:' + T.mutedText + ';text-align:center;',
+    'font-family:' + T.fb + ';font-size:35px;',
+    'color:' + T.mint + ';text-align:center;',
     'max-width:400px;line-height:1.4;letter-spacing:0.04em;',
   ].join('');
   msgEl.textContent = message;
@@ -567,7 +567,7 @@ function showErrorResult(params, message) {
 
   // Retry hint
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.dimText + ';letter-spacing:0.08em;margin-top:8px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';letter-spacing:0.08em;margin-top:8px;';
   hint.textContent = 'tap to try again';
   panel.appendChild(hint);
 
