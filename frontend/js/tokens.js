@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-export const T = Object.freeze({
+export const T = {
   bg:       '#333333',
   bgDark:   '#1a1a1a',
   bgLight:  '#5a5a5a',
@@ -39,12 +39,22 @@ export const T = Object.freeze({
   lavenderL:'#d0b8ff',
   lavenderD:'#5a3f7a',
   yellow:   '#ffff00',
+  mintB:    '#7bed9f',
+  redB:     '#ff4757',
   catProteins:  '#ff4757',
+  catProteinsL: '#ff7a87',
+  catProteinsD: '#7a1f28',
   catVegetables:'#C6FFBB',   // alias T.mint
   catBeverages: '#70a1ff',
+  catBeveragesL:'#a0c4ff',
+  catBeveragesD:'#354d7a',
   catSauces:    '#ffa502',
+  catSaucesL:   '#ffc04d',
+  catSaucesD:   '#7a5001',
   catDesserts:  '#b48efa',   // alias T.lavender
   catStarches:  '#7bed9f',
+  catStarchesL: '#aff4c4',
+  catStarchesD: '#3a7a4d',
   fh:   'Alien Encounters Solid Bold, monospace',
   fb:   'Sevastopol Interface, monospace',
   fsQuick:  '70px',
@@ -52,16 +62,34 @@ export const T = Object.freeze({
   fsNumpad: '100px',
   fsHeader: '70px',
   fsClr:    '70px',
+  fsSmall:  '25px',
+  fsItem:   '35px',
+  fsMod:    '35px',
+  fsBtn:    '35px',
+  fsBtnSm:  '30px',
   appW:     1024,
   appH:     600,
   headerH:  52,
   scenePad: 20,
   colGap:   20,
   bevel:    7,
+  bevelBtn: 4,
   chamfer:  8,
   shadowX:  3,
   shadowY:  4,
-});
+};
+
+// Default palette: Terminal Glow
+// This will become operator-configurable via Overseer settings
+T.categoryPalette = {
+  'COMBO':      '#ffd93d',
+  'RIBS':       '#ff4757',
+  'SANDWICHES': '#C6FFBB',
+  'SIDES':      '#70a1ff',
+  'SODA':       '#ffa502',
+};
+
+T.catColor = (category) => T.categoryPalette[category] || T.mint;
 
 export function chamfer(s) {
   var c = s || T.chamfer;
@@ -77,18 +105,31 @@ export function bevelEdges(fillColor) {
   if (fillColor === T.red)     return { light: T.redL,        dark: T.redD     };
   if (fillColor === T.cyan)    return { light: T.cyanL,       dark: T.cyanD    };
   if (fillColor === T.lavender)return { light: T.lavenderL,   dark: T.lavenderD};
+  if (fillColor === T.catProteins) return { light: T.catProteinsL, dark: T.catProteinsD };
+  if (fillColor === T.catBeverages)return { light: T.catBeveragesL,dark: T.catBeveragesD};
+  if (fillColor === T.catSauces)   return { light: T.catSaucesL,   dark: T.catSaucesD  };
+  if (fillColor === T.catStarches) return { light: T.catStarchesL, dark: T.catStarchesD};
+  if (fillColor === T.mintB)  return { light: '#aff4c4', dark: '#3a7a4d' };
+  if (fillColor === T.redB)   return { light: '#ff7a87', dark: '#7a1f28' };
   return { light: T.bgLight, dark: T.bgEdge };
 }
 
 export function shadowColor(fillColor) {
-  if (fillColor === T.bg)       return 'rgba(20, 20, 20, 0.8)';
-  if (fillColor === T.darkBtn)  return 'rgba(15, 13, 10, 0.8)';
-  if (fillColor === T.mint)     return 'rgba(60, 100, 50, 0.8)';
-  if (fillColor === T.goGreen)  return 'rgba(30, 55, 15, 0.8)';
-  if (fillColor === T.gold)     return 'rgba(100, 70, 15, 0.8)';
-  if (fillColor === T.red)      return 'rgba(80, 15, 10, 0.8)';
-  if (fillColor === T.cyan)     return 'rgba(15, 70, 70, 0.8)';
-  if (fillColor === T.lavender) return 'rgba(50, 25, 70, 0.8)';
+  // Style D: dark buttons get mint shadow 55% opacity; colored buttons get dark shadow 80%
+  if (fillColor === T.bg)       return 'rgba(198, 255, 187, 0.55)';
+  if (fillColor === T.darkBtn)  return 'rgba(198, 255, 187, 0.55)';
+  if (fillColor === T.mint)     return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.goGreen)  return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.gold)     return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.red)      return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.cyan)     return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.lavender) return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catProteins) return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catBeverages)return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catSauces)   return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.catStarches) return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.mintB)  return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.redB)   return 'rgba(10, 10, 10, 0.8)';
   return 'rgba(10, 10, 10, 0.8)';
 }
 
@@ -102,7 +143,7 @@ export function buildStyledButton(fillColor) {
   var fill = fillColor || T.darkBtn;
   var edges = bevelEdges(fill);
   var shadow = shadowColor(fill);
-  var b = T.bevel;
+  var b = T.bevelBtn;
 
   var wrap = document.createElement('div');
   wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ')';
@@ -130,6 +171,7 @@ export function buildStyledButton(fillColor) {
   wrap._edges = edges;
   wrap._shadow = shadow;
   wrap._inner = inner;
+  wrap._bevel = b;
 
   wrap.addEventListener('pointerdown', _wDown);
   wrap.addEventListener('pointerup', _wUp);
@@ -140,7 +182,7 @@ export function buildStyledButton(fillColor) {
 
 function _wDown(e) {
   var w = e.currentTarget;
-  var b = T.bevel;
+  var b = w._bevel || T.bevelBtn;
   w._inner.style.borderTop    = b + 'px solid ' + w._edges.dark;
   w._inner.style.borderLeft   = b + 'px solid ' + w._edges.dark;
   w._inner.style.borderBottom = b + 'px solid ' + w._edges.light;
@@ -151,7 +193,7 @@ function _wDown(e) {
 
 function _wUp(e) {
   var w = e.currentTarget;
-  var b = T.bevel;
+  var b = w._bevel || T.bevelBtn;
   w._inner.style.borderTop    = b + 'px solid ' + w._edges.light;
   w._inner.style.borderLeft   = b + 'px solid ' + w._edges.light;
   w._inner.style.borderBottom = b + 'px solid ' + w._edges.dark;

@@ -2,6 +2,14 @@ venv/
 __pycache__/
 *.pyc
 **/data/
+!backend/data/demo_seed.json
 hardware_config.db
 *.db
 .env
+test-results/
+.idea/
+.vscode/
+.DS_Store
+print_live_test.py
+test_new_templates.py
+printer_size_diagnostic.py

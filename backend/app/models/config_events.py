@@ -2,14 +2,14 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 
 class StoreInfo(BaseModel):
-    restaurant_name: str
+    restaurant_name: str = "KINDpos"
     legal_entity_name: Optional[str] = None
-    address_line_1: str
+    address_line_1: str = ""
     address_line_2: Optional[str] = None
-    city: str
-    state: str
-    zip: str
-    phone: str
+    city: str = ""
+    state: str = ""
+    zip: str = ""
+    phone: str = ""
     email: Optional[str] = None
     website: Optional[str] = None
 
@@ -65,11 +65,19 @@ class Employee(BaseModel):
     first_name: str
     last_name: str
     display_name: str
-    role_id: str
+    role_ids: List[str] = []
+    role_id: Optional[str] = None  # backward compat — migrated to role_ids
     pin: str
     hourly_rate: float
     permissions_override: Optional[Dict[str, bool]] = None
     active: bool = True
+
+    def __init__(self, **data):
+        # Migrate legacy single role_id to role_ids list
+        if 'role_id' in data and 'role_ids' not in data:
+            rid = data.pop('role_id')
+            data['role_ids'] = [rid] if rid else []
+        super().__init__(**data)
 
 class TipoutRule(BaseModel):
     rule_id: str

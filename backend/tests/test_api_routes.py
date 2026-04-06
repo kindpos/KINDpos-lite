@@ -464,7 +464,7 @@ async def test_push_config_changes(client, ledger):
     """POST /api/v1/config/push — batch writes config events."""
     resp = await client.post("/api/v1/config/push", json=[
         {
-            "event_type": "menu.item_created",
+            "event_type": "MENU_ITEM_CREATED",
             "payload": {
                 "item_id": "new-item-01",
                 "name": "Test Dish",

@@ -14,7 +14,11 @@ import sys
 from app.api.routes.printing import print_queue
 from app.printing.print_dispatcher import PrintDispatcher
 from app.config import settings
-from app.api.dependencies import init_ledger, close_ledger
+from app.api.dependencies import init_ledger, close_ledger, set_printer_manager
+from app.services.demo_seeder import seed_demo_data_if_empty
+from app.core.adapters.printer_manager import PrinterManager
+from app.core.adapters.mock_thermal import MockThermalPrinter
+from app.core.adapters.base_printer import PrinterConfig, PrinterType, CutType
 from app.api.routes import orders
 from app.api.routes import system
 from app.api.routes import menu
@@ -23,10 +27,70 @@ from app.api.routes import printing
 from app.api.routes import payment_routes
 from app.api.routes import config
 from app.api.routes import staff
+from app.api.routes import reporting
 from app.api.routes.printing import print_queue
 
 
 _dispatcher: PrintDispatcher = None
+
+HARDWARE_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'hardware_config.db')
+
+
+async def _init_printer_manager(ledger):
+    """Load saved printers from hardware_config.db, fall back to mock."""
+    import aiosqlite
+
+    manager = PrinterManager(ledger, settings.terminal_id)
+    printer_found = False
+
+    if os.path.exists(HARDWARE_DB_PATH):
+        try:
+            async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
+                db.row_factory = aiosqlite.Row
+                async with db.execute("SELECT * FROM devices WHERE type = 'printer'") as cur:
+                    rows = await cur.fetchall()
+                    for row in rows:
+                        device = dict(row)
+                        role = "kitchen" if "kitchen" in device.get("name", "").lower() else "receipt"
+                        config = PrinterConfig(
+                            printer_id=device["mac"],
+                            name=device.get("name", "Printer"),
+                            printer_type=PrinterType.THERMAL,
+                            role=role,
+                            connection_string=f"{device['ip']}:{device.get('port', 9100)}",
+                            cut_type=CutType.PARTIAL,
+                        )
+                        printer = MockThermalPrinter(config)
+                        await manager.register_printer(printer)
+                        printer_found = True
+                        print(f"  Printer loaded: {device.get('name', device['mac'])} @ {device['ip']}")
+        except Exception as e:
+            print(f"  Warning: could not load printers from hardware_config.db: {e}")
+
+    if not printer_found:
+        # Register default mock printers for demo
+        receipt_config = PrinterConfig(
+            printer_id="mock-receipt-01",
+            name="Front Register",
+            printer_type=PrinterType.THERMAL,
+            role="receipt",
+            connection_string="127.0.0.1:9100",
+            cut_type=CutType.FULL,
+        )
+        kitchen_config = PrinterConfig(
+            printer_id="mock-kitchen-01",
+            name="Kitchen Printer",
+            printer_type=PrinterType.THERMAL,
+            role="kitchen",
+            connection_string="127.0.0.1:9101",
+            cut_type=CutType.PARTIAL,
+        )
+        await manager.register_printer(MockThermalPrinter(receipt_config))
+        await manager.register_printer(MockThermalPrinter(kitchen_config))
+        print("  Mock printers registered (no saved printers found)")
+
+    set_printer_manager(manager)
+    return manager
 
 
 @asynccontextmanager
@@ -37,8 +101,13 @@ async def lifespan(app: FastAPI):
     print("Terminal ID: " + settings.terminal_id)
     print("Database: " + settings.database_path)
 
-    await init_ledger()
+    ledger = await init_ledger()
     print("Event Ledger initialized")
+
+    await seed_demo_data_if_empty(ledger)
+
+    printer_manager = await _init_printer_manager(ledger)
+    print(f"PrinterManager initialized ({len(printer_manager._printers)} printers)")
 
     await print_queue.connect()
     print("Print Queue initialized")
@@ -80,6 +149,7 @@ app.include_router(printing.router, prefix="/api/v1")
 app.include_router(payment_routes.router, prefix="/api/v1")
 app.include_router(config.router, prefix="/api/v1")
 app.include_router(staff.router, prefix="/api/v1")
+app.include_router(reporting.router, prefix="/api/v1")
 
 
 # Serve frontend

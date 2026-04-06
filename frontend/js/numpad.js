@@ -26,19 +26,29 @@ export function buildNumpad(opts) {
   var onChange     = o.onChange     || null;   // fires(digits) on every digit/clear
   var displayFormat = o.displayFormat || null; // function(digits) => display string
 
+  // Allow per-instance size overrides
+  var displayH = o.displayH || PAD.displayH;
+  var gap      = o.gap      != null ? o.gap : PAD.gap;
+  var keyH     = o.keyH     || PAD.keyH;
+  var keyGap   = o.keyGap   != null ? o.keyGap : PAD.keyGap;
+  var cardPad  = o.cardPad  != null ? o.cardPad : PAD.cardPad;
+  var width    = o.width    || PAD.width;
+  var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2;
+
   var pin = '';
+  var _submitCooldown = false;
 
   // ── Container ──
   var container = document.createElement('div');
-  container.style.width = PAD.width + 'px';
+  container.style.width = width + 'px';
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
-  container.style.gap = PAD.gap + 'px';
+  container.style.gap = gap + 'px';
 
   // ── Digit Display (mint shadow wrap + sunken inner) ──
   var displayShadow = document.createElement('div');
   displayShadow.style.width = '100%';
-  displayShadow.style.height = PAD.displayH + 'px';
+  displayShadow.style.height = displayH + 'px';
   displayShadow.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadowColor(T.darkBtn) + ')';
 
   var display = document.createElement('div');
@@ -60,17 +70,17 @@ export function buildNumpad(opts) {
   // ── Numpad Card (mint fill, raised with depth) ──
   var cardWrap = document.createElement('div');
   cardWrap.style.width = '100%';
-  cardWrap.style.height = PAD.cardH + 'px';
+  cardWrap.style.height = cardH + 'px';
   cardWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadowColor(T.mint) + ')';
 
   var card = document.createElement('div');
   card.style.width = '100%';
   card.style.height = '100%';
-  card.style.padding = PAD.cardPad + 'px';
+  card.style.padding = cardPad + 'px';
   card.style.display = 'grid';
   card.style.gridTemplateColumns = 'repeat(3, ' + PAD.keyW + 'px)';
-  card.style.gridTemplateRows = 'repeat(4, ' + PAD.keyH + 'px)';
-  card.style.gap = PAD.keyGap + 'px';
+  card.style.gridTemplateRows = 'repeat(4, ' + keyH + 'px)';
+  card.style.gap = keyGap + 'px';
   card.style.boxSizing = 'border-box';
   applyRaisedStyle(card, T.mint);
 
@@ -105,28 +115,57 @@ export function buildNumpad(opts) {
 
     var pair = buildStyledButton(fill);
     pair.wrap.style.width = PAD.keyW + 'px';
-    pair.wrap.style.height = PAD.keyH + 'px';
+    pair.wrap.style.height = keyH + 'px';
     pair.inner.style.fontFamily = T.fb;
     pair.inner.style.fontSize = fontSize;
     pair.inner.style.color = textColor;
     pair.inner.style.lineHeight = '1';
     pair.inner.textContent = key.label;
 
-    pair.wrap.addEventListener('pointerup', function() {
-      if (key.type === 'digit') {
-        if (pin.length < maxDigits) {
-          pin += key.label;
+    if (key.type === 'clear') {
+      // CLR: normal tap clears last digit, long-press (500ms) clears all
+      var _clrTimer = null;
+      var _clrFired = false;
+      pair.wrap.addEventListener('pointerdown', function() {
+        _clrFired = false;
+        _clrTimer = setTimeout(function() {
+          _clrFired = true;
+          pin = '';
           render();
           if (onChange) onChange(pin);
+        }, 500);
+      });
+      pair.wrap.addEventListener('pointerup', function() {
+        if (_clrTimer) { clearTimeout(_clrTimer); _clrTimer = null; }
+        if (!_clrFired) {
+          // Short tap — backspace (remove last digit)
+          if (pin.length > 0) {
+            pin = pin.slice(0, -1);
+            render();
+            if (onChange) onChange(pin);
+          }
         }
-      } else if (key.type === 'clear') {
-        pin = '';
-        render();
-        if (onChange) onChange(pin);
-      } else if (key.type === 'submit') {
-        if (pin.length > 0) onSubmit(pin);
-      }
-    });
+      });
+      pair.wrap.addEventListener('pointercancel', function() {
+        if (_clrTimer) { clearTimeout(_clrTimer); _clrTimer = null; }
+      });
+    } else {
+      pair.wrap.addEventListener('pointerup', function() {
+        if (key.type === 'digit') {
+          if (pin.length < maxDigits) {
+            pin += key.label;
+            render();
+            if (onChange) onChange(pin);
+          }
+        } else if (key.type === 'submit') {
+          if (pin.length > 0 && !_submitCooldown) {
+            _submitCooldown = true;
+            setTimeout(function() { _submitCooldown = false; }, 200);
+            onSubmit(pin);
+          }
+        }
+      });
+    }
 
     card.appendChild(pair.wrap);
   });

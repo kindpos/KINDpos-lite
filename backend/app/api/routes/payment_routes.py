@@ -2,49 +2,192 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import uuid
+import aiosqlite
+import os
 
 # Correcting relative imports for app.api.routes
 from ..dependencies import get_ledger
 from ...core.event_ledger import EventLedger
 from ...core.adapters.payment_manager import PaymentManager
 from ...core.adapters.payment_validator import PaymentValidator
-from ...core.adapters.base_payment import TransactionRequest, TransactionResult, ValidationStatus, ValidationResult, PaymentDeviceConfig, PaymentDeviceType
+from ...core.adapters.base_payment import TransactionRequest, TransactionResult, TransactionStatus, ValidationStatus, ValidationResult, PaymentDeviceConfig, PaymentDeviceType
 from ...core.adapters.mock_payment import MockPaymentDevice
+from ...core.adapters.dejavoo_spin import DejavooSPInAdapter
 from ...core.events import (
     payment_initiated, payment_confirmed, order_closed, tip_adjusted,
     create_event, EventType,
 )
-from ...core.projections import project_order
+from ...core.projections import project_order, project_orders
+from ...core.money import money_round
 from ...config import settings
+from typing import Optional as Opt
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 _manager: Optional[PaymentManager] = None
 _validator: Optional[PaymentValidator] = None
 
-_mock_initialized = False
+_devices_initialized = False
 
-async def _ensure_mock_device(manager: PaymentManager):
-    """Register a MockPaymentDevice if no devices are mapped."""
-    global _mock_initialized
-    if _mock_initialized:
+HARDWARE_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'hardware_config.db')
+
+
+async def _ensure_devices(manager: PaymentManager):
+    """Load saved card readers as SPIn adapters, fall back to mock."""
+    global _devices_initialized
+    if _devices_initialized:
         return
-    _mock_initialized = True
-    mock = MockPaymentDevice()
-    config = PaymentDeviceConfig(
-        device_id="mock_001",
-        name="Mock Payment Device",
-        device_type=PaymentDeviceType.SMART_TERMINAL,
-        ip_address="127.0.0.1",
-        mac_address="00:00:00:00:00:00",
-        port=8443,
-        protocol="mock",
-        processor_id="mock_processor",
-    )
-    await mock.connect(config)
-    manager.register_device(mock)
-    manager.map_terminal_to_device(settings.terminal_id, "mock_001")
-    manager.map_terminal_to_device("T-01", "mock_001")  # frontend default terminal ID
+    _devices_initialized = True
+
+    # Try to load a real card reader from hardware_config.db
+    reader_found = False
+    if os.path.exists(HARDWARE_DB_PATH):
+        try:
+            async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
+                db.row_factory = aiosqlite.Row
+                async with db.execute("SELECT * FROM devices WHERE type = 'card_reader' LIMIT 1") as cur:
+                    row = await cur.fetchone()
+                    if row:
+                        device = dict(row)
+                        adapter = DejavooSPInAdapter()
+                        config = PaymentDeviceConfig(
+                            device_id=device['mac'],
+                            name=device.get('name', 'Dejavoo'),
+                            device_type=PaymentDeviceType.SMART_TERMINAL,
+                            ip_address=device['ip'],
+                            mac_address=device['mac'],
+                            port=device.get('port', 9000),
+                            protocol="spin",
+                            processor_id="dejavoo",
+                            register_id=device.get('register_id', ''),
+                            tpn=device.get('tpn', ''),
+                            auth_key=device.get('auth_key', ''),
+                        )
+                        connected = await adapter.connect(config)
+                        if connected:
+                            manager.register_device(adapter)
+                            manager.map_terminal_to_device(settings.terminal_id, device['mac'])
+                            manager.map_terminal_to_device("T-001", device['mac'])
+                            reader_found = True
+                            print(f"  Card reader loaded: {device.get('name', device['mac'])} @ {device['ip']}:{device.get('port', 8443)}")
+                        else:
+                            print(f"  Card reader saved but unreachable: {device['ip']}:{device.get('port', 8443)}")
+        except Exception as e:
+            print(f"  Warning: could not load card reader: {e}")
+
+    # Fall back to mock if no real device found
+    if not reader_found:
+        mock = MockPaymentDevice()
+        config = PaymentDeviceConfig(
+            device_id="mock_001",
+            name="Mock Payment Device",
+            device_type=PaymentDeviceType.SMART_TERMINAL,
+            ip_address="127.0.0.1",
+            mac_address="00:00:00:00:00:00",
+            port=8443,
+            protocol="mock",
+            processor_id="mock_processor",
+        )
+        await mock.connect(config)
+        manager.register_device(mock)
+        manager.map_terminal_to_device(settings.terminal_id, "mock_001")
+        manager.map_terminal_to_device("T-001", "mock_001")
+        print("  Mock payment device registered (no card reader found)")
+
+
+@router.post("/reload-devices")
+async def reload_devices(ledger: EventLedger = Depends(get_ledger)):
+    """Hot-reload card reader from hardware_config.db without server restart."""
+    global _devices_initialized, _manager
+    _devices_initialized = False
+    _manager = PaymentManager(ledger, settings.terminal_id)
+    await _ensure_devices(_manager)
+    # Report what's active
+    device_ids = list(_manager._devices.keys()) if hasattr(_manager, '_devices') else []
+    return {
+        "reloaded": True,
+        "active_devices": device_ids,
+        "using_mock": any("mock" in d for d in device_ids),
+    }
+
+
+@router.get("/test-device")
+async def test_device(ledger: EventLedger = Depends(get_ledger)):
+    """Send GetStatus to the card reader and return the raw response."""
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+
+    device = manager.get_device_for_terminal(settings.terminal_id)
+    if not device:
+        return {"connected": False, "error": "No device registered", "using_mock": True}
+
+    is_mock = device.config and device.config.protocol == "mock"
+    if is_mock:
+        return {"connected": True, "device": "mock", "using_mock": True, "status": "ready"}
+
+    # Real device — check status
+    try:
+        status = await device.check_status()
+        cfg = device.config
+        return {
+            "connected": status.value != "OFFLINE",
+            "using_mock": False,
+            "status": status.value,
+            "device": {
+                "name": cfg.name if cfg else "unknown",
+                "ip": cfg.ip_address if cfg else "",
+                "port": cfg.port if cfg else 0,
+                "register_id": cfg.register_id if cfg else "",
+                "serial": cfg.device_id if cfg else "",
+            },
+        }
+    except Exception as e:
+        return {"connected": False, "using_mock": False, "error": str(e)}
+
+@router.get("/spin-diag")
+async def spin_diagnostic(ledger: EventLedger = Depends(get_ledger)):
+    """Send multiple SPIn XML variants to diagnose what the terminal accepts."""
+    import httpx, urllib.parse, xml.etree.ElementTree as ET_diag
+
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+    device = manager.get_device_for_terminal(settings.terminal_id)
+    if not device or not device.config or device.config.protocol == "mock":
+        return {"error": "No real card reader loaded"}
+
+    cfg = device.config
+    reg = cfg.register_id or ""
+    base_url = f"http://{cfg.ip_address}:{cfg.port}/spin/cgi.html"
+
+    tests = [
+        ("GetStatus bare",        f'<request><function>GetStatus</function><RegisterId>{reg}</RegisterId></request>'),
+        ("GetStatus +Amount",     f'<request><function>GetStatus</function><RegisterId>{reg}</RegisterId><Amount>0.00</Amount></request>'),
+        ("Sale minimal",          f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0001</InvNum></request>'),
+        ("Sale +PaymentType",     f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0002</InvNum><PaymentType>Credit</PaymentType></request>'),
+        ("Sale +AuthKey",         f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><AuthKey></AuthKey><Amount>0.01</Amount><InvNum>diag0003</InvNum><PaymentType>Credit</PaymentType></request>'),
+        ("CreditSale function",   f'<request><function>CreditSale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0004</InvNum></request>'),
+        ("Sale +SPInProto fields", f'<request><function>Sale</function><RegisterId>{reg}</RegisterId><Amount>0.01</Amount><InvNum>diag0005</InvNum><PaymentType>Credit</PaymentType><Tip>0.00</Tip><Frequency>OneTime</Frequency></request>'),
+    ]
+
+    results = []
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for name, xml in tests:
+            encoded = urllib.parse.quote(xml, safe='')
+            url = f"{base_url}?TerminalTransaction={encoded}"
+            try:
+                resp = await client.get(url)
+                body = resp.text.strip()
+                if "<xmp>" in body:
+                    body = body.split("<xmp>", 1)[-1]
+                if "</xmp>" in body:
+                    body = body.split("</xmp>", 1)[0]
+                body = urllib.parse.unquote(body.strip())
+                results.append({"test": name, "status": resp.status_code, "response": body, "xml_sent": xml})
+            except Exception as e:
+                results.append({"test": name, "error": str(e), "xml_sent": xml})
+
+    return {"device": f"{cfg.ip_address}:{cfg.port}", "register_id": reg, "results": results}
+
 
 def get_payment_manager(ledger: EventLedger = Depends(get_ledger)) -> PaymentManager:
     global _manager
@@ -62,10 +205,11 @@ def get_payment_validator(ledger: EventLedger = Depends(get_ledger)) -> PaymentV
 async def process_sale(
     request: TransactionRequest,
     manager: PaymentManager = Depends(get_payment_manager),
-    validator: PaymentValidator = Depends(get_payment_validator)
+    validator: PaymentValidator = Depends(get_payment_validator),
+    ledger: EventLedger = Depends(get_ledger),
 ):
     """Initiate sale. Returns ValidationResult or TransactionResult."""
-    await _ensure_mock_device(manager)
+    await _ensure_devices(manager)
     # 1. Resolve Device
     device_id = manager._terminal_device_map.get(request.terminal_id)
     device = manager._devices.get(device_id) if device_id else None
@@ -80,6 +224,29 @@ async def process_sale(
 
     # 3. Process
     result = await manager.initiate_sale(request)
+
+    # Return HTTP error if the transaction was not approved
+    if hasattr(result, 'status'):
+        if result.status == TransactionStatus.DECLINED:
+            raise HTTPException(status_code=402, detail=result.processor_message or "Declined")
+        if result.status == TransactionStatus.CANCELLED:
+            raise HTTPException(status_code=400, detail=result.processor_message or "Cancelled")
+        if result.status == TransactionStatus.ERROR:
+            msg = result.processor_message or (result.error.message if result.error else "Transaction error")
+            raise HTTPException(status_code=502, detail=msg)
+
+    # 4. Auto-close order if fully paid (same as cash route)
+    if hasattr(result, 'status') and result.status == TransactionStatus.APPROVED:
+        events = await ledger.get_events_by_correlation(request.order_id)
+        order = project_order(events)
+        if order and order.is_fully_paid and order.status != "closed":
+            close_evt = order_closed(
+                terminal_id=settings.terminal_id,
+                order_id=request.order_id,
+                total=order.total,
+            )
+            await ledger.append(close_evt)
+
     return result
 
 
@@ -111,15 +278,34 @@ async def process_cash_payment(
     if order.status in ("closed", "voided"):
         raise HTTPException(status_code=400, detail=f"Cannot pay on {order.status} order")
 
-    payment_id = f"pay_{uuid.uuid4().hex[:8]}"
-    total_with_tip = round(request.amount + request.tip, 2)
+    # Apply cash dual-pricing discount if paying less than order total
+    cash_discount = money_round(order.total - request.amount)
+    if cash_discount > 0 and request.payment_method == "cash":
+        discount_evt = create_event(
+            event_type=EventType.DISCOUNT_APPROVED,
+            terminal_id=settings.terminal_id,
+            payload={
+                "order_id": request.order_id,
+                "discount_type": "cash_dual_pricing",
+                "amount": cash_discount,
+                "reason": "Cash dual-pricing discount",
+            },
+            correlation_id=request.order_id,
+        )
+        await ledger.append(discount_evt)
+        # Re-project so order.total reflects the discount
+        events = await ledger.get_events_by_correlation(request.order_id)
+        order = project_order(events)
 
-    # Emit PAYMENT_INITIATED
+    payment_id = f"pay_{uuid.uuid4().hex[:8]}"
+    sale_amount = money_round(request.amount)
+
+    # Emit PAYMENT_INITIATED (sale amount only — tip tracked via TIP_ADJUSTED)
     init_evt = payment_initiated(
         terminal_id=settings.terminal_id,
         order_id=request.order_id,
         payment_id=payment_id,
-        amount=total_with_tip,
+        amount=sale_amount,
         method="cash",
     )
     await ledger.append(init_evt)
@@ -130,7 +316,7 @@ async def process_cash_payment(
         order_id=request.order_id,
         payment_id=payment_id,
         transaction_id=f"cash_{uuid.uuid4().hex[:8]}",
-        amount=total_with_tip,
+        amount=sale_amount,
     )
     await ledger.append(confirm_evt)
 
@@ -140,7 +326,7 @@ async def process_cash_payment(
             terminal_id=settings.terminal_id,
             order_id=request.order_id,
             payment_id=payment_id,
-            tip_amount=request.tip,
+            tip_amount=money_round(request.tip),
         )
         await ledger.append(tip_evt)
 
@@ -161,7 +347,7 @@ async def process_cash_payment(
         "success": True,
         "payment_id": payment_id,
         "order_id": request.order_id,
-        "amount": total_with_tip,
+        "amount": sale_amount,
         "tip": request.tip,
     }
 
@@ -207,7 +393,7 @@ async def adjust_tip(
                 and e.payload.get("payment_id") == request.payment_id):
             previous_tip = e.payload.get("tip_amount", 0.0)
 
-    tip_amt = round(request.tip_amount, 2)
+    tip_amt = money_round(request.tip_amount)
     evt = tip_adjusted(
         terminal_id=settings.terminal_id,
         order_id=request.order_id,
@@ -217,13 +403,85 @@ async def adjust_tip(
     )
     await ledger.append(evt)
 
+    # Send tip adjust to payment device so it's included in batch settlement
+    device_adjusted = False
+    device_error = None
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+    device = manager.get_device_for_terminal(settings.terminal_id)
+    if device and hasattr(device, 'adjust_tip') and device.config and device.config.protocol != "mock":
+        try:
+            from decimal import Decimal
+            result = await device.adjust_tip(target.payment_id, Decimal(str(tip_amt)))
+            device_adjusted = result.status.value == "APPROVED"
+            if not device_adjusted:
+                device_error = f"Device tip adjust returned {result.status.value}"
+        except Exception as e:
+            device_error = f"Device tip adjust exception: {e}"
+    if device_error:
+        import logging
+        logging.getLogger("kindpos.payment").warning(
+            f"Tip adjust for {request.payment_id} saved to ledger but device sync failed: {device_error}"
+        )
+
     return {
         "success": True,
         "order_id": request.order_id,
         "payment_id": request.payment_id,
         "tip_amount": tip_amt,
         "previous_tip": previous_tip,
+        "device_adjusted": device_adjusted,
+        "device_warning": device_error,
     }
+
+
+@router.post("/zero-unadjusted")
+async def zero_unadjusted_tips(
+    server_id: Opt[str] = None,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Bulk-zero all unadjusted card tips for the current business day.
+
+    Emits a TIP_ADJUSTED event with tip_amount=0 for every confirmed card
+    payment that has no existing TIP_ADJUSTED event.  Optionally scoped to
+    a single server via ?server_id=.
+    """
+    boundary = await ledger.get_last_day_close_sequence()
+    all_events = await ledger.get_events_since(boundary, limit=50000)
+    orders = project_orders(all_events)
+
+    # Build set of payment_ids that already have a TIP_ADJUSTED event
+    adjusted_pids = set()
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            pid = e.payload.get("payment_id")
+            if pid:
+                adjusted_pids.add(pid)
+
+    zeroed = 0
+    for order in orders.values():
+        if order.status not in ("closed", "paid"):
+            continue
+        if server_id and order.server_id != server_id:
+            continue
+        for p in order.payments:
+            if p.status != "confirmed":
+                continue
+            if p.method == "cash":
+                continue
+            if p.payment_id in adjusted_pids:
+                continue
+            evt = tip_adjusted(
+                terminal_id=settings.terminal_id,
+                order_id=order.order_id,
+                payment_id=p.payment_id,
+                tip_amount=0.0,
+                previous_tip=0.0,
+            )
+            await ledger.append(evt)
+            zeroed += 1
+
+    return {"success": True, "zeroed_count": zeroed}
 
 
 @router.get("/device-status")
