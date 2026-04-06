@@ -309,15 +309,15 @@ function buildCardPanel(params) {
   panel.style.cssText = [
     'flex:1;background:' + T.bgDark + ';',
     'display:flex;flex-direction:column;',
-    'align-items:center;justify-content:center;gap:16px;',
-    'padding:24px;',
+    'align-items:center;justify-content:center;gap:10px;',
+    'padding:14px;overflow:hidden;',
   ].join('');
   applySunkenStyle(panel);
 
   // Icon
   var iconWrap = document.createElement('div');
   iconWrap.style.cssText = [
-    'width:80px;height:80px;',
+    'width:64px;height:64px;',
     'background:' + T.bg4 + ';',
     'display:flex;align-items:center;justify-content:center;',
     'font-size:40px;color:' + T.gold + ';',
@@ -361,7 +361,7 @@ function buildCardPanel(params) {
   // Amount display
   var amtBox = document.createElement('div');
   amtBox.style.cssText = [
-    'margin-top:12px;padding:12px 32px;',
+    'margin-top:6px;padding:8px 32px;',
     'background:' + T.bg4 + ';',
     'clip-path:' + chamfer(6) + ';',
     'border:2px solid ' + T.gold + ';',
