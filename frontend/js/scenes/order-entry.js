@@ -445,6 +445,7 @@ function handleItemSelect(item) {
     if (comboFlow.step === 'soda') {
       comboFlow.ticketItem.mods.push({ name: name, price: 0, charged: false });
       comboFlow = null;
+      hexNav.unlockNav();
       hexNav.reset();
       renderTicket();
       updateBottomBar();
@@ -464,6 +465,7 @@ function handleItemSelect(item) {
     };
     ticket.push(ticketItem);
     comboFlow = { step: 'side', ticketItem: ticketItem };
+    hexNav.lockNav();
     var sidesCat = getMenuCat('sides');
     hexNav.showPickList('SIDES', sidesCat.color, sidesCat.textColor, sidesCat.subcats[0].items);
     renderTicket();

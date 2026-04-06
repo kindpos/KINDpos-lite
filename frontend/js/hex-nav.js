@@ -325,12 +325,15 @@ export function HexNav(container, opts) {
     render();
   }
 
+  var navLocked = false;
+
   function onHexTap(h) {
     var now = Date.now();
     if (now - lastTapTime < 250) return;
     lastTapTime = now;
 
     if (h.locked) {
+      if (navLocked) return;  // during combo flow, ignore locked hex taps
       if (h.type === 'cat')    showCats();
       if (h.type === 'subcat') showSubcats(state.cat);
       return;
@@ -378,6 +381,9 @@ export function HexNav(container, opts) {
   this.getCatId = function() {
     return state.cat ? state.cat.id : null;
   };
+
+  this.lockNav   = function() { navLocked = true; };
+  this.unlockNav = function() { navLocked = false; };
 
   this.destroy = function() {
     svg.remove();
