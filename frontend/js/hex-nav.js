@@ -240,20 +240,42 @@ export function HexNav(container, opts) {
     return baseR;
   }
 
-  // Build a unified honeycomb: locked parents keep their positions,
-  // children fill honeycomb slots that don't overlap locked hexes.
+  // Generate hex ring positions radiating outward from a center point.
+  // Ring 0 = center, ring 1 = 6 neighbors, ring 2 = 12, etc.
+  function hexRingSlots(cx, cy, r, maxRings) {
+    var dist = r * Math.sqrt(3) * GAP;
+    var slots = [];
+    for (var ring = 1; ring <= maxRings; ring++) {
+      for (var side = 0; side < 6; side++) {
+        for (var step = 0; step < ring; step++) {
+          // Walk along each edge of the hex ring
+          var a1 = (Math.PI / 3) * (side + 2);  // direction of edge
+          var a0 = (Math.PI / 3) * (side + 1);  // starting corner
+          var sx = cx + ring * dist * Math.cos(a0) + step * dist * Math.cos(a1);
+          var sy = cy + ring * dist * Math.sin(a0) + step * dist * Math.sin(a1);
+          // Keep in viewport
+          if (sx - r >= 2 && sx + r <= svgW - 2 && sy - r >= 2 && sy + r <= svgH - 2) {
+            slots.push({ x: sx, y: sy });
+          }
+        }
+      }
+    }
+    return slots;
+  }
+
+  // Build hex layout: locked parents keep positions, children fill
+  // ring slots radiating outward from the parent — tight cluster.
   function buildGrid(lockedHexes, childItems, childR, childType) {
     var r = adaptiveR(childR, childItems.length, svgW, svgH);
     var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
 
-    // Generate enough grid slots for children
-    // Use a generous count so we have spare slots to skip overlaps
-    var slotsNeeded = childItems.length + lockedHexes.length + 4;
-    var positions = honeycombLayout(new Array(slotsNeeded), r);
+    // Generate ring slots outward from parent, enough rings to fit all children
+    var maxRings = Math.max(3, Math.ceil(Math.sqrt(childItems.length)));
+    var slots = hexRingSlots(parentHex.x, parentHex.y, r, maxRings);
 
     // Filter out slots that overlap any locked hex
     var freeSlots = [];
-    positions.forEach(function(pos) {
+    slots.forEach(function(pos) {
       var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
         return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.9;
@@ -261,18 +283,18 @@ export function HexNav(container, opts) {
       if (!overlaps) freeSlots.push(pos);
     });
 
-    // Sort free slots by distance to parent (nearest first = cascade from parent)
-    freeSlots.sort(function(a, b) {
-      var dxA = a.x - parentHex.x, dyA = a.y - parentHex.y;
-      var dxB = b.x - parentHex.x, dyB = b.y - parentHex.y;
-      return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
-    });
+    // Already sorted by ring (nearest first) from hexRingSlots
 
     // Build hex list: locked hexes first (unchanged positions), then children
     var hexes = lockedHexes.slice();
     childItems.forEach(function(item, i) {
-      if (i >= freeSlots.length) return; // safety
+      if (i >= freeSlots.length) return;
       var pos = freeSlots[i];
+      // Extend viewport if needed
+      if (pos.y + r > svgH - 4) {
+        svgH = pos.y + r + 10;
+        svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+      }
       hexes.push({
         id:        item.id    || item,
         label:     item.label || item,
