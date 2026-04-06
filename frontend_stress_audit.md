@@ -28,7 +28,7 @@
 | Severity | Count | Fixed | Open |
 |----------|-------|-------|------|
 | 🔴 CRITICAL | 5 | 5 | 0 |
-| 🟡 WARNING | 12 | 3 | 9 |
+| 🟡 WARNING | 12 | 9 | 3 |
 | 🟢 INFO | 5 | 0 | 5 |
 | 🆕 NEW (post-merge) | 4 | 4 | 0 |
 
@@ -100,23 +100,21 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ## 🟡 WARNING Findings
 
-### W-01: Numpad submit double-tap amplifies F-01
+### W-01: ~~Numpad submit double-tap amplifies F-01~~ ✅ FIXED
 
-**File:** `frontend/js/numpad.js:126-128`
+**File:** `frontend/js/numpad.js:160`
+**Fix:** 200ms `_submitCooldown` flag on submit key — second tap within cooldown is ignored.
 **Reproduction:** Tap >>> key twice rapidly on payment screen
 **Root cause:** Submit key fires `onSubmit(pin)` on every `pointerup` with no cooldown. On payment scene, this calls `handleConfirm()` — amplifying the double-charge risk from F-01.
 
-**Suggested fix:** Add a one-shot guard or short debounce (200ms) on submit key.
-
 ---
 
-### W-02: Preset cash buttons accumulate on rapid tap
+### W-02: ~~Preset cash buttons accumulate on rapid tap~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/payment.js:200-204, 333-337`
+**File:** `frontend/js/scenes/payment.js:600`
+**Fix:** 200ms `_tenderedCooldown` flag on `addTendered()` — prevents rapid-fire preset stacking.
 **Reproduction:** Tap $100 preset button 3 times rapidly
-**Root cause:** `addTendered(val, params)` (line 333) adds `val` to `tendered` each tap. Three rapid taps on $100 = $300 tendered. Not a crash, but operator may not intend this — no visual "processing" state between taps.
-
-**Suggested fix:** Brief visual feedback (button disable/flash) after preset tap. Or replace additive behavior with set behavior.
+**Root cause:** `addTendered(val, params)` adds `val` to `tendered` each tap. Three rapid taps on $100 = $300 tendered. Not a crash, but operator may not intend this — no visual "processing" state between taps.
 
 ---
 
@@ -150,13 +148,12 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### W-06: EventSource race when rapid-tapping scan buttons
+### W-06: ~~EventSource race when rapid-tapping scan buttons~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/settings.js:435-523`
+**File:** `frontend/js/scenes/settings.js:558, 614`
+**Fix:** `_scanGen` generation counter — each scan increments counter, stale EventSource messages are ignored when `gen !== _scanGen`.
 **Reproduction:** Tap "Scan Network" then immediately tap "Enter IP → Scan"
 **Root cause:** Both `doScan()` and `doScanIP()` close existing EventSource and open new one. If the close/open happens fast enough, the `onmessage` handler of the dying stream could fire after the new stream opens, corrupting `state.scanResults`.
-
-**Suggested fix:** Add a scan generation counter. Ignore messages from stale EventSources.
 
 ---
 
@@ -182,23 +179,21 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### W-09: Tip-adjustment table cell has no debounce
+### W-09: ~~Tip-adjustment table cell has no debounce~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/tip-adjustment.js:123-125`
+**File:** `frontend/js/scenes/tip-adjustment.js:252`
+**Fix:** 200ms `_editCooldown` flag on `activateEdit()` — prevents rapid cell switching.
 **Reproduction:** Rapidly tap different tip cells in the table
 **Root cause:** `pointerup` calls `activateEdit(i)` directly. Rapid tapping could cause `editingIndex` to bounce between values, causing rapid DOM re-renders via `renderTable()`.
 
-**Suggested fix:** Debounce `activateEdit` or ignore taps while already in edit mode for a different row.
-
 ---
 
-### W-10: Accordion toggle has no debounce (server-checkout, close-day)
+### W-10: ~~Accordion toggle has no debounce (server-checkout, close-day)~~ ✅ FIXED
 
-**Files:** `server-checkout.js:354-357`, `close-day.js:352-356`
+**Files:** `server-checkout.js:617-629`, `close-day.js:711-723`
+**Fix:** 150ms `_accordionCooldown` flag on `expandCard()` and `collapseToGrid()` in both files.
 **Reproduction:** Rapidly tap accordion header 10 times
 **Root cause:** Each `pointerup` toggles `body.style.display` and updates chevron. Rapid toggling causes DOM thrash — repeated show/hide with potential layout reflow each cycle.
-
-**Suggested fix:** Add a short debounce (100ms) or ignore toggles while animating.
 
 ---
 
@@ -212,13 +207,12 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### W-12: Device delete has no confirmation
+### W-12: ~~Device delete has no confirmation~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/settings.js:852`
+**File:** `frontend/js/scenes/settings.js:1351`
+**Fix:** Remove button now triggers a confirmation interrupt ("Remove [device name]?") before executing `deleteDevice()`. Also retains `_savingDevice` concurrency guard.
 **Reproduction:** Tap "Remove" button on a saved device
 **Root cause:** `deleteDevice(dev.mac)` fires immediately on tap with no confirmation interrupt. Accidental tap deletes the device with no undo.
-
-**Suggested fix:** Add confirmation interrupt before delete.
 
 ---
 

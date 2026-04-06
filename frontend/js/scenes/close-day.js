@@ -29,6 +29,7 @@ var _state         = null;
 var _expandedIdx   = null;
 var _gridContainer = null;
 var _bannerEl      = null;
+var _accordionCooldown = false;
 var _receiptScroll = null;
 var _rightCol      = null;
 var _batchSettled  = false;
@@ -709,14 +710,18 @@ function buildExpandedView(state, idx) {
 // ─────────────────────────────────────────────────
 
 function expandCard(idx) {
-  if (!_state || !_gridContainer) return;
+  if (!_state || !_gridContainer || _accordionCooldown) return;
+  _accordionCooldown = true;
+  setTimeout(function() { _accordionCooldown = false; }, 150);
   _expandedIdx = idx;
   _gridContainer.innerHTML = '';
   _gridContainer.appendChild(buildExpandedView(_state, idx));
 }
 
 function collapseToGrid() {
-  if (!_state || !_gridContainer) return;
+  if (!_state || !_gridContainer || _accordionCooldown) return;
+  _accordionCooldown = true;
+  setTimeout(function() { _accordionCooldown = false; }, 150);
   _expandedIdx = null;
   _gridContainer.innerHTML = '';
   _gridContainer.appendChild(buildGridView(_state));

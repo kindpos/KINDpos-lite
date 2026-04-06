@@ -597,7 +597,11 @@ function showErrorResult(params, message, errorType) {
 //  CASH HELPERS
 // ═══════════════════════════════════════════════════
 
+var _tenderedCooldown = false;
 function addTendered(val, params) {
+  if (_tenderedCooldown) return;
+  _tenderedCooldown = true;
+  setTimeout(function() { _tenderedCooldown = false; }, 200);
   tendered  += val;
   numpadStr  = '';
   updateCashDisplay(params);

@@ -16,6 +16,7 @@ var filter = 'all';         // 'all' | 'unadjusted'
 var statusFilter = 'all';  // 'all' | 'open' | 'closed' | 'voided'
 var editingIndex = -1;      // index into checks[]
 var cents = 0;
+var _editCooldown = false;
 
 var tableBody     = null;
 var rightDefault  = null;
@@ -250,6 +251,9 @@ function updateSummary() {
 // ═══════════════════════════════════════════════════
 
 function activateEdit(idx) {
+  if (_editCooldown) return;
+  _editCooldown = true;
+  setTimeout(function() { _editCooldown = false; }, 200);
   editingIndex = idx;
   cents = 0;
 

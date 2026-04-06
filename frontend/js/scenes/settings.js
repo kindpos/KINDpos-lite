@@ -6,7 +6,7 @@
 
 import { T, chamfer, buildStyledButton, applySunkenStyle, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, pop } from '../scene-manager.js';
+import { registerScene, pop, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
 import { showKeyboard } from '../keyboard.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
@@ -46,6 +46,7 @@ var state = {
 
 var rootEl = null;
 var _savingDevice = false;   // guard against double-tap on save/delete
+var _scanGen = 0;            // generation counter to ignore stale EventSource messages
 
 var HW_NAVS = [
   { id: 'readers',  label: 'Card Readers'   },
@@ -558,6 +559,7 @@ function doScan(targetIp, card) {
   // Kill any existing scan — stops auto-reconnect
   if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
 
+  var gen = ++_scanGen;
   state.scanResults = [];
   renderHWContent(card);  // Show scanning UI
   var liveList = card.querySelector('#scan-live-list');
@@ -569,6 +571,7 @@ function doScan(targetIp, card) {
   state.eventSource = es;
 
   es.onmessage = function(evt) {
+    if (gen !== _scanGen) { es.close(); return; }
     try {
       var data = JSON.parse(evt.data);
 
@@ -596,6 +599,7 @@ function doScan(targetIp, card) {
   };
 
   es.onerror = function() {
+    if (gen !== _scanGen) return;
     if (state.eventSource !== es) return;  // Already closed intentionally
     console.warn('[SCAN] connection error');
     es.close(); state.eventSource = null;
@@ -608,6 +612,7 @@ function doScan(targetIp, card) {
 function doScanIP(targetIp, card) {
   if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
 
+  var gen = ++_scanGen;
   renderHWContent(card);  // Show scanning UI
   var liveList = card.querySelector('#scan-live-list');
 
@@ -617,6 +622,7 @@ function doScanIP(targetIp, card) {
   var found = false;
 
   es.onmessage = function(evt) {
+    if (gen !== _scanGen) { es.close(); return; }
     try {
       var data = JSON.parse(evt.data);
       if (data.type === 'device') {
@@ -638,6 +644,7 @@ function doScanIP(targetIp, card) {
   };
 
   es.onerror = function() {
+    if (gen !== _scanGen) return;
     if (state.eventSource !== es) return;
     es.close(); state.eventSource = null;
     if (!found) renderManualAdd(targetIp, card);
@@ -1343,14 +1350,44 @@ function renderEditDevice(card) {
 
   footer.appendChild(buildButton('Remove', {
     fill: T.red, color: '#fff', fontSize: T.fsBtn, height: 44,
-    onTap: async function() {
-      if (_savingDevice) return;
-      _savingDevice = true;
-      try {
-        await deleteDevice(dev.mac);
-        state.editingDevice = null;
-        renderCurrentState();
-      } finally { _savingDevice = false; }
+    onTap: function() {
+      interrupt('confirm-delete-device', {
+        reason: 'delete-device',
+        onBuild: function(el) {
+          el.style.flexDirection = 'column';
+          el.style.gap = '16px';
+
+          var card = document.createElement('div');
+          card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.red + ';padding:24px 32px;text-align:center;max-width:400px;';
+          card.style.clipPath = chamfer(10);
+
+          var msg = document.createElement('div');
+          msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';margin-bottom:20px;';
+          msg.textContent = 'Remove ' + (dev.name || dev.mac) + '?';
+          card.appendChild(msg);
+
+          var btns = document.createElement('div');
+          btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+          btns.appendChild(buildButton('Remove', {
+            fill: T.red, color: '#fff', fontSize: T.fsBtn, width: 120, height: 44,
+            onTap: function() { resolveInterrupt(); },
+          }));
+          btns.appendChild(buildButton('Cancel', {
+            fill: BG, color: MINT, fontSize: T.fsBtn, width: 120, height: 44,
+            onTap: function() { cancelInterrupt(); },
+          }));
+          card.appendChild(btns);
+          el.appendChild(card);
+        },
+      }).then(async function() {
+        if (_savingDevice) return;
+        _savingDevice = true;
+        try {
+          await deleteDevice(dev.mac);
+          state.editingDevice = null;
+          renderCurrentState();
+        } finally { _savingDevice = false; }
+      }).catch(function() {});
     },
   }));
 

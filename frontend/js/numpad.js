@@ -36,6 +36,7 @@ export function buildNumpad(opts) {
   var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2;
 
   var pin = '';
+  var _submitCooldown = false;
 
   // ── Container ──
   var container = document.createElement('div');
@@ -157,7 +158,11 @@ export function buildNumpad(opts) {
             if (onChange) onChange(pin);
           }
         } else if (key.type === 'submit') {
-          if (pin.length > 0) onSubmit(pin);
+          if (pin.length > 0 && !_submitCooldown) {
+            _submitCooldown = true;
+            setTimeout(function() { _submitCooldown = false; }, 200);
+            onSubmit(pin);
+          }
         }
       });
     }
