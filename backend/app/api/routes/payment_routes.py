@@ -270,6 +270,8 @@ async def process_cash_payment(
     ledger: EventLedger = Depends(get_ledger),
 ):
     """Process a cash payment — immediately confirmed, closes order if fully paid."""
+    if request.tip < 0:
+        raise HTTPException(status_code=400, detail="Tip amount cannot be negative")
     # Get current order state
     events = await ledger.get_events_by_correlation(request.order_id)
     if not events:
@@ -372,6 +374,8 @@ async def adjust_tip(
     ledger: EventLedger = Depends(get_ledger),
 ):
     """Adjust tip on an existing payment (e.g. from signed credit card receipt)."""
+    if request.tip_amount < 0:
+        raise HTTPException(status_code=400, detail="Tip amount cannot be negative")
     events = await ledger.get_events_by_correlation(request.order_id)
     if not events:
         raise HTTPException(status_code=404, detail=f"Order {request.order_id} not found")

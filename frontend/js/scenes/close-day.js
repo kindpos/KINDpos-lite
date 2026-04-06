@@ -922,17 +922,23 @@ function openPinGate(onSuccess) {
 //  CLOSE DAY ACTION
 // ─────────────────────────────────────────────────
 
+var _closeDayRunning = false;
+
 function doCloseDay(state) {
+  if (_closeDayRunning) return;
+  _closeDayRunning = true;
   fetch('/api/v1/orders/close-day', { method: 'POST' })
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     })
     .then(function(data) {
+      _closeDayRunning = false;
       console.log('[KINDpos] Day closed:', data);
       pop();
     })
     .catch(function(err) {
+      _closeDayRunning = false;
       console.error('[KINDpos] Close day failed:', err);
       showToast('Close day failed — check connection');
     });

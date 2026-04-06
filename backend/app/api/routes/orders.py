@@ -5,6 +5,7 @@ Endpoints for order management.
 All mutations go through the Event Ledger.
 """
 
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -13,6 +14,18 @@ import logging
 import uuid
 
 _logger = logging.getLogger("kindpos.orders")
+
+_TWO_DP = Decimal("0.01")
+
+
+def _validate_2dp(value: float, field_name: str) -> None:
+    """Raise 400 if a monetary value has more than 2 decimal places."""
+    d = Decimal(str(value))
+    if d != d.quantize(_TWO_DP):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{field_name} must have at most 2 decimal places (got {value})",
+        )
 
 from app.config import settings
 from app.api.dependencies import get_ledger
@@ -83,7 +96,7 @@ class AddItemRequest(BaseModel):
     menu_item_id: str
     name: str
     price: float
-    quantity: int = 1
+    quantity: int = Field(default=1, ge=1)
     category: Optional[str] = None
     notes: Optional[str] = None
     seat_number: Optional[int] = None
@@ -92,7 +105,7 @@ class AddItemRequest(BaseModel):
 
 class ModifyItemRequest(BaseModel):
     """Request to modify an item."""
-    quantity: Optional[int] = None
+    quantity: Optional[int] = Field(default=None, ge=1)
     price: Optional[float] = None
     notes: Optional[str] = None
 
@@ -607,6 +620,11 @@ async def add_item(
         ledger: EventLedger = Depends(get_ledger),
 ):
     """Add an item to an order."""
+    _validate_2dp(request.price, "price")
+    if request.modifiers:
+        for mod in request.modifiers:
+            _validate_2dp(mod.modifier_price, "modifier_price")
+
     order = await get_order_or_404(ledger, order_id)
 
     if order.status != "open":
@@ -765,9 +783,10 @@ async def initiate_payment(
         ledger: EventLedger = Depends(get_ledger),
 ):
     """Initiate a payment on an order."""
+    _validate_2dp(request.amount, "amount")
     order = await get_order_or_404(ledger, order_id)
 
-    if order.status not in ("open", "paid"):
+    if order.status != "open":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot process payment on {order.status} order"
@@ -1045,6 +1064,12 @@ async def send_order(
             detail=f"Cannot send items on {order.status} order"
         )
 
+    if not order.items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot send order with no items"
+        )
+
     unsent = [item for item in order.items if not getattr(item, 'sent', False)]
     if not unsent:
         return SendResponse(sent_count=0, items=[])
@@ -1138,6 +1163,17 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
                         batch_card += Decimal(str(p.amount))
                         tip = Decimal(str(batch_tip_map.get(p.payment_id, p.tip_amount)))
                         batch_card_tips += tip
+
+    if not all_order_ids:
+        return {
+            "success": True,
+            "orders_closed_now": closed_count,
+            "batch_total": 0.0,
+            "cash_total": 0.0,
+            "card_total": 0.0,
+            "order_count": 0,
+            "status": "no_transactions",
+        }
 
     # Settlement = card sales + card tips (what the processor will settle)
     batch_settlement = batch_card + batch_card_tips
