@@ -10,11 +10,13 @@ import { setSceneName, setHeaderBack } from '../app.js';
 
 var AUTO_RETURN_MS = 4000;
 var returnTimer    = null;
+var returned       = false;
 
 registerScene('change-due', {
   onEnter: function(el, params) {
     setSceneName(null);
     setHeaderBack({ x: true });
+    returned = false;
 
     // params shape:
     // {
@@ -159,6 +161,8 @@ registerScene('change-due', {
 });
 
 function doReturn(returnScene) {
+  if (returned) return;
+  returned = true;
   if (returnTimer) {
     clearTimeout(returnTimer);
     returnTimer = null;

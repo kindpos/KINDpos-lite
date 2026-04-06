@@ -32,6 +32,7 @@ var API = '/api/v1';
 
 // ── Order ID — one per transaction, reset on fresh enter ──
 var currentOrderId = null;
+var isSending = false;   // guard against concurrent handleSend calls
 var currentCheckNumber = null;
 
 // ── Void reasons ──────────────────────────────────
@@ -153,6 +154,7 @@ registerScene('order-entry', {
     prefixCard     = null;
     saveBtn        = null;
     currentOrderId = null;   // soft reset — ID assigned on first SEND
+    isSending      = false;
     currentCheckNumber = null;
     customerName   = '';     // reset tab name
 
@@ -700,7 +702,9 @@ function handleVoid() {
     onBuild: function(el) { buildPinOverlay(el, function(pinOk) {
       if (!pinOk) { cancelInterrupt(); return; }
       resolveInterrupt();
-      showVoidReasons(voidingEntireOrder ? ticket : selected, voidingEntireOrder);
+      // Defer to next microtask so activeInterrupt is fully cleared
+      var vTargets = voidingEntireOrder ? ticket : selected;
+      setTimeout(function() { showVoidReasons(vTargets, voidingEntireOrder); }, 0);
     }); },
   }).catch(function() {});
 }
@@ -814,6 +818,8 @@ function buildPinOverlay(el, cb) {
 
 async function handleSend() {
   if (ticket.length === 0) return;
+  if (isSending) return;
+  isSending = true;
 
   var totals = computeTotals();
 
@@ -869,6 +875,8 @@ async function handleSend() {
   } catch (err) {
     console.warn('[KINDpos] Send failed:', err);
     throw err;
+  } finally {
+    isSending = false;
   }
 
   // Reset hex nav — ticket stays visible for PAY

@@ -725,6 +725,7 @@ function buildActionBar(state) {
     finPair.inner.style.color = '#1a1a1a';
     finPair.inner.textContent = '//FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
+      if (isBlocked(state)) return;
       doFinalize(state);
     });
   }
