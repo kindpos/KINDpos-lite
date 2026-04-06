@@ -173,45 +173,60 @@ export function HexNav(container, opts) {
   // fill remaining slots. The whole grid is centered in the viewport.
   function honeycombLayout(allItems, r, gap) {
     var g = gap || gapForLevel(0);
-    // Flat-top hex tiling: columns step by 1.5r, rows by sqrt(3)*r
-    var colStep = r * 1.5 * g;
-    var rowStep = r * Math.sqrt(3) * g;
-    var total   = allItems.length;
+    var size = r * g;
+    var total = allItems.length;
 
-    // Determine grid dimensions (fill columns first, then rows)
-    var perRow = Math.max(2, Math.ceil(Math.sqrt(total * 1.3)));
-    var maxPerRow = Math.max(2, Math.floor((svgW - r * 2) / colStep) + 1);
-    if (perRow > maxPerRow) perRow = maxPerRow;
+    // Axial to pixel (flat-top) centered at (0,0)
+    function axToPixel(q, rax) {
+      return {
+        x: size * 1.5 * q,
+        y: size * Math.sqrt(3) * (rax + q / 2)
+      };
+    }
 
-    var rows = Math.ceil(total / perRow);
+    // Generate axial coords in a compact hex spiral
+    // Start at center, spiral outward
+    var coords = [{ q: 0, r: 0 }];
+    var ring = 1;
+    while (coords.length < total) {
+      var q = ring, rax = 0;
+      // 6 directions for hex ring walk
+      var dirs = [[0,-1],[-1,0],[-1,1],[0,1],[1,0],[1,-1]];
+      for (var d = 0; d < 6 && coords.length < total; d++) {
+        for (var s = 0; s < ring && coords.length < total; s++) {
+          coords.push({ q: q, r: rax });
+          q += dirs[d][0];
+          rax += dirs[d][1];
+        }
+      }
+      ring++;
+    }
 
-    // Calculate total grid size then center it
-    var gridW = (perRow - 1) * colStep;
-    var gridH = (rows - 1) * rowStep + rowStep / 2; // account for offset columns
-    var originX = (svgW - gridW) / 2;
-    var originY = (svgH - gridH) / 2;
+    // Convert to pixel positions
+    var rawPositions = coords.map(function(c) { return axToPixel(c.q, c.r); });
 
-    if (originX < r + 4) originX = r + 4;
-    if (originY < r + 4) originY = r + 4;
+    // Center the whole group in the viewport
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    rawPositions.forEach(function(p) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    });
+    var offsetX = (svgW - (maxX - minX)) / 2 - minX;
+    var offsetY = (svgH - (maxY - minY)) / 2 - minY;
 
-    var positions = [];
-    for (var i = 0; i < total; i++) {
-      var row = Math.floor(i / perRow);
-      var col = i % perRow;
-      // Flat-top: odd columns shift down by half a row
-      var yOff = (col % 2 === 1) ? rowStep / 2 : 0;
-      var x = originX + col * colStep;
-      var y = originY + row * rowStep + yOff;
-
-      // Extend viewport if needed
+    return rawPositions.map(function(p) {
+      var x = p.x + offsetX;
+      var y = p.y + offsetY;
+      if (x < r + 4) x = r + 4;
+      if (y < r + 4) y = r + 4;
       if (y + r > svgH - 4) {
         svgH = y + r + 10;
         svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
       }
-
-      positions.push({ x: x, y: y });
-    }
-    return positions;
+      return { x: x, y: y };
+    });
   }
 
   // ── Tap debounce ───────────────────────────────
@@ -246,34 +261,46 @@ export function HexNav(container, opts) {
   // Generate flat-top honeycomb grid slots centered on (cx, cy).
   // Same math as honeycombLayout but centered on parent, not viewport.
   // Generates enough slots to cover children, sorted nearest-first.
+  // Generate hex neighbor positions using axial coordinates.
+  // For flat-top hexes, the 6 neighbor offsets in axial (q, r) are:
+  //   (+1,0) (-1,0) (0,+1) (0,-1) (+1,-1) (-1,+1)
+  // Convert axial to pixel: x = r * 1.5 * q, y = r * sqrt(3) * (r_ax + q/2)
   function gridSlotsAround(cx, cy, r, count, gap) {
-    // Same flat-top grid math as categories — uniform radius tiling
-    var colStep = r * 1.5 * gap;
-    var rowStep = r * Math.sqrt(3) * gap;
+    var size = r * gap;
+    // Axial to pixel conversion for flat-top hexes
+    function axToPixel(q, rax) {
+      return {
+        x: cx + size * 1.5 * q,
+        y: cy + size * Math.sqrt(3) * (rax + q / 2)
+      };
+    }
 
-    var spread = Math.max(3, Math.ceil(Math.sqrt(count)) + 2);
+    // Generate all axial coords in a hex-shaped region
+    var radius = Math.max(3, Math.ceil(Math.sqrt(count)));
     var slots = [];
-    for (var col = -spread; col <= spread; col++) {
-      for (var row = -spread; row <= spread; row++) {
-        var yOff = (Math.abs(col) % 2 === 1) ? rowStep / 2 : 0;
-        var x = cx + col * colStep;
-        var y = cy + row * rowStep + yOff;
-        // Skip center (parent sits there)
-        if (col === 0 && row === 0) continue;
+    for (var q = -radius; q <= radius; q++) {
+      for (var rax = -radius; rax <= radius; rax++) {
+        // Hex constraint: |q + r| <= radius
+        if (Math.abs(q + rax) > radius) continue;
+        // Skip center (parent)
+        if (q === 0 && rax === 0) continue;
+        var pos = axToPixel(q, rax);
         // Keep in viewport
-        if (x - r < 2 || x + r > svgW - 2) continue;
-        if (y - r < 2 || y + r > svgH - 2) continue;
-        slots.push({ x: x, y: y });
+        if (pos.x - r < 2 || pos.x + r > svgW - 2) continue;
+        if (pos.y - r < 2 || pos.y + r > svgH - 2) continue;
+        slots.push(pos);
       }
     }
+
     // Sort: nearest to parent first, bias toward viewport center
     var vcx = svgW / 2, vcy = svgH / 2;
+    var nearDist = size * size * 4;
     slots.sort(function(a, b) {
       var dxA = a.x - cx, dyA = a.y - cy;
       var dxB = b.x - cx, dyB = b.y - cy;
       var distA = dxA * dxA + dyA * dyA;
       var distB = dxB * dxB + dyB * dyB;
-      if (Math.abs(distA - distB) > colStep * colStep * 0.5) return distA - distB;
+      if (Math.abs(distA - distB) > nearDist * 0.5) return distA - distB;
       var vdxA = a.x - vcx, vdyA = a.y - vcy;
       var vdxB = b.x - vcx, vdyB = b.y - vcy;
       return (vdxA * vdxA + vdyA * vdyA) - (vdxB * vdxB + vdyB * vdyB);
