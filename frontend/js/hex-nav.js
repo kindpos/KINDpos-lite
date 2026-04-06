@@ -71,15 +71,6 @@ export function HexNav(container, opts) {
     return pts.join(' ');
   }
 
-  function noCollision(x, y, r, allHexes) {
-    for (var i = 0; i < allHexes.length; i++) {
-      var h = allHexes[i];
-      var dx = h.x - x, dy = h.y - y;
-      if (Math.sqrt(dx * dx + dy * dy) < (h.r + r) * 1.05) return false;
-    }
-    return true;
-  }
-
   // ── Render ─────────────────────────────────────
   function render() {
     svg.innerHTML = '';
@@ -174,79 +165,50 @@ export function HexNav(container, opts) {
     svg.appendChild(g);
   }
 
-  // ── Cascade placement ───────────────────────────
-  // Children flow from the parent in a honeycomb grid:
-  // row 0 starts to the right of the parent, subsequent
-  // rows cascade below with hex offset. Fills left-to-right
-  // then top-to-bottom like reading order.
-  function placeChain(parent, items, childR, locked, gravity) {
-    var placed = [];
-    if (!items || items.length === 0) return placed;
+  // ── Honeycomb grid layout ───────────────────────
+  // Place all hexes (parent + children) in a single centered
+  // honeycomb grid. Parent occupies slot 0 (locked), children
+  // fill remaining slots. The whole grid is centered in the viewport.
+  function honeycombLayout(allItems, r) {
+    var colStep = r * Math.sqrt(3) * GAP;
+    var rowStep = r * 1.5 * GAP;
+    var total   = allItems.length;
 
-    var colStep = childR * Math.sqrt(3) * GAP;
-    var rowStep = childR * 1.5 * GAP;
+    // Determine grid dimensions
+    var perRow = Math.max(2, Math.ceil(Math.sqrt(total * 1.3)));
+    // Clamp to viewport width
+    var maxPerRow = Math.max(2, Math.floor((svgW - r * 2) / colStep) + 1);
+    if (perRow > maxPerRow) perRow = maxPerRow;
 
-    // Find the usable area below/right of the parent
-    // Start children to the right of parent, same row
-    var startX = parent.x + (parent.r + childR) * GAP + 8;
-    var startY = parent.y;
+    var rows = Math.ceil(total / perRow);
 
-    // If not enough room to the right, start below parent
-    if (startX + childR > svgW - 4) {
-      startX = childR + 10;
-      startY = parent.y + (parent.r + childR) * GAP + 8;
-    }
+    // Calculate total grid size then center it
+    var gridW = (perRow - 1) * colStep + colStep / 2; // account for offset rows
+    var gridH = (rows - 1) * rowStep;
+    var originX = (svgW - gridW) / 2 + r;
+    var originY = (svgH - gridH) / 2;
 
-    // Calculate how many fit per row in remaining width
-    var availW = svgW - startX - childR - 4;
-    var perRow = Math.max(1, Math.floor(availW / colStep) + 1);
+    // Clamp so hexes don't go off-screen
+    if (originX < r + 4) originX = r + 4;
+    if (originY < r + 4) originY = r + 4;
 
-    // Generate grid positions, cascade down
-    items.forEach(function(item, idx) {
-      var row = Math.floor(idx / perRow);
-      var col = idx % perRow;
+    var positions = [];
+    for (var i = 0; i < total; i++) {
+      var row = Math.floor(i / perRow);
+      var col = i % perRow;
       var xOff = (row % 2 === 1) ? colStep / 2 : 0;
-      var x = startX + col * colStep + xOff;
-      var y = startY + row * rowStep;
+      var x = originX + col * colStep + xOff;
+      var y = originY + row * rowStep;
 
-      // Wrap: if x goes off-screen, push to next row
-      if (x + childR > svgW - 4) {
-        return; // skip — handled by viewport extension below
-      }
-
-      // Extend viewport if y overflows
-      if (y + childR > svgH - 4) {
-        svgH = y + childR + 10;
+      // Extend viewport if needed
+      if (y + r > svgH - 4) {
+        svgH = y + r + 10;
         svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
       }
 
-      // Collision check against locked hexes — nudge if needed
-      var allHexes = locked.concat(placed);
-      if (!noCollision(x, y, childR, allHexes)) {
-        // Try shifting right within the row
-        for (var nudge = 1; nudge <= 3; nudge++) {
-          var nx = x + nudge * colStep * 0.5;
-          if (nx + childR > svgW - 4) break;
-          if (noCollision(nx, y, childR, allHexes)) {
-            x = nx;
-            break;
-          }
-        }
-      }
-
-      placed.push({
-        id:        item.id    || item,
-        label:     item.label || item,
-        x: x,  y: y,  r: childR,
-        color:     parent.color,
-        textColor: parent.textColor,
-        locked:    false,
-        type:      childR === SUBCAT_R ? 'subcat' : 'item',
-        data:      item,
-      });
-    });
-
-    return placed;
+      positions.push({ x: x, y: y });
+    }
+    return positions;
   }
 
   // ── Tap debounce ───────────────────────────────
@@ -255,30 +217,8 @@ export function HexNav(container, opts) {
   // ── Navigation ─────────────────────────────────
   function showCats() {
     state.level = 0; state.cat = null; state.subcat = null;
-
-    // Re-measure container each time
     resize();
-
-    var colStep = CAT_R * Math.sqrt(3) * 1.08 + 8;
-    var rowStep = CAT_R * 1.5 * 1.08 + 8;
-    var startX  = CAT_R + 20;
-    var startY  = CAT_R + 20;
-
-    // Build honeycomb rows: row 0 = full width, row 1 = offset, etc.
-    // Fit as many per row as possible
-    var perRow = Math.floor((svgW - startX - CAT_R) / colStep) + 1;
-    perRow = Math.max(2, perRow);
-
-    var positions = data.map(function(_, i) {
-      var row = Math.floor(i / perRow);
-      var col = i % perRow;
-      var xOff = (row % 2 === 1) ? colStep / 2 : 0;
-      return {
-        x: startX + col * colStep + xOff,
-        y: startY + row * rowStep,
-      };
-    });
-
+    var positions = honeycombLayout(data, CAT_R);
     state.hexes = data.map(function(cat, i) {
       return {
         id: cat.id, label: cat.label,
@@ -290,19 +230,8 @@ export function HexNav(container, opts) {
     render();
   }
 
-  function showSubcats(catHex) {
-    resize();
-    state.level = 1; state.cat = catHex;
-    catHex.locked = true;
-    var placed = placeChain(catHex, catHex.data.subcats, SUBCAT_R, [catHex], catHex);
-    state.hexes = [catHex].concat(placed);
-    render();
-  }
-
   function adaptiveR(baseR, count, areaW, areaH) {
-    // Shrink hex radius when too many items for the viewport
     var area = areaW * areaH;
-    // Each hex needs roughly (2r)^2 of space with gaps
     var needed = count * Math.pow(baseR * 2.3, 2);
     if (needed > area * 0.7) {
       var scale = Math.sqrt((area * 0.7) / needed);
@@ -311,14 +240,67 @@ export function HexNav(container, opts) {
     return baseR;
   }
 
+  // Build a unified honeycomb: locked parents keep their positions,
+  // children fill honeycomb slots that don't overlap locked hexes.
+  function buildGrid(lockedHexes, childItems, childR, childType) {
+    var r = adaptiveR(childR, childItems.length, svgW, svgH);
+    var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
+
+    // Generate enough grid slots for children
+    // Use a generous count so we have spare slots to skip overlaps
+    var slotsNeeded = childItems.length + lockedHexes.length + 4;
+    var positions = honeycombLayout(new Array(slotsNeeded), r);
+
+    // Filter out slots that overlap any locked hex
+    var freeSlots = [];
+    positions.forEach(function(pos) {
+      var overlaps = lockedHexes.some(function(lh) {
+        var dx = lh.x - pos.x, dy = lh.y - pos.y;
+        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.9;
+      });
+      if (!overlaps) freeSlots.push(pos);
+    });
+
+    // Sort free slots by distance to parent (nearest first = cascade from parent)
+    freeSlots.sort(function(a, b) {
+      var dxA = a.x - parentHex.x, dyA = a.y - parentHex.y;
+      var dxB = b.x - parentHex.x, dyB = b.y - parentHex.y;
+      return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
+    });
+
+    // Build hex list: locked hexes first (unchanged positions), then children
+    var hexes = lockedHexes.slice();
+    childItems.forEach(function(item, i) {
+      if (i >= freeSlots.length) return; // safety
+      var pos = freeSlots[i];
+      hexes.push({
+        id:        item.id    || item,
+        label:     item.label || item,
+        x: pos.x,  y: pos.y,  r: r,
+        color:     parentHex.color,
+        textColor: parentHex.textColor,
+        locked:    false,
+        type:      childType || 'item',
+        data:      item,
+      });
+    });
+    return hexes;
+  }
+
+  function showSubcats(catHex) {
+    resize();
+    state.level = 1; state.cat = catHex;
+    catHex.locked = true;
+    state.hexes = buildGrid([catHex], catHex.data.subcats, SUBCAT_R, 'subcat');
+    render();
+  }
+
   function showItems(subcatHex) {
     resize();
     state.level = 2; state.subcat = subcatHex;
     subcatHex.locked = true;
-    var locked = [state.cat, subcatHex];
-    var r = adaptiveR(ITEM_R, subcatHex.data.items.length, svgW, svgH);
-    var placed = placeChain(subcatHex, subcatHex.data.items, r, locked, state.cat);
-    state.hexes = locked.concat(placed);
+    state.cat.locked = true;
+    state.hexes = buildGrid([state.cat, subcatHex], subcatHex.data.items, ITEM_R, 'item');
     render();
   }
 
@@ -327,10 +309,7 @@ export function HexNav(container, opts) {
     state.level = 2; state.cat = catHex; state.subcat = null;
     catHex.locked = true;
     var items = (catHex.data.subcats && catHex.data.subcats[0]) ? catHex.data.subcats[0].items : [];
-    var r = adaptiveR(SUBCAT_R, items.length, svgW, svgH);
-    var placed = placeChain(catHex, items, r, [catHex], catHex);
-    placed.forEach(function(h) { h.type = 'item'; });
-    state.hexes = [catHex].concat(placed);
+    state.hexes = buildGrid([catHex], items, SUBCAT_R, 'item');
     render();
   }
 
@@ -367,6 +346,14 @@ export function HexNav(container, opts) {
 
     itemHex.locked = true;
     state.level = 3;
+    // Anchor cat top-left, item hex beside it
+    if (state.cat && state.cat !== itemHex) {
+      anchorTopLeft(state.cat);
+      itemHex.x = state.cat.x + (state.cat.r + itemHex.r) * GAP + 8;
+      itemHex.y = state.cat.y;
+    } else {
+      anchorTopLeft(itemHex);
+    }
     var locked = [itemHex];
     if (state.cat && state.cat !== itemHex) locked.unshift(state.cat);
 
@@ -383,39 +370,33 @@ export function HexNav(container, opts) {
       };
     });
 
-    // Count items: groups + maybe DONE
     var allSatisfied = modState.groups.every(function(g) { return modState.satisfied[g.id]; });
-    var totalCount = groupItems.length + (allSatisfied ? 1 : 0);
-    var r = adaptiveR(SUBCAT_R, totalCount, svgW, svgH);
-    var placed = placeChain(itemHex, groupItems, r, locked, itemHex);
     var catColor = state.cat ? state.cat.color : itemHex.color;
     var catText  = state.cat ? (state.cat.textColor || '#1a1a1a') : (itemHex.textColor || '#1a1a1a');
-    placed.forEach(function(h) {
-      h.type = 'modgroup';
-      if (modState.satisfied[h.data.id]) {
-        h.locked = true;  // filled = satisfied
+
+    // Add DONE to the list if all satisfied
+    if (allSatisfied) {
+      groupItems.push({ id: '__done__', label: 'DONE', isDone: true });
+    }
+
+    state.hexes = buildGrid(locked, groupItems, SUBCAT_R, 'modgroup');
+    // Style the mod-group hexes
+    state.hexes.forEach(function(h) {
+      if (h.type !== 'modgroup') return;
+      if (h.data.isDone) {
+        h.type = 'done';
+        h.color = catColor;
+        h.textColor = catText;
+      } else if (modState.satisfied[h.data.id]) {
+        h.locked = true;
         h.color = catColor;
         h.textColor = catText;
       } else {
-        h.pulse = true;   // pulsate = needs selection
+        h.pulse = true;
         h.color = T.mint;
         h.textColor = '#1a1a1a';
       }
     });
-
-    // DONE hex — only when all groups satisfied, in cat/item color
-    if (allSatisfied) {
-      var doneItems = [{ id: '__done__', label: 'DONE', isDone: true }];
-      var donePlaced = placeChain(itemHex, doneItems, r, locked.concat(placed), itemHex);
-      donePlaced.forEach(function(h) {
-        h.type = 'done';
-        h.color = catColor;
-        h.textColor = catText;
-      });
-      placed = placed.concat(donePlaced);
-    }
-
-    state.hexes = locked.concat(placed);
     render();
   }
 
@@ -433,15 +414,14 @@ export function HexNav(container, opts) {
       return { id: c.label, label: c.label, price: c.price, groupId: groupData.id };
     });
 
-    var r = adaptiveR(ITEM_R, choiceItems.length, svgW, svgH);
-    var placed = placeChain(modGroupHex, choiceItems, r, locked, modGroupHex);
-    placed.forEach(function(h) {
-      h.type = 'mod';
+    state.hexes = buildGrid(locked, choiceItems, ITEM_R, 'mod');
+    // Style mod choices
+    state.hexes.forEach(function(h) {
+      if (h.type !== 'mod') return;
       h.color = T.mint;
       h.textColor = '#1a1a1a';
-      h.pulse = true;  // pulsate until tapped
+      h.pulse = true;
     });
-    state.hexes = locked.concat(placed);
     render();
   }
 
@@ -551,15 +531,12 @@ export function HexNav(container, opts) {
     state.level = 2; state.subcat = null;
     var centerHex = {
       id: 'pick-center', label: label,
-      x: CAT_R + 20, y: svgH / 2, r: CAT_R,
+      x: 0, y: 0, r: CAT_R,
       color: color, textColor: textColor || '#1a1a1a',
       locked: true, type: 'cat', data: { subcats: [] },
     };
     state.cat = centerHex;
-    var r = adaptiveR(SUBCAT_R, items.length, svgW, svgH);
-    var placed = placeChain(centerHex, items, r, [centerHex], centerHex);
-    placed.forEach(function(h) { h.type = 'item'; });
-    state.hexes = [centerHex].concat(placed);
+    state.hexes = buildGrid([centerHex], items, SUBCAT_R, 'item');
     render();
   };
 
