@@ -243,70 +243,60 @@ export function HexNav(container, opts) {
     return baseR;
   }
 
-  // Generate hex ring positions radiating from center.
-  // Uses axial coordinates converted to pixel positions.
-  // innerDist = center-to-center for ring 1 (accounts for parent size)
-  // stepDist  = center-to-center between children in outer rings
-  function hexRingSlots(cx, cy, r, maxRings, innerDist, stepDist) {
+  // Generate flat-top honeycomb grid slots centered on (cx, cy).
+  // Same math as honeycombLayout but centered on parent, not viewport.
+  // Generates enough slots to cover children, sorted nearest-first.
+  function gridSlotsAround(cx, cy, r, count, gap) {
+    var colStep = r * 1.5 * gap;
+    var rowStep = r * Math.sqrt(3) * gap;
+    // Generate a grid large enough: spread columns/rows around center
+    var spread = Math.max(3, Math.ceil(Math.sqrt(count)) + 2);
     var slots = [];
-    for (var ring = 1; ring <= maxRings; ring++) {
-      // Distance from center for this ring
-      var ringDist = innerDist + (ring - 1) * stepDist;
-      for (var side = 0; side < 6; side++) {
-        for (var step = 0; step < ring; step++) {
-          var a0 = (Math.PI / 3) * side;  // flat-top: neighbor at 0°, 60°, 120°...
-          var a1 = (Math.PI / 3) * ((side + 2) % 6);  // edge walk direction
-          var sx = cx + ringDist * Math.cos(a0) + step * stepDist * Math.cos(a1);
-          var sy = cy + ringDist * Math.sin(a0) + step * stepDist * Math.sin(a1);
-          if (sx - r >= 2 && sx + r <= svgW - 2 && sy - r >= 2 && sy + r <= svgH - 2) {
-            slots.push({ x: sx, y: sy });
-          }
-        }
+    for (var col = -spread; col <= spread; col++) {
+      for (var row = -spread; row <= spread; row++) {
+        var yOff = (Math.abs(col) % 2 === 1) ? rowStep / 2 : 0;
+        var x = cx + col * colStep;
+        var y = cy + row * rowStep + yOff;
+        // Skip the center (parent sits there)
+        if (Math.abs(x - cx) < 1 && Math.abs(y - cy) < 1) continue;
+        // Keep in viewport
+        if (x - r < 2 || x + r > svgW - 2) continue;
+        if (y - r < 2 || y + r > svgH - 2) continue;
+        slots.push({ x: x, y: y });
       }
     }
+    // Sort by distance to center (nearest first = tight cluster)
+    slots.sort(function(a, b) {
+      var dxA = a.x - cx, dyA = a.y - cy;
+      var dxB = b.x - cx, dyB = b.y - cy;
+      return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
+    });
     return slots;
   }
 
   // Build hex layout: locked parents keep positions, children fill
-  // ring slots radiating outward from the parent — tight cluster.
+  // flat-top grid slots nearest to the parent — tight cluster.
   function buildGrid(lockedHexes, childItems, childR, childType) {
     var r = adaptiveR(childR, childItems.length, svgW, svgH);
     var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
     var gap = gapForLevel(state.level);
 
-    // Ring 1 distance: must clear the parent hex (which may be larger)
-    var innerDist = (parentHex.r + r) * gap;
-    // Step distance between children in same/outer rings
-    var stepDist = r * Math.sqrt(3) * gap;
+    var slots = gridSlotsAround(parentHex.x, parentHex.y, r, childItems.length, gap);
 
-    var maxRings = Math.max(3, Math.ceil(Math.sqrt(childItems.length)));
-    var slots = hexRingSlots(parentHex.x, parentHex.y, r, maxRings, innerDist, stepDist);
-
-    // Filter out slots that overlap ANY locked hex (parent, grandparent, etc.)
-    // Also filter slots that overlap already-accepted children
+    // Filter out slots that overlap ANY locked hex
     var freeSlots = [];
     slots.forEach(function(pos) {
       var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
-        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * gap;
+        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.95;
       });
       if (!overlaps) freeSlots.push(pos);
     });
 
-    // Deduplicate slots that are too close to each other
-    var uniqueSlots = [];
-    freeSlots.forEach(function(pos) {
-      var tooClose = uniqueSlots.some(function(u) {
-        var dx = u.x - pos.x, dy = u.y - pos.y;
-        return Math.sqrt(dx * dx + dy * dy) < r * 1.5;
-      });
-      if (!tooClose) uniqueSlots.push(pos);
-    });
-
     var hexes = lockedHexes.slice();
     childItems.forEach(function(item, i) {
-      if (i >= uniqueSlots.length) return;
-      var pos = uniqueSlots[i];
+      if (i >= freeSlots.length) return;
+      var pos = freeSlots[i];
       if (pos.y + r > svgH - 4) {
         svgH = pos.y + r + 10;
         svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
