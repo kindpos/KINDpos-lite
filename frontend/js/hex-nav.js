@@ -248,6 +248,35 @@ export function HexNav(container, opts) {
       }
     }
 
+    // Grid scan: systematically search the viewport for any open position
+    if (!pos) {
+      var step = childR * 1.8;
+      var bestDist = Infinity;
+      for (var gy = childR + 2; gy < svgH - childR; gy += step) {
+        for (var gx = childR + 2; gx < svgW - childR; gx += step) {
+          if (noCollision(gx, gy, childR, allHexes)) {
+            var dgx = gx - grav.x, dgy = gy - grav.y;
+            var d = dgx * dgx + dgy * dgy;
+            if (d < bestDist) { bestDist = d; pos = { x: gx, y: gy }; }
+          }
+        }
+      }
+    }
+
+    // Last resort: extend viewport height and place below existing hexes
+    if (!pos) {
+      var maxY = 0;
+      allHexes.forEach(function(h) { if (h.y + h.r > maxY) maxY = h.y + h.r; });
+      placed.forEach(function(h) { if (h.y + h.r > maxY) maxY = h.y + h.r; });
+      var ny = maxY + childR + 10;
+      var nx = grav.x;
+      if (nx - childR < 2) nx = childR + 2;
+      if (nx + childR > svgW - 2) nx = svgW - childR - 2;
+      svgH = ny + childR + 10;
+      svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+      pos = { x: nx, y: ny };
+    }
+
     if (!pos) return;
 
     placed.push({
@@ -315,12 +344,25 @@ export function HexNav(container, opts) {
     render();
   }
 
+  function adaptiveR(baseR, count, areaW, areaH) {
+    // Shrink hex radius when too many items for the viewport
+    var area = areaW * areaH;
+    // Each hex needs roughly (2r)^2 of space with gaps
+    var needed = count * Math.pow(baseR * 2.3, 2);
+    if (needed > area * 0.7) {
+      var scale = Math.sqrt((area * 0.7) / needed);
+      return Math.max(Math.round(baseR * scale), 28);
+    }
+    return baseR;
+  }
+
   function showItems(subcatHex) {
     resize();
     state.level = 2; state.subcat = subcatHex;
     subcatHex.locked = true;
     var locked = [state.cat, subcatHex];
-    var placed = placeChain(subcatHex, subcatHex.data.items, ITEM_R, locked, state.cat);
+    var r = adaptiveR(ITEM_R, subcatHex.data.items.length, svgW, svgH);
+    var placed = placeChain(subcatHex, subcatHex.data.items, r, locked, state.cat);
     state.hexes = locked.concat(placed);
     render();
   }
@@ -330,7 +372,8 @@ export function HexNav(container, opts) {
     state.level = 2; state.cat = catHex; state.subcat = null;
     catHex.locked = true;
     var items = (catHex.data.subcats && catHex.data.subcats[0]) ? catHex.data.subcats[0].items : [];
-    var placed = placeChain(catHex, items, SUBCAT_R, [catHex], catHex);
+    var r = adaptiveR(SUBCAT_R, items.length, svgW, svgH);
+    var placed = placeChain(catHex, items, r, [catHex], catHex);
     placed.forEach(function(h) { h.type = 'item'; });
     state.hexes = [catHex].concat(placed);
     render();
@@ -383,7 +426,8 @@ export function HexNav(container, opts) {
       locked: true, type: 'cat', data: { subcats: [] },
     };
     state.cat = centerHex;
-    var placed = placeChain(centerHex, items, SUBCAT_R, [centerHex], centerHex);
+    var r = adaptiveR(SUBCAT_R, items.length, svgW, svgH);
+    var placed = placeChain(centerHex, items, r, [centerHex], centerHex);
     placed.forEach(function(h) { h.type = 'item'; });
     state.hexes = [centerHex].concat(placed);
     render();
