@@ -31,6 +31,11 @@ export function HexNav(container, opts) {
   var onSelect = o.onSelect || function() {};
   var onToast  = o.onToast  || function() {};
   var data     = o.data    || [];
+  var scale    = o.scale   || 1;
+  var sCatR    = Math.round(CAT_R    * scale);
+  var sSubcatR = Math.round(SUBCAT_R * scale);
+  var sItemR   = Math.round(ITEM_R   * scale);
+  var sModR    = Math.round(MOD_R    * scale);
 
   var svgNS = 'http://www.w3.org/2000/svg';
   var svgW = 600;  // safe fallback until container has real dimensions
@@ -124,7 +129,7 @@ export function HexNav(container, opts) {
     }
 
     // Label
-    var fontSize = h.r > 70 ? 28 : h.r > 30 ? 22 : 18;
+    var fontSize = h.r > 70 * scale ? Math.round(28 * scale) : h.r > 30 * scale ? Math.round(22 * scale) : Math.round(18 * scale);
     var lines    = h.label.split(' ');
     lines.forEach(function(line, i) {
       var text = document.createElementNS(svgNS, 'text');
@@ -237,11 +242,11 @@ export function HexNav(container, opts) {
   function showCats() {
     state.level = 0; state.cat = null; state.subcat = null;
     resize();
-    var positions = honeycombLayout(data, CAT_R);
+    var positions = honeycombLayout(data, sCatR);
     state.hexes = data.map(function(cat, i) {
       return {
         id: cat.id, label: cat.label,
-        x: positions[i].x, y: positions[i].y, r: CAT_R,
+        x: positions[i].x, y: positions[i].y, r: sCatR,
         color: cat.color, textColor: cat.textColor || '#1a1a1a',
         locked: false, type: 'cat', data: cat,
       };
@@ -253,8 +258,8 @@ export function HexNav(container, opts) {
     var area = areaW * areaH;
     var needed = count * Math.pow(baseR * 2.3, 2);
     if (needed > area * 0.7) {
-      var scale = Math.sqrt((area * 0.7) / needed);
-      return Math.max(Math.round(baseR * scale), 28);
+      var s = Math.sqrt((area * 0.7) / needed);
+      return Math.max(Math.round(baseR * s), Math.round(28 * scale));
     }
     return baseR;
   }
@@ -357,7 +362,7 @@ export function HexNav(container, opts) {
     resize();
     state.level = 1; state.cat = catHex;
     catHex.locked = true;
-    state.hexes = buildGrid([catHex], catHex.data.subcats, SUBCAT_R, 'subcat');
+    state.hexes = buildGrid([catHex], catHex.data.subcats, sSubcatR, 'subcat');
     render();
   }
 
@@ -366,7 +371,7 @@ export function HexNav(container, opts) {
     state.level = 2; state.subcat = subcatHex;
     subcatHex.locked = true;
     state.cat.locked = true;
-    state.hexes = buildGrid([state.cat, subcatHex], subcatHex.data.items, ITEM_R, 'item');
+    state.hexes = buildGrid([state.cat, subcatHex], subcatHex.data.items, sItemR, 'item');
     render();
   }
 
@@ -375,7 +380,7 @@ export function HexNav(container, opts) {
     state.level = 2; state.cat = catHex; state.subcat = null;
     catHex.locked = true;
     var items = (catHex.data.subcats && catHex.data.subcats[0]) ? catHex.data.subcats[0].items : [];
-    state.hexes = buildGrid([catHex], items, SUBCAT_R, 'item');
+    state.hexes = buildGrid([catHex], items, sSubcatR, 'item');
     render();
   }
 
@@ -440,7 +445,7 @@ export function HexNav(container, opts) {
       groupItems.push({ id: '__done__', label: 'DONE', isDone: true });
     }
 
-    state.hexes = buildGrid(locked, groupItems, ITEM_R, 'modgroup');
+    state.hexes = buildGrid(locked, groupItems, sItemR, 'modgroup');
     // Style the mod-group hexes
     state.hexes.forEach(function(h) {
       if (h.type !== 'modgroup') return;
@@ -475,7 +480,7 @@ export function HexNav(container, opts) {
       return { id: c.label, label: c.label, price: c.price, groupId: groupData.id };
     });
 
-    state.hexes = buildGrid(locked, choiceItems, MOD_R, 'mod');
+    state.hexes = buildGrid(locked, choiceItems, sModR, 'mod');
     // Style mod choices
     state.hexes.forEach(function(h) {
       if (h.type !== 'mod') return;
@@ -592,12 +597,12 @@ export function HexNav(container, opts) {
     state.level = 2; state.subcat = null;
     var centerHex = {
       id: 'pick-center', label: label,
-      x: svgW / 2, y: svgH / 2, r: CAT_R,
+      x: svgW / 2, y: svgH / 2, r: sCatR,
       color: color, textColor: textColor || '#1a1a1a',
       locked: true, type: 'cat', data: { subcats: [] },
     };
     state.cat = centerHex;
-    state.hexes = buildGrid([centerHex], items, SUBCAT_R, 'item');
+    state.hexes = buildGrid([centerHex], items, sSubcatR, 'item');
     render();
   };
 

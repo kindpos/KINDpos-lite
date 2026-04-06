@@ -638,6 +638,9 @@ function openModifierSession() {
     _mainArea.insertBefore(panel, _bottomBar);
   }
 
+  // Init HexNav after panel is in the DOM so it gets correct dimensions
+  if (panel._initHexNav) panel._initHexNav();
+
   rebuildBottomBar();
   renderTicket();
 }
@@ -661,7 +664,7 @@ function buildPlacementPill() {
     'touch-action:manipulation;transition:transform 50ms,filter 50ms;',
   ].join('');
 
-  // Inner pill — override global border-radius:0 with !important
+  // Inner pill — use clip-path for rounded ends (global CSS kills border-radius)
   var inner = document.createElement('div');
   inner.style.cssText = [
     'display:flex;align-items:stretch;height:' + PILL_H + 'px;',
@@ -671,8 +674,8 @@ function buildPlacementPill() {
     'border-bottom:' + b + 'px solid ' + edges.dark + ';',
     'border-right:' + b + 'px solid ' + edges.dark + ';',
     'overflow:hidden;box-sizing:border-box;',
+    'clip-path:inset(0 round ' + rad + 'px);',
   ].join('');
-  inner.style.setProperty('border-radius', rad + 'px', 'important');
 
   var segments = {};
   var order = ['left', 'whole', 'right'];
@@ -812,15 +815,24 @@ function buildModifierPanel(catIds) {
   panel.appendChild(hexCanvas);
 
   // Build HexNav data filtered by categories
+  // Double-rAF ensures the flex container has laid out before HexNav reads dimensions
   var modData = getModHexData(catIds || []);
-  requestAnimationFrame(function() {
-    var nav = new HexNav(hexCanvas, {
-      data: modData,
-      onSelect: function(item) { applyModifier(item); },
-      onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
+  panel._modData = modData;
+  panel._hexCanvasRef = hexCanvas;
+  panel._initHexNav = function() {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        if (!modifierSession.active) return;
+        var nav = new HexNav(hexCanvas, {
+          data: modData,
+          scale: 0.7,
+          onSelect: function(item) { applyModifier(item); },
+          onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
+        });
+        modifierSession.hexNav = nav;
+      });
     });
-    modifierSession.hexNav = nav;
-  });
+  };
 
   // ── APPLIED MODS LOG ──
   var logWrap = document.createElement('div');
