@@ -62,23 +62,25 @@ must choose before the item is added to the ticket.
 ### Flow
 
 1. User taps an item hex that has `requiredMods`
-2. Item hex locks (filled). Mod-group hexes bloom off the item
-3. User taps a mod-group hex -> it locks, individual modifier choice hexes bloom off it, plus a **DONE** hex
-4. User taps modifier choices (each attaches to the pending item). Tapping a selected modifier again deselects it
-5. User taps the **DONE** hex to confirm that mod group and return to the mod-group level
-6. If more required mod groups remain, they stay visible for selection
-7. Once all required groups have at least one choice, `onSelect` fires with the item data plus a `selectedMods` array
+2. Item hex locks (filled). Mod-group hexes bloom off the item — **pulsating** to indicate they need a selection
+3. User taps a mod-group hex -> it locks, individual modifier choice hexes bloom off it (mint, pulsating)
+4. User taps a modifier choice -> **single-select**: that choice is picked, auto-returns to mod-group level
+5. The satisfied mod-group hex **stops pulsating**, locks (filled), and its **label changes** to the selected modifier (e.g. `SAUCE` -> `Hot`)
+6. Tapping a satisfied (locked) mod-group re-opens its choices to change the selection
+7. Once **all** required groups have a selection, a **DONE** hex appears at the mod-group level
+8. Tapping DONE fires `onSelect` with the item data plus a `selectedMods` array
 
-### Modifier Choice + DONE Hex Styling
+### Visual Behavior
 
-- Modifier choice hexes and the DONE hex both use **mint** (`T.mint`) with dark text (`#1a1a1a`)
-- This makes mandatory mod choices visually distinct from the mod-group parent hex
-- Selected modifier hexes become **locked** (filled mint)
-- DONE hex label: `DONE`
-- Tapping DONE:
-  - If the current mod group has at least one selection -> lock that group as satisfied, return to mod-group level
-  - If no selection yet -> show toast "Pick at least one"
-- When all required mod groups are satisfied after a DONE tap, auto-fire `onSelect`
+| Element | Unsatisfied | Satisfied |
+|---------|------------|-----------|
+| Mod-group hex | Pulsating stroke, shows group name (`SAUCE`) | Locked (filled), label = selected choice (`Hot`) |
+| Modifier choice hex | Mint (`T.mint`), pulsating | N/A (auto-returns on tap) |
+| DONE hex | Hidden | Appears in **item/cat color**, label `DONE` |
+
+### Pulse Animation
+
+Unsatisfied mod-group hexes and unselected modifier choices pulsate via an SVG `<animate>` on `stroke-opacity` (`1 -> 0.3 -> 1`, 1.5s loop). Set `h.pulse = true` on hex data to enable.
 
 ### onSelect Payload with Modifiers
 
@@ -118,12 +120,13 @@ mandatory modifiers use the bloom-off-item pattern.
 
 ## Implementation Checklist
 
-When implementing mandatory modifiers:
-
-1. [ ] Add `requiredMods` data to menu items (ribs, sandwiches get sauce choice)
-2. [ ] Add level 3 (mod-group) and level 4 (modifier) handling in `onHexTap`
-3. [ ] Track pending mod state: `state.pendingItem`, `state.selectedMods`, `state.currentModGroup`
-4. [ ] Render DONE hex in mod-choice bloom (mint color, type `'done'`)
-5. [ ] On DONE tap: validate >= 1 selection, lock group, check if all groups done
-6. [ ] On all groups done: fire `onSelect` with `selectedMods` attached to item data
-7. [ ] In `order-entry.js` `addToTicket`: read `item.selectedMods` and push as ticket mods
+1. [x] Add `requiredMods` data to menu items (ribs, sandwiches get sauce choice)
+2. [x] Add level 3 (mod-group) and level 4 (modifier) handling in `onHexTap`
+3. [x] Track pending mod state via `modState` object in hex-nav.js
+4. [x] Pulse animation on unsatisfied mod-group and unselected choice hexes
+5. [x] Single-select per group: tapping choice auto-returns to mod-group level
+6. [x] Label swap on satisfied groups (group name -> selected choice name)
+7. [x] DONE hex appears only when all groups satisfied, in item/cat color
+8. [x] On DONE tap: fire `onSelect` with `selectedMods` attached to item data
+9. [x] In `order-entry.js` `addToTicket`: read `item.selectedMods` and push as ticket mods
+10. [x] Tapping locked (satisfied) mod-group re-opens choices to change selection

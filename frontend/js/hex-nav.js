@@ -153,6 +153,16 @@ export function HexNav(container, opts) {
       g.appendChild(bevel);
     }
 
+    // Pulse animation for unsatisfied mandatory mod hexes
+    if (h.pulse) {
+      var anim = document.createElementNS(svgNS, 'animate');
+      anim.setAttribute('attributeName', 'stroke-opacity');
+      anim.setAttribute('values', '1;0.3;1');
+      anim.setAttribute('dur', '1.5s');
+      anim.setAttribute('repeatCount', 'indefinite');
+      poly.appendChild(anim);
+    }
+
     // Label
     var fontSize = h.r > 70 ? 28 : h.r > 30 ? 22 : 18;
     var lines    = h.label.split(' ');
@@ -401,27 +411,64 @@ export function HexNav(container, opts) {
     modState.currentGroup = null;
   }
 
-  function showModGroups(itemHex) {
+  function showModGroups(itemHex, fresh) {
     resize();
-    modState.active = true;
-    modState.itemHex = itemHex;
-    modState.itemData = itemHex.data;
-    modState.groups = itemHex.data.requiredMods;
-    modState.selectedMods = [];
-    modState.satisfied = {};
-    modState.currentGroup = null;
+    if (fresh) {
+      modState.active = true;
+      modState.itemHex = itemHex;
+      modState.itemData = itemHex.data;
+      modState.groups = itemHex.data.requiredMods;
+      modState.selectedMods = [];
+      modState.satisfied = {};
+      modState.currentGroup = null;
+    }
 
     itemHex.locked = true;
     state.level = 3;
     var locked = [itemHex];
-    if (state.cat) locked.unshift(state.cat);
+    if (state.cat && state.cat !== itemHex) locked.unshift(state.cat);
 
+    // Build group items with label swap for satisfied groups
     var groupItems = modState.groups.map(function(g) {
-      return { id: g.id, label: g.label, color: g.color, textColor: g.textColor, choices: g.choices };
+      var sel = null;
+      modState.selectedMods.forEach(function(m) { if (m.group === g.id) sel = m; });
+      return {
+        id: g.id,
+        label: sel ? sel.label : g.label,
+        color: g.color,
+        textColor: g.textColor,
+        choices: g.choices,
+      };
     });
-    var r = adaptiveR(SUBCAT_R, groupItems.length, svgW, svgH);
+
+    // Count items: groups + maybe DONE
+    var allSatisfied = modState.groups.every(function(g) { return modState.satisfied[g.id]; });
+    var totalCount = groupItems.length + (allSatisfied ? 1 : 0);
+    var r = adaptiveR(SUBCAT_R, totalCount, svgW, svgH);
     var placed = placeChain(itemHex, groupItems, r, locked, itemHex);
-    placed.forEach(function(h) { h.type = 'modgroup'; });
+    placed.forEach(function(h) {
+      h.type = 'modgroup';
+      if (modState.satisfied[h.data.id]) {
+        h.locked = true;  // filled = satisfied
+      } else {
+        h.pulse = true;   // pulsate = needs selection
+      }
+    });
+
+    // DONE hex — only when all groups satisfied, in cat/item color
+    if (allSatisfied) {
+      var catColor = state.cat ? state.cat.color : itemHex.color;
+      var catText  = state.cat ? (state.cat.textColor || '#1a1a1a') : (itemHex.textColor || '#1a1a1a');
+      var doneItems = [{ id: '__done__', label: 'DONE', isDone: true }];
+      var donePlaced = placeChain(itemHex, doneItems, r, locked.concat(placed), itemHex);
+      donePlaced.forEach(function(h) {
+        h.type = 'done';
+        h.color = catColor;
+        h.textColor = catText;
+      });
+      placed = placed.concat(donePlaced);
+    }
+
     state.hexes = locked.concat(placed);
     render();
   }
@@ -440,79 +487,51 @@ export function HexNav(container, opts) {
       return { id: c.label, label: c.label, price: c.price, groupId: groupData.id };
     });
 
-    // Add DONE item
-    var doneItem = { id: '__done__', label: 'DONE', isDone: true, groupId: groupData.id };
-    choiceItems.push(doneItem);
-
     var r = adaptiveR(ITEM_R, choiceItems.length, svgW, svgH);
     var placed = placeChain(modGroupHex, choiceItems, r, locked, modGroupHex);
     placed.forEach(function(h) {
-      if (h.data.isDone) {
-        h.type = 'done';
-        h.color = T.mint;
-        h.textColor = '#1a1a1a';
-      } else {
-        h.type = 'mod';
-        h.color = T.mint;
-        h.textColor = '#1a1a1a';
-        // Check if already selected — show as locked
-        var isSel = modState.selectedMods.some(function(m) {
-          return m.group === groupData.id && m.label === h.data.label;
-        });
-        if (isSel) h.locked = true;
-      }
+      h.type = 'mod';
+      h.color = T.mint;
+      h.textColor = '#1a1a1a';
+      h.pulse = true;  // pulsate until tapped
     });
     state.hexes = locked.concat(placed);
     render();
   }
 
-  function toggleModSelection(modHex) {
+  function selectMod(modHex) {
     var groupId = modHex.data.groupId;
     var label   = modHex.data.label;
     var price   = modHex.data.price || 0;
 
-    var idx = -1;
-    modState.selectedMods.forEach(function(m, i) {
-      if (m.group === groupId && m.label === label) idx = i;
+    // Single-select: replace any prior selection for this group
+    modState.selectedMods = modState.selectedMods.filter(function(m) {
+      return m.group !== groupId;
     });
+    modState.selectedMods.push({ group: groupId, label: label, price: price });
+    modState.satisfied[groupId] = true;
 
-    if (idx >= 0) {
-      modState.selectedMods.splice(idx, 1);
-      modHex.locked = false;
-      // Check if group still has selections
-      var groupHasAny = modState.selectedMods.some(function(m) { return m.group === groupId; });
-      if (!groupHasAny) delete modState.satisfied[groupId];
-    } else {
-      modState.selectedMods.push({ group: groupId, label: label, price: price });
-      modHex.locked = true;
-      modState.satisfied[groupId] = true;
-    }
-    render();
+    // Return to mod-group level
+    showModGroups(modState.itemHex, false);
   }
 
   function handleDoneTap() {
-    var groupId = modState.currentGroup.data.id;
-    var groupHasAny = modState.selectedMods.some(function(m) { return m.group === groupId; });
-    if (!groupHasAny) {
-      if (typeof o.onToast === 'function') o.onToast('Pick at least one');
-      return;
-    }
-
-    modState.satisfied[groupId] = true;
-
-    // Check if all groups satisfied
     var allDone = modState.groups.every(function(g) { return modState.satisfied[g.id]; });
-    if (allDone) {
-      var result = {};
-      for (var k in modState.itemData) result[k] = modState.itemData[k];
-      result.selectedMods = modState.selectedMods.slice();
-      resetModState();
-      onSelect(result);
-      return;
-    }
+    if (!allDone) return;  // shouldn't happen — DONE only shows when all satisfied
 
-    // Return to mod-group level with remaining groups
-    showModGroups(modState.itemHex);
+    var result = {};
+    for (var k in modState.itemData) result[k] = modState.itemData[k];
+    result.selectedMods = modState.selectedMods.slice();
+
+    // Restore nav to item level before firing callback
+    var savedCat    = state.cat;
+    var savedSubcat = state.subcat;
+    resetModState();
+    if (savedSubcat) showItems(savedSubcat);
+    else if (savedCat) showItemsDirect(savedCat);
+    else showCats();
+
+    onSelect(result);
   }
 
   var navLocked = false;
@@ -532,13 +551,9 @@ export function HexNav(container, opts) {
         else showCats();
         return;
       }
+      // Tap satisfied mod-group to re-pick
       if (modState.active && h.type === 'modgroup') {
-        showModGroups(modState.itemHex);
-        return;
-      }
-      // Toggle already-selected modifier
-      if (h.type === 'mod') {
-        toggleModSelection(h);
+        showModChoices(h);
         return;
       }
       if (h.type === 'cat')    showCats();
@@ -556,14 +571,14 @@ export function HexNav(container, opts) {
     if (h.type === 'subcat') { showItems(h); return; }
     if (h.type === 'item') {
       if (h.data.requiredMods && h.data.requiredMods.length > 0) {
-        showModGroups(h);
+        showModGroups(h, true);
       } else {
         onSelect(h.data);
       }
       return;
     }
     if (h.type === 'modgroup') { showModChoices(h); return; }
-    if (h.type === 'mod')     { toggleModSelection(h); return; }
+    if (h.type === 'mod')     { selectMod(h); return; }
     if (h.type === 'done')    { handleDoneTap(); return; }
   }
 
