@@ -93,12 +93,12 @@ function buildReceiptPanel(params) {
   // ── Column headers ──
   var colHead = document.createElement('div');
   colHead.style.cssText = [
-    'display:grid;grid-template-columns:1fr 50px 80px;',
+    'display:grid;grid-template-columns:1fr 50px 40px 80px;',
     'padding:6px 14px;',
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';color:' + T.gold + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';',
   ].join('');
-  ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
+  ['ITEM', 'QTY', '', 'PRICE'].forEach(function(t, i) {
     var c = document.createElement('div');
     c.textContent = t;
     if (i > 0) c.style.textAlign = 'right';
@@ -115,7 +115,7 @@ function buildReceiptPanel(params) {
   (params.items || []).forEach(function(item) {
     var row = document.createElement('div');
     row.style.cssText = [
-      'display:grid;grid-template-columns:1fr 50px 80px;',
+      'display:grid;grid-template-columns:1fr 50px 40px 80px;',
       'padding:4px 0;',
       'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
@@ -131,8 +131,10 @@ function buildReceiptPanel(params) {
     var price = document.createElement('div');
     price.style.textAlign = 'right';
     price.textContent = '$' + (item.unitPrice * item.qty).toFixed(2);
+    var spacer = document.createElement('div');
     row.appendChild(name);
     row.appendChild(qty);
+    row.appendChild(spacer);
     row.appendChild(price);
     itemScroll.appendChild(row);
   });
