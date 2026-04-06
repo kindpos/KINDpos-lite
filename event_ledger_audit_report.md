@@ -192,8 +192,8 @@ All 17 findings from the initial audit (5 CRITICAL, 7 WARNING, 5 INFO) remain re
 
 | # | Severity | Finding | File + Line | Detail |
 |---|---|---|---|---|
-| N1 | **WARNING** | `_pending_tax` instance variable race | `payment_manager.py:57` | `initiate_sale()` stashes `tax` as `self._pending_tax` then awaits `device.initiate_sale()` (up to 90s). If two concurrent sales run on the same PaymentManager instance, the second call overwrites `_pending_tax` before the first completes. Tax will be misattributed. Should pass `tax` through the call chain or use a dict keyed by transaction_id. |
-| N2 | **WARNING** | `from ..money import money_round` inside method body | `payment_manager.py:101` | Import statement inside `initiate_sale()`. Should be at module top. Not a correctness issue but causes repeated import overhead and violates project conventions. |
+| N1 | ~~WARNING~~ **RESOLVED** | `_pending_tax` instance variable race | `payment_manager.py:57` | `initiate_sale()` stashed `tax` as `self._pending_tax` — concurrent calls could overwrite it. **Fixed:** replaced with local `tax` parameter passed directly to `money_round(tax)` in `_emit_result_event()`. No instance state. |
+| N2 | ~~WARNING~~ **RESOLVED** | `from ..money import money_round` inside method body | `payment_manager.py:101` | Import was inside method body. **Fixed:** moved to module-level imports. |
 | N3 | **INFO** | `Order.tax` dual-path may diverge | `projections.py:110-115` | `Order.tax` prefers event-sourced tax (`sum of payment.tax_amount`) but falls back to computed `taxable * tax_rate` when no confirmed payment exists. If the tax rate changes between order creation and payment, the fallback and captured values could differ. This is by design (captured tax is the truth after payment), but worth noting for debugging. |
 
 ---
@@ -203,9 +203,9 @@ All 17 findings from the initial audit (5 CRITICAL, 7 WARNING, 5 INFO) remain re
 | Severity | Prior (resolved) | New | Total Active |
 |---|---|---|---|
 | CRITICAL | 5 | 0 | **0** |
-| WARNING | 7 | 2 | **2** |
+| WARNING | 7 | 2 (both resolved) | **0** |
 | INFO | 5 | 1 | **1** |
-| **Total** | **17** | **3** | **3** |
+| **Total** | **17** | **3** | **1** (INFO only) |
 
 ---
 
