@@ -86,12 +86,22 @@ export function HexNav(container, opts) {
     return occ;
   }
 
-  function getChildPositions(parent, childR, allHexes) {
+  function getChildPositions(parent, childR, allHexes, towardCenter) {
     var occ  = getOccupiedFaces(parent, allHexes);
     var dist = (parent.r + childR) * GAP + 8;
     var positions = [];
-    // Seed from parent position — deterministic per hex, varied between hexes
-    var startFace = Math.abs(Math.floor(parent.x * 7 + parent.y * 3)) % 6;
+    var startFace;
+    if (towardCenter) {
+      // Pick the face that points toward the viewport center
+      var toCenterAngle = Math.atan2(svgH / 2 - parent.y, svgW / 2 - parent.x);
+      // Convert angle to face index (face 0 = top, goes clockwise)
+      var normAngle = toCenterAngle + Math.PI / 2; // offset to match hex face 0 = top
+      if (normAngle < 0) normAngle += Math.PI * 2;
+      startFace = Math.round(normAngle / (Math.PI / 3)) % 6;
+    } else {
+      // Seed from parent position — deterministic per hex, varied between hexes
+      startFace = Math.abs(Math.floor(parent.x * 7 + parent.y * 3)) % 6;
+    }
     for (var i = 0; i < 6; i++) {
       var face = (startFace + i) % 6;
       if (occ[face]) continue;
@@ -223,7 +233,7 @@ export function HexNav(container, opts) {
     var candidates = [];
 
     sources.forEach(function(src) {
-      getChildPositions(src, childR, allHexes).forEach(function(pos) {
+      getChildPositions(src, childR, allHexes, preferSpace).forEach(function(pos) {
         candidates.push(pos);
       });
     });
@@ -237,36 +247,12 @@ export function HexNav(container, opts) {
       if (!isDup) unique.push(c);
     });
 
-    if (preferSpace) {
-      // Pack with siblings first, then prefer border clearance as tiebreaker.
-      // Centroid = average position of already-placed siblings (or parent if none yet).
-      var cx = parent.x, cy = parent.y;
-      if (placed.length > 0) {
-        var sx = 0, sy = 0;
-        placed.forEach(function(p) { sx += p.x; sy += p.y; });
-        cx = sx / placed.length;
-        cy = sy / placed.length;
-      }
-      unique.sort(function(a, b) {
-        var dxA = a.x - cx, dyA = a.y - cy;
-        var dxB = b.x - cx, dyB = b.y - cy;
-        var distA = dxA * dxA + dyA * dyA;
-        var distB = dxB * dxB + dyB * dyB;
-        // Primary: closeness to sibling centroid
-        if (Math.abs(distA - distB) > childR * childR) return distA - distB;
-        // Tiebreaker: more border clearance
-        var clearA = Math.min(a.x - childR, svgW - a.x - childR, a.y - childR, svgH - a.y - childR);
-        var clearB = Math.min(b.x - childR, svgW - b.x - childR, b.y - childR, svgH - b.y - childR);
-        return clearB - clearA;
-      });
-    } else {
-      // Prefer positions closest to gravity (cat)
-      unique.sort(function(a, b) {
-        var dxA = a.x - grav.x, dyA = a.y - grav.y;
-        var dxB = b.x - grav.x, dyB = b.y - grav.y;
-        return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
-      });
-    }
+    // Prefer positions closest to gravity (cat/parent)
+    unique.sort(function(a, b) {
+      var dxA = a.x - grav.x, dyA = a.y - grav.y;
+      var dxB = b.x - grav.x, dyB = b.y - grav.y;
+      return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
+    });
 
     var pos = null;
     for (var j = 0; j < unique.length; j++) {
