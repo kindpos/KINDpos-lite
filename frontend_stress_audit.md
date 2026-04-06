@@ -1,6 +1,6 @@
 # KINDpos-lite Frontend Stress Audit
 
-**Date:** 2026-04-06
+**Date:** 2026-04-06 (re-audited post-merge)
 **Target:** 1024×600 touch display, all scenes in `/frontend/js/scenes/`
 **Method:** Static analysis of adversarial interaction sequences
 
@@ -25,19 +25,21 @@
 
 ## Findings Summary
 
-| Severity | Count |
-|----------|-------|
-| 🔴 CRITICAL | 5 |
-| 🟡 WARNING | 12 |
-| 🟢 INFO | 5 |
+| Severity | Count | Fixed | Open |
+|----------|-------|-------|------|
+| 🔴 CRITICAL | 5 | 5 | 0 |
+| 🟡 WARNING | 12 | 3 | 9 |
+| 🟢 INFO | 5 | 0 | 5 |
+| 🆕 NEW (post-merge) | 4 | 0 | 4 |
 
 ---
 
 ## 🔴 CRITICAL Findings
 
-### F-01: Double-charge on payment confirm (FINANCIAL RISK)
+### F-01: ~~Double-charge on payment confirm~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/payment.js:370-425`
+**File:** `frontend/js/scenes/payment.js:743-744`
+**Fix:** `confirmProcessing` guard flag — checked at entry, set true, reset on all exit paths (lines 25, 36, 743, 744, 767, 795, 813, 818)
 **Reproduction:** Tap CHARGE or numpad >>> twice rapidly (<200ms apart)
 **Root cause:** `handleConfirm()` is `async` with no guard flag. Three unprotected entry points:
 - Numpad `onSubmit` (line 270) — fires when `tendered >= cashPrice`
@@ -50,9 +52,10 @@ Each tap fires a POST to `/api/v1/payments/cash`. Two rapid taps = two payment P
 
 ---
 
-### F-02: Double-send creates duplicate order items
+### F-02: ~~Double-send creates duplicate order items~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/order-entry.js:691-748`
+**File:** `frontend/js/scenes/order-entry.js:821-822`
+**Fix:** `isSending` guard flag — checked at entry (line 821), set true (line 822), reset in finally block (line 879)
 **Reproduction:** Tap //SEND// twice rapidly
 **Root cause:** `handleSend()` is `async` with no guard. First call creates the order (POST `/api/v1/orders`, sets `currentOrderId` at line 709). Second concurrent call finds `currentOrderId` still null (Promise hasn't resolved), attempts a second POST `/api/v1/orders` �� creating a **duplicate order**.
 
@@ -62,9 +65,10 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### F-03: SEND→PAY rapid succession race condition
+### F-03: ~~SEND→PAY rapid succession race condition~~ ✅ FIXED
 
 **File:** `frontend/js/scenes/order-entry.js:928-956`
+**Fix:** `isSending` guard in `handleSend()` prevents concurrent entry from both SEND and PAY buttons
 **Reproduction:** Tap //SEND// then //PAY// within 200ms
 **Root cause:** PAY calls `await handleSend()` internally (line 932-933) if `currentOrderId` is null. If SEND was already tapped, two `handleSend()` invocations overlap. Both see `currentOrderId === null`, both POST to create a new order. The second order creation overwrites `currentOrderId`, orphaning the first order on the server.
 
@@ -72,9 +76,10 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### F-04: history.go(-1) bypasses Scene Manager
+### F-04: ~~history.go(-1) bypasses Scene Manager~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/receipt-review.js:291`
+**File:** `frontend/js/scenes/receipt-review.js`
+**Fix:** BACK button now uses `pop()` from scene-manager (import at line 9, call in onTap handler)
 **Reproduction:** Navigate: order-entry → receipt-review → payment (via card/cash) → back. Then tap BACK on receipt-review.
 **Root cause:** BACK button uses `history.go(-1)` instead of `pop()`. After `replace()` calls (e.g., change-due replaces payment in the stack), browser history and Scene Manager's `navStack` diverge. `history.go(-1)` could navigate to a destroyed scene, the change-due screen, or even outside the SPA.
 
@@ -82,9 +87,10 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### F-05: Void interrupt chain has microtask timing gap
+### F-05: ~~Void interrupt chain has microtask timing gap~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/order-entry.js:606-613`
+**File:** `frontend/js/scenes/order-entry.js:707`
+**Fix:** `showVoidReasons` deferred via `setTimeout(..., 0)` after `resolveInterrupt()`, eliminating microtask gap
 **Reproduction:** During void flow, tap rapidly while PIN interrupt resolves
 **Root cause:** At line 610, `resolveInterrupt()` synchronously sets `activeInterrupt = null`, removes DOM, and calls `resolve()`. Then line 611 immediately calls `showVoidReasons()` which creates a new `interrupt('void-reason')`. Between `resolveInterrupt` completing and the new interrupt's DOM rendering, there's a microtask gap where `activeInterrupt` is null. If another pointer event fires during this gap (e.g., a queued touch event), it could trigger a competing interrupt → `reject(Error('Interrupt already active'))` → swallowed by `.catch(function() {})`.
 
@@ -154,9 +160,10 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### W-07: Close Day / Finalize buttons disabled via CSS only
+### W-07: ~~Close Day / Finalize buttons disabled via CSS only~~ ✅ FIXED (partial)
 
-**Files:** `close-day.js:941-944`, `server-checkout.js:892-896`
+**Files:** `server-checkout.js:728`
+**Fix:** JS `isBlocked(state)` guard added to Finalize button pointerup handler. Close-day button is structurally safe — handler only wired in non-blocked branch (line 842).
 **Reproduction:** Programmatic event dispatch or browser devtools
 **Root cause:** Blocked state uses `pointerEvents: 'none'` CSS — no JavaScript-level guard. A synthetic `pointerup` event could bypass this. Low probability on a dedicated terminal, but not zero.
 
@@ -164,9 +171,10 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### W-08: Change-due double-return race
+### W-08: ~~Change-due double-return race~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/change-due.js:36-38, 150-152`
+**File:** `frontend/js/scenes/change-due.js:13, 19, 164-165`
+**Fix:** `returned` flag set on first `doReturn()` call, early-return on subsequent calls
 **Reproduction:** Tap screen at exactly the 4-second auto-return moment
 **Root cause:** Both tap handler (line 36) and `setTimeout` (line 150) call `doReturn()`. If both fire within 200ms, `replace()` is called twice. Second call is caught by Scene Manager's `debounceCheck` — but the first `replace` already tore down the scene, so `doReturn`'s `clearTimeout` (line 164) tries to clear an already-fired timer. Harmless but noisy.
 
@@ -252,6 +260,47 @@ PIN entry numpad allows rapid digit entry. Not a crash risk (maxDigits: 6 caps i
 
 ---
 
+## 🆕 New Findings (Post-Merge Re-Audit)
+
+### N-01: Unguarded async saveDevice in settings — ADD ANYWAY button
+
+**File:** `frontend/js/scenes/settings.js:791`
+**Reproduction:** Tap //ADD ANYWAY// twice rapidly on manual device add screen
+**Root cause:** `onTap: async function() { await saveDevice({...}); }` — no guard flag. Two rapid taps = two POST `/api/v1/hardware/devices` with same MAC.
+**Impact:** Duplicate device entries in device registry.
+**Suggested fix:** Add `isSavingDevice` guard flag, same pattern as `isSending` in order-entry.js.
+
+---
+
+### N-02: Unguarded async saveDevice in settings — SAVE confirm button
+
+**File:** `frontend/js/scenes/settings.js:1062`
+**Reproduction:** Tap //SAVE// twice rapidly on device confirm screen
+**Root cause:** Same as N-01 — `await saveDevice()` with no concurrency guard.
+**Impact:** Duplicate device save.
+**Suggested fix:** Same `isSavingDevice` guard.
+
+---
+
+### N-03: Unguarded async saveDevice in settings — SAVE edit button
+
+**File:** `frontend/js/scenes/settings.js:1317`
+**Reproduction:** Tap //SAVE// twice rapidly on device edit screen
+**Root cause:** Same pattern — unguarded async saveDevice call.
+**Suggested fix:** Same `isSavingDevice` guard.
+
+---
+
+### N-04: Unguarded async deleteDevice in settings — Remove button (no confirmation)
+
+**File:** `frontend/js/scenes/settings.js:1333`
+**Reproduction:** Tap Remove twice rapidly on device list
+**Root cause:** `onTap: async function() { await deleteDevice(dev.mac); }` — no guard, no confirmation interrupt.
+**Impact:** Double DELETE request. No undo.
+**Suggested fix:** Add `isDeletingDevice` guard flag AND a confirmation interrupt before delete.
+
+---
+
 ## Appendix A: buildStyledButton Call Inventory
 
 | Scene | Line | Element | Handler | Debounce |
@@ -276,16 +325,16 @@ PIN entry numpad allows rapid digit entry. Not a crash risk (maxDigits: 6 caps i
 
 | Handler | File:Line | Entry Points | Guard Flag | Risk |
 |---------|-----------|-------------|------------|------|
-| `handleSend()` | order-entry.js:691 | SEND button, PAY button (internal) | ❌ None | 🔴 Duplicate orders/items |
-| `handlePay()` | order-entry.js:928 | PAY button | ❌ None | 🔴 Race with handleSend |
-| `handleConfirm()` | payment.js:370 | Numpad >>>, Confirm key, CHARGE btn | ❌ None | 🔴 Double payment |
-| `loadSavedDevices()` | settings.js:102 | Scene enter | N/A (read-only) | 🟢 Safe |
-| `saveDevice()` | settings.js:109 | ADD ANYWAY, SAVE buttons | ❌ None | 🟡 Duplicate save |
-| `deleteDevice()` | settings.js:127 | Remove button | ❌ None | 🟡 No confirmation |
-| `scanNetwork()` | settings.js:135 | Not directly called by UI | N/A | 🟢 Safe |
-| `doScan()` (SSE) | settings.js:435 | Scan Network button | Closes prior ES | 🟡 Race window |
-| `doScanIP()` (SSE) | settings.js:486 | IP scan flow | Closes prior ES | 🟡 Race window |
-| `testDevice()` | settings.js:861 | Test button | ❌ None | 🟡 Concurrent tests |
+| `handleSend()` | order-entry.js:821 | SEND button, PAY button (internal) | ✅ `isSending` | 🟢 Fixed |
+| `handlePay()` | order-entry.js:928 | PAY button | ✅ via `isSending` | 🟢 Fixed |
+| `handleConfirm()` | payment.js:743 | Numpad >>>, Confirm key, CHARGE btn | ✅ `confirmProcessing` | 🟢 Fixed |
+| `loadSavedDevices()` | settings.js:114 | Scene enter | N/A (read-only) | 🟢 Safe |
+| `saveDevice()` | settings.js:120 | ADD ANYWAY (791), SAVE (1062, 1317) | ❌ None | 🟡 Duplicate save |
+| `deleteDevice()` | settings.js:139 | Remove button (1333) | ❌ None | 🟡 No confirmation |
+| `scanNetwork()` | settings.js:147 | Not directly called by UI | N/A | 🟢 Safe |
+| `doScan()` (SSE) | settings.js:567 | Scan Network button | Closes prior ES | 🟡 Race window |
+| `doScanIP()` (SSE) | settings.js:614 | IP scan flow | Closes prior ES | 🟡 Race window |
+| `testDevice()` | settings.js:1339 | Test button | ❌ None | 🟡 Concurrent tests |
 
 ## Appendix C: Overlay/Interrupt Stacking Matrix
 
@@ -303,7 +352,10 @@ PIN entry numpad allows rapid digit entry. Not a crash risk (maxDigits: 6 caps i
 ## Acceptance Checklist
 
 - [x] Every .js file in `/frontend/scenes/` examined (10 files)
-- [x] Every `buildStyledButton` call inventoried (15 call sites)
+- [x] Every `buildStyledButton` call inventoried
 - [x] Every async handler mapped for concurrency safety (10 handlers)
 - [x] Every overlay/interrupt checked for stacking conflicts
-- [x] Zero files modified (report only)
+- [x] 5/5 CRITICAL findings fixed and verified on main
+- [x] 3/12 WARNING findings fixed and verified on main
+- [x] 4 new post-merge findings documented (settings.js device CRUD)
+- [x] New utility files audited (keyboard.js, chart-helpers.js — no issues)
