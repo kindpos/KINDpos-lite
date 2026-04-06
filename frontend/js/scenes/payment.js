@@ -12,7 +12,7 @@ import { buildNumpad } from '../numpad.js';
 
 var PAD     = T.scenePad;
 var GAP     = T.colGap;
-var LEFT_W  = 280;
+var LEFT_W  = 340;
 
 // ── Scene state ───────────────────────────────────
 var tendered   = 0;
@@ -75,7 +75,7 @@ function buildReceiptPanel(params) {
   // ── Header ──
   var header = document.createElement('div');
   header.style.cssText = [
-    'padding:8px 14px;flex-shrink:0;',
+    'padding:10px 14px;flex-shrink:0;',
     'background:' + T.bg4 + ';',
     'border-bottom:2px solid ' + T.bgEdge + ';',
     'display:flex;justify-content:space-between;align-items:center;',
@@ -93,12 +93,12 @@ function buildReceiptPanel(params) {
   // ── Column headers ──
   var colHead = document.createElement('div');
   colHead.style.cssText = [
-    'display:grid;grid-template-columns:1fr 50px 30px 80px;',
+    'display:grid;grid-template-columns:1fr 60px 90px;gap:0 12px;',
     'padding:6px 14px;',
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';color:' + T.gold + ';letter-spacing:0.08em;',
-    'border-bottom:1px solid ' + T.bg3 + ';',
+    'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
-  ['ITEM', 'QTY', '', 'PRICE'].forEach(function(t, i) {
+  ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
     var c = document.createElement('div');
     c.textContent = t;
     if (i > 0) c.style.textAlign = 'right';
@@ -115,26 +115,22 @@ function buildReceiptPanel(params) {
   (params.items || []).forEach(function(item) {
     var row = document.createElement('div');
     row.style.cssText = [
-      'display:grid;grid-template-columns:1fr 50px 30px 80px;',
+      'display:grid;grid-template-columns:1fr 60px 90px;gap:0 12px;',
       'padding:4px 0;',
-      'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:' + T.fsItem + ';color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var name = document.createElement('div');
     name.textContent = item.name;
-    name.style.overflow = 'hidden';
-    name.style.textOverflow = 'ellipsis';
-    name.style.whiteSpace = 'nowrap';
+    name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
     var qty = document.createElement('div');
-    qty.style.cssText = 'text-align:right;color:' + T.mutedText + ';';
+    qty.style.cssText = 'text-align:right;color:' + T.gold + ';';
     qty.textContent = item.qty + '\u00D7';
     var price = document.createElement('div');
     price.style.cssText = 'text-align:right;color:' + T.gold + ';';
     price.textContent = '$' + (item.unitPrice * item.qty).toFixed(2);
-    var spacer = document.createElement('div');
     row.appendChild(name);
     row.appendChild(qty);
-    row.appendChild(spacer);
     row.appendChild(price);
     itemScroll.appendChild(row);
   });
@@ -147,8 +143,8 @@ function buildReceiptPanel(params) {
     'border-top:2px solid ' + T.bg3 + ';',
   ].join('');
 
-  footer.appendChild(totalsRow('Subtotal', '$' + params.subtotal.toFixed(2), false, T.mutedText));
-  footer.appendChild(totalsRow('Tax', '$' + params.tax.toFixed(2), false, T.mutedText));
+  footer.appendChild(totalsRow('Subtotal', '$' + params.subtotal.toFixed(2), false, T.mint));
+  footer.appendChild(totalsRow('Tax', '$' + params.tax.toFixed(2), false, T.mint));
 
   var hr = document.createElement('hr');
   hr.style.cssText = 'border:none;border-top:1px dashed ' + T.bgLight + ';margin:6px 0;';
@@ -188,14 +184,14 @@ function totalsRow(label, value, bold, color) {
   var row = document.createElement('div');
   row.style.cssText = [
     'display:flex;justify-content:space-between;padding:2px 0;',
-    'font-family:' + T.fb + ';',
-    'font-size:' + (bold ? T.fsSmall : '18px') + ';',
+    'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';',
     'color:' + (color || T.mint) + ';',
     bold ? 'font-weight:bold;' : '',
   ].join('');
   var l = document.createElement('span');
   l.textContent = label;
   var v = document.createElement('span');
+  v.style.color = T.gold;
   v.textContent = value;
   v.setAttribute('data-val', '1');
   row.appendChild(l);
@@ -511,6 +507,7 @@ function addTendered(val, params) {
   tendered  += val;
   numpadStr  = '';
   updateCashDisplay(params);
+  if (tendered >= params.cashPrice) handleConfirm(params);
 }
 
 function updateCashDisplay(params) {
