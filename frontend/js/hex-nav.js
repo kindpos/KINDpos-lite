@@ -67,7 +67,7 @@ export function HexNav(container, opts) {
   function hexPoints(cx, cy, r) {
     var pts = [];
     for (var i = 0; i < 6; i++) {
-      var a = (Math.PI / 3) * i - Math.PI / 2;
+      var a = (Math.PI / 3) * i;  // flat-top: first vertex at 0° (right)
       pts.push((cx + r * Math.cos(a)).toFixed(2) + ',' + (cy + r * Math.sin(a)).toFixed(2));
     }
     return pts.join(' ');
@@ -254,8 +254,8 @@ export function HexNav(container, opts) {
       var ringDist = innerDist + (ring - 1) * stepDist;
       for (var side = 0; side < 6; side++) {
         for (var step = 0; step < ring; step++) {
-          var a0 = (Math.PI / 3) * side - Math.PI / 6;  // corner angle
-          var a1 = (Math.PI / 3) * ((side + 2) % 6) - Math.PI / 6;  // edge walk direction
+          var a0 = (Math.PI / 3) * side;  // flat-top: neighbor at 0°, 60°, 120°...
+          var a1 = (Math.PI / 3) * ((side + 2) % 6);  // edge walk direction
           var sx = cx + ringDist * Math.cos(a0) + step * stepDist * Math.cos(a1);
           var sy = cy + ringDist * Math.sin(a0) + step * stepDist * Math.sin(a1);
           if (sx - r >= 2 && sx + r <= svgW - 2 && sy - r >= 2 && sy + r <= svgH - 2) {
