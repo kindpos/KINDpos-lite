@@ -19,12 +19,22 @@ from app.core.events import create_event, EventType
 
 # ── Categories ────────────────────────────────────────────────────────────────
 
+# ── Tax Rules ─────────────────────────────────────────────────────────────────
+
+TAX_RULES = [
+    {"tax_rule_id": "food_tax",    "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "pizza"},
+    {"tax_rule_id": "food_tax_2",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "apps"},
+    {"tax_rule_id": "food_tax_3",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "subs"},
+    {"tax_rule_id": "food_tax_4",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "sides"},
+    {"tax_rule_id": "bev_tax",     "name": "Beverage Tax",   "rate_percent": 9.0,  "applies_to": "category", "category_id": "drinks"},
+]
+
 CATEGORIES = [
-    {"category_id": "pizza",  "name": "Pizza",       "label": "PIZZA",  "color": "#c0392b", "display_order": 1},
-    {"category_id": "apps",   "name": "Appetizers",  "label": "APPS",   "color": "#d4a017", "display_order": 2},
-    {"category_id": "subs",   "name": "Subs",        "label": "SUBS",   "color": "#7ac943", "display_order": 3},
-    {"category_id": "sides",  "name": "Sides",       "label": "SIDES",  "color": "#00bcd4", "display_order": 4},
-    {"category_id": "drinks", "name": "Drinks",      "label": "DRINKS", "color": "#2196f3", "display_order": 5},
+    {"category_id": "pizza",  "name": "Pizza",       "label": "PIZZA",  "color": "#c0392b", "display_order": 1, "tax_rule_id": "food_tax"},
+    {"category_id": "apps",   "name": "Appetizers",  "label": "APPS",   "color": "#d4a017", "display_order": 2, "tax_rule_id": "food_tax_2"},
+    {"category_id": "subs",   "name": "Subs",        "label": "SUBS",   "color": "#7ac943", "display_order": 3, "tax_rule_id": "food_tax_3"},
+    {"category_id": "sides",  "name": "Sides",       "label": "SIDES",  "color": "#00bcd4", "display_order": 4, "tax_rule_id": "food_tax_4"},
+    {"category_id": "drinks", "name": "Drinks",      "label": "DRINKS", "color": "#2196f3", "display_order": 5, "tax_rule_id": "bev_tax"},
 ]
 
 # ── Menu Items ────────────────────────────────────────────────────────────────
@@ -98,7 +108,24 @@ async def main():
     existing_mods = await ledger.get_events_by_type(EventType.MODIFIER_GROUP_CREATED, limit=1000)
     existing_mod_ids = {e.payload.get("group_id") for e in existing_mods}
 
+    existing_tax = await ledger.get_events_by_type(EventType.STORE_TAX_RULE_CREATED, limit=1000)
+    existing_tax_ids = {e.payload.get("tax_rule_id") for e in existing_tax}
+
     seeded = 0
+
+    # ── Seed tax rules ────────────────────────────────────────────────────
+    for rule in TAX_RULES:
+        if rule["tax_rule_id"] in existing_tax_ids:
+            print(f"  skip  tax rule: {rule['name']} (already in ledger)")
+            continue
+        event = create_event(
+            event_type=EventType.STORE_TAX_RULE_CREATED,
+            terminal_id="SEED",
+            payload=rule,
+        )
+        await ledger.append(event)
+        print(f"  added tax rule: {rule['name']}  {rule['rate_percent']}% → {rule['applies_to']}")
+        seeded += 1
 
     # ── Seed categories ───────────────────────────────────────────────────
     for cat in CATEGORIES:

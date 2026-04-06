@@ -32,6 +32,7 @@ from app.core.money import money_round
 DB_PATH = "data/event_ledger.db"
 TERMINAL_ID = "terminal_01"
 TAX_RATE = 0.06
+CASH_DISCOUNT_RATE = 0.04  # 4% dual-pricing cash discount
 DAYS_OF_HISTORY = 90
 SEED = 42  # reproducible data
 
@@ -39,12 +40,24 @@ random.seed(SEED)
 
 # ─── Menu Data ────────────────────────────────────────────────────────────────
 
+# ─── Tax Rules ────────────────────────────────────────────────────────────────
+# Florida-style: food is generally exempt from sales tax, but prepared food
+# and beverages are taxable. We model this as category-specific rules.
+
+TAX_RULES = [
+    {"tax_rule_id": "food_tax",    "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "pizza"},
+    {"tax_rule_id": "food_tax_2",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "apps"},
+    {"tax_rule_id": "food_tax_3",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "subs"},
+    {"tax_rule_id": "food_tax_4",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "sides"},
+    {"tax_rule_id": "bev_tax",     "name": "Beverage Tax",   "rate_percent": 9.0,  "applies_to": "category", "category_id": "drinks"},
+]
+
 CATEGORIES = [
-    {"category_id": "pizza",  "name": "Pizza",       "label": "PIZZA",  "color": "#c0392b", "display_order": 1},
-    {"category_id": "apps",   "name": "Appetizers",  "label": "APPS",   "color": "#d4a017", "display_order": 2},
-    {"category_id": "subs",   "name": "Subs",        "label": "SUBS",   "color": "#7ac943", "display_order": 3},
-    {"category_id": "sides",  "name": "Sides",       "label": "SIDES",  "color": "#00bcd4", "display_order": 4},
-    {"category_id": "drinks", "name": "Drinks",      "label": "DRINKS", "color": "#2196f3", "display_order": 5},
+    {"category_id": "pizza",  "name": "Pizza",       "label": "PIZZA",  "color": "#c0392b", "display_order": 1, "tax_rule_id": "food_tax"},
+    {"category_id": "apps",   "name": "Appetizers",  "label": "APPS",   "color": "#d4a017", "display_order": 2, "tax_rule_id": "food_tax_2"},
+    {"category_id": "subs",   "name": "Subs",        "label": "SUBS",   "color": "#7ac943", "display_order": 3, "tax_rule_id": "food_tax_3"},
+    {"category_id": "sides",  "name": "Sides",       "label": "SIDES",  "color": "#00bcd4", "display_order": 4, "tax_rule_id": "food_tax_4"},
+    {"category_id": "drinks", "name": "Drinks",      "label": "DRINKS", "color": "#2196f3", "display_order": 5, "tax_rule_id": "bev_tax"},
 ]
 
 MENU_ITEMS = [
@@ -324,18 +337,40 @@ def _generate_order_events(day_date, order_num, servers_on_duty):
         ))
         return events  # No payment for voided orders
 
-    # 3) PAYMENT
-    total = float(subtotal)
+    # 3) PAYMENT — with dual-pricing cash discount
+    subtotal_f = float(subtotal)
+    tax = money_round(subtotal_f * TAX_RATE)
+    card_total = money_round(subtotal_f + tax)
     payment_id = f"pay-{order_id}"
     payment_ts = order_ts + timedelta(minutes=random.randint(15, 45))
     method = random.choices(["card", "cash"], weights=[70, 30], k=1)[0]
+
+    if method == "cash":
+        # Apply dual-pricing cash discount: 4% off the card total
+        cash_discount = money_round(card_total * CASH_DISCOUNT_RATE)
+        sale_amount = money_round(card_total - cash_discount)
+
+        # Emit DISCOUNT_APPROVED event (same as real payment flow)
+        events.append(_make_event(
+            EventType.DISCOUNT_APPROVED,
+            {
+                "order_id": order_id,
+                "discount_type": "cash_dual_pricing",
+                "amount": cash_discount,
+                "reason": "Cash dual-pricing discount",
+            },
+            payment_ts,
+            correlation_id=correlation_id,
+        ))
+    else:
+        sale_amount = card_total
 
     events.append(_make_event(
         EventType.PAYMENT_INITIATED,
         {
             "order_id": order_id,
             "payment_id": payment_id,
-            "amount": money_round(total),
+            "amount": sale_amount,
             "method": method,
         },
         payment_ts,
@@ -351,7 +386,7 @@ def _generate_order_events(day_date, order_num, servers_on_duty):
             "order_id": order_id,
             "payment_id": payment_id,
             "transaction_id": transaction_id,
-            "amount": money_round(total),
+            "amount": sale_amount,
         },
         confirm_ts,
         correlation_id=correlation_id,
@@ -363,7 +398,7 @@ def _generate_order_events(day_date, order_num, servers_on_duty):
             [0.15, 0.18, 0.20, 0.22, 0.25],
             weights=[20, 30, 30, 15, 5], k=1
         )[0]
-        tip_amount = money_round(total * tip_pct)
+        tip_amount = money_round(card_total * tip_pct)
         tip_ts = confirm_ts + timedelta(seconds=random.randint(5, 60))
 
         events.append(_make_event(
@@ -382,7 +417,7 @@ def _generate_order_events(day_date, order_num, servers_on_duty):
     close_ts = confirm_ts + timedelta(seconds=random.randint(10, 120))
     events.append(_make_event(
         EventType.ORDER_CLOSED,
-        {"order_id": order_id, "total": money_round(total)},
+        {"order_id": order_id, "total": sale_amount},
         close_ts,
         correlation_id=correlation_id,
     ))
@@ -498,6 +533,19 @@ async def main():
     await ledger.append(event)
     total_events += 1
     print("  KIND Pizza config seeded")
+
+    # ── 1b. Tax rules ─────────────────────────────────────────────────────
+    print("\n── Seeding tax rules ──")
+    for rule in TAX_RULES:
+        event = _make_event(
+            EventType.STORE_TAX_RULE_CREATED,
+            rule,
+            datetime(2026, 1, 1, 8, 0, 30, tzinfo=timezone.utc),
+        )
+        await ledger.append(event)
+        total_events += 1
+        applies = f"category:{rule['category_id']}" if rule["applies_to"] == "category" else "all items"
+        print(f"  {rule['name']:20s} {rule['rate_percent']}% → {applies}")
 
     # ── 2. Categories ─────────────────────────────────────────────────────
     print("\n── Seeding categories ──")
