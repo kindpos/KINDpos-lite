@@ -173,25 +173,24 @@ export function HexNav(container, opts) {
   // fill remaining slots. The whole grid is centered in the viewport.
   function honeycombLayout(allItems, r, gap) {
     var g = gap || gapForLevel(0);
-    var colStep = r * Math.sqrt(3) * g;
-    var rowStep = r * 1.5 * g;
+    // Flat-top hex tiling: columns step by 1.5r, rows by sqrt(3)*r
+    var colStep = r * 1.5 * g;
+    var rowStep = r * Math.sqrt(3) * g;
     var total   = allItems.length;
 
-    // Determine grid dimensions
+    // Determine grid dimensions (fill columns first, then rows)
     var perRow = Math.max(2, Math.ceil(Math.sqrt(total * 1.3)));
-    // Clamp to viewport width
     var maxPerRow = Math.max(2, Math.floor((svgW - r * 2) / colStep) + 1);
     if (perRow > maxPerRow) perRow = maxPerRow;
 
     var rows = Math.ceil(total / perRow);
 
     // Calculate total grid size then center it
-    var gridW = (perRow - 1) * colStep + colStep / 2; // account for offset rows
-    var gridH = (rows - 1) * rowStep;
-    var originX = (svgW - gridW) / 2 + r;
+    var gridW = (perRow - 1) * colStep;
+    var gridH = (rows - 1) * rowStep + rowStep / 2; // account for offset columns
+    var originX = (svgW - gridW) / 2;
     var originY = (svgH - gridH) / 2;
 
-    // Clamp so hexes don't go off-screen
     if (originX < r + 4) originX = r + 4;
     if (originY < r + 4) originY = r + 4;
 
@@ -199,9 +198,10 @@ export function HexNav(container, opts) {
     for (var i = 0; i < total; i++) {
       var row = Math.floor(i / perRow);
       var col = i % perRow;
-      var xOff = (row % 2 === 1) ? colStep / 2 : 0;
-      var x = originX + col * colStep + xOff;
-      var y = originY + row * rowStep;
+      // Flat-top: odd columns shift down by half a row
+      var yOff = (col % 2 === 1) ? rowStep / 2 : 0;
+      var x = originX + col * colStep;
+      var y = originY + row * rowStep + yOff;
 
       // Extend viewport if needed
       if (y + r > svgH - 4) {
