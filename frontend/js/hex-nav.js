@@ -7,10 +7,10 @@
 import { T } from './tokens.js';
 
 var CAT_R    = 80;
-var SUBCAT_R = 80;
-var ITEM_R   = 60;
-var GAP      = 1.06;
-var NBTH     = 1.2; // neighbor threshold multiplier
+var SUBCAT_R = 70;
+var ITEM_R   = 48;
+var GAP      = 1.04;
+var NBTH     = 1.15; // neighbor threshold multiplier
 
 // ═══════════════════════════════════════════════════
 //  HexNav class
@@ -204,8 +204,6 @@ export function HexNav(container, opts) {
       if (!isDup) unique.push(c);
     });
 
-    if (unique.length === 0) return;
-
     // Prefer positions closest to gravity (cat)
     unique.sort(function(a, b) {
       var dxA = a.x - grav.x, dyA = a.y - grav.y;
@@ -219,6 +217,26 @@ export function HexNav(container, opts) {
         pos = unique[j]; break;
       }
     }
+
+    // Fallback: try all 12 directions from every placed hex with tighter packing
+    if (!pos) {
+      var fallbackDist = childR * 2.1;
+      var allSources = [parent].concat(placed);
+      for (var si = 0; si < allSources.length && !pos; si++) {
+        var src = allSources[si];
+        for (var a = 0; a < 12 && !pos; a++) {
+          var angle = (Math.PI / 6) * a;
+          var fx = src.x + fallbackDist * Math.cos(angle);
+          var fy = src.y + fallbackDist * Math.sin(angle);
+          if (fx - childR < 0 || fx + childR > svgW) continue;
+          if (fy - childR < 0 || fy + childR > svgH) continue;
+          if (noCollision(fx, fy, childR, allHexes)) {
+            pos = { x: fx, y: fy };
+          }
+        }
+      }
+    }
+
     if (!pos) return;
 
     placed.push({
@@ -235,6 +253,9 @@ export function HexNav(container, opts) {
 
   return placed;
 }
+
+  // ── Tap debounce ───────────────────────────────
+  var lastTapTime = 0;
 
   // ── Navigation ─────────────────────────────────
   function showCats() {
@@ -305,6 +326,10 @@ export function HexNav(container, opts) {
   }
 
   function onHexTap(h) {
+    var now = Date.now();
+    if (now - lastTapTime < 250) return;
+    lastTapTime = now;
+
     if (h.locked) {
       if (h.type === 'cat')    showCats();
       if (h.type === 'subcat') showSubcats(state.cat);

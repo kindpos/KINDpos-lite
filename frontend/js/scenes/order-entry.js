@@ -21,8 +21,6 @@ var OVERLAP  = 18;
 // ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
 var TAX_RATE      = 0.07;
 var CASH_DISCOUNT = 0.04;
-var STUB_PRICE    = 0;
-
 // Fetch canonical rates from backend so FE/BE always agree
 fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
   if (d.tax_rate != null)           TAX_RATE      = d.tax_rate;
@@ -44,31 +42,49 @@ var MENU_DATA = [
   {
     id: 'combo', label: 'COMBO', color: T.catColor('COMBO'), textColor: '#1a1a00',
     subcats: [
-      { id: 'combo-items', label: 'Combo', items: ['Half Rack', 'Pulled Pork'] },
+      { id: 'combo-items', label: 'Combo', items: [
+        { label: 'Half Rack', price: 16.00 },
+        { label: 'Pulled Pork', price: 14.00 },
+      ] },
     ]
   },
   {
     id: 'ribs', label: 'RIBS', color: T.catColor('RIBS'), textColor: '#1a0a0a',
     subcats: [
-      { id: 'ribs-items', label: 'Ribs', items: ['Full Rack', 'Half Rack'] },
+      { id: 'ribs-items', label: 'Ribs', items: [
+        { label: 'Full Rack', price: 18.00 },
+        { label: 'Half Rack', price: 12.00 },
+      ] },
     ]
   },
   {
     id: 'sandwiches', label: 'SANDWICHES', color: T.catColor('SANDWICHES'), textColor: '#1a2a1a',
     subcats: [
-      { id: 'sandwich-items', label: 'Sandwiches', items: ['Pulled Pork', 'Sliced Brisket'] },
+      { id: 'sandwich-items', label: 'Sandwiches', items: [
+        { label: 'Pulled Pork', price: 10.00 },
+        { label: 'Sliced Brisket', price: 12.00 },
+      ] },
     ]
   },
   {
     id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: '#001a1a',
     subcats: [
-      { id: 'side-items', label: 'Sides', items: ['Fries', 'Baked Potato', 'Slaw'] },
+      { id: 'side-items', label: 'Sides', items: [
+        { label: 'Fries', price: 4.00 },
+        { label: 'Baked Potato', price: 5.00 },
+        { label: 'Slaw', price: 3.00 },
+      ] },
     ]
   },
   {
     id: 'soda', label: 'SODA', color: T.catColor('SODA'), textColor: '#001a1a',
     subcats: [
-      { id: 'soda-items', label: 'Soda', items: ['Coke', 'Sprite', 'Diet Coke', 'Fanta'] },
+      { id: 'soda-items', label: 'Soda', items: [
+        { label: 'Coke', price: 3.00 },
+        { label: 'Sprite', price: 3.00 },
+        { label: 'Diet Coke', price: 3.00 },
+        { label: 'Fanta', price: 3.00 },
+      ] },
     ]
   },
 ];
@@ -77,13 +93,24 @@ var MOD_DATA = [
   {
     id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff',
     subcats: [
-      { id: 'sauce-items', label: 'Sauce', items: ['Sweet', 'Hot', 'Mild', 'Vinegar', 'Mustard'] },
+      { id: 'sauce-items', label: 'Sauce', items: [
+        { label: 'Sweet', price: 0 },
+        { label: 'Hot', price: 0 },
+        { label: 'Mild', price: 0 },
+        { label: 'Vinegar', price: 0 },
+        { label: 'Mustard', price: 0 },
+      ] },
     ]
   },
   {
     id: 'extras', label: 'EXTRAS', color: T.lavender, textColor: '#1a0030',
     subcats: [
-      { id: 'extras-items', label: 'Extras', items: ['Extra Meat', 'Cheese', 'Jalapeños', 'Onions'] },
+      { id: 'extras-items', label: 'Extras', items: [
+        { label: 'Extra Meat', price: 3.00 },
+        { label: 'Cheese', price: 1.00 },
+        { label: 'Jalape\u00f1os', price: 0.50 },
+        { label: 'Onions', price: 0 },
+      ] },
     ]
   },
 ];
@@ -429,7 +456,7 @@ function handleItemSelect(item) {
     var ticketItem = {
       id:        ++ticketSeq,
       name:      'Combo ' + name,
-      unitPrice: STUB_PRICE,
+      unitPrice: price,
       mods:      [],
       selected:  false,
       sent:      false,
@@ -447,7 +474,8 @@ function handleItemSelect(item) {
 }
 
 function addToTicket(item) {
-  var name = item.label || item;
+  var name  = item.label || item;
+  var price = typeof item.price === 'number' ? item.price : 0;
 
   if (activeTab === 'modifiers') {
     // Apply modifier to all selected instances
@@ -455,15 +483,16 @@ function addToTicket(item) {
     if (selected.length === 0) return;
     var pfx = PREFIXES.find(function(p) { return p.id === activePrefix; });
     var modName = (pfx ? pfx.label + ' ' : '') + name;
+    var charged = price > 0;
     selected.forEach(function(inst) {
-      inst.mods.push({ name: modName, price: 0, charged: false });
+      inst.mods.push({ name: modName, price: price, charged: charged });
     });
   } else {
     // New item instance
     ticket.push({
       id:        ++ticketSeq,
       name:      name,
-      unitPrice: STUB_PRICE,
+      unitPrice: price,
       mods:      [],
       selected:  false,
       sent:      false,
@@ -744,6 +773,7 @@ function buildPinOverlay(el, cb) {
     'display:flex;flex-direction:column;align-items:center;',
     'gap:14px;background:#1a1a1a;',
     'border:4px solid ' + T.mint + ';padding:20px;',
+    'max-height:90vh;overflow-y:auto;',
   ].join('');
 
   var lbl = document.createElement('div');
@@ -772,6 +802,11 @@ function buildPinOverlay(el, cb) {
   panel.appendChild(cancelBtn);
 
   el.appendChild(panel);
+
+  // Backdrop tap dismisses interrupt
+  el.addEventListener('pointerup', function(e) {
+    if (e.target === el) cb(false);
+  });
 }
 
 async function handleSend() {
@@ -830,6 +865,7 @@ async function handleSend() {
 
   } catch (err) {
     console.warn('[KINDpos] Send failed:', err);
+    throw err;
   }
 
   // Reset hex nav — ticket stays visible for PAY
@@ -1045,7 +1081,12 @@ async function handlePay(params) {
 
   // If SEND was never tapped, create the order now before navigating
   if (!currentOrderId) {
-    await handleSend();
+    try {
+      await handleSend();
+    } catch (err) {
+      console.warn('[KINDpos] Send failed during pay — cannot proceed to payment');
+      return;
+    }
   }
 
   if (!currentOrderId) {
