@@ -320,11 +320,10 @@ export function HexNav(container, opts) {
     var gridR = (parentHex.r + r) / 2;
     var slots = gridSlotsAround(parentHex.x, parentHex.y, gridR, childItems.length, gap, r);
 
-    // Only avoid overlapping parent and grandparent (last 2 locked hexes)
-    var avoidHexes = lockedHexes.slice(-2);
+    // Avoid overlapping ALL locked ancestors in the chain
     var freeSlots = [];
     slots.forEach(function(pos) {
-      var overlaps = avoidHexes.some(function(lh) {
+      var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
         return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.85;
       });
