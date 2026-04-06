@@ -375,6 +375,7 @@ async def get_day_summary(
     gross_sales = _ZERO
     void_total = _ZERO
     discount_total = _ZERO
+    refund_total = _ZERO
     discount_count = 0
     tax_total = _ZERO
     cash_total = _ZERO
@@ -417,7 +418,9 @@ async def get_day_summary(
 
         gross_sales += Decimal(str(order.subtotal))
         order_disc = Decimal(str(order.discount_total))
+        order_refund = Decimal(str(order.refund_total))
         discount_total += order_disc
+        refund_total += order_refund
         if order_disc > 0:
             discount_count += 1
         tax_total += Decimal(str(order.tax))
@@ -428,7 +431,7 @@ async def get_day_summary(
             h = order.created_at.hour
             if h not in hourly:
                 hourly[h] = {"net": _ZERO, "checks": 0}
-            hourly[h]["net"] += Decimal(str(order.subtotal)) - order_disc
+            hourly[h]["net"] += Decimal(str(order.subtotal)) - order_disc - order_refund
             hourly[h]["checks"] += 1
 
         # Category breakdown from items
@@ -512,7 +515,7 @@ async def get_day_summary(
                 "status": "open",
             })
 
-    net_sales = float(gross_sales - void_total - discount_total)
+    net_sales = float(gross_sales - void_total - discount_total - refund_total)
     total_checks = closed_count + open_count
     avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
     unadjusted = sum(1 for c in checks_list if not c["adjusted"])

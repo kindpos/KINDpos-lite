@@ -240,6 +240,7 @@ class PrintContextBuilder:
         voids_total = _ZERO
         comps_total = _ZERO
         discounts_total = _ZERO
+        refunds_total = _ZERO
         tax_collected = _ZERO
         cash_sales = _ZERO
         card_sales = _ZERO
@@ -267,8 +268,9 @@ class PrintContextBuilder:
             gross_sales += order_subtotal
             tax_collected += order_tax
 
-            # Use projection's discount_total for consistent deduction model
+            # Use projection totals for consistent deduction model
             discounts_total += Decimal(str(order.discount_total or 0))
+            refunds_total += Decimal(str(order.refund_total or 0))
 
             # ── Payment details ───────────────────────────────────────────────
             for p in (order.payments or []):
@@ -300,7 +302,7 @@ class PrintContextBuilder:
                         "tip_open": tip_open,
                     })
 
-        net_sales = float(gross_sales - discounts_total)
+        net_sales = float(gross_sales - discounts_total - refunds_total)
         cc_tips_total = sum(t["tip"] for t in cc_transactions)
         gross_tips = cc_tips_total + (declared_cash_tips or 0.0)
 
@@ -462,6 +464,7 @@ class PrintContextBuilder:
         comps_count = 0
         discounts_total = _ZERO
         discounts_count = 0
+        refunds_total = _ZERO
         tax_collected = _ZERO
         cash_sales = _ZERO
         cash_count = 0
@@ -509,11 +512,12 @@ class PrintContextBuilder:
 
             covers += max(len(seats), 1)  # At least 1 guest per check
 
-            # Use projection's discount_total for consistent deduction model
+            # Use projection totals for consistent deduction model
             order_disc = Decimal(str(order.discount_total or 0))
             discounts_total += order_disc
             if order_disc > 0:
                 discounts_count += 1
+            refunds_total += Decimal(str(order.refund_total or 0))
 
             # Payments
             for p in (order.payments or []):
@@ -532,7 +536,7 @@ class PrintContextBuilder:
                     card_count += 1
                     card_tips += tip
 
-        net_sales = float(gross_sales - discounts_total)
+        net_sales = float(gross_sales - discounts_total - refunds_total)
         total_payments = float(cash_sales + card_sales)
         avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
         per_person_avg = money_round(net_sales / covers) if covers > 0 else 0.0

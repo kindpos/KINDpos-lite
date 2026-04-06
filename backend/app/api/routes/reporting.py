@@ -60,6 +60,7 @@ def _aggregate_orders(orders, tip_map):
     gross_sales = _ZERO
     void_total = _ZERO
     discount_total = _ZERO
+    refund_total = _ZERO
     cash_total = _ZERO
     card_total = _ZERO
     total_tips = _ZERO
@@ -80,11 +81,12 @@ def _aggregate_orders(orders, tip_map):
         total_checks += 1
         gross_sales += Decimal(str(order.subtotal))
         discount_total += Decimal(str(order.discount_total))
+        refund_total += Decimal(str(order.refund_total))
         guest_count += order.guest_count
         if order.table:
             table_set.add(order.table)
 
-        order_net = Decimal(str(order.subtotal)) - Decimal(str(order.discount_total))
+        order_net = Decimal(str(order.subtotal)) - Decimal(str(order.discount_total)) - Decimal(str(order.refund_total))
 
         # Per-item tracking
         food_total = _ZERO
@@ -137,7 +139,7 @@ def _aggregate_orders(orders, tip_map):
                 card_total += Decimal(str(p.amount))
                 card_tips += tip
 
-    net_sales = gross_sales - void_total - discount_total
+    net_sales = gross_sales - void_total - discount_total - refund_total
 
     return {
         "net_sales": net_sales,

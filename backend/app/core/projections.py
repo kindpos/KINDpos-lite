@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
+from decimal import Decimal
+
 from .events import Event, EventType
 from .money import money_round
 
@@ -36,9 +38,10 @@ class OrderItem:
 
     @property
     def subtotal(self) -> float:
-        """Calculate item subtotal including modifiers (no intermediate rounding)."""
-        modifier_total = sum(m.get("price", 0) for m in self.modifiers)
-        return (self.price + modifier_total) * self.quantity
+        """Calculate item subtotal including modifiers.
+        Uses Decimal to avoid float drift (e.g. 0.01 × 100)."""
+        modifier_total = sum(Decimal(str(m.get("price", 0))) for m in self.modifiers)
+        return float((Decimal(str(self.price)) + modifier_total) * self.quantity)
 
 
 @dataclass
@@ -76,6 +79,7 @@ class Order:
     items: list[OrderItem] = field(default_factory=list)
     payments: list[Payment] = field(default_factory=list)
     discounts: list[dict] = field(default_factory=list)
+    refunds: list[dict] = field(default_factory=list)
 
     created_at: Optional[datetime] = None
     closed_at: Optional[datetime] = None
@@ -97,6 +101,11 @@ class Order:
     def discount_total(self) -> float:
         """Sum of all discounts. Rounded to prevent float addition drift."""
         return money_round(sum(d.get("amount", 0) for d in self.discounts))
+
+    @property
+    def refund_total(self) -> float:
+        """Sum of all refunds issued on this order."""
+        return money_round(sum(r.get("amount", 0) for r in self.refunds))
 
     @property
     def tax_rate(self) -> float:
@@ -320,6 +329,15 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                     if payment.payment_id == payload["payment_id"]:
                         payment.tip_amount = payload.get("tip_amount", 0.0)
                         break
+
+        elif event.event_type == EventType.PAYMENT_REFUNDED:
+            if order:
+                order.refunds.append({
+                    "payment_id": payload.get("payment_id"),
+                    "amount": payload.get("amount", 0),
+                    "reason": payload.get("reason"),
+                    "refunded_at": event.timestamp,
+                })
 
         # --- PRINTING ---
 
