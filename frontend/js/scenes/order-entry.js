@@ -131,6 +131,10 @@ var savedTabs    = [];    // [{ id, checkNum, label, ticket }] — in-memory for
 var saveSeq      = 0;     // saved tab ID counter
 var saveBtn      = null;  // DOM ref for SAVE button state
 var customerName = '';    // current tab's customer name (from save/recall)
+var modHistory   = [];    // [{inst, mod}] — undo stack for modifier additions
+var _tabCanvas   = null;  // DOM refs for tab switching from CONFIRM
+var _tabItemsBtn = null;
+var _tabModsBtn  = null;
 
 // ── Void reasons ─────────────────────────────────
 var VOID_REASONS = ['Mistake', 'Kitchen Error', 'Customer Request', 'Manager Comp', 'Other'];
@@ -160,6 +164,7 @@ registerScene('order-entry', {
     isSending      = false;
     currentCheckNumber = null;
     customerName   = '';     // reset tab name
+    modHistory     = [];     // reset undo stack
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -286,7 +291,7 @@ function buildPrefixCard() {
     'border-bottom:none;',
     'padding:6px 8px;',
     'display:none;gap:6px;',
-    'align-items:center;',
+    'align-items:center;flex-wrap:wrap;',
   ].join('');
 
   // Label
@@ -327,6 +332,51 @@ function buildPrefixCard() {
     btnEls[p.id] = pair;
     card.appendChild(pair.wrap);
   });
+
+  // ── UNDO + CONFIRM row ──
+  var actionRow = document.createElement('div');
+  actionRow.style.cssText = 'display:flex;gap:6px;width:100%;margin-top:2px;';
+
+  var undoPair = buildStyledButton(T.bgDark);
+  undoPair.wrap.style.height = '40px';
+  undoPair.wrap.style.flex   = '1';
+  undoPair.inner.style.fontFamily = T.fb;
+  undoPair.inner.style.fontSize   = T.fsBtn;
+  undoPair.inner.style.color      = T.red;
+  undoPair.inner.textContent = 'UNDO';
+  undoPair.wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + T.red + 'aa)';
+  undoPair.wrap.addEventListener('pointerup', function() {
+    if (modHistory.length === 0) return;
+    var last = modHistory.pop();
+    var idx = last.inst.mods.indexOf(last.mod);
+    if (idx !== -1) last.inst.mods.splice(idx, 1);
+    renderTicket();
+    updateBottomBar();
+  });
+  actionRow.appendChild(undoPair.wrap);
+
+  var confirmPair = buildStyledButton(T.goGreen);
+  confirmPair.wrap.style.height = '40px';
+  confirmPair.wrap.style.flex   = '2';
+  confirmPair.inner.style.fontFamily = T.fb;
+  confirmPair.inner.style.fontSize   = T.fsBtn;
+  confirmPair.inner.style.color      = '#1a2a1a';
+  confirmPair.inner.textContent = 'CONFIRM';
+  confirmPair.wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + T.goGreen + 'aa)';
+  confirmPair.wrap.addEventListener('pointerup', function() {
+    // Deselect all items and clear undo history
+    ticket.forEach(function(i) { i.selected = false; });
+    modHistory = [];
+    renderTicket();
+    updateBottomBar();
+    // Switch back to ADD ITEMS tab
+    if (_tabCanvas && _tabItemsBtn && _tabModsBtn) {
+      switchTab('items', _tabCanvas, _tabItemsBtn, _tabModsBtn);
+    }
+  });
+  actionRow.appendChild(confirmPair.wrap);
+
+  card.appendChild(actionRow);
 
   card._btnEls = btnEls;
   prefixCard = card;
@@ -374,6 +424,11 @@ function buildMain(parentEl, params) {
   });
   tabMods.style.gridColumn = '3 / 5';
   tabMods.style.gridRow    = '1';
+
+  // Store refs so CONFIRM/UNDO can switch tabs
+  _tabCanvas   = canvas;
+  _tabItemsBtn = tabItems;
+  _tabModsBtn  = tabMods;
 
   var send = buildButton('SEND', {
     fill: T.goGreen, color: T.bg, fontSize: '30px', fontFamily: T.fh,
@@ -505,7 +560,9 @@ function addToTicket(item) {
     var modName = (pfx ? pfx.label + ' ' : '') + name;
     var charged = price > 0;
     selected.forEach(function(inst) {
-      inst.mods.push({ name: modName, price: price, charged: charged });
+      var mod = { name: modName, price: price, charged: charged };
+      inst.mods.push(mod);
+      modHistory.push({ inst: inst, mod: mod });
     });
   } else {
     // New item instance
@@ -639,7 +696,26 @@ function renderTicket() {
         if (visibleMods.length > 0) {
           ic.appendChild(buildSeparator());
           visibleMods.forEach(function(m) {
-            ic.appendChild(buildModRow(m.name, m.price, active, active));
+            var modRow = buildModRow(m.name, m.price, active, active);
+            // Tap mod row to remove modifier when in modifiers tab and item is selected
+            if (active && activeTab === 'modifiers') {
+              modRow.style.cursor = 'pointer';
+              modRow.style.textDecoration = 'none';
+              modRow.addEventListener('pointerenter', function() { modRow.style.opacity = '0.6'; });
+              modRow.addEventListener('pointerleave', function() { modRow.style.opacity = '1'; });
+              (function(targetInst, targetMod) {
+                modRow.addEventListener('pointerup', function(e) {
+                  e.stopPropagation();
+                  var mi = targetInst.mods.indexOf(targetMod);
+                  if (mi !== -1) targetInst.mods.splice(mi, 1);
+                  // Also remove from undo history
+                  modHistory = modHistory.filter(function(h) { return h.mod !== targetMod; });
+                  renderTicket();
+                  updateBottomBar();
+                });
+              })(inst, m);
+            }
+            ic.appendChild(modRow);
           });
         }
 
