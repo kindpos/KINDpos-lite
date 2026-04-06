@@ -17,6 +17,7 @@ import './scenes/tip-adjustment.js';
 import './scenes/reporting.js';
 import './scenes/server-checkout.js';
 import './scenes/close-day.js';
+import './scenes/sales-summary.js';
 
 window._push = push;
 // ── Header state ──────────────────────────────────
