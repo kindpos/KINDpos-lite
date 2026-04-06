@@ -41,7 +41,18 @@ export var PIZZA_PLACEMENTS = [
 // Each category becomes a hex; its items become child hexes on drill-down
 // Categories are filtered at runtime by union of selected ticket item categories
 
+var MOD_COLORS_PLACEMENT = { color: '#6b3a3a', textColor: '#ffccd0' };
+
 var ALL_MOD_CATEGORIES = [
+  {
+    id: 'mod-placement', label: 'PLACE', menuCategories: ['pizza'],
+    color: MOD_COLORS_PLACEMENT.color, textColor: MOD_COLORS_PLACEMENT.textColor,
+    subcats: [{ id: 'placement-items', label: 'Placement', items: [
+      { label: 'Whole', id: '__place_whole__', isPlacement: true },
+      { label: 'Left',  id: '__place_left__',  isPlacement: true },
+      { label: 'Right', id: '__place_right__', isPlacement: true },
+    ]}],
+  },
   {
     id: 'mod-prep', label: 'PREP', menuCategories: ['*'],
     color: MOD_COLORS.prep.color, textColor: MOD_COLORS.prep.textColor,
