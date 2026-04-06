@@ -1006,9 +1006,10 @@ function buildPinOverlay(el, cb) {
       // Validate against backend employee roster — accept any manager PIN
       fetch(API + '/servers')
         .then(function(r) { return r.json(); })
-        .then(function(employees) {
-          var match = employees.find(function(e) {
-            return e.pin === pin && e.role === 'manager';
+        .then(function(data) {
+          var servers = data.servers || [];
+          var match = servers.find(function(e) {
+            return e.pin === pin && (e.role === 'manager' || (e.roles && e.roles.indexOf('manager') !== -1));
           });
           if (match) {
             cb(true);

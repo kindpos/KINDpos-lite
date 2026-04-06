@@ -52,12 +52,15 @@ async def _clocked_in_ids(ledger: EventLedger) -> set:
     """Return the set of employee IDs currently clocked in."""
     login_events = await ledger.get_events_by_type(EventType.USER_LOGGED_IN)
     logout_events = await ledger.get_events_by_type(EventType.USER_LOGGED_OUT)
-    clocked_in: dict = {}
-    for e in sorted(login_events, key=lambda x: x.sequence_number or 0):
-        clocked_in[e.payload["employee_id"]] = e
-    for e in sorted(logout_events, key=lambda x: x.sequence_number or 0):
-        clocked_in.pop(e.payload["employee_id"], None)
-    return set(clocked_in.keys())
+    all_events = sorted(login_events + logout_events, key=lambda x: x.sequence_number or 0)
+    clocked_in: set = set()
+    for e in all_events:
+        eid = e.payload["employee_id"]
+        if e.event_type == EventType.USER_LOGGED_IN:
+            clocked_in.add(eid)
+        else:
+            clocked_in.discard(eid)
+    return clocked_in
 
 
 @router.post("/clock-in")
