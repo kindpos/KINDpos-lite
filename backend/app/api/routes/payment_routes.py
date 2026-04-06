@@ -222,8 +222,11 @@ async def process_sale(
     if v_result.status == ValidationStatus.NEEDS_APPROVAL:
         return v_result # Return to frontend for PIN entry
 
-    # 3. Process
-    result = await manager.initiate_sale(request)
+    # 3. Process — capture tax at payment time
+    order_events = await ledger.get_events_by_correlation(request.order_id)
+    order_proj = project_order(order_events)
+    order_tax = order_proj.tax if order_proj else 0.0
+    result = await manager.initiate_sale(request, tax=order_tax)
 
     # Return HTTP error if the transaction was not approved
     if hasattr(result, 'status'):
@@ -317,6 +320,7 @@ async def process_cash_payment(
         payment_id=payment_id,
         transaction_id=f"cash_{uuid.uuid4().hex[:8]}",
         amount=sale_amount,
+        tax=order.tax,
     )
     await ledger.append(confirm_evt)
 

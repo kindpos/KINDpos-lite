@@ -421,9 +421,10 @@ def payment_confirmed(
         payment_id: str,
         transaction_id: str,
         amount: float,
+        tax: float = 0.0,
         **kwargs
 ) -> Event:
-    """Create a PAYMENT_CONFIRMED event."""
+    """Create a PAYMENT_CONFIRMED event.  Captures tax at payment time."""
     return create_event(
         event_type=EventType.PAYMENT_CONFIRMED,
         terminal_id=terminal_id,
@@ -432,6 +433,7 @@ def payment_confirmed(
             "payment_id": payment_id,
             "transaction_id": transaction_id,
             "amount": amount,
+            "tax": money_round(tax),
         },
         correlation_id=order_id,
         **kwargs

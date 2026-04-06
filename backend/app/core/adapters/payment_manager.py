@@ -52,9 +52,10 @@ class PaymentManager:
             return self._devices[device_id]
         return None
 
-    async def initiate_sale(self, request: TransactionRequest) -> TransactionResult:
+    async def initiate_sale(self, request: TransactionRequest, tax: float = 0.0) -> TransactionResult:
         """Core sale entry point with idempotency and event emission."""
-        
+        self._pending_tax = tax  # stash for _emit_result_event
+
         # 5.1 Idempotency check
         existing_result = await self._check_idempotency(request.transaction_id)
         if existing_result:
@@ -96,8 +97,9 @@ class PaymentManager:
                 )
             )
 
-        # 5.2 Event Emission - Result
-        await self._emit_result_event(request, result)
+        # 5.2 Event Emission - Result (include tax captured at payment time)
+        from ..money import money_round
+        await self._emit_result_event(request, result, extra={"tax": money_round(self._pending_tax)})
         
         return result
 
@@ -117,7 +119,7 @@ class PaymentManager:
                  
         return None
 
-    async def _emit_result_event(self, request: TransactionRequest, result: TransactionResult):
+    async def _emit_result_event(self, request: TransactionRequest, result: TransactionResult, extra: dict = None):
         status_map = {
             TransactionStatus.APPROVED: EventType.PAYMENT_CONFIRMED,
             TransactionStatus.DECLINED: EventType.PAYMENT_DECLINED,
@@ -125,14 +127,13 @@ class PaymentManager:
             TransactionStatus.TIMEOUT: EventType.PAYMENT_TIMED_OUT,
             TransactionStatus.ERROR: EventType.PAYMENT_ERROR
         }
-        
+
         event_type = status_map.get(result.status, EventType.PAYMENT_ERROR)
-        
+
         payload = request.dict()
-        # Convert Decimals to strings/floats for JSON payload in ledger if needed, 
-        # but EventLedger usually handles it or create_event does.
-        # Actually TransactionResult has pydantic dict() which should be fine.
         payload.update(result.dict())
+        if extra:
+            payload.update(extra)
         
         event = self._create_payment_event(event_type, payload)
         await self._ledger.append(event)

@@ -16,6 +16,7 @@ from app.core.event_ledger import EventLedger
 from app.core.events import EventType
 from app.core.projections import project_orders
 from app.core.money import money_round
+from app.config import settings as app_settings
 
 router = APIRouter(prefix="/reports", tags=["reporting"])
 
@@ -308,11 +309,11 @@ async def get_sales_summary(
 
     if server_id:
         # Server-specific fields
-        tipout_rate = 0.02  # 2% tipout — matches labor-summary tipout_percent
+        tipout_rate = app_settings.tipout_percent / 100.0
         tips = float(agg["total_tips"])
         cash_t = float(agg["cash_tips"])
         card_t = float(agg["card_tips"])
-        tipout = money_round(card_t * tipout_rate)
+        tipout = money_round(tips * tipout_rate)
         take_home = money_round(tips - tipout)
 
         base["total_guests"] = agg["guest_count"]
@@ -543,9 +544,10 @@ async def get_labor_summary(
             "weekly_hours": weekly_hours,
         })
 
-    tipout_percent = 2
-    tipout_deducted = money_round(float(card_tips_total) * tipout_percent / 100)
-    tip_pool = money_round(float(card_tips_total) - tipout_deducted)
+    tipout_percent = app_settings.tipout_percent
+    total_tips_all = sum(Decimal(str(emp.get("tips", 0))) for emp in employees)
+    tipout_deducted = money_round(float(total_tips_all) * tipout_percent / 100)
+    tip_pool = money_round(float(total_tips_all) - tipout_deducted)
 
     # OT alerts: anyone at or over 35 weekly hours
     ot_alerts = []
