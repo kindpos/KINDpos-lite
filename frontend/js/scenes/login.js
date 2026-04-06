@@ -10,14 +10,10 @@ import { buildNumpad } from '../numpad.js';
 import { registerScene, push, overlay, dismissOverlay } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
-var COL_LEFT   = 530;
-var COL_RIGHT  = 410;
 var COL_GAP    = 20;
 var SCENE_PAD  = 10;
-var QS_H       = 120;
-var MGMT_H     = 130;
-var CONFIG_H   = 100;
-var MGMT_W     = 250;
+var BTN_W      = 260;
+var BTN_H      = 100;
 
 var selectedAction = null;
 var employees = [];  // loaded from /api/v1/servers on scene enter
@@ -83,52 +79,31 @@ registerScene('login', {
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
       employees = data.servers || [];
     }).catch(function() { employees = []; });
-    el.style.cssText = 'width:100%;height:100%;display:grid;grid-template-columns:' + COL_LEFT + 'px ' + COL_RIGHT + 'px;gap:' + COL_GAP + 'px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
+    el.style.cssText = 'width:100%;height:100%;display:grid;grid-template-columns:1fr auto 1fr;gap:' + COL_GAP + 'px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
 
-    // ── LEFT COLUMN ──
+    // ── LEFT COLUMN ── (Clock In/Out, Reporting, Configuration)
     var left = document.createElement('div');
-    left.style.cssText = 'display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:0;padding-top:20px;';
+    left.style.cssText = 'display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;';
 
-    // Quick Service — large button at top
-    var qsBtn = buildButton('< Quick Service >', {
-      fill: T.mint, color: T.bg, fontSize: '60px',
-      width: COL_LEFT - 60, height: QS_H,
-      onTap: function() { handleAction('quick-service'); },
-    });
-    registerActionButton(qsBtn, 'quick-service', T.mint);
-    left.appendChild(qsBtn);
-
-    left.appendChild(buildGap(40));
-
-    // Clock in/out + Reporting — side by side
-    var row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:20px;';
-
-    var clockBtn = buildButton('Clock\nin/out', {
-      fill: T.cyan, color: T.bg, fontSize: T.fsMgmt,
-      width: MGMT_W, height: MGMT_H,
-      lineHeight: '0.75',
+    var clockBtn = buildButton('CLOCK IN/OUT', {
+      fill: T.cyan, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      width: BTN_W, height: BTN_H,
       onTap: function() { handleAction('clock'); },
     });
     registerActionButton(clockBtn, 'clock', T.cyan);
-    row.appendChild(clockBtn);
+    left.appendChild(clockBtn);
 
-    var reportBtn = buildButton('Reporting', {
-      fill: T.cyan, color: T.bg, fontSize: T.fsMgmt,
-      width: MGMT_W, height: MGMT_H,
+    var reportBtn = buildButton('REPORTING', {
+      fill: T.cyan, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      width: BTN_W, height: BTN_H,
       onTap: function() { handleAction('reporting'); },
     });
     registerActionButton(reportBtn, 'reporting', T.cyan);
-    row.appendChild(reportBtn);
+    left.appendChild(reportBtn);
 
-    left.appendChild(row);
-
-    left.appendChild(buildGap(40));
-
-    // Configurations — wide gold button at bottom
-    var configBtn = buildButton('< Configurations >', {
-      fill: T.gold, color: T.bg, fontSize: '60px',
-      width: COL_LEFT - 60, height: CONFIG_H,
+    var configBtn = buildButton('CONFIGURATION', {
+      fill: T.gold, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      width: BTN_W, height: BTN_H,
       onTap: function() { handleAction('configuration'); },
     });
     registerActionButton(configBtn, 'configuration', T.gold);
@@ -136,16 +111,16 @@ registerScene('login', {
 
     el.appendChild(left);
 
-    // ── RIGHT COLUMN ──
-    var right = document.createElement('div');
-    right.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;';
+    // ── CENTER COLUMN ── (PIN prompt + Numpad + Version)
+    var center = document.createElement('div');
+    center.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;';
 
     // PIN prompt — hidden until an action button is tapped
     var pinPrompt = document.createElement('div');
-    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;padding:2px 0;min-height:26px;';
+    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';text-align:center;padding:2px 0;min-height:26px;';
     pinPrompt.textContent = '';
     _pinPromptEl = pinPrompt;
-    right.appendChild(pinPrompt);
+    center.appendChild(pinPrompt);
 
     _numpadRef = buildNumpad({
       maxDigits: 6,
@@ -157,9 +132,9 @@ registerScene('login', {
       cardPad: 18,
       onSubmit: function(pin) { handlePinSubmit(pin, pinPrompt); },
     });
-    right.appendChild(_numpadRef);
+    center.appendChild(_numpadRef);
 
-    // Version label at bottom-right with multi-color spans
+    // Version label at bottom with multi-color spans
     var version = document.createElement('div');
     version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:40px;padding:4px 0;margin-right:0;';
     var parts = [
@@ -176,7 +151,37 @@ registerScene('login', {
       span.textContent = p.text;
       version.appendChild(span);
     });
-    right.appendChild(version);
+    center.appendChild(version);
+
+    el.appendChild(center);
+
+    // ── RIGHT COLUMN ── (Quick Service, Recall Table, Tip Adjustment)
+    var right = document.createElement('div');
+    right.style.cssText = 'display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;';
+
+    var qsBtn = buildButton('QUICK SERVICE', {
+      fill: T.grayBtn, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      width: BTN_W, height: BTN_H,
+      onTap: function() { handleAction('quick-service'); },
+    });
+    registerActionButton(qsBtn, 'quick-service', T.grayBtn);
+    right.appendChild(qsBtn);
+
+    var recallBtn = buildButton('RECALL TABLE', {
+      fill: T.grayBtn, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      width: BTN_W, height: BTN_H,
+      onTap: function() { handleAction('recall-table'); },
+    });
+    registerActionButton(recallBtn, 'recall-table', T.grayBtn);
+    right.appendChild(recallBtn);
+
+    var tipBtn = buildButton('TIP ADJUSTMENT', {
+      fill: T.cyan, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      width: BTN_W, height: BTN_H,
+      onTap: function() { handleAction('tip-adjustment'); },
+    });
+    registerActionButton(tipBtn, 'tip-adjustment', T.cyan);
+    right.appendChild(tipBtn);
 
     el.appendChild(right);
   },
@@ -190,6 +195,8 @@ var actionLabels = {
   'clock': 'Clock In/Out',
   'reporting': 'Reporting',
   'configuration': 'Configurations',
+  'recall-table': 'Recall Table',
+  'tip-adjustment': 'Tip Adjustment',
 };
 
 function handleAction(action) {
@@ -207,7 +214,7 @@ function handleAction(action) {
 
   if (_pinPromptEl) {
     _pinPromptEl.textContent = 'Enter PIN for ' + (actionLabels[action] || action);
-    _pinPromptEl.style.color = T.mint;
+    _pinPromptEl.style.color = T.gold;
   }
 }
 
@@ -241,6 +248,12 @@ function handlePinSubmit(pin, promptEl) {
         return;
       }
       push('settings', { pin: pin });
+      break;
+    case 'recall-table':
+      push('order-entry', { mode: 'service', pin: pin, employeeId: emp.id, employeeName: emp.name, autoRecall: true });
+      break;
+    case 'tip-adjustment':
+      push('tip-adjustment', base);
       break;
   }
 }

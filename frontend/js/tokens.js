@@ -38,6 +38,9 @@ export const T = {
   lavender: '#b48efa',
   lavenderL:'#d0b8ff',
   lavenderD:'#5a3f7a',
+  grayBtn:  '#aaaaaa',
+  grayBtnL: '#cccccc',
+  grayBtnD: '#555555',
   yellow:   '#ffff00',
   mintB:    '#7bed9f',
   redB:     '#ff4757',
@@ -109,6 +112,7 @@ export function bevelEdges(fillColor) {
   if (fillColor === T.catBeverages)return { light: T.catBeveragesL,dark: T.catBeveragesD};
   if (fillColor === T.catSauces)   return { light: T.catSaucesL,   dark: T.catSaucesD  };
   if (fillColor === T.catStarches) return { light: T.catStarchesL, dark: T.catStarchesD};
+  if (fillColor === T.grayBtn) return { light: T.grayBtnL, dark: T.grayBtnD };
   if (fillColor === T.mintB)  return { light: '#aff4c4', dark: '#3a7a4d' };
   if (fillColor === T.redB)   return { light: '#ff7a87', dark: '#7a1f28' };
   return { light: T.bgLight, dark: T.bgEdge };
@@ -128,6 +132,7 @@ export function shadowColor(fillColor) {
   if (fillColor === T.catBeverages)return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.catSauces)   return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.catStarches) return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.grayBtn) return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.mintB)  return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.redB)   return 'rgba(10, 10, 10, 0.8)';
   return 'rgba(10, 10, 10, 0.8)';

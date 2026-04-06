@@ -172,6 +172,10 @@ registerScene('order-entry', {
     var mainArea    = buildMain(el, params);
     el.appendChild(ticketPanel);
     el.appendChild(mainArea);
+
+    if (params && params.autoRecall) {
+      setTimeout(function() { handleRecall(); }, 100);
+    }
   },
 
   onResume: function() {

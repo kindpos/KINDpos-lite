@@ -60,7 +60,7 @@ export function buildNumpad(opts) {
   display.style.justifyContent = 'center';
   display.style.fontFamily = T.fb;
   display.style.fontSize = '60px';
-  display.style.color = T.mint;
+  display.style.color = T.gold;
   display.style.letterSpacing = '5px';
   applySunkenStyle(display);
 
@@ -106,11 +106,11 @@ export function buildNumpad(opts) {
   layout.forEach(function(key) {
     var fill, textColor, fontSize;
     if (key.type === 'clear') {
-      fill = T.red; textColor = '#ffffff'; fontSize = T.fsClr;
+      fill = T.red; textColor = T.mint; fontSize = T.fsClr;
     } else if (key.type === 'submit') {
-      fill = T.goGreen; textColor = '#ffffff'; fontSize = T.fsClr;
+      fill = T.goGreen; textColor = T.mint; fontSize = T.fsClr;
     } else {
-      fill = T.darkBtn; textColor = T.mint; fontSize = T.fsNumpad;
+      fill = T.darkBtn; textColor = T.gold; fontSize = T.fsNumpad;
     }
 
     var pair = buildStyledButton(fill);
@@ -186,7 +186,7 @@ export function buildNumpad(opts) {
     display.textContent = msg || '';
     display.style.color = T.red;
     setTimeout(function() {
-      display.style.color = T.mint;
+      display.style.color = T.gold;
       pin = ''; render();
     }, 1200);
   };
