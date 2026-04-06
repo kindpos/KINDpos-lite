@@ -9,7 +9,9 @@ import { T } from './tokens.js';
 var CAT_R    = 80;
 var SUBCAT_R = 70;
 var ITEM_R   = 48;
-var GAP      = 1.04;
+// Gap multipliers per depth — tighter as you drill deeper
+var GAPS = [1.08, 1.04, 1.01, 0.98, 0.98];
+function gapForLevel(level) { return GAPS[level] || GAPS[GAPS.length - 1]; }
 
 // ═══════════════════════════════════════════════════
 //  HexNav class
@@ -169,9 +171,10 @@ export function HexNav(container, opts) {
   // Place all hexes (parent + children) in a single centered
   // honeycomb grid. Parent occupies slot 0 (locked), children
   // fill remaining slots. The whole grid is centered in the viewport.
-  function honeycombLayout(allItems, r) {
-    var colStep = r * Math.sqrt(3) * GAP;
-    var rowStep = r * 1.5 * GAP;
+  function honeycombLayout(allItems, r, gap) {
+    var g = gap || gapForLevel(0);
+    var colStep = r * Math.sqrt(3) * g;
+    var rowStep = r * 1.5 * g;
     var total   = allItems.length;
 
     // Determine grid dimensions
@@ -242,18 +245,16 @@ export function HexNav(container, opts) {
 
   // Generate hex ring positions radiating outward from a center point.
   // Ring 0 = center, ring 1 = 6 neighbors, ring 2 = 12, etc.
-  function hexRingSlots(cx, cy, r, maxRings) {
-    var dist = r * Math.sqrt(3) * GAP;
+  function hexRingSlots(cx, cy, r, maxRings, gap) {
+    var dist = r * Math.sqrt(3) * gap;
     var slots = [];
     for (var ring = 1; ring <= maxRings; ring++) {
       for (var side = 0; side < 6; side++) {
         for (var step = 0; step < ring; step++) {
-          // Walk along each edge of the hex ring
-          var a1 = (Math.PI / 3) * (side + 2);  // direction of edge
-          var a0 = (Math.PI / 3) * (side + 1);  // starting corner
+          var a1 = (Math.PI / 3) * (side + 2);
+          var a0 = (Math.PI / 3) * (side + 1);
           var sx = cx + ring * dist * Math.cos(a0) + step * dist * Math.cos(a1);
           var sy = cy + ring * dist * Math.sin(a0) + step * dist * Math.sin(a1);
-          // Keep in viewport
           if (sx - r >= 2 && sx + r <= svgW - 2 && sy - r >= 2 && sy + r <= svgH - 2) {
             slots.push({ x: sx, y: sy });
           }
@@ -268,29 +269,29 @@ export function HexNav(container, opts) {
   function buildGrid(lockedHexes, childItems, childR, childType) {
     var r = adaptiveR(childR, childItems.length, svgW, svgH);
     var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
+    var gap = gapForLevel(state.level);
 
-    // Generate ring slots outward from parent, enough rings to fit all children
+    // Generate ring slots outward from parent
     var maxRings = Math.max(3, Math.ceil(Math.sqrt(childItems.length)));
-    var slots = hexRingSlots(parentHex.x, parentHex.y, r, maxRings);
+    var slots = hexRingSlots(parentHex.x, parentHex.y, r, maxRings, gap);
 
-    // Filter out slots that overlap any locked hex
+    // Filter out slots that overlap ANY locked hex (parent, grandparent, etc.)
     var freeSlots = [];
     slots.forEach(function(pos) {
       var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
-        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.9;
+        var minDist = (lh.r + r) * gap;  // use actual radii of both hexes
+        return Math.sqrt(dx * dx + dy * dy) < minDist;
       });
       if (!overlaps) freeSlots.push(pos);
     });
 
     // Already sorted by ring (nearest first) from hexRingSlots
 
-    // Build hex list: locked hexes first (unchanged positions), then children
     var hexes = lockedHexes.slice();
     childItems.forEach(function(item, i) {
       if (i >= freeSlots.length) return;
       var pos = freeSlots[i];
-      // Extend viewport if needed
       if (pos.y + r > svgH - 4) {
         svgH = pos.y + r + 10;
         svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
@@ -371,7 +372,7 @@ export function HexNav(container, opts) {
     // Anchor cat top-left, item hex beside it
     if (state.cat && state.cat !== itemHex) {
       anchorTopLeft(state.cat);
-      itemHex.x = state.cat.x + (state.cat.r + itemHex.r) * GAP + 8;
+      itemHex.x = state.cat.x + (state.cat.r + itemHex.r) * gapForLevel(3) + 8;
       itemHex.y = state.cat.y;
     } else {
       anchorTopLeft(itemHex);
