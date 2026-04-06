@@ -81,10 +81,10 @@ function buildReceiptPanel(params) {
     'display:flex;justify-content:space-between;align-items:center;',
   ].join('');
   var hTitle = document.createElement('div');
-  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';letter-spacing:0.08em;';
-  hTitle.textContent = 'ORDER';
+  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.gold + ';letter-spacing:0.08em;';
+  hTitle.textContent = 'ORDER RECAP';
   var hId = document.createElement('div');
-  hId.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';';
+  hId.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';white-space:nowrap;';
   hId.textContent = params.checkId || '';
   header.appendChild(hTitle);
   header.appendChild(hId);
@@ -95,7 +95,7 @@ function buildReceiptPanel(params) {
   colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 50px 80px;',
     'padding:6px 14px;',
-    'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';letter-spacing:0.08em;',
+    'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';color:' + T.gold + ';letter-spacing:0.08em;',
     'border-bottom:1px solid ' + T.bg3 + ';',
   ].join('');
   ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
@@ -210,31 +210,31 @@ function buildCashPanel(params) {
   var col = document.createElement('div');
   col.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow:hidden;';
 
-  // ── Top: Presets + Numpad side by side ──
+  // ── Top: Presets (left, expanded) + Numpad (right, login-sized) ──
   var topRow = document.createElement('div');
   topRow.style.cssText = 'flex:1;display:flex;gap:' + GAP + 'px;overflow:hidden;';
 
-  // Preset column
+  // Preset column (expanded — takes remaining space)
   var presetCol = document.createElement('div');
-  presetCol.style.cssText = 'width:180px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;';
+  presetCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:12px;';
 
-  // Preset grid (2×3)
+  // Preset grid (2×3) — expanded with larger font
   var grid = document.createElement('div');
-  grid.style.cssText = 'flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;';
+  grid.style.cssText = 'flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:12px;';
 
   [5, 10, 15, 20, 50, 100].forEach(function(val) {
     var btn = buildButton('$' + val, {
-      fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
+      fill: T.mint, color: T.bgDark, fontSize: '50px',
       onTap: function() { addTendered(val, params); },
     });
     grid.appendChild(btn);
   });
   presetCol.appendChild(grid);
 
-  // Exact button
-  var exact = buildButton('EXACT\n$' + params.cashPrice.toFixed(2), {
-    fill: T.gold, color: T.bgDark, fontSize: T.fsBtn,
-    height: 56,
+  // Exact button — taller with more presence
+  var exact = buildButton('EXACT  $' + params.cashPrice.toFixed(2), {
+    fill: T.gold, color: T.bgDark, fontSize: '42px',
+    height: 72,
     onTap: function() {
       tendered  = params.cashPrice;
       numpadStr = '';
@@ -247,19 +247,18 @@ function buildCashPanel(params) {
 
   topRow.appendChild(presetCol);
 
-  // Numpad column
+  // Numpad column (right, login-sized)
   var numpadWrap = document.createElement('div');
-  numpadWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;';
+  numpadWrap.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;';
 
   var numpad = buildNumpad({
     masked:        false,
     maxDigits:     7,
-    width:         null,
-    displayH:      56,
-    cardPad:       12,
-    keyH:          56,
-    keyGap:        8,
-    gap:           8,
+    displayH:      60,
+    cardPad:       18,
+    keyH:          84,
+    keyGap:        12,
+    gap:           16,
     displayFormat: function(digits) {
       var n = digits ? parseInt(digits, 10) : 0;
       return '$' + (n / 100).toFixed(2);
@@ -273,7 +272,6 @@ function buildCashPanel(params) {
       if (tendered >= params.cashPrice) handleConfirm(params);
     },
   });
-  numpad.style.flex = '1';
   numpadWrap.appendChild(numpad);
   topRow.appendChild(numpadWrap);
 
