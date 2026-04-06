@@ -6,7 +6,7 @@
 
 import { T, chamfer, applySunkenStyle, buildStyledButton, shadowColor, bevelEdges } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, push } from '../scene-manager.js';
+import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var PAD = T.scenePad;
@@ -212,7 +212,7 @@ function buildMethodPanel(params) {
   var back = buildButton('\u2190 BACK', {
     fill: T.bg, color: T.mint, fontSize: T.fsSmall,
     height: 48,
-    onTap: function() { history.go(-1); },
+    onTap: function() { pop(); },
   });
   back.style.flexShrink = '0';
   panel.appendChild(back);
