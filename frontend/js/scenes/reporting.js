@@ -21,6 +21,12 @@ var salesData = null;
 var laborData = null;
 
 function fmt(n) { return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function hrLabel(h) {
+  var hr = typeof h === 'string' ? parseInt(h.split(':')[0]) : h;
+  if (hr === 0 || hr === 24) return '12a';
+  if (hr === 12) return '12p';
+  return hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+}
 
 // ═══════════════════════════════════════════════════
 //  FETCH DATA
@@ -412,8 +418,7 @@ function buildManagerSalesPanels(sales, fullSize) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
-      var hr = parseInt(hourly[i].hour);
-      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      var label = hrLabel(hourly[i].hour);
       data.push({ label: label, food: hourly[i].food || hourly[i].net || 0, drink: hourly[i].drink || 0, other: hourly[i].other || 0 });
     }
     drawStackedColumn(svg, data, {
@@ -436,8 +441,7 @@ function buildManagerSalesPanels(sales, fullSize) {
     var heatGrid = [];
     if (peakData.length > 0 && peakData[0].hours) {
       for (var c = 0; c < peakData[0].hours.length; c++) {
-        var hr = peakData[0].hours[c].hour;
-        colLabels.push(hr > 12 ? (hr - 12) + 'p' : hr + 'a');
+        colLabels.push(hrLabel(peakData[0].hours[c].hour));
       }
       for (var r = 0; r < peakData.length; r++) {
         var row = [];
@@ -450,8 +454,7 @@ function buildManagerSalesPanels(sales, fullSize) {
       // Fallback: generate from hourly data
       colLabels = [];
       for (var i = 0; i < hourly.length; i++) {
-        var hr = parseInt(hourly[i].hour);
-        colLabels.push(hr > 12 ? (hr - 12) + 'p' : hr + 'a');
+        colLabels.push(hrLabel(hourly[i].hour));
       }
       var dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       for (var r = 0; r < 7; r++) {
@@ -476,11 +479,14 @@ function buildManagerSalesPanels(sales, fullSize) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     var compare = [];
+    // Build lookup by hour for last week so alignment is by hour, not index
+    var lwByHour = {};
+    for (var j = 0; j < lastWeek.length; j++) lwByHour[lastWeek[j].hour] = lastWeek[j];
     for (var i = 0; i < hourly.length; i++) {
-      var hr = parseInt(hourly[i].hour);
-      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      var label = hrLabel(hourly[i].hour);
       data.push({ label: label, value: hourly[i].net || 0 });
-      compare.push({ label: label, value: lastWeek[i] ? lastWeek[i].net : 0 });
+      var lw = lwByHour[hourly[i].hour];
+      compare.push({ label: label, value: lw ? lw.net : 0 });
     }
     drawTrendLine(svg, data, {
       color: DATA.orange, compareData: compare, compareColor: DATA.blue,
@@ -501,7 +507,7 @@ function buildManagerSalesPanels(sales, fullSize) {
     for (var i = 0; i < topItems.length; i++) {
       var item = topItems[i];
       var cat = (item.category || '').toLowerCase();
-      var isFood = cat === 'food' || cat === 'combo' || cat === 'ribs' || cat === 'sandwiches' || cat === 'sides';
+      var isFood = cat !== 'drinks' && cat !== 'soda' && cat !== 'beverage';
       data.push({
         label: item.name || item.label,
         value: item.revenue || item.value || 0,
@@ -645,8 +651,7 @@ function buildServerShiftPanels(sales, fullSize) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     for (var i = 0; i < hourly.length; i++) {
-      var hr = parseInt(hourly[i].hour);
-      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      var label = hrLabel(hourly[i].hour);
       data.push({ label: label, food: hourly[i].food || hourly[i].net || 0, drink: hourly[i].drink || 0 });
     }
     drawStackedColumn(svg, data, {
@@ -687,11 +692,13 @@ function buildServerShiftPanels(sales, fullSize) {
     var svg = createSVG(svgW, svgH);
     var data = [];
     var compare = [];
+    var lwByHour = {};
+    for (var j = 0; j < lastWeek.length; j++) lwByHour[lastWeek[j].hour] = lastWeek[j];
     for (var i = 0; i < hourly.length; i++) {
-      var hr = parseInt(hourly[i].hour);
-      var label = hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+      var label = hrLabel(hourly[i].hour);
       data.push({ label: label, value: hourly[i].net || 0 });
-      compare.push({ label: label, value: lastWeek[i] ? lastWeek[i].net : 0 });
+      var lw = lwByHour[hourly[i].hour];
+      compare.push({ label: label, value: lw ? lw.net : 0 });
     }
     drawTrendLine(svg, data, {
       color: DATA.orange, compareData: compare, compareColor: DATA.blue,
@@ -712,7 +719,7 @@ function buildServerShiftPanels(sales, fullSize) {
     for (var i = 0; i < topItems.length; i++) {
       var item = topItems[i];
       var cat = (item.category || '').toLowerCase();
-      var isFood = cat === 'food' || cat === 'combo' || cat === 'ribs' || cat === 'sandwiches' || cat === 'sides';
+      var isFood = cat !== 'drinks' && cat !== 'soda' && cat !== 'beverage';
       data.push({
         label: item.name || item.label,
         value: item.revenue || item.value || 0,

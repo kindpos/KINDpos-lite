@@ -31,7 +31,7 @@ from app.core.money import money_round
 
 DB_PATH = "data/event_ledger.db"
 TERMINAL_ID = "terminal_01"
-TAX_RATE = 0.06
+TAX_RATE = 0.07
 CASH_DISCOUNT_RATE = 0.04  # 4% dual-pricing cash discount
 DAYS_OF_HISTORY = 90
 SEED = 42  # reproducible data
@@ -45,10 +45,10 @@ random.seed(SEED)
 # and beverages are taxable. We model this as category-specific rules.
 
 TAX_RULES = [
-    {"tax_rule_id": "food_tax",    "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "pizza"},
-    {"tax_rule_id": "food_tax_2",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "apps"},
-    {"tax_rule_id": "food_tax_3",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "subs"},
-    {"tax_rule_id": "food_tax_4",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "sides"},
+    {"tax_rule_id": "food_tax",    "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "pizza"},
+    {"tax_rule_id": "food_tax_2",  "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "apps"},
+    {"tax_rule_id": "food_tax_3",  "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "subs"},
+    {"tax_rule_id": "food_tax_4",  "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "sides"},
     {"tax_rule_id": "bev_tax",     "name": "Beverage Tax",   "rate_percent": 9.0,  "applies_to": "category", "category_id": "drinks"},
 ]
 
@@ -525,7 +525,7 @@ async def main():
             "phone": "(305) 555-0187",
             "email": "hello@kindpizza.com",
             "website": None,
-            "tax_rate": TAX_RATE,
+            "tax_rate": 0.07,
             "timezone": "America/New_York",
         },
         datetime(2026, 1, 1, 8, 0, 0, tzinfo=timezone.utc),

@@ -22,10 +22,10 @@ from app.core.events import create_event, EventType
 # ── Tax Rules ─────────────────────────────────────────────────────────────────
 
 TAX_RULES = [
-    {"tax_rule_id": "food_tax",    "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "pizza"},
-    {"tax_rule_id": "food_tax_2",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "apps"},
-    {"tax_rule_id": "food_tax_3",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "subs"},
-    {"tax_rule_id": "food_tax_4",  "name": "Prepared Food",  "rate_percent": 6.0,  "applies_to": "category", "category_id": "sides"},
+    {"tax_rule_id": "food_tax",    "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "pizza"},
+    {"tax_rule_id": "food_tax_2",  "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "apps"},
+    {"tax_rule_id": "food_tax_3",  "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "subs"},
+    {"tax_rule_id": "food_tax_4",  "name": "Prepared Food",  "rate_percent": 7.0,  "applies_to": "category", "category_id": "sides"},
     {"tax_rule_id": "bev_tax",     "name": "Beverage Tax",   "rate_percent": 9.0,  "applies_to": "category", "category_id": "drinks"},
 ]
 
