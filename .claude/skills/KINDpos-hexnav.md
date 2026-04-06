@@ -69,11 +69,12 @@ must choose before the item is added to the ticket.
 6. If more required mod groups remain, they stay visible for selection
 7. Once all required groups have at least one choice, `onSelect` fires with the item data plus a `selectedMods` array
 
-### The DONE Hex
+### Modifier Choice + DONE Hex Styling
 
-- Appears alongside modifier choices when a mod-group is expanded
-- Color: mint (`T.mint`) with dark text
-- Label: `DONE`
+- Modifier choice hexes and the DONE hex both use **mint** (`T.mint`) with dark text (`#1a1a1a`)
+- This makes mandatory mod choices visually distinct from the mod-group parent hex
+- Selected modifier hexes become **locked** (filled mint)
+- DONE hex label: `DONE`
 - Tapping DONE:
   - If the current mod group has at least one selection -> lock that group as satisfied, return to mod-group level
   - If no selection yet -> show toast "Pick at least one"

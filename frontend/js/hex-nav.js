@@ -36,6 +36,17 @@ export function HexNav(container, opts) {
   // State
   var state = { level: 0, cat: null, subcat: null, hexes: [] };
 
+  // Mandatory modifier state
+  var modState = {
+    active:       false,
+    itemHex:      null,   // the locked item hex
+    itemData:     null,   // original item data
+    groups:       [],     // requiredMods array
+    selectedMods: [],     // [{group:'sauce', label:'Hot', price:0}, ...]
+    satisfied:    {},     // {groupId: true} — groups with at least one pick
+    currentGroup: null,   // currently expanded mod-group hex
+  };
+
   // ── Build SVG ──────────────────────────────────
   var svg = document.createElementNS(svgNS, 'svg');
   svg.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;';
@@ -379,6 +390,131 @@ export function HexNav(container, opts) {
     render();
   }
 
+  // ── Mandatory Modifier Flow ────────────────────
+  function resetModState() {
+    modState.active = false;
+    modState.itemHex = null;
+    modState.itemData = null;
+    modState.groups = [];
+    modState.selectedMods = [];
+    modState.satisfied = {};
+    modState.currentGroup = null;
+  }
+
+  function showModGroups(itemHex) {
+    resize();
+    modState.active = true;
+    modState.itemHex = itemHex;
+    modState.itemData = itemHex.data;
+    modState.groups = itemHex.data.requiredMods;
+    modState.selectedMods = [];
+    modState.satisfied = {};
+    modState.currentGroup = null;
+
+    itemHex.locked = true;
+    state.level = 3;
+    var locked = [itemHex];
+    if (state.cat) locked.unshift(state.cat);
+
+    var groupItems = modState.groups.map(function(g) {
+      return { id: g.id, label: g.label, color: g.color, textColor: g.textColor, choices: g.choices };
+    });
+    var r = adaptiveR(SUBCAT_R, groupItems.length, svgW, svgH);
+    var placed = placeChain(itemHex, groupItems, r, locked, itemHex);
+    placed.forEach(function(h) { h.type = 'modgroup'; });
+    state.hexes = locked.concat(placed);
+    render();
+  }
+
+  function showModChoices(modGroupHex) {
+    resize();
+    modState.currentGroup = modGroupHex;
+    modGroupHex.locked = true;
+    state.level = 4;
+
+    var locked = [modState.itemHex, modGroupHex];
+    if (state.cat && state.cat !== modState.itemHex) locked.unshift(state.cat);
+
+    var groupData = modGroupHex.data;
+    var choiceItems = groupData.choices.map(function(c) {
+      return { id: c.label, label: c.label, price: c.price, groupId: groupData.id };
+    });
+
+    // Add DONE item
+    var doneItem = { id: '__done__', label: 'DONE', isDone: true, groupId: groupData.id };
+    choiceItems.push(doneItem);
+
+    var r = adaptiveR(ITEM_R, choiceItems.length, svgW, svgH);
+    var placed = placeChain(modGroupHex, choiceItems, r, locked, modGroupHex);
+    placed.forEach(function(h) {
+      if (h.data.isDone) {
+        h.type = 'done';
+        h.color = T.mint;
+        h.textColor = '#1a1a1a';
+      } else {
+        h.type = 'mod';
+        h.color = T.mint;
+        h.textColor = '#1a1a1a';
+        // Check if already selected — show as locked
+        var isSel = modState.selectedMods.some(function(m) {
+          return m.group === groupData.id && m.label === h.data.label;
+        });
+        if (isSel) h.locked = true;
+      }
+    });
+    state.hexes = locked.concat(placed);
+    render();
+  }
+
+  function toggleModSelection(modHex) {
+    var groupId = modHex.data.groupId;
+    var label   = modHex.data.label;
+    var price   = modHex.data.price || 0;
+
+    var idx = -1;
+    modState.selectedMods.forEach(function(m, i) {
+      if (m.group === groupId && m.label === label) idx = i;
+    });
+
+    if (idx >= 0) {
+      modState.selectedMods.splice(idx, 1);
+      modHex.locked = false;
+      // Check if group still has selections
+      var groupHasAny = modState.selectedMods.some(function(m) { return m.group === groupId; });
+      if (!groupHasAny) delete modState.satisfied[groupId];
+    } else {
+      modState.selectedMods.push({ group: groupId, label: label, price: price });
+      modHex.locked = true;
+      modState.satisfied[groupId] = true;
+    }
+    render();
+  }
+
+  function handleDoneTap() {
+    var groupId = modState.currentGroup.data.id;
+    var groupHasAny = modState.selectedMods.some(function(m) { return m.group === groupId; });
+    if (!groupHasAny) {
+      if (typeof o.onToast === 'function') o.onToast('Pick at least one');
+      return;
+    }
+
+    modState.satisfied[groupId] = true;
+
+    // Check if all groups satisfied
+    var allDone = modState.groups.every(function(g) { return modState.satisfied[g.id]; });
+    if (allDone) {
+      var result = {};
+      for (var k in modState.itemData) result[k] = modState.itemData[k];
+      result.selectedMods = modState.selectedMods.slice();
+      resetModState();
+      onSelect(result);
+      return;
+    }
+
+    // Return to mod-group level with remaining groups
+    showModGroups(modState.itemHex);
+  }
+
   var navLocked = false;
 
   function onHexTap(h) {
@@ -388,6 +524,23 @@ export function HexNav(container, opts) {
 
     if (h.locked) {
       if (navLocked) return;  // during combo flow, ignore locked hex taps
+      // Back navigation for mod flow
+      if (modState.active && h.type === 'item') {
+        resetModState();
+        if (state.subcat) showItems(state.subcat);
+        else if (state.cat) showItemsDirect(state.cat);
+        else showCats();
+        return;
+      }
+      if (modState.active && h.type === 'modgroup') {
+        showModGroups(modState.itemHex);
+        return;
+      }
+      // Toggle already-selected modifier
+      if (h.type === 'mod') {
+        toggleModSelection(h);
+        return;
+      }
       if (h.type === 'cat')    showCats();
       if (h.type === 'subcat') showSubcats(state.cat);
       return;
@@ -400,8 +553,18 @@ export function HexNav(container, opts) {
       }
       return;
     }
-    if (h.type === 'subcat') { showItems(h);   return; }
-    if (h.type === 'item')   { onSelect(h.data); return; }
+    if (h.type === 'subcat') { showItems(h); return; }
+    if (h.type === 'item') {
+      if (h.data.requiredMods && h.data.requiredMods.length > 0) {
+        showModGroups(h);
+      } else {
+        onSelect(h.data);
+      }
+      return;
+    }
+    if (h.type === 'modgroup') { showModChoices(h); return; }
+    if (h.type === 'mod')     { toggleModSelection(h); return; }
+    if (h.type === 'done')    { handleDoneTap(); return; }
   }
 
   // ── Public API ─────────────────────────────────
@@ -412,6 +575,7 @@ export function HexNav(container, opts) {
   };
 
   this.reset = function() {
+    resetModState();
     resize();
     showCats();
   };

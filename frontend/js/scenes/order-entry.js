@@ -53,8 +53,20 @@ var MENU_DATA = [
     id: 'ribs', label: 'RIBS', color: T.catColor('RIBS'), textColor: '#1a0a0a',
     subcats: [
       { id: 'ribs-items', label: 'Ribs', items: [
-        { label: 'Full Rack', price: 18.00 },
-        { label: 'Half Rack', price: 12.00 },
+        { label: 'Full Rack', price: 18.00, requiredMods: [
+          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
+            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
+            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
+            { label: 'Mustard', price: 0 },
+          ] }
+        ] },
+        { label: 'Half Rack', price: 12.00, requiredMods: [
+          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
+            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
+            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
+            { label: 'Mustard', price: 0 },
+          ] }
+        ] },
       ] },
     ]
   },
@@ -62,8 +74,20 @@ var MENU_DATA = [
     id: 'sandwiches', label: 'SANDWICHES', color: T.catColor('SANDWICHES'), textColor: '#1a2a1a',
     subcats: [
       { id: 'sandwich-items', label: 'Sandwiches', items: [
-        { label: 'Pulled Pork', price: 10.00 },
-        { label: 'Sliced Brisket', price: 12.00 },
+        { label: 'Pulled Pork', price: 10.00, requiredMods: [
+          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
+            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
+            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
+            { label: 'Mustard', price: 0 },
+          ] }
+        ] },
+        { label: 'Sliced Brisket', price: 12.00, requiredMods: [
+          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
+            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
+            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
+            { label: 'Mustard', price: 0 },
+          ] }
+        ] },
       ] },
     ]
   },
@@ -471,6 +495,7 @@ function buildMain(parentEl, params) {
     hexNav = new HexNav(canvas, {
       data: MENU_DATA,
       onSelect: function(item) { handleItemSelect(item); },
+      onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
     });
   });
 
@@ -569,11 +594,17 @@ function addToTicket(item) {
     });
   } else {
     // New item instance
+    var mods = [];
+    if (item.selectedMods) {
+      item.selectedMods.forEach(function(sm) {
+        mods.push({ name: sm.label, price: sm.price || 0, charged: sm.price > 0 });
+      });
+    }
     ticket.push({
       id:        ++ticketSeq,
       name:      name,
       unitPrice: price,
-      mods:      [],
+      mods:      mods,
       selected:  false,
       sent:      false,
     });
