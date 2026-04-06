@@ -3,7 +3,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { init, push, pop, replace, onBeforeTransition } from './scene-manager.js';
+import { init, push, pop, replace, onBeforeTransition, clearSceneCache } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
 import { hideKeyboard } from './keyboard.js';
 
@@ -63,7 +63,7 @@ export function setHeaderBack({ back = false, x = false, onBack = null } = {}) {
     logoutPair.inner.style.fontSize = T.fsBtnSm;
     logoutPair.inner.style.color = '#fff';
     logoutPair.inner.textContent = 'X';
-    logoutPair.wrap.addEventListener('pointerup', () => replace('login'));
+    logoutPair.wrap.addEventListener('pointerup', () => { clearSceneCache('order-entry'); replace('login'); });
     logout.appendChild(logoutPair.wrap);
   } else if (logout) {
     logout.style.display = 'none';

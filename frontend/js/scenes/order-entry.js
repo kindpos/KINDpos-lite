@@ -6,7 +6,7 @@
 
 import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
+import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
@@ -873,6 +873,7 @@ function showVoidReasons(targets, isFullVoid) {
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 currentOrderId = null;
                 currentCheckNumber = null;
+                clearSceneCache('order-entry');
                 replace('login');
               }).catch(function(err) {
                 console.error('[KINDpos] Void API error:', err);
@@ -886,6 +887,7 @@ function showVoidReasons(targets, isFullVoid) {
             } else if (isFullVoid) {
               currentOrderId = null;
               currentCheckNumber = null;
+              clearSceneCache('order-entry');
               replace('login');
             } else {
               renderTicket();

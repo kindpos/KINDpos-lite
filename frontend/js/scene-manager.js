@@ -374,3 +374,10 @@ export function getActiveScene() { return activeScene; }
 export function getStack() { return [...navStack]; }
 export function getOverlayCount() { return overlayStack.length; }
 export function hasInterrupt() { return activeInterrupt !== null; }
+
+export function clearSceneCache(name) {
+  if (cachedEls[name]) {
+    cachedEls[name].remove();
+    delete cachedEls[name];
+  }
+}

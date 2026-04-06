@@ -6,7 +6,7 @@
 
 import { T, chamfer, applySunkenStyle, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, replace, overlay, dismissOverlay, interrupt, resolveInterrupt } from '../scene-manager.js';
+import { registerScene, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
@@ -525,6 +525,7 @@ function activateResult(params, change) {
       }
     },
   }).then(function(target) {
+    if (target === 'login') clearSceneCache('order-entry');
     replace(target || 'order-entry', {});
   }).catch(function() {
     // Interrupt cancelled by navigation — no action needed
