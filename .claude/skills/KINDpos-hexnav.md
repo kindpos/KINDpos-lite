@@ -120,10 +120,13 @@ mandatory modifiers use the bloom-off-item pattern.
 
 ## Placement Rules
 
-- `placeChain()` places child hexes around a parent using 6-face hex geometry
-- Fallback 1: try 12 directions from all placed hexes
-- Fallback 2: grid scan across entire viewport for nearest open position
-- Fallback 3: extend SVG viewBox height (no item is ever silently dropped)
+- `placeChain()` uses **cascade placement**: children flow right then down from the
+  parent in a honeycomb grid (left-to-right reading order, offset rows)
+- The parent hex anchors the top-left; children start to its right on the same row,
+  then wrap to rows below with hex offset
+- If insufficient room to the right of the parent, children start below instead
+- Viewport height auto-extends if rows overflow (no item is ever silently dropped)
+- Collision nudging shifts hexes right within a row if they overlap locked hexes
 - `adaptiveR()` shrinks hex radius when item count exceeds viewport capacity (min 28px)
 
 ---

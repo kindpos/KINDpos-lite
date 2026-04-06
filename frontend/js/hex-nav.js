@@ -10,7 +10,6 @@ var CAT_R    = 80;
 var SUBCAT_R = 70;
 var ITEM_R   = 48;
 var GAP      = 1.04;
-var NBTH     = 1.15; // neighbor threshold multiplier
 
 // ═══════════════════════════════════════════════════
 //  HexNav class
@@ -70,43 +69,6 @@ export function HexNav(container, opts) {
       pts.push((cx + r * Math.cos(a)).toFixed(2) + ',' + (cy + r * Math.sin(a)).toFixed(2));
     }
     return pts.join(' ');
-  }
-
-  function getOccupiedFaces(target, allHexes) {
-    var occ = [false, false, false, false, false, false];
-    allHexes.forEach(function(h) {
-      if (h === target) return;
-      var dx = h.x - target.x, dy = h.y - target.y;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > (target.r + h.r) * NBTH) return;
-      var angle = Math.atan2(dy, dx);
-      if (angle < 0) angle += Math.PI * 2;
-      var face = Math.round((angle + Math.PI / 2) / (Math.PI / 3)) % 6;
-      occ[face] = true;
-    });
-    return occ;
-  }
-
-  function getChildPositions(parent, childR, allHexes) {
-    var occ  = getOccupiedFaces(parent, allHexes);
-    var dist = (parent.r + childR) * GAP + 8;
-    var positions = [];
-    // Always start from the face pointing toward the viewport center
-    var toCenterAngle = Math.atan2(svgH / 2 - parent.y, svgW / 2 - parent.x);
-    var normAngle = toCenterAngle + Math.PI / 2;
-    if (normAngle < 0) normAngle += Math.PI * 2;
-    var startFace = Math.round(normAngle / (Math.PI / 3)) % 6;
-    for (var i = 0; i < 6; i++) {
-      var face = (startFace + i) % 6;
-      if (occ[face]) continue;
-      var angle = -Math.PI / 2 + (Math.PI / 3) * face + Math.PI / 6;
-      var x = parent.x + dist * Math.cos(angle);
-      var y = parent.y + dist * Math.sin(angle);
-      if (x - childR < 2 || x + childR > svgW - 2) continue;
-      if (y - childR < 2 || y + childR > svgH - 2) continue;
-      positions.push({ x: x, y: y });
-    }
-    return positions;
   }
 
   function noCollision(x, y, r, allHexes) {
@@ -212,123 +174,80 @@ export function HexNav(container, opts) {
     svg.appendChild(g);
   }
 
-  // ── Chain bloom placement ──────────────────────
-  // First child off parent, subsequent children off the
-  // already-placed child nearest to parent, preferring
-  // positions that face back toward the parent
+  // ── Cascade placement ───────────────────────────
+  // Children flow from the parent in a honeycomb grid:
+  // row 0 starts to the right of the parent, subsequent
+  // rows cascade below with hex offset. Fills left-to-right
+  // then top-to-bottom like reading order.
   function placeChain(parent, items, childR, locked, gravity) {
-  var grav = gravity || parent;
-  var placed = [];
+    var placed = [];
+    if (!items || items.length === 0) return placed;
 
-  items.forEach(function(item, idx) {
-    var allHexes = locked.concat(placed);
-    var sources = idx === 0 ? [parent] : [parent].concat(placed);
-    var candidates = [];
+    var colStep = childR * Math.sqrt(3) * GAP;
+    var rowStep = childR * 1.5 * GAP;
 
-    sources.forEach(function(src) {
-      getChildPositions(src, childR, allHexes).forEach(function(pos) {
-        candidates.push(pos);
-      });
-    });
+    // Find the usable area below/right of the parent
+    // Start children to the right of parent, same row
+    var startX = parent.x + (parent.r + childR) * GAP + 8;
+    var startY = parent.y;
 
-    // Deduplicate
-    var unique = [];
-    candidates.forEach(function(c) {
-      var isDup = unique.some(function(u) {
-        return Math.abs(u.x - c.x) < 4 && Math.abs(u.y - c.y) < 4;
-      });
-      if (!isDup) unique.push(c);
-    });
-
-    // Prefer positions closest to gravity (cat/parent)
-    unique.sort(function(a, b) {
-      var dxA = a.x - grav.x, dyA = a.y - grav.y;
-      var dxB = b.x - grav.x, dyB = b.y - grav.y;
-      return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
-    });
-
-    // Look-ahead: score each position by how many children it can fit
-    var pos = null;
-    var bestScore = -1;
-    for (var j = 0; j < unique.length; j++) {
-      if (!noCollision(unique[j].x, unique[j].y, childR, allHexes)) continue;
-      var phantom = { x: unique[j].x, y: unique[j].y, r: childR };
-      var futureHexes = allHexes.concat([phantom]);
-      var slots = getChildPositions(phantom, childR, futureHexes);
-      var freeSlots = 0;
-      for (var s = 0; s < slots.length; s++) {
-        if (noCollision(slots[s].x, slots[s].y, childR, futureHexes)) freeSlots++;
-      }
-      if (freeSlots > bestScore) {
-        bestScore = freeSlots;
-        pos = unique[j];
-      }
+    // If not enough room to the right, start below parent
+    if (startX + childR > svgW - 4) {
+      startX = childR + 10;
+      startY = parent.y + (parent.r + childR) * GAP + 8;
     }
 
-    // Fallback: try all 12 directions from every placed hex with tighter packing
-    if (!pos) {
-      var fallbackDist = childR * 2.1;
-      var allSources = [parent].concat(placed);
-      for (var si = 0; si < allSources.length && !pos; si++) {
-        var src = allSources[si];
-        for (var a = 0; a < 12 && !pos; a++) {
-          var angle = (Math.PI / 6) * a;
-          var fx = src.x + fallbackDist * Math.cos(angle);
-          var fy = src.y + fallbackDist * Math.sin(angle);
-          if (fx - childR < 0 || fx + childR > svgW) continue;
-          if (fy - childR < 0 || fy + childR > svgH) continue;
-          if (noCollision(fx, fy, childR, allHexes)) {
-            pos = { x: fx, y: fy };
+    // Calculate how many fit per row in remaining width
+    var availW = svgW - startX - childR - 4;
+    var perRow = Math.max(1, Math.floor(availW / colStep) + 1);
+
+    // Generate grid positions, cascade down
+    items.forEach(function(item, idx) {
+      var row = Math.floor(idx / perRow);
+      var col = idx % perRow;
+      var xOff = (row % 2 === 1) ? colStep / 2 : 0;
+      var x = startX + col * colStep + xOff;
+      var y = startY + row * rowStep;
+
+      // Wrap: if x goes off-screen, push to next row
+      if (x + childR > svgW - 4) {
+        return; // skip — handled by viewport extension below
+      }
+
+      // Extend viewport if y overflows
+      if (y + childR > svgH - 4) {
+        svgH = y + childR + 10;
+        svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+      }
+
+      // Collision check against locked hexes — nudge if needed
+      var allHexes = locked.concat(placed);
+      if (!noCollision(x, y, childR, allHexes)) {
+        // Try shifting right within the row
+        for (var nudge = 1; nudge <= 3; nudge++) {
+          var nx = x + nudge * colStep * 0.5;
+          if (nx + childR > svgW - 4) break;
+          if (noCollision(nx, y, childR, allHexes)) {
+            x = nx;
+            break;
           }
         }
       }
-    }
 
-    // Grid scan: systematically search the viewport for any open position
-    if (!pos) {
-      var step = childR * 1.8;
-      var bestDist = Infinity;
-      for (var gy = childR + 2; gy < svgH - childR; gy += step) {
-        for (var gx = childR + 2; gx < svgW - childR; gx += step) {
-          if (noCollision(gx, gy, childR, allHexes)) {
-            var dgx = gx - grav.x, dgy = gy - grav.y;
-            var d = dgx * dgx + dgy * dgy;
-            if (d < bestDist) { bestDist = d; pos = { x: gx, y: gy }; }
-          }
-        }
-      }
-    }
-
-    // Last resort: extend viewport height and place below existing hexes
-    if (!pos) {
-      var maxY = 0;
-      allHexes.forEach(function(h) { if (h.y + h.r > maxY) maxY = h.y + h.r; });
-      placed.forEach(function(h) { if (h.y + h.r > maxY) maxY = h.y + h.r; });
-      var ny = maxY + childR + 10;
-      var nx = grav.x;
-      if (nx - childR < 2) nx = childR + 2;
-      if (nx + childR > svgW - 2) nx = svgW - childR - 2;
-      svgH = ny + childR + 10;
-      svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
-      pos = { x: nx, y: ny };
-    }
-
-    if (!pos) return;
-
-    placed.push({
-      id:        item.id    || item,
-      label:     item.label || item,
-      x: pos.x,  y: pos.y,  r: childR,
-      color:     parent.color,
-      textColor: parent.textColor,
-      locked:    false,
-      type:      childR === SUBCAT_R ? 'subcat' : 'item',
-      data:      item,
+      placed.push({
+        id:        item.id    || item,
+        label:     item.label || item,
+        x: x,  y: y,  r: childR,
+        color:     parent.color,
+        textColor: parent.textColor,
+        locked:    false,
+        type:      childR === SUBCAT_R ? 'subcat' : 'item',
+        data:      item,
+      });
     });
-  });
 
-  return placed;
-}
+    return placed;
+  }
 
   // ── Tap debounce ───────────────────────────────
   var lastTapTime = 0;
