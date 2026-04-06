@@ -10,7 +10,7 @@ var CAT_R    = 80;
 var SUBCAT_R = 70;
 var ITEM_R   = 48;
 // Gap multipliers per depth — tighter as you drill deeper
-var GAPS = [1.08, 1.04, 1.01, 0.98, 0.98];
+var GAPS = [1.12, 1.06, 1.02, 1.00, 1.00];
 function gapForLevel(level) { return GAPS[level] || GAPS[GAPS.length - 1]; }
 
 // ═══════════════════════════════════════════════════
@@ -243,18 +243,21 @@ export function HexNav(container, opts) {
     return baseR;
   }
 
-  // Generate hex ring positions radiating outward from a center point.
-  // Ring 0 = center, ring 1 = 6 neighbors, ring 2 = 12, etc.
-  function hexRingSlots(cx, cy, r, maxRings, gap) {
-    var dist = r * Math.sqrt(3) * gap;
+  // Generate hex ring positions radiating from center.
+  // Uses axial coordinates converted to pixel positions.
+  // innerDist = center-to-center for ring 1 (accounts for parent size)
+  // stepDist  = center-to-center between children in outer rings
+  function hexRingSlots(cx, cy, r, maxRings, innerDist, stepDist) {
     var slots = [];
     for (var ring = 1; ring <= maxRings; ring++) {
+      // Distance from center for this ring
+      var ringDist = innerDist + (ring - 1) * stepDist;
       for (var side = 0; side < 6; side++) {
         for (var step = 0; step < ring; step++) {
-          var a1 = (Math.PI / 3) * (side + 2);
-          var a0 = (Math.PI / 3) * (side + 1);
-          var sx = cx + ring * dist * Math.cos(a0) + step * dist * Math.cos(a1);
-          var sy = cy + ring * dist * Math.sin(a0) + step * dist * Math.sin(a1);
+          var a0 = (Math.PI / 3) * side - Math.PI / 6;  // corner angle
+          var a1 = (Math.PI / 3) * ((side + 2) % 6) - Math.PI / 6;  // edge walk direction
+          var sx = cx + ringDist * Math.cos(a0) + step * stepDist * Math.cos(a1);
+          var sy = cy + ringDist * Math.sin(a0) + step * stepDist * Math.sin(a1);
           if (sx - r >= 2 && sx + r <= svgW - 2 && sy - r >= 2 && sy + r <= svgH - 2) {
             slots.push({ x: sx, y: sy });
           }
@@ -271,27 +274,39 @@ export function HexNav(container, opts) {
     var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
     var gap = gapForLevel(state.level);
 
-    // Generate ring slots outward from parent
+    // Ring 1 distance: must clear the parent hex (which may be larger)
+    var innerDist = (parentHex.r + r) * gap;
+    // Step distance between children in same/outer rings
+    var stepDist = r * Math.sqrt(3) * gap;
+
     var maxRings = Math.max(3, Math.ceil(Math.sqrt(childItems.length)));
-    var slots = hexRingSlots(parentHex.x, parentHex.y, r, maxRings, gap);
+    var slots = hexRingSlots(parentHex.x, parentHex.y, r, maxRings, innerDist, stepDist);
 
     // Filter out slots that overlap ANY locked hex (parent, grandparent, etc.)
+    // Also filter slots that overlap already-accepted children
     var freeSlots = [];
     slots.forEach(function(pos) {
       var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
-        var minDist = (lh.r + r) * gap;  // use actual radii of both hexes
-        return Math.sqrt(dx * dx + dy * dy) < minDist;
+        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * gap;
       });
       if (!overlaps) freeSlots.push(pos);
     });
 
-    // Already sorted by ring (nearest first) from hexRingSlots
+    // Deduplicate slots that are too close to each other
+    var uniqueSlots = [];
+    freeSlots.forEach(function(pos) {
+      var tooClose = uniqueSlots.some(function(u) {
+        var dx = u.x - pos.x, dy = u.y - pos.y;
+        return Math.sqrt(dx * dx + dy * dy) < r * 1.5;
+      });
+      if (!tooClose) uniqueSlots.push(pos);
+    });
 
     var hexes = lockedHexes.slice();
     childItems.forEach(function(item, i) {
-      if (i >= freeSlots.length) return;
-      var pos = freeSlots[i];
+      if (i >= uniqueSlots.length) return;
+      var pos = uniqueSlots[i];
       if (pos.y + r > svgH - 4) {
         svgH = pos.y + r + 10;
         svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
