@@ -36,59 +36,45 @@ var currentOrderId = null;
 var isSending = false;   // guard against concurrent handleSend calls
 var currentCheckNumber = null;
 
-// ── Void reasons ──────────────────────────────────
-var VOID_REASONS = ['Wrong Order', 'Customer Request', 'Manager Comp', 'Other'];
-
 // ── Menu data ─────────────────────────────────────
 var MENU_DATA = [
   {
-    id: 'combo', label: 'COMBO', color: T.catColor('COMBO'), textColor: '#1a1a00',
+    id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
     subcats: [
-      { id: 'combo-items', label: 'Combo', items: [
-        { label: 'Half Rack', price: 16.00 },
-        { label: 'Pulled Pork', price: 14.00 },
+      { id: 'pizza-items', label: 'Pizza', items: [
+        { label: 'Large Cheese', price: 14.00, requiredMods: [
+          { id: 'toppings', label: 'TOPPINGS', color: T.red, textColor: '#fff', choices: [
+            { label: 'Pepperoni', price: 1.50 }, { label: 'Sausage', price: 1.50 },
+            { label: 'Mushrooms', price: 1.00 }, { label: 'Onions', price: 1.00 },
+            { label: 'Peppers', price: 1.00 }, { label: 'Extra Cheese', price: 2.00 },
+          ] }
+        ] },
+        { label: 'Large Pepperoni', price: 16.00 },
+        { label: 'Large Supreme', price: 18.00 },
+        { label: 'Slice Cheese', price: 3.50 },
+        { label: 'Slice Pepperoni', price: 4.00 },
+        { label: 'Calzone', price: 12.00 },
       ] },
     ]
   },
   {
-    id: 'ribs', label: 'RIBS', color: T.catColor('RIBS'), textColor: '#1a0a0a',
+    id: 'apps', label: 'APPS', color: T.catColor('APPS'), textColor: '#1a1a00',
     subcats: [
-      { id: 'ribs-items', label: 'Ribs', items: [
-        { label: 'Full Rack', price: 18.00, requiredMods: [
-          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
-            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
-            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
-            { label: 'Mustard', price: 0 },
-          ] }
-        ] },
-        { label: 'Half Rack', price: 12.00, requiredMods: [
-          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
-            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
-            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
-            { label: 'Mustard', price: 0 },
-          ] }
-        ] },
+      { id: 'apps-items', label: 'Appetizers', items: [
+        { label: 'Garlic Knots', price: 6.00 },
+        { label: 'Mozz Sticks', price: 8.00 },
+        { label: 'Buffalo Wings', price: 10.00 },
+        { label: 'Garlic Bread', price: 5.00 },
       ] },
     ]
   },
   {
-    id: 'sandwiches', label: 'SANDWICHES', color: T.catColor('SANDWICHES'), textColor: '#1a2a1a',
+    id: 'subs', label: 'SUBS', color: T.catColor('SUBS'), textColor: '#1a2a1a',
     subcats: [
-      { id: 'sandwich-items', label: 'Sandwiches', items: [
-        { label: 'Pulled Pork', price: 10.00, requiredMods: [
-          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
-            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
-            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
-            { label: 'Mustard', price: 0 },
-          ] }
-        ] },
-        { label: 'Sliced Brisket', price: 12.00, requiredMods: [
-          { id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff', choices: [
-            { label: 'Sweet', price: 0 }, { label: 'Hot', price: 0 },
-            { label: 'Mild', price: 0 }, { label: 'Vinegar', price: 0 },
-            { label: 'Mustard', price: 0 },
-          ] }
-        ] },
+      { id: 'subs-items', label: 'Subs', items: [
+        { label: 'Italian Sub', price: 10.00 },
+        { label: 'Meatball Sub', price: 9.00 },
+        { label: 'Chicken Parm Sub', price: 11.00 },
       ] },
     ]
   },
@@ -96,20 +82,24 @@ var MENU_DATA = [
     id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: '#001a1a',
     subcats: [
       { id: 'side-items', label: 'Sides', items: [
+        { label: 'House Salad', price: 7.00, requiredMods: [
+          { id: 'dressing', label: 'DRESSING', color: T.cyan, textColor: '#001a1a', choices: [
+            { label: 'Ranch', price: 0 }, { label: 'Blue Cheese', price: 0 },
+            { label: 'Italian', price: 0 }, { label: 'Caesar', price: 0 },
+          ] }
+        ] },
+        { label: 'Caesar Salad', price: 8.00 },
         { label: 'Fries', price: 4.00 },
-        { label: 'Baked Potato', price: 5.00 },
-        { label: 'Slaw', price: 3.00 },
       ] },
     ]
   },
   {
-    id: 'soda', label: 'SODA', color: T.catColor('SODA'), textColor: '#001a1a',
+    id: 'drinks', label: 'DRINKS', color: T.catColor('DRINKS'), textColor: '#001a1a',
     subcats: [
-      { id: 'soda-items', label: 'Soda', items: [
-        { label: 'Coke', price: 3.00 },
-        { label: 'Sprite', price: 3.00 },
-        { label: 'Diet Coke', price: 3.00 },
-        { label: 'Fanta', price: 3.00 },
+      { id: 'drinks-items', label: 'Drinks', items: [
+        { label: 'Soda', price: 2.50 },
+        { label: 'Iced Tea', price: 2.50 },
+        { label: 'Water', price: 1.50 },
       ] },
     ]
   },
@@ -117,33 +107,34 @@ var MENU_DATA = [
 
 var MOD_DATA = [
   {
-    id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff',
+    id: 'toppings', label: 'TOPPINGS', color: T.red, textColor: '#fff',
+    half_placement: true,
     subcats: [
-      { id: 'sauce-items', label: 'Sauce', items: [
-        { label: 'Sweet', price: 0 },
-        { label: 'Hot', price: 0 },
-        { label: 'Mild', price: 0 },
-        { label: 'Vinegar', price: 0 },
-        { label: 'Mustard', price: 0 },
+      { id: 'toppings-items', label: 'Toppings', items: [
+        { label: 'Pepperoni', price: 1.50, half_price: 0.75 },
+        { label: 'Sausage', price: 1.50, half_price: 0.75 },
+        { label: 'Mushrooms', price: 1.00, half_price: 0.50 },
+        { label: 'Onions', price: 1.00, half_price: 0.50 },
+        { label: 'Peppers', price: 1.00, half_price: 0.50 },
+        { label: 'Extra Cheese', price: 2.00, half_price: 1.00 },
       ] },
     ]
   },
   {
-    id: 'extras', label: 'EXTRAS', color: T.lavender, textColor: '#1a0030',
-    half_placement: true,
+    id: 'dressing', label: 'DRESSING', color: T.cyan, textColor: '#001a1a',
     subcats: [
-      { id: 'extras-items', label: 'Extras', items: [
-        { label: 'Extra Meat', price: 3.00, half_price: 1.50 },
-        { label: 'Cheese', price: 1.00, half_price: 0.50 },
-        { label: 'Jalape\u00f1os', price: 0.50, half_price: 0.25 },
-        { label: 'Onions', price: 0, half_price: null },
+      { id: 'dressing-items', label: 'Dressing', items: [
+        { label: 'Ranch', price: 0 },
+        { label: 'Blue Cheese', price: 0 },
+        { label: 'Italian', price: 0 },
+        { label: 'Caesar', price: 0 },
       ] },
     ]
   },
 ];
 
 // ── Combo flow state ─────────────────────────────
-var comboFlow    = null;  // { step: 'side'|'soda', ticketItem: ref }
+var comboFlow    = null;  // { step: 'side'|'drink', ticketItem: ref }
 
 // ── Scene state ───────────────────────────────────
 var hexNav       = null;
@@ -538,14 +529,14 @@ function handleItemSelect(item) {
   if (comboFlow) {
     if (comboFlow.step === 'side') {
       comboFlow.ticketItem.mods.push({ name: name, price: 0, charged: false });
-      comboFlow.step = 'soda';
-      var sodaCat = getMenuCat('soda');
-      hexNav.showPickList('SODA', sodaCat.color, sodaCat.textColor, sodaCat.subcats[0].items);
+      comboFlow.step = 'drink';
+      var drinksCat = getMenuCat('drinks');
+      hexNav.showPickList('DRINKS', drinksCat.color, drinksCat.textColor, drinksCat.subcats[0].items);
       renderTicket();
       updateBottomBar();
       return;
     }
-    if (comboFlow.step === 'soda') {
+    if (comboFlow.step === 'drink') {
       comboFlow.ticketItem.mods.push({ name: name, price: 0, charged: false });
       comboFlow = null;
       hexNav.unlockNav();
