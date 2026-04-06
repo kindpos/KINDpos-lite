@@ -840,6 +840,7 @@ function buildActionBar(state) {
     closePair.inner.style.color = '#1a1a1a';
     closePair.inner.textContent = '//CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
+      if (isBlocked(state)) return;
       doCloseDay(state);
     });
   }
