@@ -253,7 +253,8 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                                 if m["modifier_id"] != payload["modifier_id"]
                             ]
                         else:
-                            item.modifiers.append(modifier)
+                            if not any(m["modifier_id"] == modifier["modifier_id"] for m in item.modifiers):
+                                item.modifiers.append(modifier)
                         break
 
         elif event.event_type == EventType.ITEM_SENT:
