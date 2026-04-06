@@ -42,9 +42,12 @@ var state = {
   wifiSSID:     '—',
   taxRate:      '7.0',
   cashDiscount: '4.0',
+  maskPinDigits: true,
 };
 
 var rootEl = null;
+window.KINDpos = window.KINDpos || {};
+window.KINDpos.maskPinDigits = state.maskPinDigits;
 var _savingDevice = false;   // guard against double-tap on save/delete
 var _scanGen = 0;            // generation counter to ignore stale EventSource messages
 
@@ -1466,6 +1469,30 @@ function renderTermContent(card) {
   });
 
   inner.appendChild(grid);
+
+  // Toggle: Mask PIN Digits (only in business tab)
+  if (state.activeNav === 'business') {
+    var toggleRow = document.createElement('div');
+    toggleRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 0;';
+
+    var toggleLabel = makeLabel('Mask PIN Digits', GOLD, T.fsSmall);
+    toggleRow.appendChild(toggleLabel);
+
+    var toggleBtn = buildStyledButton(state.maskPinDigits ? T.goGreen : T.darkBtn);
+    toggleBtn.wrap.style.width = '120px';
+    toggleBtn.wrap.style.height = '48px';
+    toggleBtn.inner.style.fontFamily = T.fb;
+    toggleBtn.inner.style.fontSize = T.fsSmall;
+    toggleBtn.inner.style.color = state.maskPinDigits ? DARK : MINT;
+    toggleBtn.inner.textContent = state.maskPinDigits ? 'ON' : 'OFF';
+    toggleBtn.wrap.addEventListener('pointerup', function() {
+      state.maskPinDigits = !state.maskPinDigits;
+      window.KINDpos.maskPinDigits = state.maskPinDigits;
+      renderCurrentState();
+    });
+    toggleRow.appendChild(toggleBtn.wrap);
+    inner.appendChild(toggleRow);
+  }
 }
 
 function openSettingEditor(item, valEl) {

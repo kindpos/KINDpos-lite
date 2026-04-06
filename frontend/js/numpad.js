@@ -16,7 +16,7 @@ var PAD = {
   keyGap:   14,
 };
 PAD.cardW = PAD.keyW * 3 + PAD.keyGap * 2 + PAD.cardPad * 2;
-PAD.cardH = PAD.keyH * 4 + PAD.keyGap * 3 + PAD.cardPad * 2;
+PAD.cardH = PAD.keyH * 4 + PAD.keyGap * 3 + PAD.cardPad * 2 + 14;
 
 export function buildNumpad(opts) {
   var o = opts || {};
@@ -33,7 +33,7 @@ export function buildNumpad(opts) {
   var keyGap   = o.keyGap   != null ? o.keyGap : PAD.keyGap;
   var cardPad  = o.cardPad  != null ? o.cardPad : PAD.cardPad;
   var width    = o.width    || PAD.width;
-  var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2;
+  var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2 + T.bevel * 2;
 
   var pin = '';
   var _submitCooldown = false;
@@ -54,6 +54,7 @@ export function buildNumpad(opts) {
   var display = document.createElement('div');
   display.style.width = '100%';
   display.style.height = '100%';
+  display.style.boxSizing = 'border-box';
   display.style.background = T.bg;
   display.style.display = 'flex';
   display.style.alignItems = 'center';
