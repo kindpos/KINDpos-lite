@@ -269,11 +269,20 @@ export function HexNav(container, opts) {
         slots.push({ x: x, y: y });
       }
     }
-    // Sort by distance to center (nearest first = tight cluster)
+    // Sort by distance to parent (nearest first), with bias toward
+    // viewport center so children fill toward available space
+    var vcx = svgW / 2, vcy = svgH / 2;
     slots.sort(function(a, b) {
       var dxA = a.x - cx, dyA = a.y - cy;
       var dxB = b.x - cx, dyB = b.y - cy;
-      return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
+      var distA = dxA * dxA + dyA * dyA;
+      var distB = dxB * dxB + dyB * dyB;
+      // Primary: distance to parent
+      if (Math.abs(distA - distB) > colStep * colStep * 0.5) return distA - distB;
+      // Tiebreaker: prefer slots closer to viewport center (more space)
+      var vdxA = a.x - vcx, vdyA = a.y - vcy;
+      var vdxB = b.x - vcx, vdyB = b.y - vcy;
+      return (vdxA * vdxA + vdyA * vdyA) - (vdxB * vdxB + vdyB * vdyB);
     });
     return slots;
   }
