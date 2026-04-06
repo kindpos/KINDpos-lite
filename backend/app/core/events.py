@@ -27,122 +27,73 @@ class OrderType(str, Enum):
 
 
 class EventType(str, Enum):
-    """All possible event types in the system."""
+    """All event types in the system.
 
-    # Order lifecycle
+    Naming convention: new types should use dot.notation values
+    (e.g. "order.created"). Legacy UPPERCASE values are kept for
+    backward-compatibility with existing ledger data.
+    """
+
+    # ── Order lifecycle (LEDGER_CORE) ────────────────────────────────
     ORDER_CREATED = "ORDER_CREATED"
     ORDER_CLOSED = "ORDER_CLOSED"
     ORDER_REOPENED = "ORDER_REOPENED"
     ORDER_VOIDED = "ORDER_VOIDED"
-    ORDER_TYPE_CHANGED = "ORDER_TYPE_CHANGED"
 
-    # Item management
+    # ── Item management (LEDGER_CORE) ────────────────────────────────
     ITEM_ADDED = "ITEM_ADDED"
     ITEM_REMOVED = "ITEM_REMOVED"
     ITEM_MODIFIED = "ITEM_MODIFIED"
     ITEM_SENT = "ITEM_SENT"
-    ITEM_VOIDED = "ITEM_VOIDED"
-    ITEM_COMPED = "ITEM_COMPED"
     MODIFIER_APPLIED = "MODIFIER_APPLIED"
 
-    # Discounts
-    DISCOUNT_REQUESTED = "DISCOUNT_REQUESTED"
+    # ── Discounts (LEDGER_CORE) ──────────────────────────────────────
     DISCOUNT_APPROVED = "DISCOUNT_APPROVED"
-    DISCOUNT_REJECTED = "DISCOUNT_REJECTED"
-    DISCOUNT_APPLIED = "DISCOUNT_APPLIED"
 
-    # Printing
-    TICKET_PRINTED = "TICKET_PRINTED"
-    TICKET_PRINT_FAILED = "TICKET_PRINT_FAILED"
-    TICKET_REPRINTED = "TICKET_REPRINTED"
-    RECEIPT_PRINTED = "RECEIPT_PRINTED"
-    RECEIPT_REPRINTED = "RECEIPT_REPRINTED"
-    PRINT_JOB_QUEUED = "PRINT_JOB_QUEUED"
-    PRINT_JOB_SENT = "PRINT_JOB_SENT"
-    PRINT_JOB_COMPLETED = "PRINT_JOB_COMPLETED"
-    PRINT_JOB_FAILED = "PRINT_JOB_FAILED"
-    PRINT_JOB_RETRIED = "PRINT_JOB_RETRIED"
-    PRINT_RETRYING = "PRINT_RETRYING"
-    PRINT_REROUTED = "PRINT_REROUTED"
+    # ── Printing (LEDGER_OPERATIONAL / EPHEMERAL) ────────────────────
+    TICKET_PRINTED = "TICKET_PRINTED"           # LEDGER_OPERATIONAL
+    TICKET_PRINT_FAILED = "TICKET_PRINT_FAILED" # EPHEMERAL
+    TICKET_REPRINTED = "TICKET_REPRINTED"        # LEDGER_OPERATIONAL
+    PRINT_RETRYING = "PRINT_RETRYING"            # EPHEMERAL
+    PRINT_REROUTED = "PRINT_REROUTED"            # EPHEMERAL
 
-    # Delivery lifecycle
-    DELIVERY_INFO_ADDED = "DELIVERY_INFO_ADDED"
-    DRIVER_ASSIGNED = "DRIVER_ASSIGNED"
-    DELIVERY_DISPATCHED = "DELIVERY_DISPATCHED"
-    DELIVERY_COMPLETED = "DELIVERY_COMPLETED"
+    # ── Printer lifecycle (LEDGER_OPERATIONAL / EPHEMERAL) ───────────
+    PRINTER_REGISTERED = "PRINTER_REGISTERED"           # LEDGER_OPERATIONAL
+    PRINTER_STATUS_CHANGED = "PRINTER_STATUS_CHANGED"   # EPHEMERAL
+    PRINTER_ERROR = "PRINTER_ERROR"                     # EPHEMERAL
+    PRINTER_ROLE_CREATED = "PRINTER_ROLE_CREATED"       # EPHEMERAL
+    PRINTER_FALLBACK_ASSIGNED = "PRINTER_FALLBACK_ASSIGNED"  # EPHEMERAL
 
-    # Printer lifecycle
-    PRINTER_REGISTERED = "PRINTER_REGISTERED"
-    PRINTER_STATUS_CHANGED = "PRINTER_STATUS_CHANGED"
-    PRINTER_ERROR = "PRINTER_ERROR"
-
-    # Printer configuration
-    PRINTER_ROLE_ASSIGNED = "PRINTER_ROLE_ASSIGNED"
-    PRINTER_ROLE_CREATED = "PRINTER_ROLE_CREATED"
-    PRINTER_FALLBACK_ASSIGNED = "PRINTER_FALLBACK_ASSIGNED"
-    PRINTER_CONFIG_UPDATED = "PRINTER_CONFIG_UPDATED"
-    TEMPLATE_CONFIG_UPDATED = "TEMPLATE_CONFIG_UPDATED"
-
-    # Printer maintenance
+    # ── Printer maintenance (EPHEMERAL) ──────────────────────────────
     PRINTER_REBOOT_STARTED = "PRINTER_REBOOT_STARTED"
     PRINTER_REBOOT_COMPLETED = "PRINTER_REBOOT_COMPLETED"
     PRINTER_HEALTH_WARNING = "PRINTER_HEALTH_WARNING"
 
-    # Cash drawer
+    # ── Cash drawer (EPHEMERAL) ──────────────────────────────────────
     DRAWER_OPENED = "DRAWER_OPENED"
     DRAWER_OPEN_FAILED = "DRAWER_OPEN_FAILED"
 
-    # Payment device lifecycle
-    PAYMENT_DEVICE_REGISTERED = "PAYMENT_DEVICE_REGISTERED"
-    PAYMENT_DEVICE_CONNECTED = "PAYMENT_DEVICE_CONNECTED"
-    PAYMENT_DEVICE_DISCONNECTED = "PAYMENT_DEVICE_DISCONNECTED"
-    PAYMENT_DEVICE_ERROR = "PAYMENT_DEVICE_ERROR"
-    PAYMENT_DEVICE_REBOOTED = "PAYMENT_DEVICE_REBOOTED"
-
-    # Payment processing
+    # ── Payment processing (LEDGER_CORE) ─────────────────────────────
     PAYMENT_INITIATED = "payment.initiated"
-    PAYMENT_WAITING = "PAYMENT_WAITING"
-    PAYMENT_PROCESSING = "PAYMENT_PROCESSING"
-    PAYMENT_APPROVED = "PAYMENT_APPROVED"
     PAYMENT_CONFIRMED = "payment.confirmed"
     PAYMENT_DECLINED = "payment.failed"
     PAYMENT_CANCELLED = "payment.cancelled"
     PAYMENT_TIMED_OUT = "payment.timeout"
     PAYMENT_ERROR = "PAYMENT_ERROR"
-    PAYMENT_FAILED = "PAYMENT_FAILED"
 
-    # Post-authorization
-    PAYMENT_CAPTURED = "PAYMENT_CAPTURED"
-    PAYMENT_VOIDED = "payment.voided"
+    # ── Post-authorization (LEDGER_CORE) ─────────────────────────────
     PAYMENT_REFUNDED = "PAYMENT_REFUNDED"
-    PAYMENT_REFUND_FAILED = "PAYMENT_REFUND_FAILED"
-    TIP_ADDED = "TIP_ADDED"
-    TIP_ADJUST_SENT = "TIP_ADJUST_SENT"
-    TIP_ADJUST_CONFIRMED = "TIP_ADJUST_CONFIRMED"
-    TIP_ADJUST_FAILED = "TIP_ADJUST_FAILED"
     TIP_ADJUSTED = "payment.tip_adjusted"
     CASH_TIPS_DECLARED = "payment.cash_tips_declared"
 
-    # Batch / Day
-    BATCH_CLOSED = "batch.closed"
+    # ── Batch / Day (LEDGER_CORE) ────────────────────────────────────
     BATCH_SUBMITTED = "batch.submitted"
     DAY_CLOSED = "day.closed"
 
-    # Device
+    # ── Device (EPHEMERAL) ───────────────────────────────────────────
     DEVICE_STATUS_CHANGED = "device.status_changed"
-    DEVICE_DISCOVERED = "device.discovered"
-    DEVICE_IP_CHANGED = "device.ip_changed"
-    DEVICE_RESTORED = "device.restored"
 
-    # Split payments
-    SPLIT_STARTED = "SPLIT_STARTED"
-    SPLIT_PAYMENT_COMPLETED = "SPLIT_PAYMENT_COMPLETED"
-    SPLIT_COMPLETED = "SPLIT_COMPLETED"
-
-    # Idempotency
-    DUPLICATE_PAYMENT_BLOCKED = "DUPLICATE_PAYMENT_BLOCKED"
-
-    # Store Configuration (Overseer)
+    # ── Store Configuration (LEDGER_OPERATIONAL) ─────────────────────
     STORE_INFO_UPDATED = "store.info_updated"
     STORE_CC_PROCESSING_RATE_UPDATED = "store.cc_processing_rate_updated"
     STORE_TAX_RULE_CREATED = "store.tax_rule_created"
@@ -152,7 +103,7 @@ class EventType(str, Enum):
     STORE_ORDER_TYPES_UPDATED = "store.order_types_updated"
     STORE_AUTO_GRATUITY_UPDATED = "store.auto_gratuity_updated"
 
-    # Employee & Roles (NEW)
+    # ── Employee & Roles (LEDGER_OPERATIONAL) ────────────────────────
     EMPLOYEE_ROLE_CREATED = "employee.role_created"
     EMPLOYEE_ROLE_UPDATED = "employee.role_updated"
     EMPLOYEE_ROLE_DELETED = "employee.role_deleted"
@@ -163,7 +114,7 @@ class EventType(str, Enum):
     TIPOUT_RULE_UPDATED = "tipout.rule_updated"
     TIPOUT_RULE_DELETED = "tipout.rule_deleted"
 
-    # Menu management (EXTENDED)
+    # ── Menu management (LEDGER_OPERATIONAL) ─────────────────────────
     MENU_ITEM_CREATED = "MENU_ITEM_CREATED"
     MENU_ITEM_UPDATED = "MENU_ITEM_UPDATED"
     MENU_ITEM_DELETED = "MENU_ITEM_DELETED"
@@ -172,37 +123,28 @@ class EventType(str, Enum):
     MENU_CATEGORY_DELETED = "MENU_CATEGORY_DELETED"
     MENU_ITEM_86D = "menu.item_86d"
     MENU_ITEM_RESTORED = "menu.item_restored"
-    
     MODIFIER_GROUP_CREATED = "MODIFIER_GROUP_CREATED"
     MODIFIER_GROUP_UPDATED = "MODIFIER_GROUP_UPDATED"
     MODIFIER_GROUP_DELETED = "MODIFIER_GROUP_DELETED"
 
-    # Bombard / Batch setup
+    # ── Batch setup (LEDGER_OPERATIONAL) ─────────────────────────────
     RESTAURANT_CONFIGURED = "restaurant.configured"
     TAX_RULES_BATCH_CREATED = "tax_rules.batch_created"
     CATEGORIES_BATCH_CREATED = "categories.batch_created"
     ITEMS_BATCH_CREATED = "items.batch_created"
 
-    # Floor Plan (NEW)
+    # ── Floor Plan (LEDGER_OPERATIONAL) ──────────────────────────────
     FLOORPLAN_SECTION_CREATED = "floorplan.section_created"
     FLOORPLAN_SECTION_UPDATED = "floorplan.section_updated"
     FLOORPLAN_SECTION_DELETED = "floorplan.section_deleted"
     FLOORPLAN_LAYOUT_UPDATED = "floorplan.layout_updated"
 
-    # Hardware (EXTENDED)
+    # ── Hardware (LEDGER_OPERATIONAL) ────────────────────────────────
     TERMINAL_REGISTERED = "TERMINAL_REGISTERED"
     TERMINAL_UPDATED = "terminal.updated"
-    TERMINAL_TRAINING_MODE_CHANGED = "terminal.training_mode_changed"
     ROUTING_MATRIX_UPDATED = "routing.matrix_updated"
-    ROUTING_ITEM_OVERRIDE_CREATED = "routing.item_override_created"
-    ROUTING_ITEM_OVERRIDE_DELETED = "routing.item_override_deleted"
 
-    # Reporting (NEW)
-    REPORTING_DASHBOARD_CONFIGURED = "reporting.dashboard_configured"
-    REPORTING_CUSTOM_REPORT_SAVED = "reporting.custom_report_saved"
-    REPORTING_ACCOUNTS_MAPPING_UPDATED = "reporting.accounts_mapping_updated"
-
-    # System
+    # ── System (LEDGER_OPERATIONAL) ──────────────────────────────────
     USER_LOGGED_IN = "USER_LOGGED_IN"
     USER_LOGGED_OUT = "USER_LOGGED_OUT"
 
@@ -504,9 +446,9 @@ def payment_failed(
         error_code: Optional[str] = None,
         **kwargs
 ) -> Event:
-    """Create a PAYMENT_FAILED event."""
+    """Create a payment failure event (maps to PAYMENT_DECLINED)."""
     return create_event(
-        event_type=EventType.PAYMENT_FAILED,
+        event_type=EventType.PAYMENT_DECLINED,
         terminal_id=terminal_id,
         payload={
             "order_id": order_id,
@@ -822,28 +764,6 @@ def printer_error(
 # Printer Configuration Events
 # -----------------------------------------------------------------------------
 
-def printer_role_assigned(
-        terminal_id: str,
-        printer_id: str,
-        printer_name: str,
-        role: str,
-        previous_role: Optional[str] = None,
-        **kwargs
-) -> Event:
-    """Create a PRINTER_ROLE_ASSIGNED event."""
-    return create_event(
-        event_type=EventType.PRINTER_ROLE_ASSIGNED,
-        terminal_id=terminal_id,
-        payload={
-            "printer_id": printer_id,
-            "printer_name": printer_name,
-            "role": role,
-            "previous_role": previous_role,
-        },
-        **kwargs
-    )
-
-
 def printer_role_created(
         terminal_id: str,
         role_name: str,
@@ -964,306 +884,6 @@ def printer_health_warning(
 
 # -----------------------------------------------------------------------------
 # Print Queue & Advanced Printing Events
-# -----------------------------------------------------------------------------
-
-def receipt_printed(
-        terminal_id: str,
-        order_id: str,
-        printer_mac: str,
-        copy_type: str,
-        ticket_number: str,
-        reprint: bool = False,
-        reprinted_by: Optional[str] = None,
-        **kwargs
-) -> Event:
-    """Create a RECEIPT_PRINTED event."""
-    return create_event(
-        event_type=EventType.RECEIPT_PRINTED,
-        terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "printer_mac": printer_mac,
-            "copy_type": copy_type,
-            "ticket_number": ticket_number,
-            "reprint": reprint,
-            "reprinted_by": reprinted_by,
-        },
-        **kwargs
-    )
-
-
-def receipt_reprinted(
-        terminal_id: str,
-        order_id: str,
-        printer_mac: str,
-        copy_type: str,
-        ticket_number: str,
-        reprinted_by: str,
-        **kwargs
-) -> Event:
-    """Create a RECEIPT_REPRINTED event (extends RECEIPT_PRINTED)."""
-    return receipt_printed(
-        terminal_id=terminal_id,
-        order_id=order_id,
-        printer_mac=printer_mac,
-        copy_type=copy_type,
-        ticket_number=ticket_number,
-        reprint=True,
-        reprinted_by=reprinted_by,
-        **kwargs
-    )
-
-
-def print_job_queued(
-        terminal_id: str,
-        order_id: str,
-        template_id: str,
-        printer_mac: str,
-        ticket_number: str,
-        copy_type: Optional[str] = None,
-        triggered_by: Optional[str] = None,
-        **kwargs
-) -> Event:
-    """Create a PRINT_JOB_QUEUED event."""
-    return create_event(
-        event_type=EventType.PRINT_JOB_QUEUED,
-        terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "template_id": template_id,
-            "printer_mac": printer_mac,
-            "copy_type": copy_type,
-            "triggered_by": triggered_by,
-            "ticket_number": ticket_number,
-        },
-        **kwargs
-    )
-
-
-def print_job_sent(
-        terminal_id: str,
-        job_id: str,
-        attempt_number: int,
-        sent_at: str,
-        **kwargs
-) -> Event:
-    """Create a PRINT_JOB_SENT event."""
-    return create_event(
-        event_type=EventType.PRINT_JOB_SENT,
-        terminal_id=terminal_id,
-        payload={
-            "job_id": job_id,
-            "attempt_number": attempt_number,
-            "sent_at": sent_at,
-        },
-        **kwargs
-    )
-
-
-def print_job_completed(
-        terminal_id: str,
-        job_id: str,
-        completed_at: str,
-        attempt_number: int,
-        **kwargs
-) -> Event:
-    """Create a PRINT_JOB_COMPLETED event."""
-    return create_event(
-        event_type=EventType.PRINT_JOB_COMPLETED,
-        terminal_id=terminal_id,
-        payload={
-            "job_id": job_id,
-            "completed_at": completed_at,
-            "attempt_number": attempt_number,
-        },
-        **kwargs
-    )
-
-
-def print_job_failed(
-        terminal_id: str,
-        job_id: str,
-        final_attempt_at: str,
-        failure_reason: str,
-        alert_sent: bool = False,
-        **kwargs
-) -> Event:
-    """Create a PRINT_JOB_FAILED event."""
-    return create_event(
-        event_type=EventType.PRINT_JOB_FAILED,
-        terminal_id=terminal_id,
-        payload={
-            "job_id": job_id,
-            "final_attempt_at": final_attempt_at,
-            "failure_reason": failure_reason,
-            "alert_sent": alert_sent,
-        },
-        **kwargs
-    )
-
-
-def print_job_retried(
-        terminal_id: str,
-        job_id: str,
-        retried_by: str,
-        retried_at: str,
-        **kwargs
-) -> Event:
-    """Create a PRINT_JOB_RETRIED event."""
-    return create_event(
-        event_type=EventType.PRINT_JOB_RETRIED,
-        terminal_id=terminal_id,
-        payload={
-            "job_id": job_id,
-            "retried_by": retried_by,
-            "retried_at": retried_at,
-        },
-        **kwargs
-    )
-
-
-# -----------------------------------------------------------------------------
-# Delivery Events
-# -----------------------------------------------------------------------------
-
-def delivery_info_added(
-        terminal_id: str,
-        order_id: str,
-        customer_name: str,
-        address: str,
-        phone: str,
-        notes: Optional[str] = None,
-        **kwargs
-) -> Event:
-    """Create a DELIVERY_INFO_ADDED event."""
-    return create_event(
-        event_type=EventType.DELIVERY_INFO_ADDED,
-        terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "customer_name": customer_name,
-            "address": address,
-            "phone": phone,
-            "notes": notes,
-        },
-        **kwargs
-    )
-
-
-def driver_assigned(
-        terminal_id: str,
-        order_id: str,
-        driver_id: str,
-        driver_name: str,
-        assigned_at: str,
-        **kwargs
-) -> Event:
-    """Create a DRIVER_ASSIGNED event."""
-    return create_event(
-        event_type=EventType.DRIVER_ASSIGNED,
-        terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "driver_id": driver_id,
-            "driver_name": driver_name,
-            "assigned_at": assigned_at,
-        },
-        **kwargs
-    )
-
-
-def delivery_dispatched(
-        terminal_id: str,
-        order_id: str,
-        driver_id: str,
-        dispatched_at: str,
-        **kwargs
-) -> Event:
-    """Create a DELIVERY_DISPATCHED event."""
-    return create_event(
-        event_type=EventType.DELIVERY_DISPATCHED,
-        terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "driver_id": driver_id,
-            "dispatched_at": dispatched_at,
-        },
-        **kwargs
-    )
-
-
-def delivery_completed(
-        terminal_id: str,
-        order_id: str,
-        driver_id: str,
-        completed_at: str,
-        tip_amount: float = 0.0,
-        **kwargs
-) -> Event:
-    """Create a DELIVERY_COMPLETED event."""
-    return create_event(
-        event_type=EventType.DELIVERY_COMPLETED,
-        terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "driver_id": driver_id,
-            "completed_at": completed_at,
-            "tip_amount": tip_amount,
-        },
-        **kwargs
-    )
-
-
-# -----------------------------------------------------------------------------
-# Configuration Audit Events
-# -----------------------------------------------------------------------------
-
-def printer_config_updated(
-        terminal_id: str,
-        printer_mac: str,
-        changed_by: str,
-        previous_config: dict[str, Any],
-        new_config: dict[str, Any],
-        **kwargs
-) -> Event:
-    """Create a PRINTER_CONFIG_UPDATED event."""
-    return create_event(
-        event_type=EventType.PRINTER_CONFIG_UPDATED,
-        terminal_id=terminal_id,
-        payload={
-            "printer_mac": printer_mac,
-            "changed_by": changed_by,
-            "previous_config": previous_config,
-            "new_config": new_config,
-        },
-        **kwargs
-    )
-
-
-def template_config_updated(
-        terminal_id: str,
-        template_id: str,
-        changed_by: str,
-        previous_config: dict[str, Any],
-        new_config: dict[str, Any],
-        **kwargs
-) -> Event:
-    """Create a TEMPLATE_CONFIG_UPDATED event."""
-    return create_event(
-        event_type=EventType.TEMPLATE_CONFIG_UPDATED,
-        terminal_id=terminal_id,
-        payload={
-            "template_id": template_id,
-            "changed_by": changed_by,
-            "previous_config": previous_config,
-            "new_config": new_config,
-        },
-        **kwargs
-    )
-
-
-# -----------------------------------------------------------------------------
-# Cash Drawer Events
 # -----------------------------------------------------------------------------
 
 def drawer_opened(

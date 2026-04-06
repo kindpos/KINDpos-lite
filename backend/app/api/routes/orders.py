@@ -1139,14 +1139,6 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     )
     await ledger.append(submit_evt)
 
-    # Keep BATCH_CLOSED for backward compatibility
-    batch_evt = create_event(
-        event_type=EventType.BATCH_CLOSED,
-        terminal_id=settings.terminal_id,
-        payload={"order_count": closed_count},
-    )
-    await ledger.append(batch_evt)
-
     return {
         "success": True,
         "orders_closed_now": closed_count,

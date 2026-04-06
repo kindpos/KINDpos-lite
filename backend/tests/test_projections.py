@@ -186,7 +186,7 @@ class TestProjectOrder:
                 method="card",
             ),
             create_event(
-                event_type=EventType.PAYMENT_FAILED,
+                event_type=EventType.PAYMENT_DECLINED,
                 terminal_id=TERMINAL,
                 payload={"payment_id": "p1", "error": "declined"},
                 correlation_id=ORDER_ID,

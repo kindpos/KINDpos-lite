@@ -145,6 +145,7 @@ async def declare_cash_tips(
         terminal_id=settings.terminal_id,
         server_id=request.server_id,
         amount=request.amount,
+        correlation_id=request.server_id,
     )
     await ledger.append(event)
     return {

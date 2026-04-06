@@ -267,14 +267,10 @@ class PrintContextBuilder:
             gross_sales += order_subtotal
             tax_collected += order_tax
 
-            # ── Aggregate voids/comps from events ─────────────────────────────
+            # ── Aggregate discounts from events ──────────────────────────────
             for e in order_events:
                 payload = e.payload or {}
-                if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += Decimal(str(payload.get("amount", 0)))
-                elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += Decimal(str(payload.get("amount", 0)))
-                elif e.event_type == EventType.DISCOUNT_APPLIED:
+                if e.event_type == EventType.DISCOUNT_APPROVED:
                     discounts_total += Decimal(str(payload.get("amount", 0)))
 
             # ── Payment details ───────────────────────────────────────────────
@@ -516,16 +512,10 @@ class PrintContextBuilder:
 
             covers += max(len(seats), 1)  # At least 1 guest per check
 
-            # Voids / comps / discounts from events
+            # Discounts from events
             for e in order_events:
                 payload = e.payload or {}
-                if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += Decimal(str(payload.get("amount", 0)))
-                    voids_count += 1
-                elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += Decimal(str(payload.get("amount", 0)))
-                    comps_count += 1
-                elif e.event_type == EventType.DISCOUNT_APPLIED:
+                if e.event_type == EventType.DISCOUNT_APPROVED:
                     discounts_total += Decimal(str(payload.get("amount", 0)))
                     discounts_count += 1
 

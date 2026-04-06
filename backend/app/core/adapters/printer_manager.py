@@ -48,7 +48,6 @@ from ..events import (
     printer_registered,
     printer_status_changed,
     printer_error,
-    printer_role_assigned,
     printer_role_created,
     printer_fallback_assigned,
     printer_reboot_started,
@@ -59,6 +58,7 @@ from ..events import (
 )
 
 from ..event_ledger import EventLedger
+from ..ephemeral_log import EphemeralLog
 
 logger = logging.getLogger("kindpos.printer.manager")
 
@@ -95,15 +95,17 @@ class PrinterManager:
         await manager.schedule_maintenance()
     """
 
-    def __init__(self, ledger: EventLedger, terminal_id: str):
+    def __init__(self, ledger: EventLedger, terminal_id: str, ephemeral_log: Optional[EphemeralLog] = None):
         """
         Initialize the PrinterManager.
 
         Args:
             ledger: The Event Ledger for recording all actions
             terminal_id: This terminal's ID (for event creation)
+            ephemeral_log: Separate non-chained log for operational telemetry
         """
         self._ledger = ledger
+        self._ephemeral = ephemeral_log or ledger  # fall back to ledger if not provided
         self._terminal_id = terminal_id
         self._printers: dict[str, BasePrinter] = {}  # printer_id -> adapter
         self._custom_roles: set[str] = {"receipt", "kitchen", "bar"}  # Default roles
@@ -212,7 +214,7 @@ class PrinterManager:
             role_name=role_name,
             created_by=created_by,
         )
-        await self._ledger.append(event)
+        await self._ephemeral.append(event)
 
         logger.info(f"[MANAGER] Custom role created: '{role_name}'")
         return True
@@ -255,7 +257,7 @@ class PrinterManager:
             fallback_printer_id=fallback_printer_id,
             fallback_printer_name=fallback.name,
         )
-        await self._ledger.append(event)
+        await self._ephemeral.append(event)
 
         logger.info(
             f"[MANAGER] Fallback assigned: '{printer.name}' → '{fallback.name}'"
@@ -451,7 +453,7 @@ class PrinterManager:
                 error=f"Printer not ready (status: {printer.status.value})",
                 will_retry=False,
             )
-            await self._ledger.append(fail_event)
+            await self._ephemeral.append(fail_event)
 
             return PrintResult(
                 success=False,
@@ -519,7 +521,7 @@ class PrinterManager:
                     retry_count=attempt,
                     error=result.message,
                 )
-                await self._ledger.append(retry_event)
+                await self._ephemeral.append(retry_event)
 
                 logger.info(
                     f"[MANAGER] Retry {attempt}/{MAX_RETRIES} "
@@ -535,7 +537,7 @@ class PrinterManager:
             error=last_result.message if last_result else "Unknown error",
             will_retry=False,
         )
-        await self._ledger.append(fail_event)
+        await self._ephemeral.append(fail_event)
 
         return last_result
 
@@ -643,7 +645,7 @@ class PrinterManager:
                 reason=f"Primary printer failed after {MAX_RETRIES} retries",
                 fallback_tier=tier,
             )
-            await self._ledger.append(reroute_event)
+            await self._ephemeral.append(reroute_event)
 
             # Also log the successful print
             print_event = ticket_printed(
@@ -706,7 +708,7 @@ class PrinterManager:
                 printer_id=printer_id or "unknown",
                 error="No receipt printer available",
             )
-            await self._ledger.append(fail_event)
+            await self._ephemeral.append(fail_event)
             return False
 
         # Try to open
@@ -719,7 +721,7 @@ class PrinterManager:
                 reason=reason,
                 opened_by=opened_by,
             )
-            await self._ledger.append(event)
+            await self._ephemeral.append(event)
             logger.info(
                 f"[MANAGER] Drawer opened via '{printer.name}' "
                 f"(reason={reason}, by={opened_by})"
@@ -730,7 +732,7 @@ class PrinterManager:
                 printer_id=printer.printer_id,
                 error="Drawer kick command failed",
             )
-            await self._ledger.append(event)
+            await self._ephemeral.append(event)
             logger.warning(f"[MANAGER] Drawer kick failed on '{printer.name}'")
 
         return success
@@ -760,7 +762,7 @@ class PrinterManager:
                     previous_status=previous_status.value,
                     new_status=current_status.value,
                 )
-                await self._ledger.append(event)
+                await self._ephemeral.append(event)
 
                 logger.info(
                     f"[MANAGER] Status change: '{printer.name}' "
@@ -776,7 +778,7 @@ class PrinterManager:
                         warning_type="overheating",
                         details="Print head temperature elevated — scheduled reboot recommended",
                     )
-                    await self._ledger.append(warning_event)
+                    await self._ephemeral.append(warning_event)
 
         return results
 
@@ -801,7 +803,7 @@ class PrinterManager:
             printer_name=printer.name,
             reason="scheduled_maintenance",
         )
-        await self._ledger.append(start_event)
+        await self._ephemeral.append(start_event)
 
         start_time = datetime.now(timezone.utc)
 
@@ -816,7 +818,7 @@ class PrinterManager:
             printer_name=printer.name,
             duration_seconds=duration,
         )
-        await self._ledger.append(complete_event)
+        await self._ephemeral.append(complete_event)
 
         logger.info(
             f"[MANAGER] Reboot {'complete' if success else 'failed'}: "
@@ -873,7 +875,7 @@ class PrinterManager:
                   f"Order: {job.order_id}, Job: {job.job_id[:8]}...",
             requires_attention=True,
         )
-        await self._ledger.append(error_event)
+        await self._ephemeral.append(error_event)
 
         logger.error(
             f"[MANAGER] *** MANAGER ALERT ***\n"
@@ -894,7 +896,7 @@ class PrinterManager:
                   f"Order: {job.order_id}",
             requires_attention=True,
         )
-        await self._ledger.append(error_event)
+        await self._ephemeral.append(error_event)
 
         logger.error(
             f"[MANAGER] *** MANAGER ALERT ***\n"
