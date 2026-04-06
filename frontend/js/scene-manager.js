@@ -19,6 +19,7 @@ let activeInterrupt = null;
 let lastNavTime = 0;
 let timeoutTimers = {};
 let lastInteraction = {};
+var _transitionHooks = [];
 
 // ── DOM Containers ────────────────────────────────
 let sceneContainer = null;
@@ -41,6 +42,30 @@ function debounceCheck() {
   if (now - lastNavTime < DEBOUNCE_MS) return false;
   lastNavTime = now;
   return true;
+}
+
+// ── Transition cleanup ───────────────────────────
+function _clearUpperTiers() {
+  // Drain all overlays
+  while (overlayStack.length > 0) {
+    var entry = overlayStack.pop();
+    entry.el.remove();
+    entry.dim.remove();
+  }
+  // Cancel active interrupt (reject so .then chains don't fire stale logic)
+  if (activeInterrupt) {
+    var ai = activeInterrupt;
+    ai.el.remove();
+    ai.dim.remove();
+    activeInterrupt = null;
+    ai.reject(new Error('Interrupt cancelled by navigation'));
+  }
+  // Fire external cleanup hooks (e.g. keyboard)
+  _transitionHooks.forEach(function(fn) { fn(); });
+}
+
+export function onBeforeTransition(fn) {
+  _transitionHooks.push(fn);
 }
 
 // ═══════════════════════════════════════════════════
@@ -94,6 +119,8 @@ export async function push(name, params = {}) {
       return;
     }
   }
+
+  _clearUpperTiers();
 
   // Pause or teardown current scene
   if (from) {
@@ -161,6 +188,8 @@ export async function pop() {
     }
   }
 
+  _clearUpperTiers();
+
   // Teardown current
   clearTimeout(timeoutTimers[from]);
   if (scenes[from].onExit) scenes[from].onExit();
@@ -194,6 +223,8 @@ export async function replace(name, params = {}) {
   if (!scenes[name]) return console.error(`Scene "${name}" not registered`);
 
   const from = activeScene;
+
+  _clearUpperTiers();
 
   // Teardown current (no exit guard on replace)
   if (from) {

@@ -143,11 +143,15 @@ class SalesRecapTemplate(BaseTemplate):
         cmds.append({'type': 'divider'})
         cmds.append({'type': 'text', 'content': self._money_line('Total Payments', total_payments, cpl), 'bold': True})
 
-        # Tips collected
+        # Cash expected (cash sales + cash tips)
+        cash_expected = ctx.get('cash_expected', cash_sales + ctx.get('cash_tips', 0.0))
+        cmds.append({'type': 'text', 'content': self._money_line('Cash Expected', cash_expected, cpl)})
+
+        # Tip total
         total_tips = ctx.get('total_tips', 0.0)
         if total_tips > 0:
             cmds.append({'type': 'feed', 'lines': 1})
-            cmds.append({'type': 'text', 'content': self._money_line('Total Tips (CC)', total_tips, cpl)})
+            cmds.append({'type': 'text', 'content': self._money_line('Tip Total', total_tips, cpl), 'bold': True})
 
         cmds.append({'type': 'divider', 'char': '='})
         return cmds

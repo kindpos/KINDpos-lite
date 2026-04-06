@@ -1,10 +1,14 @@
 import logging
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from datetime import datetime, timezone, timedelta
+from typing import Dict, Any, Optional, List
 
 from ..core.event_ledger import EventLedger
 from ..core.projections import project_order
 from ..core.events import EventType
+from decimal import Decimal
+from ..core.money import money_round
+
+_ZERO = Decimal('0')
 from ..config import settings
 
 logger = logging.getLogger("kindpos.printing.context_builder")
@@ -111,6 +115,7 @@ class PrintContextBuilder:
             "closed_at":                  closed_at,
             "table":                      getattr(order, "table", None),
             "server_name":                getattr(order, "server_name", None),
+            "customer_name":              getattr(order, "customer_name", None),
             "items":                      items,
             "subtotal":                   float(order.subtotal or 0),
             "tax_lines":                  tax_lines,
@@ -180,6 +185,7 @@ class PrintContextBuilder:
             "order_type":         order_type,
             "order_type_display": ORDER_TYPE_LABELS.get(order_type, order_type.upper()),
             "table":              getattr(order, "table", None),
+            "customer_name":      getattr(order, "customer_name", None),
             "server":             getattr(order, "server_name", None),
             "server_name":        getattr(order, "server_name", None),
             "seats":              sorted(seats) if seats else None,
@@ -230,13 +236,13 @@ class PrintContextBuilder:
 
         # ── Project each order ────────────────────────────────────────────────
         checks_closed = 0
-        gross_sales = 0.0
-        voids_total = 0.0
-        comps_total = 0.0
-        discounts_total = 0.0
-        tax_collected = 0.0
-        cash_sales = 0.0
-        card_sales = 0.0
+        gross_sales = _ZERO
+        voids_total = _ZERO
+        comps_total = _ZERO
+        discounts_total = _ZERO
+        tax_collected = _ZERO
+        cash_sales = _ZERO
+        card_sales = _ZERO
         cc_transactions = []
         open_tip_count = 0
 
@@ -256,9 +262,8 @@ class PrintContextBuilder:
 
             checks_closed += 1
 
-            order_subtotal = float(order.subtotal or 0)
-            order_tax = float(order.tax or 0)
-            order_total = float(order.total or 0)
+            order_subtotal = Decimal(str(order.subtotal or 0))
+            order_tax = Decimal(str(order.tax or 0))
             gross_sales += order_subtotal
             tax_collected += order_tax
 
@@ -266,17 +271,17 @@ class PrintContextBuilder:
             for e in order_events:
                 payload = e.payload or {}
                 if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += float(payload.get("amount", 0))
+                    voids_total += Decimal(str(payload.get("amount", 0)))
                 elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += float(payload.get("amount", 0))
+                    comps_total += Decimal(str(payload.get("amount", 0)))
                 elif e.event_type == EventType.DISCOUNT_APPLIED:
-                    discounts_total += float(payload.get("amount", 0))
+                    discounts_total += Decimal(str(payload.get("amount", 0)))
 
             # ── Payment details ───────────────────────────────────────────────
             for p in (order.payments or []):
                 if p.status != "confirmed":
                     continue
-                amount = float(getattr(p, "amount", 0) or 0)
+                amount = Decimal(str(getattr(p, "amount", 0) or 0))
                 tip = float(getattr(p, "tip_amount", 0) or 0)
 
                 if p.method == "cash":
@@ -297,12 +302,12 @@ class PrintContextBuilder:
                     cc_transactions.append({
                         "check_number": ticket_num,
                         "card_last_four": last4 or "****",
-                        "total": amount,
+                        "total": float(amount),
                         "tip": tip,
                         "tip_open": tip_open,
                     })
 
-        net_sales = gross_sales - voids_total - comps_total - discounts_total
+        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
         cc_tips_total = sum(t["tip"] for t in cc_transactions)
         gross_tips = cc_tips_total + (declared_cash_tips or 0.0)
 
@@ -348,14 +353,14 @@ class PrintContextBuilder:
                 base_amount = net_sales
             elif basis == "alcohol" or basis == "alcohol_sales":
                 base_amount = float(preset.get("base_override", 0))
-                # TODO: derive alcohol sales from category data when available
+                # Deferred: derive alcohol sales from category data when available
             elif basis == "food" or basis == "food_sales":
                 base_amount = float(preset.get("base_override", 0))
-                # TODO: derive food sales from category data when available
+                # Deferred: derive food sales from category data when available
             else:
                 base_amount = net_sales
 
-            calculated = round(base_amount * (pct / 100), 2)
+            calculated = money_round(base_amount * (pct / 100))
 
             # Apply manager override if present
             adjusted = False
@@ -367,7 +372,7 @@ class PrintContextBuilder:
                     calculated = 0.0
                 else:
                     adjusted = (override_val != calculated)
-                    calculated = round(float(override_val), 2)
+                    calculated = money_round(float(override_val))
 
             tip_outs.append({
                 "role": role,
@@ -382,7 +387,7 @@ class PrintContextBuilder:
 
         # ── Tip pool (if server is in one) ────────────────────────────────────
         tip_pool = None
-        # TODO: Check staff config for pool membership
+        # Deferred: check staff config for pool membership
         # If server is in a pool, set:
         # tip_pool = {
         #     "name": "BAR POOL",
@@ -403,24 +408,24 @@ class PrintContextBuilder:
             "clock_out": clock_out,
             "shift_duration": shift_duration,
             "checks_closed": checks_closed,
-            "gross_sales": round(gross_sales, 2),
-            "voids_total": round(voids_total, 2),
-            "comps_total": round(comps_total, 2),
-            "discounts_total": round(discounts_total, 2),
-            "net_sales": round(net_sales, 2),
-            "tax_collected": round(tax_collected, 2),
-            "cash_sales": round(cash_sales, 2),
-            "card_sales": round(card_sales, 2),
+            "gross_sales": money_round(float(gross_sales)),
+            "voids_total": money_round(float(voids_total)),
+            "comps_total": money_round(float(comps_total)),
+            "discounts_total": money_round(float(discounts_total)),
+            "net_sales": money_round(net_sales),
+            "tax_collected": money_round(float(tax_collected)),
+            "cash_sales": money_round(float(cash_sales)),
+            "card_sales": money_round(float(card_sales)),
             "show_cc_detail": getattr(settings, "show_cc_detail", True),
             "cc_transactions": cc_transactions,
-            "cc_tips_total": round(cc_tips_total, 2),
+            "cc_tips_total": money_round(cc_tips_total),
             "declared_cash_tips": declared_cash_tips,
-            "gross_tips": round(gross_tips, 2),
+            "gross_tips": money_round(gross_tips),
             "tip_pool": tip_pool,
             "tip_outs": tip_outs,
-            "total_tip_out": round(total_tip_out, 2),
-            "net_tips": round(net_tips, 2),
-            "cash_collected": round(cash_collected, 2),
+            "total_tip_out": money_round(total_tip_out),
+            "net_tips": money_round(net_tips),
+            "cash_collected": money_round(float(cash_sales)),
             "cc_tips_payout": getattr(settings, "cc_tips_payout", "cash"),
             "open_tip_count": open_tip_count,
             "require_manager_sign": getattr(settings, "require_manager_sign", True),
@@ -457,19 +462,21 @@ class PrintContextBuilder:
 
         # ── Aggregate across all orders ───────────────────────────────────────
         total_checks = 0
-        gross_sales = 0.0
-        voids_total = 0.0
+        gross_sales = _ZERO
+        voids_total = _ZERO
         voids_count = 0
-        comps_total = 0.0
+        comps_total = _ZERO
         comps_count = 0
-        discounts_total = 0.0
+        discounts_total = _ZERO
         discounts_count = 0
-        tax_collected = 0.0
-        cash_sales = 0.0
+        tax_collected = _ZERO
+        cash_sales = _ZERO
         cash_count = 0
-        card_sales = 0.0
+        card_sales = _ZERO
         card_count = 0
-        total_tips = 0.0
+        total_tips = _ZERO
+        cash_tips = _ZERO
+        card_tips = _ZERO
         covers = 0
         category_totals = {}  # {category_name: {"total": float, "count": int}}
 
@@ -488,8 +495,8 @@ class PrintContextBuilder:
                 continue
 
             total_checks += 1
-            order_subtotal = float(order.subtotal or 0)
-            order_tax = float(order.tax or 0)
+            order_subtotal = Decimal(str(order.subtotal or 0))
+            order_tax = Decimal(str(order.tax or 0))
             gross_sales += order_subtotal
             tax_collected += order_tax
 
@@ -501,9 +508,9 @@ class PrintContextBuilder:
                     seats.add(seat)
                 # Category aggregation
                 cat = getattr(item, "category", None) or "Uncategorized"
-                item_total = float(item.quantity * item.price)
+                item_total = Decimal(str(item.quantity * item.price))
                 if cat not in category_totals:
-                    category_totals[cat] = {"total": 0.0, "count": 0}
+                    category_totals[cat] = {"total": _ZERO, "count": 0}
                 category_totals[cat]["total"] += item_total
                 category_totals[cat]["count"] += item.quantity
 
@@ -513,39 +520,41 @@ class PrintContextBuilder:
             for e in order_events:
                 payload = e.payload or {}
                 if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += float(payload.get("amount", 0))
+                    voids_total += Decimal(str(payload.get("amount", 0)))
                     voids_count += 1
                 elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += float(payload.get("amount", 0))
+                    comps_total += Decimal(str(payload.get("amount", 0)))
                     comps_count += 1
                 elif e.event_type == EventType.DISCOUNT_APPLIED:
-                    discounts_total += float(payload.get("amount", 0))
+                    discounts_total += Decimal(str(payload.get("amount", 0)))
                     discounts_count += 1
 
             # Payments
             for p in (order.payments or []):
                 if p.status != "confirmed":
                     continue
-                amount = float(getattr(p, "amount", 0) or 0)
-                tip = float(getattr(p, "tip_amount", 0) or 0)
+                amount = Decimal(str(getattr(p, "amount", 0) or 0))
+                tip = Decimal(str(getattr(p, "tip_amount", 0) or 0))
                 total_tips += tip
 
                 if p.method == "cash":
                     cash_sales += amount
                     cash_count += 1
+                    cash_tips += tip
                 elif p.method == "card":
                     card_sales += amount
                     card_count += 1
+                    card_tips += tip
 
-        net_sales = gross_sales - voids_total - comps_total - discounts_total
-        total_payments = cash_sales + card_sales
-        avg_check = round(net_sales / total_checks, 2) if total_checks > 0 else 0.0
-        per_person_avg = round(net_sales / covers, 2) if covers > 0 else 0.0
+        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
+        total_payments = float(cash_sales + card_sales)
+        avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
+        per_person_avg = money_round(net_sales / covers) if covers > 0 else 0.0
 
         # ── Category sales (sorted by total descending) ───────────────────────
         category_sales = sorted(
             [
-                {"name": name, "total": round(data["total"], 2), "count": data["count"]}
+                {"name": name, "total": money_round(float(data["total"])), "count": data["count"]}
                 for name, data in category_totals.items()
             ],
             key=lambda c: c["total"],
@@ -553,10 +562,10 @@ class PrintContextBuilder:
         )
 
         # ── Tax lines ─────────────────────────────────────────────────────────
-        tax_lines = [{"label": "Tax", "amount": round(tax_collected, 2)}]
+        tax_lines = [{"label": "Tax", "amount": money_round(float(tax_collected))}]
 
         # ── Daypart breakdown ─────────────────────────────────────────────────
-        # TODO: Implement daypart bucketing once order timestamps are available
+        # Deferred: daypart bucketing once order timestamps are available
         # dayparts = [
         #     {"name": "Breakfast (6a-11a)", "sales": 0.0, "checks": 0},
         #     {"name": "Lunch (11a-3p)",     "sales": 0.0, "checks": 0},
@@ -575,23 +584,26 @@ class PrintContextBuilder:
             "date_to": "",
             "printed_by": printed_by,
             "printed_at": datetime.now(timezone.utc).isoformat(),
-            "gross_sales": round(gross_sales, 2),
-            "voids_total": round(voids_total, 2),
+            "gross_sales": money_round(float(gross_sales)),
+            "voids_total": money_round(float(voids_total)),
             "voids_count": voids_count,
-            "comps_total": round(comps_total, 2),
+            "comps_total": money_round(float(comps_total)),
             "comps_count": comps_count,
-            "discounts_total": round(discounts_total, 2),
+            "discounts_total": money_round(float(discounts_total)),
             "discounts_count": discounts_count,
-            "net_sales": round(net_sales, 2),
-            "tax_collected": round(tax_collected, 2),
+            "net_sales": money_round(net_sales),
+            "tax_collected": money_round(float(tax_collected)),
             "tax_lines": tax_lines,
-            "cash_sales": round(cash_sales, 2),
+            "cash_sales": money_round(float(cash_sales)),
             "cash_count": cash_count,
-            "card_sales": round(card_sales, 2),
+            "card_sales": money_round(float(card_sales)),
             "card_count": card_count,
             "other_payments": [],
-            "total_payments": round(total_payments, 2),
-            "total_tips": round(total_tips, 2),
+            "total_payments": money_round(total_payments),
+            "total_tips": money_round(float(total_tips)),
+            "cash_tips": money_round(float(cash_tips)),
+            "card_tips": money_round(float(card_tips)),
+            "cash_expected": money_round(float(cash_sales + cash_tips)),
             "category_sales": category_sales,
             "total_checks": total_checks,
             "avg_check": avg_check,
@@ -599,4 +611,140 @@ class PrintContextBuilder:
             "per_person_avg": per_person_avg,
             "dayparts": dayparts,
             "terminal_id": settings.terminal_id,
+        }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  CLOCK HOURS SUMMARY
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def build_clock_hours_context(
+            self,
+            employee_id: str,
+            employee_name: str,
+            role_name: str = "",
+            action: str = "CLOCK IN",
+    ) -> Dict[str, Any]:
+        """
+        Build context for ClockHoursTemplate.
+
+        Calculates this-shift duration and weekly pay-period hours
+        from USER_LOGGED_IN / USER_LOGGED_OUT events.
+        """
+        now = datetime.now(timezone.utc)
+
+        # ── Determine pay-period window (Mon 00:00 → now) ────────────────────
+        days_since_monday = now.weekday()  # 0=Mon
+        period_start = (now - timedelta(days=days_since_monday)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        # Fetch all clock events within the pay period
+        login_events = await self.ledger.get_events_by_type(
+            EventType.USER_LOGGED_IN, since=period_start, limit=5000
+        )
+        logout_events = await self.ledger.get_events_by_type(
+            EventType.USER_LOGGED_OUT, since=period_start, limit=5000
+        )
+
+        # Filter to this employee
+        logins = sorted(
+            [e for e in login_events if (e.payload or {}).get("employee_id") == employee_id],
+            key=lambda e: e.timestamp,
+        )
+        logouts = sorted(
+            [e for e in logout_events if (e.payload or {}).get("employee_id") == employee_id],
+            key=lambda e: e.timestamp,
+        )
+
+        # ── Pair logins with logouts into shifts ─────────────────────────────
+        shifts: List[Dict[str, Any]] = []
+        logout_idx = 0
+        for login_ev in logins:
+            t_in = login_ev.timestamp
+            t_out = None
+            # Find the next logout after this login
+            while logout_idx < len(logouts):
+                if logouts[logout_idx].timestamp > t_in:
+                    t_out = logouts[logout_idx].timestamp
+                    logout_idx += 1
+                    break
+                logout_idx += 1
+            shifts.append({"in": t_in, "out": t_out})
+
+        # ── Current shift (the most recent for this employee) ────────────────
+        current_shift_in = None
+        current_shift_out = None
+        current_duration = ""
+        if shifts:
+            last = shifts[-1]
+            current_shift_in = last["in"].isoformat()
+            if last["out"]:
+                current_shift_out = last["out"].isoformat()
+                delta = last["out"] - last["in"]
+                h, rem = divmod(int(delta.total_seconds()), 3600)
+                m = rem // 60
+                current_duration = f"{h}h {m}m"
+
+        # ── Daily breakdown ──────────────────────────────────────────────────
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        daily_hours: List[Dict[str, str]] = []
+        total_seconds = 0
+
+        for d in range(7):
+            day_date = period_start + timedelta(days=d)
+            if day_date > now:
+                break
+            day_end = day_date + timedelta(days=1)
+            label = f"{day_names[d]} {day_date.strftime('%m/%d')}"
+
+            # Find shifts overlapping this day
+            day_shifts = [
+                s for s in shifts
+                if s["in"] < day_end and s["in"] >= day_date
+            ]
+
+            if not day_shifts:
+                daily_hours.append({"label": label, "in": "--", "out": "--", "hours": "--"})
+                continue
+
+            day_total_secs = 0
+            first_in = None
+            last_out = None
+            for s in day_shifts:
+                t_in = s["in"]
+                t_out = s["out"] or now  # still clocked in → use now
+                if first_in is None:
+                    first_in = t_in
+                last_out = t_out
+                secs = (t_out - t_in).total_seconds()
+                day_total_secs += secs
+                total_seconds += secs
+
+            hrs = day_total_secs / 3600
+            in_str = first_in.strftime("%I:%M%p") if first_in else "--"
+            out_str = last_out.strftime("%I:%M%p") if last_out and day_shifts[-1]["out"] else "NOW"
+            daily_hours.append({
+                "label": label,
+                "in": in_str,
+                "out": out_str,
+                "hours": f"{hrs:.1f}h",
+            })
+
+        total_hours = total_seconds / 3600
+        period_end_date = period_start + timedelta(days=6)
+        period_label = f"{period_start.strftime('%m/%d')} - {period_end_date.strftime('%m/%d')}"
+
+        return {
+            "restaurant_name": getattr(settings, "restaurant_name", "KINDpos"),
+            "employee_name": employee_name,
+            "role_name": role_name,
+            "action": action,
+            "date": now.strftime("%m/%d/%Y"),
+            "time": now.strftime("%I:%M %p"),
+            "clock_in": current_shift_in,
+            "clock_out": current_shift_out,
+            "shift_duration": current_duration,
+            "period_label": period_label,
+            "daily_hours": daily_hours,
+            "period_total_hours": f"{total_hours:.1f}",
         }

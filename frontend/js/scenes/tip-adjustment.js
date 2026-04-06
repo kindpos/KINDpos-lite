@@ -13,6 +13,7 @@ import { buildNumpad } from '../numpad.js';
 // ── State ─────────────────────────────────────────
 var checks = [];
 var filter = 'all';         // 'all' | 'unadjusted'
+var statusFilter = 'all';  // 'all' | 'open' | 'closed' | 'voided'
 var editingIndex = -1;      // index into checks[]
 var cents = 0;
 
@@ -22,25 +23,24 @@ var rightEdit     = null;
 var batchBar      = null;
 var bottomBar     = null;
 var btnUnadj      = null;
+var btnOpen       = null;
+var btnClosed     = null;
+var btnVoided     = null;
 var numpadRef     = null;   // buildNumpad component instance
 var numpadCheckId = null;
 var numpadAmount  = null;
 var summaryEls    = {};
 
 // ═══════════════════════════════════════════════════
-//  MOCK DATA — replace with API call
+//  CHECK DATA — fetched from day-summary API
 // ═══════════════════════════════════════════════════
 
-function getMockChecks() {
-  return [
-    { checkId: 'C-001', time: '10:42am', amount: 47.50, tip: 9.50,  adjusted: true,  method: 'card' },
-    { checkId: 'C-002', time: '10:58am', amount: 23.00, tip: 4.00,  adjusted: true,  method: 'card' },
-    { checkId: 'C-003', time: '11:15am', amount: 62.00, tip: 0,     adjusted: false, method: 'card' },
-    { checkId: 'C-004', time: '11:32am', amount: 18.75, tip: 3.00,  adjusted: true,  method: 'card' },
-    { checkId: 'C-005', time: '11:50am', amount: 91.00, tip: 18.00, adjusted: true,  method: 'card' },
-    { checkId: 'C-006', time: '12:05pm', amount: 34.25, tip: 0,     adjusted: false, method: 'card' },
-    { checkId: 'C-007', time: '12:22pm', amount: 55.50, tip: 11.00, adjusted: true,  method: 'card' },
-  ];
+function fetchChecks(employeeId) {
+  var url = '/api/v1/orders/day-summary';
+  if (employeeId) url += '?server_id=' + encodeURIComponent(employeeId);
+  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    return d.checks || [];
+  }).catch(function() { return []; });
 }
 
 // ═══════════════════════════════════════════════════
@@ -75,9 +75,43 @@ function renderTable() {
   if (!tableBody) return;
   tableBody.innerHTML = '';
 
-  checks.forEach(function(c, i) {
+  // Sort checks: card first, then cash (within closed)
+  var sorted = checks.map(function(c, i) { return { c: c, i: i }; });
+  sorted.sort(function(a, b) {
+    var ma = a.c.method === 'card' ? 0 : a.c.method === 'cash' ? 1 : 2;
+    var mb = b.c.method === 'card' ? 0 : b.c.method === 'cash' ? 1 : 2;
+    return ma - mb;
+  });
+
+  var lastMethod = null;
+  sorted.forEach(function(entry) {
+    var c = entry.c;
+    var i = entry.i;
     // Filter logic
     if (filter === 'unadjusted' && c.adjusted) return;
+    var checkStatus = c.status || 'closed';
+    if (statusFilter === 'open' && checkStatus !== 'open') return;
+    if (statusFilter === 'closed' && checkStatus !== 'closed') return;
+    if (statusFilter === 'voided' && checkStatus !== 'voided') return;
+    // Hide voided checks from ALL/Open/Closed views
+    if (statusFilter !== 'voided' && checkStatus === 'voided') return;
+    // Cash checks only visible under Closed filter
+    if (c.method === 'cash' && statusFilter !== 'closed') return;
+
+    var isOpen = checkStatus === 'open';
+    var isVoided = checkStatus === 'voided';
+
+    // Group header when method changes (card → cash)
+    if (!isOpen && statusFilter === 'closed' && c.method !== lastMethod) {
+      lastMethod = c.method;
+      var hdr = document.createElement('tr');
+      var hdrTd = document.createElement('td');
+      hdrTd.colSpan = 5;
+      hdrTd.textContent = (c.method === 'card' ? 'Card' : 'Cash');
+      hdrTd.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';padding:10px 8px 4px;text-align:left;border:none;background:transparent;';
+      hdr.appendChild(hdrTd);
+      tableBody.appendChild(hdr);
+    }
 
     var tr = document.createElement('tr');
     tr.dataset.idx = i;
@@ -85,19 +119,49 @@ function renderTable() {
     var total = c.adjusted ? c.amount + c.tip : 0;
 
     // Cell data
-    var cells = [
-      { text: c.checkId, cls: '' },
-      { text: c.time,    cls: '' },
-      { text: fmt(c.amount), cls: '' },
-      { text: c.adjusted ? fmt(c.tip) : '$0.00', cls: c.adjusted ? '' : 'tip-cell' },
-      { text: c.adjusted ? fmt(total) : '$0.00', cls: c.adjusted ? '' : 'cyan-cell' },
-    ];
+    var cells;
+    if (isVoided) {
+      cells = [
+        { text: c.checkLabel || c.checkId, cls: '' },
+        { text: c.time,    cls: '' },
+        { text: fmt(c.amount), cls: '' },
+        { text: 'VOID',    cls: '' },
+        { text: '—',       cls: '' },
+      ];
+    } else if (isOpen) {
+      cells = [
+        { text: c.checkLabel || c.checkId, cls: '' },
+        { text: c.time,    cls: '' },
+        { text: fmt(c.amount), cls: '' },
+        { text: '—',       cls: '' },
+        { text: '—',       cls: '' },
+      ];
+    } else {
+      cells = [
+        { text: c.checkLabel || c.checkId, cls: '' },
+        { text: c.time,    cls: '' },
+        { text: fmt(c.amount), cls: '' },
+        { text: c.adjusted ? fmt(c.tip) : '$0.00', cls: c.adjusted ? '' : 'tip-cell' },
+        { text: c.adjusted ? fmt(total) : '$0.00', cls: c.adjusted ? '' : 'cyan-cell' },
+      ];
+    }
 
     cells.forEach(function(cell) {
       var td = document.createElement('td');
       td.textContent = cell.text;
 
-      if (c.adjusted) {
+      if (isVoided) {
+        // Voided: dim red text, strikethrough
+        td.style.background = T.bgDark;
+        td.style.border = '2px solid ' + T.dimText;
+        td.style.color = '#cc4444';
+        td.style.textDecoration = 'line-through';
+      } else if (isOpen) {
+        // Open: distinct style — dark bg, mint text, dashed border
+        td.style.background = T.bgDark;
+        td.style.border = '2px dashed ' + T.mint;
+        td.style.color = T.mint;
+      } else if (c.adjusted) {
         // Adjusted: #333 bg, gold text, visible border
         td.style.background = T.bg;
         td.style.border = '2px solid ' + T.dimText;
@@ -110,11 +174,11 @@ function renderTable() {
       }
 
       td.style.fontFamily = T.fb;
-      td.style.fontSize = '22px';
+      td.style.fontSize = T.fsSmall;
       td.style.padding = '10px 8px';
       td.style.textAlign = 'center';
 
-      // Tip cell button for unadjusted rows
+      // Tip cell button for unadjusted rows (closed checks only)
       if (cell.cls === 'tip-cell') {
         td.style.color = T.cyan;
         td.style.background = T.bg;
@@ -136,13 +200,29 @@ function renderTable() {
       tr.appendChild(td);
     });
 
+    // Sync error indicator — tip failed to save to backend
+    if (c.syncError) {
+      tr.style.outline = '2px solid ' + T.red;
+      tr.title = 'Tip failed to save — tap tip cell to retry';
+    }
+
+    // Closed check row tap → reopen option (only when not editing)
+    if (!isOpen && editingIndex < 0) {
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('pointerup', function(ev) {
+        // Don't trigger if the tip-cell button was tapped
+        if (ev.target.style.clipPath) return;
+        doReopen(c);
+      });
+    }
+
     // Dimming in edit mode
     if (editingIndex >= 0) {
       if (i === editingIndex) {
         // Selected row: cyan left accent
         tr.style.opacity = '1';
         var firstTd = tr.querySelector('td');
-        if (firstTd) firstTd.style.borderLeft = '4px solid ' + T.cyan;
+        if (firstTd) firstTd.style.borderLeft = T.bevel + 'px solid ' + T.cyan;
       } else {
         tr.style.opacity = '0.3';
         tr.style.pointerEvents = 'none';
@@ -175,7 +255,7 @@ function activateEdit(idx) {
 
   // Update numpad context
   var c = checks[idx];
-  if (numpadCheckId) numpadCheckId.textContent = c.checkId;
+  if (numpadCheckId) numpadCheckId.textContent = c.checkLabel || c.checkId;
   if (numpadAmount)  numpadAmount.textContent  = fmt(c.amount);
   updateNumpadDisplay();
 
@@ -223,6 +303,38 @@ function numpadClear() {
   updateNumpadDisplay();
 }
 
+function persistTip(c, attempt) {
+  if (!c.paymentId) return;
+  attempt = attempt || 1;
+  fetch('/api/v1/payments/tip-adjust', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      order_id:   c.checkId,
+      payment_id: c.paymentId,
+      tip_amount:  c.tip,
+    }),
+  }).then(function(res) {
+    if (res.ok) {
+      c.syncError = false;
+    } else if (!res.ok && attempt < 3) {
+      setTimeout(function() { persistTip(c, attempt + 1); }, 1000 * attempt);
+    } else if (!res.ok) {
+      console.error('[KINDpos] Tip adjust failed after retries:', res.status);
+      c.syncError = true;
+      renderTable();
+    }
+  }).catch(function(err) {
+    if (attempt < 3) {
+      setTimeout(function() { persistTip(c, attempt + 1); }, 1000 * attempt);
+    } else {
+      console.error('[KINDpos] Tip adjust failed after retries:', err);
+      c.syncError = true;
+      renderTable();
+    }
+  });
+}
+
 function numpadSubmit() {
   if (editingIndex < 0) return;
 
@@ -230,6 +342,7 @@ function numpadSubmit() {
   var c = checks[editingIndex];
   c.tip = cents / 100;
   c.adjusted = true;
+  persistTip(c);
 
   // Find next unadjusted
   var next = -1;
@@ -258,8 +371,8 @@ function numpadSubmit() {
 // ═══════════════════════════════════════════════════
 
 function buildScene(el, params) {
-  checks = getMockChecks(); // TODO: fetch from API with params.employeeId
   filter = 'all';
+  statusFilter = 'all';
   editingIndex = -1;
   cents = 0;
 
@@ -277,7 +390,12 @@ function buildScene(el, params) {
 
   // ── Scroll card (sunken panel) ──
   var scrollCard = document.createElement('div');
-  scrollCard.style.cssText = 'flex:1;min-height:0;background:' + T.mint + ';overflow-y:auto;padding:8px;';
+  scrollCard.style.cssText = 'flex:1;min-height:0;background:' + T.mint + ';overflow-y:auto;padding:8px;scrollbar-width:none;-ms-overflow-style:none;';
+  // Hide scrollbar via WebKit pseudo-element
+  var style = document.createElement('style');
+  style.textContent = '.tip-scroll::-webkit-scrollbar{display:none}';
+  document.head.appendChild(style);
+  scrollCard.classList.add('tip-scroll');
   applySunkenStyle(scrollCard);
 
   var table = document.createElement('table');
@@ -290,7 +408,7 @@ function buildScene(el, params) {
     var th = document.createElement('th');
     th.textContent = label;
     th.style.fontFamily = T.fh;
-    th.style.fontSize = '22px';
+    th.style.fontSize = T.fsSmall;
     th.style.color = T.gold;
     th.style.padding = '8px 6px';
     th.style.textAlign = 'center';
@@ -309,7 +427,7 @@ function buildScene(el, params) {
 
   // ── Batch zero button ──
   batchBar = buildButton('Set all unadjusted tips to $0?', {
-    fill: T.darkBtn, color: T.cyan, fontSize: '16px',
+    fill: T.darkBtn, color: T.cyan, fontSize: T.fsBtn,
     height: 40,
     onTap: function() { doBatchZero(); },
   });
@@ -323,13 +441,13 @@ function buildScene(el, params) {
   bottomBar.style.cssText = 'display:flex;gap:12px;flex-shrink:0;';
 
   bottomBar.appendChild(buildButton('//Checkout//', {
-    fill: T.mint, color: T.bgDark, fontSize: '22px',
+    fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
     width: 180, height: 48,
     onTap: function() { doCheckout(params); },
   }));
 
   bottomBar.appendChild(buildButton('//Print//', {
-    fill: T.darkBtn, color: T.subtleText, fontSize: '22px',
+    fill: T.darkBtn, color: T.subtleText, fontSize: T.fsSmall,
     width: 140, height: 48,
     onTap: function() { doPrint(); },
   }));
@@ -345,7 +463,7 @@ function buildScene(el, params) {
 
   // ALL button — narrower, touches top of area
   var btnAll = buildButton('ALL', {
-    fill: T.mint, color: T.bgDark, fontSize: '24px',
+    fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
     width: 200, height: 48,
     onTap: function() {
       filter = 'all';
@@ -362,7 +480,7 @@ function buildScene(el, params) {
 
   // Unadjusted button — narrower, overlaps slightly
   var btnUnadjWrap = buildButton('Unadjusted: ' + unadjCount(), {
-    fill: T.bgDark, color: T.cyan, fontSize: '20px',
+    fill: T.bgDark, color: T.cyan, fontSize: T.fsBtn,
     width: 200, height: 48,
     onTap: function() {
       filter = 'unadjusted';
@@ -381,6 +499,67 @@ function buildScene(el, params) {
   btnUnadj = btnUnadjWrap.querySelector('div'); // ref for text updates
   rightDefault.appendChild(btnUnadjWrap);
 
+  // ── Status filter (Open / Closed) ──
+  var statusSpacer = document.createElement('div');
+  statusSpacer.style.height = '16px';
+  rightDefault.appendChild(statusSpacer);
+
+  var btnOpenWrap = buildButton('Open', {
+    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
+    width: 200, height: 44,
+    onTap: function() {
+      statusFilter = statusFilter === 'open' ? 'all' : 'open';
+      updateStatusButtons();
+      renderTable();
+    },
+  });
+  btnOpenWrap.querySelector('div').style.borderColor = T.gold;
+  btnOpen = btnOpenWrap.querySelector('div');
+  rightDefault.appendChild(btnOpenWrap);
+
+  var btnClosedWrap = buildButton('Closed', {
+    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
+    width: 200, height: 44,
+    onTap: function() {
+      statusFilter = statusFilter === 'closed' ? 'all' : 'closed';
+      updateStatusButtons();
+      renderTable();
+    },
+  });
+  btnClosedWrap.style.marginTop = '8px';
+  btnClosedWrap.querySelector('div').style.borderColor = T.gold;
+  btnClosed = btnClosedWrap.querySelector('div');
+  rightDefault.appendChild(btnClosedWrap);
+
+  var btnVoidedWrap = buildButton('Voided', {
+    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
+    width: 200, height: 44,
+    onTap: function() {
+      statusFilter = statusFilter === 'voided' ? 'all' : 'voided';
+      updateStatusButtons();
+      renderTable();
+    },
+  });
+  btnVoidedWrap.style.marginTop = '8px';
+  btnVoidedWrap.querySelector('div').style.borderColor = T.gold;
+  btnVoided = btnVoidedWrap.querySelector('div');
+  rightDefault.appendChild(btnVoidedWrap);
+
+  function updateStatusButtons() {
+    if (btnOpen) {
+      btnOpen.style.background = statusFilter === 'open' ? T.gold : T.bgDark;
+      btnOpen.style.color = statusFilter === 'open' ? T.bgDark : T.gold;
+    }
+    if (btnClosed) {
+      btnClosed.style.background = statusFilter === 'closed' ? T.gold : T.bgDark;
+      btnClosed.style.color = statusFilter === 'closed' ? T.bgDark : T.gold;
+    }
+    if (btnVoided) {
+      btnVoided.style.background = statusFilter === 'voided' ? T.gold : T.bgDark;
+      btnVoided.style.color = statusFilter === 'voided' ? T.bgDark : T.gold;
+    }
+  }
+
   // Spacer
   var spacer = document.createElement('div');
   spacer.style.flex = '1';
@@ -393,7 +572,7 @@ function buildScene(el, params) {
 
   function addSummaryLine(label, valueKey, valueColor) {
     var line = document.createElement('div');
-    line.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:16px;';
+    line.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;';
     var lbl = document.createElement('span');
     lbl.textContent = label;
     lbl.style.color = T.mint;
@@ -439,7 +618,7 @@ function buildScene(el, params) {
 
   // Cancel button
   var cancelBtn = buildButton('CANCEL', {
-    fill: T.red, color: '#fff', fontSize: '20px',
+    fill: T.red, color: '#fff', fontSize: T.fsBtn,
     height: 44,
     onTap: function() { deactivateEdit(); },
   });
@@ -448,9 +627,12 @@ function buildScene(el, params) {
 
   el.appendChild(rightEdit);
 
-  // ── Initial render ──
-  renderTable();
-  updateSummary();
+  // ── Fetch checks and render ──
+  fetchChecks(params.employeeId).then(function(data) {
+    checks = data;
+    renderTable();
+    updateSummary();
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -472,7 +654,7 @@ function doBatchZero() {
       card.style.clipPath = chamfer(10);
 
       var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';margin-bottom:20px;';
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:20px;';
       msg.textContent = 'Set ' + n + ' unadjusted tip' + (n > 1 ? 's' : '') + ' to $0.00?';
       card.appendChild(msg);
 
@@ -480,7 +662,7 @@ function doBatchZero() {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Confirm', {
-        fill: T.red, color: '#fff', fontSize: '20px',
+        fill: T.red, color: '#fff', fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() {
           checks.forEach(function(c) {
@@ -493,7 +675,7 @@ function doBatchZero() {
       }));
 
       btns.appendChild(buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: '20px',
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() { cancelInterrupt(); },
       }));
@@ -518,7 +700,7 @@ function doCheckout(params) {
         card.style.clipPath = chamfer(10);
 
         var msg = document.createElement('div');
-        msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';margin-bottom:20px;';
+        msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:20px;';
         msg.textContent = n + ' tip' + (n > 1 ? 's' : '') + ' not adjusted. Set to $0 or go back and adjust.';
         card.appendChild(msg);
 
@@ -526,11 +708,11 @@ function doCheckout(params) {
         btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
         btns.appendChild(buildButton('Set to $0', {
-          fill: T.red, color: '#fff', fontSize: '18px',
+          fill: T.red, color: '#fff', fontSize: T.fsBtn,
           width: 130, height: 44,
           onTap: function() {
             checks.forEach(function(c) {
-              if (!c.adjusted) { c.tip = 0; c.adjusted = true; }
+              if (!c.adjusted) { c.tip = 0; c.adjusted = true; persistTip(c); }
             });
             resolveInterrupt(true);
             renderTable();
@@ -541,7 +723,7 @@ function doCheckout(params) {
         }));
 
         btns.appendChild(buildButton('Go Back', {
-          fill: T.darkBtn, color: T.mint, fontSize: '18px',
+          fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
           width: 130, height: 44,
           onTap: function() { cancelInterrupt(); },
         }));
@@ -557,8 +739,69 @@ function doCheckout(params) {
   push('server-checkout', { employeeId: params.employeeId });
 }
 
+function doReopen(c) {
+  interrupt('confirm-reopen', {
+    reason: 'reopen-check',
+    onBuild: function(el) {
+      el.style.flexDirection = 'column';
+      el.style.gap = '16px';
+
+      var card = document.createElement('div');
+      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:24px 32px;text-align:center;max-width:400px;';
+      card.style.clipPath = chamfer(10);
+
+      var msg = document.createElement('div');
+      msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:20px;';
+      msg.textContent = 'Reopen check ' + (c.checkLabel || c.checkId) + '?';
+      card.appendChild(msg);
+
+      var btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+
+      btns.appendChild(buildButton('Reopen', {
+        fill: T.gold, color: T.bgDark, fontSize: T.fsBtn,
+        width: 120, height: 44,
+        onTap: function() {
+          fetch('/api/v1/orders/' + c.checkId + '/reopen', { method: 'POST' })
+            .then(function(res) {
+              if (res.ok) {
+                c.status = 'open';
+                resolveInterrupt(true);
+                renderTable();
+                updateSummary();
+              } else {
+                res.json().then(function(d) {
+                  console.error('[KINDpos] Reopen failed:', d.detail || res.status);
+                }).catch(function() {
+                  console.error('[KINDpos] Reopen failed:', res.status);
+                });
+                cancelInterrupt();
+              }
+            })
+            .catch(function(err) {
+              console.error('[KINDpos] Reopen failed:', err);
+              cancelInterrupt();
+            });
+        },
+      }));
+
+      btns.appendChild(buildButton('Cancel', {
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
+        width: 120, height: 44,
+        onTap: function() { cancelInterrupt(); },
+      }));
+
+      card.appendChild(btns);
+      el.appendChild(card);
+    },
+  });
+}
+
 function doPrint() {
-  // TODO: POST to print endpoint
+  checks.forEach(function(c) {
+    fetch('/api/v1/print/receipt/' + c.checkId + '?copy_type=merchant', { method: 'POST' })
+      .catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -568,7 +811,7 @@ function doPrint() {
 registerScene('tip-adjustment', {
   onEnter: function(el, params) {
     setSceneName('Tip Adjustment: ' + (params.employeeName || 'Server'));
-    setHeaderBack(true);
+    setHeaderBack({ back: true, x: true });
     buildScene(el, params);
   },
   onExit: function() {
@@ -579,6 +822,9 @@ registerScene('tip-adjustment', {
     batchBar      = null;
     bottomBar     = null;
     btnUnadj      = null;
+    btnOpen       = null;
+    btnClosed     = null;
+    btnVoided     = null;
     numpadRef     = null;
     numpadCheckId = null;
     numpadAmount  = null;
@@ -587,6 +833,7 @@ registerScene('tip-adjustment', {
     editingIndex = -1;
     cents = 0;
     filter = 'all';
+    statusFilter = 'all';
   },
   cache: false,
   timeoutMs: 0,

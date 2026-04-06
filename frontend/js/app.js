@@ -3,8 +3,9 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { init, push, pop } from './scene-manager.js';
+import { init, push, pop, replace, onBeforeTransition } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
+import { hideKeyboard } from './keyboard.js';
 
 // Import scenes (self-registering)
 import './scenes/login.js';
@@ -27,22 +28,44 @@ export function setSceneName(name) {
   updateClock();
 }
 
-export function setHeaderBack(show) {
-  const el = document.getElementById('header-info');
-  if (!el) return;
-  el.innerHTML = '';
-  if (show) {
-    const pair = buildStyledButton(T.red);
-    pair.wrap.style.height = '44px';
-    pair.wrap.style.width = '80px';
-    pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize = '32px';
-    pair.inner.style.color = '#fff';
-    pair.inner.textContent = '<<<';
-    pair.wrap.addEventListener('pointerup', () => pop());
-    el.appendChild(pair.wrap);
-  } else {
-    el.textContent = 'KINDpos/lite <> Vz1.0';
+export function setHeaderBack({ back = false, x = false, onBack = null } = {}) {
+  const nav = document.getElementById('header-nav');
+  const logout = document.getElementById('header-logout');
+  if (nav) nav.innerHTML = '';
+  if (logout) logout.innerHTML = '';
+
+  // <<<  back button
+  if (back && nav) {
+    nav.style.display = 'flex';
+    nav.style.gap = '8px';
+    nav.style.alignItems = 'center';
+    const backPair = buildStyledButton(T.red);
+    backPair.wrap.style.height = '40px';
+    backPair.wrap.style.width = '72px';
+    backPair.inner.style.fontFamily = T.fb;
+    backPair.inner.style.fontSize = T.fsBtnSm;
+    backPair.inner.style.color = '#fff';
+    backPair.inner.textContent = '<<<';
+    backPair.wrap.addEventListener('pointerup', onBack || (() => pop()));
+    nav.appendChild(backPair.wrap);
+  } else if (nav) {
+    nav.style.display = 'none';
+  }
+
+  // X  logout / reset button
+  if (x && logout) {
+    logout.style.display = 'flex';
+    const logoutPair = buildStyledButton(T.red);
+    logoutPair.wrap.style.height = '40px';
+    logoutPair.wrap.style.width = '47px';
+    logoutPair.inner.style.fontFamily = T.fb;
+    logoutPair.inner.style.fontSize = T.fsBtnSm;
+    logoutPair.inner.style.color = '#fff';
+    logoutPair.inner.textContent = 'X';
+    logoutPair.wrap.addEventListener('pointerup', () => replace('login'));
+    logout.appendChild(logoutPair.wrap);
+  } else if (logout) {
+    logout.style.display = 'none';
   }
 }
 
@@ -54,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     interruptContainer: document.getElementById('interrupt-container'),
     onDiagnostic: null,
   });
+
+  onBeforeTransition(hideKeyboard);
 
   push('login');
 

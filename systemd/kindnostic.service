@@ -1,0 +1,18 @@
+[Unit]
+Description=KINDnostic Boot Diagnostics
+Before=kindpos.service
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -m kindnostic
+WorkingDirectory=/opt/kindpos
+TimeoutStartSec=30
+Environment=KINDPOS_DB_PATH=/opt/kindpos/data/event_ledger.db
+Environment=KINDPOS_HW_DB_PATH=/opt/kindpos/hardware_config.db
+Environment=KINDPOS_DIAG_DB_PATH=/opt/kindpos/data/diagnostic_boot.db
+Environment=KINDPOS_DATA_PATH=/opt/kindpos/data
+Environment=KINDPOS_TERMINAL_ID=terminal_01
+
+[Install]
+WantedBy=multi-user.target

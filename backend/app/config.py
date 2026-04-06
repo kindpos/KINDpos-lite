@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Tax rate (default 7%)
     tax_rate: float = 0.07
 
+    # Cash dual-pricing discount (default 4%)
+    cash_discount_rate: float = 0.04
+
     # Hardware Discovery
     default_subnet: str = "10.0.0.0/24"
     scan_timeout: float = 2.0

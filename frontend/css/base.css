@@ -7,7 +7,7 @@
 @font-face {
   font-family: 'Alien Encounters Solid Bold';
   src: url('../assets/fonts/Alien-Encounters-Solid-Bold.ttf') format('truetype');
-  font-weight: bold;
+  font-weight: normal;
   font-style: normal;
 }
 @font-face {
@@ -56,6 +56,18 @@ html, body {
   z-index: 10;
 }
 
+#header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 #scene-container {
   width: 100%;
   height: calc(100% - 52px);
@@ -90,4 +102,10 @@ html, body {
 
 * {
   border-radius: 0 !important;
+}
+
+#ticket-list::-webkit-scrollbar,
+#receipt-scroll::-webkit-scrollbar,
+#closeday-right::-webkit-scrollbar {
+  display: none;
 }

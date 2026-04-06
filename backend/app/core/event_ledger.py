@@ -19,7 +19,32 @@ from pathlib import Path
 from typing import Optional, AsyncGenerator
 from contextlib import asynccontextmanager
 
+import logging
+from decimal import Decimal
+
 from .events import Event, EventType
+
+logger = logging.getLogger("kindpos.ledger")
+
+# Monetary payload keys that must be 2-decimal-place clean
+_MONETARY_KEYS = frozenset({
+    "price", "amount", "tip_amount", "total", "total_amount",
+    "cash_total", "card_total", "modifier_price", "total_sales",
+    "total_tips", "previous_tip",
+})
+_TWO_DP = Decimal("0.01")
+
+
+def _check_monetary_precision(payload: dict) -> list[str]:
+    """Return list of keys whose values are not 2dp-clean."""
+    failures = []
+    for key in _MONETARY_KEYS:
+        val = payload.get(key)
+        if val is not None and isinstance(val, (int, float)):
+            d = Decimal(str(val))
+            if d != d.quantize(_TWO_DP):
+                failures.append(f"{key}={val}")
+    return failures
 
 
 class EventLedger:
@@ -111,6 +136,15 @@ class EventLedger:
         - Computes checksum with hash chain
         - Returns the complete event
         """
+        # 2dp precision gate — warn on non-2dp monetary values
+        if event.payload:
+            bad = _check_monetary_precision(event.payload)
+            if bad:
+                logger.warning(
+                    "Precision gate: event %s (%s) has non-2dp values: %s",
+                    event.event_id, event.event_type.value, ", ".join(bad),
+                )
+
         async with self._write_lock:
             # Get previous checksum for hash chain
             cursor = await self._db.execute(
@@ -388,6 +422,26 @@ class EventLedger:
     async def count_events(self) -> int:
         """Get total event count."""
         cursor = await self._db.execute("SELECT COUNT(*) FROM events")
+        row = await cursor.fetchone()
+        return row[0]
+
+    async def count_events_by_type(self, event_type: EventType) -> int:
+        """Get count of events of a specific type."""
+        cursor = await self._db.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type = ?",
+            (event_type.value,)
+        )
+        row = await cursor.fetchone()
+        return row[0]
+
+    async def count_events_by_type_and_payload(
+        self, event_type: EventType, payload_key: str, payload_value: str
+    ) -> int:
+        """Get count of events of a specific type where a payload field matches."""
+        cursor = await self._db.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type = ? AND json_extract(payload, ?) = ?",
+            (event_type.value, f"$.{payload_key}", payload_value),
+        )
         row = await cursor.fetchone()
         return row[0]
 

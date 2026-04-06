@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T } from '../tokens.js';
+import { T, chamfer, applySunkenStyle } from '../tokens.js';
 import { registerScene, replace } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
@@ -15,7 +15,7 @@ var returned       = false;
 registerScene('change-due', {
   onEnter: function(el, params) {
     setSceneName(null);
-    setHeaderBack(false);
+    setHeaderBack({ x: true });
     returned = false;
 
     // params shape:
@@ -45,7 +45,7 @@ registerScene('change-due', {
     // ── Top label ────────────────────────────────
     var topLabel = document.createElement('div');
     topLabel.style.cssText = [
-      'font-family:' + T.fb + ';font-size:26px;letter-spacing:0.18em;',
+      'font-family:' + T.fh + ';font-size:40px;letter-spacing:0.18em;',
       'color:' + T.mint + ';margin-bottom:24px;',
     ].join('');
     topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
@@ -57,16 +57,14 @@ registerScene('change-due', {
       'display:flex;flex-direction:column;align-items:center;',
       'padding:40px 80px;',
       'background:' + T.bgDark + ';',
-      'border:2px solid ' + T.bgLight + ';',
-      'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',
-      'clip-path:polygon(12px 0%,calc(100% - 12px) 0%,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0% calc(100% - 12px),0% 12px);',
     ].join('');
+    applySunkenStyle(amountBlock);
 
     if (hasChange) {
       // Change due label
       var changeLabel = document.createElement('div');
       changeLabel.style.cssText = [
-        'font-family:' + T.fb + ';font-size:28px;letter-spacing:0.14em;',
+        'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';letter-spacing:0.14em;',
         'color:' + T.mint + ';margin-bottom:8px;',
       ].join('');
       changeLabel.textContent = 'CHANGE DUE';
@@ -90,7 +88,7 @@ registerScene('change-due', {
 
       var paidLabel = document.createElement('div');
       paidLabel.style.cssText = [
-        'font-family:' + T.fb + ';font-size:36px;font-weight:bold;letter-spacing:0.1em;',
+        'font-family:' + T.fh + ';font-size:40px;font-weight:bold;letter-spacing:0.1em;',
         'color:' + T.mint + ';',
       ].join('');
       paidLabel.textContent = isCash ? 'EXACT CHANGE' : 'PAYMENT APPROVED';
@@ -100,7 +98,7 @@ registerScene('change-due', {
     // Charged amount sub-line
     var chargedLine = document.createElement('div');
     chargedLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:22px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
       'margin-top:16px;letter-spacing:0.06em;',
     ].join('');
     chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + params.total.toFixed(2);
@@ -111,7 +109,7 @@ registerScene('change-due', {
     // ── Receipt printing indicator ────────────────
     var printLine = document.createElement('div');
     printLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
       'letter-spacing:0.12em;margin-top:32px;',
     ].join('');
     printLine.textContent = 'RECEIPT PRINTING...';
@@ -121,8 +119,8 @@ registerScene('change-due', {
     var progressTrack = document.createElement('div');
     progressTrack.style.cssText = [
       'width:320px;height:4px;margin-top:20px;',
-      'background:' + T.bgLight + ';',
-      'box-shadow:inset 1px 1px 0 #151515;',
+      'background:' + T.bg3 + ';',
+      'clip-path:' + chamfer(2) + ';',
     ].join('');
 
     var progressFill = document.createElement('div');
@@ -137,7 +135,7 @@ registerScene('change-due', {
     // ── Tap to dismiss hint ───────────────────────
     var hint = document.createElement('div');
     hint.style.cssText = [
-      'font-family:' + T.fb + ';font-size:12px;color:#2a3a2a;',
+      'font-family:' + T.fb + ';font-size:40px;color:' + T.mutedText + ';',
       'letter-spacing:0.1em;margin-top:12px;',
     ].join('');
     hint.textContent = 'tap anywhere to continue';

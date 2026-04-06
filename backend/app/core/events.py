@@ -14,6 +14,8 @@ import uuid
 import hashlib
 import json
 
+from .money import money_round
+
 
 class OrderType(str, Enum):
     """Core order types used by KINDpos."""
@@ -30,6 +32,7 @@ class EventType(str, Enum):
     # Order lifecycle
     ORDER_CREATED = "ORDER_CREATED"
     ORDER_CLOSED = "ORDER_CLOSED"
+    ORDER_REOPENED = "ORDER_REOPENED"
     ORDER_VOIDED = "ORDER_VOIDED"
     ORDER_TYPE_CHANGED = "ORDER_TYPE_CHANGED"
 
@@ -38,12 +41,15 @@ class EventType(str, Enum):
     ITEM_REMOVED = "ITEM_REMOVED"
     ITEM_MODIFIED = "ITEM_MODIFIED"
     ITEM_SENT = "ITEM_SENT"
+    ITEM_VOIDED = "ITEM_VOIDED"
+    ITEM_COMPED = "ITEM_COMPED"
     MODIFIER_APPLIED = "MODIFIER_APPLIED"
 
     # Discounts
     DISCOUNT_REQUESTED = "DISCOUNT_REQUESTED"
     DISCOUNT_APPROVED = "DISCOUNT_APPROVED"
     DISCOUNT_REJECTED = "DISCOUNT_REJECTED"
+    DISCOUNT_APPLIED = "DISCOUNT_APPLIED"
 
     # Printing
     TICKET_PRINTED = "TICKET_PRINTED"
@@ -115,6 +121,7 @@ class EventType(str, Enum):
     TIP_ADJUST_CONFIRMED = "TIP_ADJUST_CONFIRMED"
     TIP_ADJUST_FAILED = "TIP_ADJUST_FAILED"
     TIP_ADJUSTED = "payment.tip_adjusted"
+    CASH_TIPS_DECLARED = "payment.cash_tips_declared"
 
     # Batch / Day
     BATCH_CLOSED = "batch.closed"
@@ -279,6 +286,8 @@ def order_created(
         server_name: Optional[str] = None,
         order_type: str = "dine_in",  # dine_in, takeout, delivery
         guest_count: int = 1,
+        customer_name: Optional[str] = None,
+        check_number: Optional[str] = None,
         **kwargs
 ) -> Event:
     """Create an ORDER_CREATED event."""
@@ -287,11 +296,13 @@ def order_created(
         terminal_id=terminal_id,
         payload={
             "order_id": order_id,
+            "check_number": check_number,
             "table": table,
             "server_id": server_id,
             "server_name": server_name,
             "order_type": order_type,
             "guest_count": guest_count,
+            "customer_name": customer_name,
         },
         **kwargs
     )
@@ -525,6 +536,23 @@ def order_closed(
         payload={
             "order_id": order_id,
             "total": total,
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
+def order_reopened(
+        terminal_id: str,
+        order_id: str,
+        **kwargs
+) -> Event:
+    """Create an ORDER_REOPENED event."""
+    return create_event(
+        event_type=EventType.ORDER_REOPENED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
         },
         correlation_id=order_id,
         **kwargs
@@ -1331,6 +1359,48 @@ def tip_adjusted(
     )
 
 
+def cash_refund_due(
+        terminal_id: str,
+        order_id: str,
+        payment_id: str,
+        amount: float,
+        reason: str = "Order voided after cash payment",
+        **kwargs
+) -> Event:
+    """Create a PAYMENT_REFUNDED event for cash that must be returned."""
+    return create_event(
+        event_type=EventType.PAYMENT_REFUNDED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "payment_id": payment_id,
+            "amount": money_round(amount),
+            "method": "cash",
+            "reason": reason,
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
+def cash_tips_declared(
+        terminal_id: str,
+        server_id: str,
+        amount: float,
+        **kwargs
+) -> Event:
+    """Record a server's declared cash tips at checkout (optional, self-reported)."""
+    return create_event(
+        event_type=EventType.CASH_TIPS_DECLARED,
+        terminal_id=terminal_id,
+        payload={
+            "server_id": server_id,
+            "amount": money_round(amount),
+        },
+        **kwargs
+    )
+
+
 def drawer_open_failed(
         terminal_id: str,
         printer_id: str,
@@ -1364,9 +1434,9 @@ def batch_submitted(
         terminal_id=terminal_id,
         payload={
             "order_count": order_count,
-            "total_amount": round(total_amount, 2),
-            "cash_total": round(cash_total, 2),
-            "card_total": round(card_total, 2),
+            "total_amount": money_round(total_amount),
+            "cash_total": money_round(cash_total),
+            "card_total": money_round(card_total),
             "order_ids": order_ids,
             "submitted_at": datetime.now(timezone.utc).isoformat(),
         },
@@ -1394,10 +1464,10 @@ def day_closed(
         payload={
             "date": date,
             "total_orders": total_orders,
-            "total_sales": round(total_sales, 2),
-            "total_tips": round(total_tips, 2),
-            "cash_total": round(cash_total, 2),
-            "card_total": round(card_total, 2),
+            "total_sales": money_round(total_sales),
+            "total_tips": money_round(total_tips),
+            "cash_total": money_round(cash_total),
+            "card_total": money_round(card_total),
             "order_ids": order_ids,
             "payment_count": payment_count,
             "opened_at": opened_at,

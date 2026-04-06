@@ -863,7 +863,7 @@ class PrinterManager:
         This would integrate with the KINDpos Messenger system.
         For now, logs the alert and records a PRINTER_ERROR event.
 
-        TODO: Connect to Messenger system for real-time manager alerts
+        Deferred: connect to Messenger system for real-time manager alerts
         """
         error_event = printer_error(
             terminal_id=self._terminal_id,

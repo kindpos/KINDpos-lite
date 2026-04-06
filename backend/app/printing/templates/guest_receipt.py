@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from .base_template import BaseTemplate
+from app.core.money import money_round
 
 class GuestReceiptTemplate(BaseTemplate):
     """
@@ -27,7 +28,10 @@ class GuestReceiptTemplate(BaseTemplate):
             commands.append({'type': 'text', 'content': f"Table: {context.get('table')} | Server: {context.get('server_name', 'N/A')}"})
         else:
             commands.append({'type': 'text', 'content': f"Server: {context.get('server_name', 'N/A')}"})
-            
+
+        if context.get('customer_name'):
+            commands.append({'type': 'text', 'content': f"Name: {context['customer_name']}", 'bold': True})
+
         closed_at = self._format_datetime(context.get('closed_at'))
         opened_at = self._format_datetime(context.get('opened_at'))
         commands.append({'type': 'text', 'content': f"Date: {closed_at if closed_at != 'N/A' else opened_at}"})
@@ -101,7 +105,7 @@ class GuestReceiptTemplate(BaseTemplate):
             base_amount = context.get('subtotal', 0.0) if calc_base == 'pretax' else context.get('total', 0.0)
             
             for pct in percentages:
-                amount = round(base_amount * (pct / 100), 2)
+                amount = money_round(base_amount * (pct / 100))
                 commands.append({'type': 'text', 'content': f"  {pct}%{' ' * 7}${amount:>7.2f}"})
             
             commands.append({'type': 'feed', 'lines': 1})

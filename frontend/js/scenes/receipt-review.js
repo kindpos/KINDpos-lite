@@ -1,296 +1,283 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Receipt Review Scene
-//  Itemised check + dual pricing before payment
+//  Sales recap style — two report cards + item list
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T } from '../tokens.js';
+import { T, chamfer, applySunkenStyle, buildStyledButton, shadowColor, bevelEdges } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
-var PAD      = 16;
-var GAP      = 12;
-var RECEIPT_W = 490;
-var BTN_H    = 50;
+var PAD = T.scenePad;
+var GAP = T.colGap;
 
 registerScene('receipt-review', {
   onEnter: function(el, params) {
-    setSceneName(params.checkId || 'QS-001');
-    setHeaderBack(true);
-
-    // params shape:
-    // {
-    //   checkId:    string,
-    //   items:      [{ name, qty, unitPrice }],
-    //   subtotal:   number,
-    //   tax:        number,
-    //   cardTotal:  number,
-    //   cashPrice:  number,
-    //   returnScene: 'check-grid' | 'order-entry',   // post-payment destination
-    // }
+    setSceneName(params.checkId || 'ORDER');
+    setHeaderBack({ back: true, x: true });
 
     el.style.cssText = [
       'width:100%;height:100%;',
       'display:flex;gap:' + GAP + 'px;',
       'padding:' + PAD + 'px;',
-      'box-sizing:border-box;',
+      'box-sizing:border-box;overflow:hidden;',
     ].join('');
 
     el.appendChild(buildReceiptPanel(params));
-    el.appendChild(buildPricePanel(params));
+    el.appendChild(buildMethodPanel(params));
   },
 });
 
-// ── LEFT — itemised receipt ────────────────────────
+
+// ═══════════════════════════════════════════════════
+//  LEFT — Itemised receipt (sales recap style)
+// ═══════════════════════════════════════════════════
+
 function buildReceiptPanel(params) {
   var panel = document.createElement('div');
   panel.style.cssText = [
-    'width:' + RECEIPT_W + 'px;flex-shrink:0;',
+    'width:340px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
     'background:' + T.bgDark + ';',
-    'border:2px solid ' + T.bgLight + ';',
-    'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',
   ].join('');
+  applySunkenStyle(panel);
 
-  // Receipt header
+  // Header
   var header = document.createElement('div');
   header.style.cssText = [
-    'display:flex;justify-content:space-between;align-items:center;',
-    'padding:8px 14px;',
-    'border-bottom:2px solid ' + T.bgLight + ';',
+    'padding:10px 14px;flex-shrink:0;',
     'background:' + T.bg4 + ';',
-    'flex-shrink:0;',
+    'border-bottom:2px solid ' + T.bgEdge + ';',
+    'display:flex;justify-content:space-between;align-items:center;',
   ].join('');
-
-  var titleEl = document.createElement('span');
-  titleEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mintDim + ';letter-spacing:0.1em;';
-  titleEl.textContent = 'ITEM SUMMARY';
-
-  var checkEl = document.createElement('span');
-  checkEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';letter-spacing:0.05em;';
-  checkEl.textContent = params.checkId || 'QS-001';
-
-  header.appendChild(titleEl);
-  header.appendChild(checkEl);
+  var hTitle = document.createElement('div');
+  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';color:' + T.gold + ';letter-spacing:0.08em;';
+  hTitle.textContent = 'ORDER RECAP';
+  var hId = document.createElement('div');
+  hId.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';white-space:nowrap;';
+  hId.textContent = params.checkId || '';
+  header.appendChild(hTitle);
+  header.appendChild(hId);
   panel.appendChild(header);
 
-  // Column labels
-  var colHeaders = document.createElement('div');
-  colHeaders.style.cssText = [
-    'display:grid;grid-template-columns:1fr 60px 90px;',
+  // Column headers
+  var colHead = document.createElement('div');
+  colHead.style.cssText = [
+    'display:grid;grid-template-columns:1fr 60px 90px;gap:0 12px;',
     'padding:6px 14px;',
-    'border-bottom:1px solid ' + T.bgLight + ';',
-    'font-family:' + T.fb + ';font-size:13px;color:' + T.mintDim + ';',
-    'letter-spacing:0.1em;flex-shrink:0;',
+    'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';color:' + T.gold + ';letter-spacing:0.08em;',
+    'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
-  colHeaders.innerHTML = '<span>ITEM</span><span style="text-align:center">QTY</span><span style="text-align:right">PRICE</span>';
-  panel.appendChild(colHeaders);
+  ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
+    var c = document.createElement('div');
+    c.textContent = t;
+    if (i > 0) c.style.textAlign = 'right';
+    colHead.appendChild(c);
+  });
+  panel.appendChild(colHead);
 
-  // Scrollable item list
-  var itemList = document.createElement('div');
-  itemList.style.cssText = [
-    'flex:1;overflow-y:auto;',
-    'padding:6px 14px;',
-  ].join('');
+  // Scrollable items
+  var items = document.createElement('div');
+  items.style.cssText = 'flex:1;overflow-y:auto;padding:4px 14px;';
 
   (params.items || []).forEach(function(item) {
     var row = document.createElement('div');
     row.style.cssText = [
-      'display:grid;grid-template-columns:1fr 60px 90px;',
-      'padding:5px 0;',
+      'display:grid;grid-template-columns:1fr 60px 90px;gap:0 12px;',
+      'padding:4px 0;',
+      'font-family:' + T.fb + ';font-size:' + T.fsItem + ';color:' + T.mint + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
-      'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';',
-      'align-items:baseline;',
     ].join('');
-
-    var nameEl = document.createElement('span');
-    nameEl.textContent = item.name;
-
-    var qtyEl = document.createElement('span');
-    qtyEl.style.cssText = 'text-align:center;font-size:16px;color:' + T.mintDim + ';';
-    qtyEl.textContent = '×' + (item.qty || 1);
-
-    var priceEl = document.createElement('span');
-    priceEl.style.cssText = 'text-align:right;';
-    priceEl.textContent = '$' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
-
-    row.appendChild(nameEl);
-    row.appendChild(qtyEl);
-    row.appendChild(priceEl);
-    itemList.appendChild(row);
+    var n = document.createElement('div');
+    n.textContent = item.name;
+    n.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    var q = document.createElement('div');
+    q.style.cssText = 'text-align:right;color:' + T.gold + ';';
+    q.textContent = (item.qty || 1) + '\u00D7';
+    var p = document.createElement('div');
+    p.style.cssText = 'text-align:right;color:' + T.gold + ';';
+    p.textContent = '$' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
+    row.appendChild(n);
+    row.appendChild(q);
+    row.appendChild(p);
+    items.appendChild(row);
   });
+  panel.appendChild(items);
 
-  panel.appendChild(itemList);
-
-  // Totals footer
+  // Totals
   var footer = document.createElement('div');
-  footer.style.cssText = [
-    'padding:10px 14px;',
-    'border-top:2px solid ' + T.bgLight + ';',
-    'flex-shrink:0;',
-  ].join('');
+  footer.style.cssText = 'flex-shrink:0;padding:8px 14px;border-top:2px solid ' + T.bg3 + ';';
 
-  footer.appendChild(buildFooterRow('Subtotal', '$' + (params.subtotal || 0).toFixed(2), false));
-  footer.appendChild(buildFooterRow('Tax',      '$' + (params.tax      || 0).toFixed(2), false));
+  footer.appendChild(recapRow('Subtotal', '$' + (params.subtotal || 0).toFixed(2), T.mint, T.fsSmall));
+  footer.appendChild(recapRow('Tax', '$' + (params.tax || 0).toFixed(2), T.mint, T.fsSmall));
 
-  var divider = document.createElement('hr');
-  divider.style.cssText = 'border:none;border-top:1px solid ' + T.bgLight + ';margin:6px 0;';
-  footer.appendChild(divider);
+  var hr = document.createElement('hr');
+  hr.style.cssText = 'border:none;border-top:1px dashed ' + T.bgLight + ';margin:6px 0;';
+  footer.appendChild(hr);
 
-  footer.appendChild(buildFooterRow('Card Total', '$' + (params.cardTotal || 0).toFixed(2), true, T.gold));
-  footer.appendChild(buildFooterRow('Cash Price', '$' + (params.cashPrice || 0).toFixed(2), true, T.mint));
+  footer.appendChild(recapRow('Card Total', '$' + (params.cardTotal || 0).toFixed(2), T.gold, T.fsSmall, true));
+  footer.appendChild(recapRow('Cash Price', '$' + (params.cashPrice || 0).toFixed(2), T.mint, T.fsSmall, true));
+
+  var savings = ((params.cardTotal || 0) - (params.cashPrice || 0));
+  if (savings > 0.001) {
+    var saveLine = document.createElement('div');
+    saveLine.style.cssText = [
+      'text-align:center;padding:4px 0 0;',
+      'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.cyan + ';letter-spacing:0.06em;',
+    ].join('');
+    saveLine.textContent = 'Cash saves $' + savings.toFixed(2);
+    footer.appendChild(saveLine);
+  }
 
   panel.appendChild(footer);
   return panel;
 }
 
-function buildFooterRow(label, value, big, color) {
+function recapRow(label, value, color, size, bold) {
   var row = document.createElement('div');
-  var size = big ? '22px' : '16px';
-  var col  = color || T.mint;
   row.style.cssText = [
-    'display:flex;justify-content:space-between;',
-    'font-family:' + T.fb + ';font-size:' + size + ';',
-    'color:' + col + ';',
-    'padding:2px 0;',
+    'display:flex;justify-content:space-between;padding:2px 0;',
+    'font-family:' + T.fb + ';font-size:' + (size || T.fsSmall) + ';color:' + (color || T.mint) + ';',
+    bold ? 'font-weight:bold;' : '',
   ].join('');
-  row.innerHTML = '<span>' + label + '</span><span>' + value + '</span>';
+  var l = document.createElement('span');
+  l.textContent = label;
+  var v = document.createElement('span');
+  v.style.color = T.gold;
+  v.textContent = value;
+  row.appendChild(l);
+  row.appendChild(v);
   return row;
 }
 
-// ── RIGHT — payment method selection ──────────────
-function buildPricePanel(params) {
+
+// ═══════════════════════════════════════════════════
+//  RIGHT — Payment method cards (report card style)
+// ═══════════════════════════════════════════════════
+
+function buildMethodPanel(params) {
   var panel = document.createElement('div');
   panel.style.cssText = [
-    'flex:1;',
-    'display:flex;flex-direction:column;',
-    'gap:' + GAP + 'px;',
+    'flex:1;display:flex;flex-direction:column;gap:' + GAP + 'px;',
   ].join('');
 
-  // Prompt label
+  // Prompt
   var prompt = document.createElement('div');
   prompt.style.cssText = [
-    'background:' + T.bg4 + ';',
-    'border:2px solid ' + T.bgLight + ';',
-    'padding:10px 14px;flex-shrink:0;',
-    'box-shadow:inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a;',
+    'flex-shrink:0;padding:10px 16px;',
+    'background:' + T.bgDark + ';',
   ].join('');
-  var promptLabel = document.createElement('div');
-  promptLabel.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mintDim + ';letter-spacing:0.12em;margin-bottom:4px;';
-  promptLabel.textContent = 'PAYMENT METHOD';
-  var promptText = document.createElement('div');
-  promptText.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
-  promptText.textContent = 'Select card or cash to continue';
-  prompt.appendChild(promptLabel);
-  prompt.appendChild(promptText);
+  applySunkenStyle(prompt);
+  var pLabel = document.createElement('div');
+  pLabel.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';letter-spacing:0.1em;';
+  pLabel.textContent = 'PAYMENT METHOD';
+  var pText = document.createElement('div');
+  pText.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-top:2px;';
+  pText.textContent = 'Select card or cash to continue';
+  prompt.appendChild(pLabel);
+  prompt.appendChild(pText);
   panel.appendChild(prompt);
 
-  // CARD button — gold, shows card total
-  var cardBtn = document.createElement('div');
-  cardBtn.style.cssText = [
-    'flex:1;display:flex;flex-direction:column;',
-    'align-items:center;justify-content:center;gap:6px;',
-    'cursor:pointer;',
-    'background:' + T.gold + ';',
-    'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);',
-    'box-shadow:3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #ffe080,inset -4px -4px 0 #9a7010;',
-    'transition:transform 0.06s,box-shadow 0.06s;',
-  ].join('');
+  // Two cards side by side
+  var cardRow = document.createElement('div');
+  cardRow.style.cssText = 'flex:1;display:flex;gap:' + GAP + 'px;';
 
-  var cardLabel = document.createElement('div');
-  cardLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:#1a1a1a;letter-spacing:0.12em;';
-  cardLabel.textContent = '◈  CARD';
+  cardRow.appendChild(buildMethodCard({
+    label: '◈  CARD',
+    amount: '$' + (params.cardTotal || 0).toFixed(2),
+    subtitle: null,
+    fill: T.gold,
+    textColor: T.bgDark,
+    onTap: function() {
+      push('payment', makePaymentParams(params, 'card'));
+    },
+  }));
 
-  var cardAmount = document.createElement('div');
-  cardAmount.style.cssText = 'font-family:' + T.fb + ';font-size:42px;font-weight:bold;color:#1a1a1a;';
-  cardAmount.textContent = '$' + (params.cardTotal || 0).toFixed(2);
+  var savings = ((params.cardTotal || 0) - (params.cashPrice || 0));
+  cardRow.appendChild(buildMethodCard({
+    label: '$  CASH',
+    amount: '$' + (params.cashPrice || 0).toFixed(2),
+    subtitle: savings > 0.001 ? 'save $' + savings.toFixed(2) : null,
+    fill: T.mint,
+    textColor: T.bgDark,
+    onTap: function() {
+      push('payment', makePaymentParams(params, 'cash'));
+    },
+  }));
 
-  cardBtn.appendChild(cardLabel);
-  cardBtn.appendChild(cardAmount);
-
-  cardBtn.addEventListener('pointerdown', function() {
-    cardBtn.style.transform = 'translate(3px,4px)';
-    cardBtn.style.boxShadow = 'none';
-  });
-  cardBtn.addEventListener('pointerup', function() {
-    cardBtn.style.transform = '';
-    cardBtn.style.boxShadow = '3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #ffe080,inset -4px -4px 0 #9a7010';
-    push('payment', {
-      orderId:     params.orderId,
-      checkId:     params.checkId,
-      items:       params.items,
-      subtotal:    params.subtotal,
-      tax:         params.tax,
-      cardTotal:   params.cardTotal,
-      cashPrice:   params.cashPrice,
-      paymentMode: 'card',
-      returnScene: params.returnScene,
-    });
-  });
-
-  panel.appendChild(cardBtn);
-
-  // CASH button — mint, shows cash price
-  var cashBtn = document.createElement('div');
-  cashBtn.style.cssText = [
-    'flex:1;display:flex;flex-direction:column;',
-    'align-items:center;justify-content:center;gap:6px;',
-    'cursor:pointer;',
-    'background:' + T.mint + ';',
-    'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);',
-    'box-shadow:3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #e8ffe4,inset -4px -4px 0 #7acc6e;',
-    'transition:transform 0.06s,box-shadow 0.06s;',
-  ].join('');
-
-  var cashLabel = document.createElement('div');
-  cashLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:#1a1a1a;letter-spacing:0.12em;';
-  cashLabel.textContent = '$  CASH';
-
-  var cashAmount = document.createElement('div');
-  cashAmount.style.cssText = 'font-family:' + T.fb + ';font-size:42px;font-weight:bold;color:#1a1a1a;';
-  cashAmount.textContent = '$' + (params.cashPrice || 0).toFixed(2);
-
-  var cashSavings = document.createElement('div');
-  cashSavings.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:#2a4a2a;letter-spacing:0.06em;';
-  var savings = ((params.cardTotal || 0) - (params.cashPrice || 0)).toFixed(2);
-  cashSavings.textContent = 'save $' + savings + ' with cash';
-
-  cashBtn.appendChild(cashLabel);
-  cashBtn.appendChild(cashAmount);
-  cashBtn.appendChild(cashSavings);
-
-  cashBtn.addEventListener('pointerdown', function() {
-    cashBtn.style.transform = 'translate(3px,4px)';
-    cashBtn.style.boxShadow = 'none';
-  });
-  cashBtn.addEventListener('pointerup', function() {
-    cashBtn.style.transform = '';
-    cashBtn.style.boxShadow = '3px 4px 0 rgba(0,0,0,0.5),inset 4px 4px 0 #e8ffe4,inset -4px -4px 0 #7acc6e';
-    push('payment', {
-      orderId:     params.orderId,
-      checkId:     params.checkId,
-      items:       params.items,
-      subtotal:    params.subtotal,
-      tax:         params.tax,
-      cardTotal:   params.cardTotal,
-      cashPrice:   params.cashPrice,
-      paymentMode: 'cash',
-      returnScene: params.returnScene,
-    });
-  });
-
-  panel.appendChild(cashBtn);
+  panel.appendChild(cardRow);
 
   // Back button
-  var backBtn = buildButton('← BACK', {
-    fill: T.bgLight, color: T.mint, fontSize: '28px',
-    height: BTN_H,
-    onTap: function() {
-      pop();
-    },
+  var back = buildButton('\u2190 BACK', {
+    fill: T.bg, color: T.mint, fontSize: T.fsSmall,
+    height: 48,
+    onTap: function() { pop(); },
   });
-  panel.appendChild(backBtn);
+  back.style.flexShrink = '0';
+  panel.appendChild(back);
 
   return panel;
+}
+
+function buildMethodCard(opts) {
+  var btn = buildStyledButton(opts.fill);
+  var wrap = btn.wrap;
+  var inner = btn.inner;
+
+  wrap.style.flex = '1';
+  wrap.style.minHeight = '0';
+
+  inner.style.flexDirection = 'column';
+  inner.style.gap = '8px';
+  inner.style.padding = '20px';
+
+  // Label
+  var label = document.createElement('div');
+  label.style.cssText = [
+    'font-family:' + T.fh + ';font-size:40px;',
+    'color:' + opts.textColor + ';letter-spacing:0.12em;',
+  ].join('');
+  label.textContent = opts.label;
+  inner.appendChild(label);
+
+  // Amount
+  var amount = document.createElement('div');
+  amount.style.cssText = [
+    'font-family:' + T.fb + ';font-size:48px;font-weight:bold;',
+    'color:' + opts.textColor + ';line-height:1;',
+  ].join('');
+  amount.textContent = opts.amount;
+  inner.appendChild(amount);
+
+  // Subtitle
+  if (opts.subtitle) {
+    var sub = document.createElement('div');
+    sub.style.cssText = [
+      'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';',
+      'color:' + opts.textColor + ';letter-spacing:0.06em;opacity:0.7;',
+    ].join('');
+    sub.textContent = opts.subtitle;
+    inner.appendChild(sub);
+  }
+
+  wrap.addEventListener('pointerup', function() {
+    setTimeout(opts.onTap, 60);
+  });
+
+  return wrap;
+}
+
+function makePaymentParams(params, mode) {
+  return {
+    orderId:     params.orderId,
+    checkId:     params.checkId,
+    items:       params.items,
+    subtotal:    params.subtotal,
+    tax:         params.tax,
+    cardTotal:   params.cardTotal,
+    cashPrice:   params.cashPrice,
+    paymentMode: mode,
+    returnScene: params.returnScene,
+  };
 }

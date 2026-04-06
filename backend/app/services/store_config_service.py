@@ -68,7 +68,11 @@ class StoreConfigService:
             payload = event.payload
 
             if etype == EventType.STORE_INFO_UPDATED:
-                config["info"] = payload
+                info = dict(payload)
+                # Normalise: production events may use "name" instead of "restaurant_name"
+                if "name" in info and "restaurant_name" not in info:
+                    info["restaurant_name"] = info.pop("name")
+                config["info"].update(info)
             elif etype == EventType.STORE_TAX_RULE_CREATED:
                 rid = payload["tax_rule_id"]
                 config["tax_rules"][rid] = payload

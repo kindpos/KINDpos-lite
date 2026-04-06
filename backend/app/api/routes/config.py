@@ -8,6 +8,7 @@ from app.models.config_events import (
     Role, Employee, TipoutRule, MenuItem, MenuCategory, Section, FloorPlanLayout,
     Terminal, Printer, RoutingMatrix
 )
+from app.config import settings
 from app.services.store_config_service import StoreConfigService
 from app.services.overseer_config_service import OverseerConfigService
 
@@ -16,6 +17,15 @@ router = APIRouter(prefix="/config", tags=["config"])
 # Mock WebSocket broadcast for now as we don't have a real implementation handy in routers
 async def broadcast_config_update(sections: List[str]):
     print(f"WS BROADCAST: config.updated for {sections}")
+
+@router.get("/pricing")
+async def get_pricing():
+    """Return canonical pricing constants for frontend sync."""
+    return {
+        "tax_rate": settings.tax_rate,
+        "cash_discount_rate": settings.cash_discount_rate,
+    }
+
 
 @router.get("/store", response_model=StoreConfigBundle)
 async def get_store_config(ledger: EventLedger = Depends(get_ledger)):

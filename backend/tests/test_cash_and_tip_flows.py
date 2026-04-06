@@ -110,9 +110,9 @@ async def test_cash_payment_with_tip(ledger):
     assert tips[0].payload["tip_amount"] == 5.00
     assert tips[0].payload["payment_id"] == response["payment_id"]
     
-    # Verify initiated amount includes tip
+    # Verify initiated amount is sale only (tip tracked separately via TIP_ADJUSTED)
     initiated = [e for e in events if e.event_type == EventType.PAYMENT_INITIATED][0]
-    assert initiated.payload["amount"] == 25.00
+    assert initiated.payload["amount"] == 20.00
 
 @pytest.mark.asyncio
 async def test_cash_payment_auto_closes_order(ledger):
@@ -241,16 +241,16 @@ async def test_precision_gate_2dp(ledger):
     request = CashPaymentRequest(order_id=order_id, amount=amount, tip=tip)
     response = await process_cash_payment(request, ledger)
     
-    # Check response values
-    # total_with_tip = round(10.3333333 + 2.6666666, 2) = round(12.9999999, 2) = 13.0
-    assert response["amount"] == 13.00
-    
+    # Check response values — sale amount only (tip tracked separately)
+    # money_round(10.3333333) = 10.33
+    assert response["amount"] == 10.33
+
     # Check tip_adjusted event
     # Factory tip_adjusted(tip_amount=2.6666666) -> rounds to 2.67
     events = await ledger.get_events_by_correlation(order_id)
     tip_evts = [e for e in events if e.event_type == EventType.TIP_ADJUSTED]
     assert tip_evts[0].payload["tip_amount"] == 2.67
-    
-    # Check initiate event amount
+
+    # Check initiate event amount — sale only, not sale+tip
     init_evts = [e for e in events if e.event_type == EventType.PAYMENT_INITIATED]
-    assert init_evts[0].payload["amount"] == 13.00
+    assert init_evts[0].payload["amount"] == 10.33

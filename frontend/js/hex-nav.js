@@ -4,11 +4,13 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
+import { T } from './tokens.js';
+
 var CAT_R    = 80;
-var SUBCAT_R = 80;
-var ITEM_R   = 60;
-var GAP      = 1.06;
-var NBTH     = 1.2; // neighbor threshold multiplier
+var SUBCAT_R = 70;
+var ITEM_R   = 48;
+var GAP      = 1.04;
+var NBTH     = 1.15; // neighbor threshold multiplier
 
 // ═══════════════════════════════════════════════════
 //  HexNav class
@@ -123,11 +125,11 @@ export function HexNav(container, opts) {
     if (h.locked) {
       poly.setAttribute('fill', h.color);
       poly.setAttribute('stroke', h.color);
-      poly.setAttribute('stroke-width', '5');
+      poly.setAttribute('stroke-width', '7');
     } else {
       poly.setAttribute('fill', 'transparent');
       poly.setAttribute('stroke', h.color);
-      poly.setAttribute('stroke-width', '4');
+      poly.setAttribute('stroke-width', '7');
     }
     g.appendChild(poly);
 
@@ -141,7 +143,7 @@ export function HexNav(container, opts) {
     }
 
     // Label
-    var fontSize = h.r > 70 ? 35 : h.r > 30 ? 25 : 20;
+    var fontSize = h.r > 70 ? 28 : h.r > 30 ? 22 : 18;
     var lines    = h.label.split(' ');
     lines.forEach(function(line, i) {
       var text = document.createElementNS(svgNS, 'text');
@@ -150,7 +152,7 @@ export function HexNav(container, opts) {
       text.setAttribute('y', h.y + offset);
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'central');
-      text.setAttribute('font-family', 'Sevastopol Interface, monospace');
+      text.setAttribute('font-family', T.fb);
       text.setAttribute('font-size', fontSize);
       text.setAttribute('font-weight', 'bold');
       text.setAttribute('fill', h.locked ? h.textColor : h.color);
@@ -202,8 +204,6 @@ export function HexNav(container, opts) {
       if (!isDup) unique.push(c);
     });
 
-    if (unique.length === 0) return;
-
     // Prefer positions closest to gravity (cat)
     unique.sort(function(a, b) {
       var dxA = a.x - grav.x, dyA = a.y - grav.y;
@@ -217,6 +217,26 @@ export function HexNav(container, opts) {
         pos = unique[j]; break;
       }
     }
+
+    // Fallback: try all 12 directions from every placed hex with tighter packing
+    if (!pos) {
+      var fallbackDist = childR * 2.1;
+      var allSources = [parent].concat(placed);
+      for (var si = 0; si < allSources.length && !pos; si++) {
+        var src = allSources[si];
+        for (var a = 0; a < 12 && !pos; a++) {
+          var angle = (Math.PI / 6) * a;
+          var fx = src.x + fallbackDist * Math.cos(angle);
+          var fy = src.y + fallbackDist * Math.sin(angle);
+          if (fx - childR < 0 || fx + childR > svgW) continue;
+          if (fy - childR < 0 || fy + childR > svgH) continue;
+          if (noCollision(fx, fy, childR, allHexes)) {
+            pos = { x: fx, y: fy };
+          }
+        }
+      }
+    }
+
     if (!pos) return;
 
     placed.push({
@@ -233,6 +253,9 @@ export function HexNav(container, opts) {
 
   return placed;
 }
+
+  // ── Tap debounce ───────────────────────────────
+  var lastTapTime = 0;
 
   // ── Navigation ─────────────────────────────────
   function showCats() {
@@ -291,13 +314,38 @@ export function HexNav(container, opts) {
     render();
   }
 
+  function showItemsDirect(catHex) {
+    resize();
+    state.level = 2; state.cat = catHex; state.subcat = null;
+    catHex.locked = true;
+    var items = catHex.data.subcats[0].items;
+    var placed = placeChain(catHex, items, SUBCAT_R, [catHex], catHex);
+    placed.forEach(function(h) { h.type = 'item'; });
+    state.hexes = [catHex].concat(placed);
+    render();
+  }
+
+  var navLocked = false;
+
   function onHexTap(h) {
+    var now = Date.now();
+    if (now - lastTapTime < 250) return;
+    lastTapTime = now;
+
     if (h.locked) {
+      if (navLocked) return;  // during combo flow, ignore locked hex taps
       if (h.type === 'cat')    showCats();
       if (h.type === 'subcat') showSubcats(state.cat);
       return;
     }
-    if (h.type === 'cat')    { showSubcats(h); return; }
+    if (h.type === 'cat') {
+      if (h.data.subcats.length === 1) {
+        showItemsDirect(h);
+      } else {
+        showSubcats(h);
+      }
+      return;
+    }
     if (h.type === 'subcat') { showItems(h);   return; }
     if (h.type === 'item')   { onSelect(h.data); return; }
   }
@@ -313,6 +361,29 @@ export function HexNav(container, opts) {
     resize();
     showCats();
   };
+
+  this.showPickList = function(label, color, textColor, items) {
+    resize();
+    state.level = 2; state.subcat = null;
+    var centerHex = {
+      id: 'pick-center', label: label,
+      x: CAT_R + 20, y: svgH / 2, r: CAT_R,
+      color: color, textColor: textColor || '#1a1a1a',
+      locked: true, type: 'cat', data: { subcats: [] },
+    };
+    state.cat = centerHex;
+    var placed = placeChain(centerHex, items, SUBCAT_R, [centerHex], centerHex);
+    placed.forEach(function(h) { h.type = 'item'; });
+    state.hexes = [centerHex].concat(placed);
+    render();
+  };
+
+  this.getCatId = function() {
+    return state.cat ? state.cat.id : null;
+  };
+
+  this.lockNav   = function() { navLocked = true; };
+  this.unlockNav = function() { navLocked = false; };
 
   this.destroy = function() {
     svg.remove();

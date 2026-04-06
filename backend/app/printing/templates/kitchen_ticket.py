@@ -45,7 +45,7 @@ class KitchenTicketTemplate(BaseTemplate):
         # Zone 5 — Footer
         commands.extend(self._render_zone5(context, ticket_type))
 
-        commands.append({'type': 'feed', 'lines': 5})
+        commands.append({'type': 'feed', 'lines': 7})
         commands.append({'type': 'cut', 'partial': False})
         return commands
 
@@ -274,7 +274,7 @@ class KitchenTicketTemplate(BaseTemplate):
         if isinstance(mod, dict):
             prefix = mod.get('prefix', '')
             text = mod.get('text') or mod.get('kitchen_text') or mod.get('name', '')
-            mod_type = mod.get('type', '')
+            mod_type = mod.get('type') or mod.get('action', '')
             if not prefix and mod_type:
                 prefix = self._default_prefix(mod_type)
         else:

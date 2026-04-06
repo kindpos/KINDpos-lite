@@ -13,9 +13,9 @@ This is the magic of event sourcing:
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
-from decimal import Decimal
 
 from .events import Event, EventType
+from .money import money_round
 
 
 @dataclass
@@ -38,7 +38,7 @@ class OrderItem:
     def subtotal(self) -> float:
         """Calculate item subtotal including modifiers."""
         modifier_total = sum(m.get("price", 0) for m in self.modifiers)
-        return (self.price + modifier_total) * self.quantity
+        return money_round((self.price + modifier_total) * self.quantity)
 
 
 @dataclass
@@ -63,9 +63,11 @@ class Order:
     This is NOT stored - it's computed by replaying events.
     """
     order_id: str
+    check_number: Optional[str] = None
     table: Optional[str] = None
     server_id: Optional[str] = None
     server_name: Optional[str] = None
+    customer_name: Optional[str] = None
     order_type: str = "dine_in"
     guest_count: int = 1
     status: str = "open"  # open, paid, closed, voided
@@ -82,41 +84,46 @@ class Order:
     # Printing history
     print_history: list[dict] = field(default_factory=list)
 
+    # Tax rate — read from settings by default, overridable via project_order()
+    _tax_rate: float = None
+
     @property
     def subtotal(self) -> float:
         """Sum of all items."""
-        return sum(item.subtotal for item in self.items)
+        return money_round(sum(item.subtotal for item in self.items))
 
     @property
     def discount_total(self) -> float:
         """Sum of all discounts."""
-        return sum(d.get("amount", 0) for d in self.discounts)
+        return money_round(sum(d.get("amount", 0) for d in self.discounts))
 
     @property
     def tax_rate(self) -> float:
-        """Tax rate - TODO: make configurable."""
-        return 0.08
+        if self._tax_rate is not None:
+            return self._tax_rate
+        from app.config import settings
+        return settings.tax_rate
 
     @property
     def tax(self) -> float:
         """Calculate tax on subtotal after discounts."""
         taxable = self.subtotal - self.discount_total
-        return round(taxable * self.tax_rate, 2)
+        return money_round(taxable * self.tax_rate)
 
     @property
     def total(self) -> float:
         """Final total."""
-        return round(self.subtotal - self.discount_total + self.tax, 2)
+        return money_round(self.subtotal - self.discount_total + self.tax)
 
     @property
     def amount_paid(self) -> float:
         """Sum of confirmed payments."""
-        return sum(p.amount for p in self.payments if p.status == "confirmed")
+        return money_round(sum(p.amount for p in self.payments if p.status == "confirmed"))
 
     @property
     def balance_due(self) -> float:
         """Remaining balance."""
-        return round(self.total - self.amount_paid, 2)
+        return money_round(self.total - self.amount_paid)
 
     @property
     def is_fully_paid(self) -> bool:
@@ -124,12 +131,15 @@ class Order:
         return self.amount_paid >= self.total
 
 
-def project_order(events: list[Event]) -> Optional[Order]:
+def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order]:
     """
     Rebuild an Order from a list of events.
 
     This is the core projection logic. Given all events for an order,
     replay them in sequence to compute current state.
+
+    Args:
+        tax_rate: Override the default tax rate (0.06) for this projection.
     """
     if not events:
         return None
@@ -147,18 +157,27 @@ def project_order(events: list[Event]) -> Optional[Order]:
         if event.event_type == EventType.ORDER_CREATED:
             order = Order(
                 order_id=payload["order_id"],
+                check_number=payload.get("check_number"),
                 table=payload.get("table"),
                 server_id=payload.get("server_id"),
                 server_name=payload.get("server_name"),
+                customer_name=payload.get("customer_name"),
                 order_type=payload.get("order_type", "dine_in"),
                 guest_count=payload.get("guest_count", 1),
                 created_at=event.timestamp,
             )
+            if tax_rate is not None:
+                order._tax_rate = tax_rate
 
         elif event.event_type == EventType.ORDER_CLOSED:
             if order:
                 order.status = "closed"
                 order.closed_at = event.timestamp
+
+        elif event.event_type == EventType.ORDER_REOPENED:
+            if order:
+                order.status = "open"
+                order.closed_at = None
 
         elif event.event_type == EventType.ORDER_VOIDED:
             if order:

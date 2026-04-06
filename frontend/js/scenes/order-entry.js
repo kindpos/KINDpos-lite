@@ -4,12 +4,13 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton } from '../tokens.js';
+import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, push, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
+import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
+import { showKeyboard } from '../keyboard.js';
 
 var PAD      = 16;
 var GAP      = 16;
@@ -17,10 +18,14 @@ var TICKET_W = 280;
 var BTN_H    = 50;
 var OVERLAP  = 18;
 
-// ── Pricing constants ─────────────────────────────
-var TAX_RATE      = 0.08;   // 8% — replace with config value
-var CASH_DISCOUNT = 0.04;   // 4% dual-pricing discount
-var STUB_PRICE    = 10.00;  // TODO: replace with real menu item prices
+// ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
+var TAX_RATE      = 0.07;
+var CASH_DISCOUNT = 0.04;
+// Fetch canonical rates from backend so FE/BE always agree
+fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
+  if (d.tax_rate != null)           TAX_RATE      = d.tax_rate;
+  if (d.cash_discount_rate != null) CASH_DISCOUNT = d.cash_discount_rate;
+}).catch(function() { /* keep defaults on network error */ });
 
 // ── API ───────────────────────────────────────────
 var API = '/api/v1';
@@ -28,71 +33,91 @@ var API = '/api/v1';
 // ── Order ID — one per transaction, reset on fresh enter ──
 var currentOrderId = null;
 var isSending = false;   // guard against concurrent handleSend calls
+var currentCheckNumber = null;
+
+// ── Void reasons ──────────────────────────────────
+var VOID_REASONS = ['Wrong Order', 'Customer Request', 'Manager Comp', 'Other'];
 
 // ── Menu data ─────────────────────────────────────
 var MENU_DATA = [
   {
-    id: 'food', label: 'FOOD', color: '#7ac943', textColor: '#1a2a1a',
+    id: 'combo', label: 'COMBO', color: T.catColor('COMBO'), textColor: '#1a1a00',
     subcats: [
-      { id: 'burgers', label: 'Burgers', items: ['Classic', 'Cheese', 'Bacon', 'Mushroom', 'Veggie', 'BBQ', 'Double', 'Smash'] },
-      { id: 'chicken', label: 'Chicken', items: ['Fried', 'Grilled', 'Tenders', 'Wings', 'Sandwich', 'Nuggets'] },
-      { id: 'sides',   label: 'Sides',   items: ['Fries', 'Rings', 'Slaw', 'Salad', 'Mac', 'Tots', 'Corn'] },
-      { id: 'apps',    label: 'Apps',    items: ['Nachos', 'Soup', 'Bread', 'Dip', 'Sliders', 'Pretzel'] },
-      { id: 'tacos',   label: 'Tacos',   items: ['Fish', 'Beef', 'Chicken', 'Shrimp', 'Veggie'] },
-      { id: 'pizza',   label: 'Pizza',   items: ['Cheese', 'Pepperoni', 'Veggie', 'BBQ Chkn', 'Margherita'] },
+      { id: 'combo-items', label: 'Combo', items: [
+        { label: 'Half Rack', price: 16.00 },
+        { label: 'Pulled Pork', price: 14.00 },
+      ] },
     ]
   },
   {
-    id: 'drinks', label: 'DRINKS', color: T.catBeverages, textColor: '#001a1a',
+    id: 'ribs', label: 'RIBS', color: T.catColor('RIBS'), textColor: '#1a0a0a',
     subcats: [
-      { id: 'sodas',     label: 'Sodas',     items: ['Coke', 'Sprite', 'Diet', 'Root Beer', 'Lemonade', 'Iced Tea'] },
-      { id: 'beer',      label: 'Beer',      items: ['Lager', 'IPA', 'Stout', 'Ale', 'Sour', 'Wheat', 'Pilsner'] },
-      { id: 'cocktails', label: 'Cocktails', items: ['Margarita', 'Mojito', 'Martini', 'Negroni', 'Old Fashioned', 'Spritz'] },
-      { id: 'na',        label: 'Non-Alc',   items: ['Water', 'Juice', 'Tea', 'Coffee', 'Sparkling', 'Kombucha'] },
-      { id: 'shots',     label: 'Shots',     items: ['Well', 'Premium', 'Bomb', 'Espresso', 'Fireball'] },
+      { id: 'ribs-items', label: 'Ribs', items: [
+        { label: 'Full Rack', price: 18.00 },
+        { label: 'Half Rack', price: 12.00 },
+      ] },
     ]
   },
   {
-    id: 'desserts', label: 'DESSERTS', color: T.catDesserts, textColor: '#1a0030',
+    id: 'sandwiches', label: 'SANDWICHES', color: T.catColor('SANDWICHES'), textColor: '#1a2a1a',
     subcats: [
-      { id: 'cakes',  label: 'Cakes',  items: ['Chocolate', 'Vanilla', 'Carrot', 'Red Velvet', 'Lemon', 'Cheesecake'] },
-      { id: 'frozen', label: 'Frozen', items: ['Ice Cream', 'Sorbet', 'Gelato', 'Shake', 'Float', 'Sundae'] },
-      { id: 'baked',  label: 'Baked',  items: ['Cookie', 'Brownie', 'Pie', 'Donut', 'Muffin'] },
-      { id: 'candy',  label: 'Candy',  items: ['Chocolate', 'Gummies', 'Hard Candy', 'Taffy'] },
+      { id: 'sandwich-items', label: 'Sandwiches', items: [
+        { label: 'Pulled Pork', price: 10.00 },
+        { label: 'Sliced Brisket', price: 12.00 },
+      ] },
+    ]
+  },
+  {
+    id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: '#001a1a',
+    subcats: [
+      { id: 'side-items', label: 'Sides', items: [
+        { label: 'Fries', price: 4.00 },
+        { label: 'Baked Potato', price: 5.00 },
+        { label: 'Slaw', price: 3.00 },
+      ] },
+    ]
+  },
+  {
+    id: 'soda', label: 'SODA', color: T.catColor('SODA'), textColor: '#001a1a',
+    subcats: [
+      { id: 'soda-items', label: 'Soda', items: [
+        { label: 'Coke', price: 3.00 },
+        { label: 'Sprite', price: 3.00 },
+        { label: 'Diet Coke', price: 3.00 },
+        { label: 'Fanta', price: 3.00 },
+      ] },
     ]
   },
 ];
 
 var MOD_DATA = [
   {
-    id: 'proteins', label: 'PROTEINS', color: T.catProteins, textColor: '#1a1000',
+    id: 'sauce', label: 'SAUCE', color: T.red, textColor: '#fff',
     subcats: [
-      { id: 'meat',  label: 'Meat',  items: ['Bacon', 'Chicken', 'Beef', 'Shrimp', 'Egg'] },
-      { id: 'other', label: 'Other', items: ['Tofu', 'Tempeh', 'Anchovy'] },
+      { id: 'sauce-items', label: 'Sauce', items: [
+        { label: 'Sweet', price: 0 },
+        { label: 'Hot', price: 0 },
+        { label: 'Mild', price: 0 },
+        { label: 'Vinegar', price: 0 },
+        { label: 'Mustard', price: 0 },
+      ] },
     ]
   },
   {
-    id: 'toppings', label: 'TOPPINGS', color: '#7ac943', textColor: '#1a2a1a',
+    id: 'extras', label: 'EXTRAS', color: T.lavender, textColor: '#1a0030',
     subcats: [
-      { id: 'veggies', label: 'Veggies', items: ['Lettuce', 'Tomato', 'Onion', 'Jalapeño', 'Avocado', 'Pickle'] },
-      { id: 'cheese',  label: 'Cheese',  items: ['Cheddar', 'Swiss', 'Gouda', 'Brie', 'Parm', 'Blue'] },
-    ]
-  },
-  {
-    id: 'sauces', label: 'SAUCES', color: T.catSauces, textColor: '#001a1a',
-    subcats: [
-      { id: 'hot',  label: 'Hot',  items: ['Sriracha', 'Chipotle', 'Habanero', 'Buffalo'] },
-      { id: 'mild', label: 'Mild', items: ['Ranch', 'Mayo', 'Mustard', 'Ketchup', 'BBQ', 'Aioli'] },
-    ]
-  },
-  {
-    id: 'prep', label: 'PREP', color: '#b48efa', textColor: '#1a0030',
-    subcats: [
-      { id: 'temp',  label: 'Temp',  items: ['Rare', 'Med Rare', 'Medium', 'Well Done'] },
-      { id: 'style', label: 'Style', items: ['Fried', 'Grilled', 'Baked', 'Steamed', 'Raw'] },
+      { id: 'extras-items', label: 'Extras', items: [
+        { label: 'Extra Meat', price: 3.00 },
+        { label: 'Cheese', price: 1.00 },
+        { label: 'Jalape\u00f1os', price: 0.50 },
+        { label: 'Onions', price: 0 },
+      ] },
     ]
   },
 ];
+
+// ── Combo flow state ─────────────────────────────
+var comboFlow    = null;  // { step: 'side'|'soda', ticketItem: ref }
 
 // ── Scene state ───────────────────────────────────
 var hexNav       = null;
@@ -102,9 +127,10 @@ var ticket       = [];    // [{ id, name, unitPrice, mods:[{name,price,charged}]
 var ticketSeq    = 0;     // monotonic ID counter
 var sceneParams  = {};
 var prefixCard   = null;  // DOM ref for show/hide
-var savedTabs    = [];    // [{ id, name, ticket }] — in-memory for pilot
+var savedTabs    = [];    // [{ id, checkNum, label, ticket }] — in-memory for pilot
 var saveSeq      = 0;     // saved tab ID counter
 var saveBtn      = null;  // DOM ref for SAVE button state
+var customerName = '';    // current tab's customer name (from save/recall)
 
 // ── Prefix definitions ────────────────────────────
 var PREFIXES = [
@@ -116,9 +142,10 @@ var PREFIXES = [
 ];
 
 registerScene('order-entry', {
+  cache: true,
   onEnter: function(el, params) {
-    setSceneName('QS-001');
-    setHeaderBack(true);
+    setSceneName('NEW ORDER');
+    setHeaderBack({ x: true });
     activeTab      = 'items';
     activePrefix   = 'add';
     ticket         = [];
@@ -128,6 +155,8 @@ registerScene('order-entry', {
     saveBtn        = null;
     currentOrderId = null;   // soft reset — ID assigned on first SEND
     isSending      = false;
+    currentCheckNumber = null;
+    customerName   = '';     // reset tab name
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -142,6 +171,10 @@ registerScene('order-entry', {
     el.appendChild(mainArea);
   },
 
+  onResume: function() {
+    var el = document.querySelector('[data-scene="order-entry"]');
+    if (el) el.style.display = 'flex';
+  },
   onExit: function() {
     if (hexNav) { hexNav.destroy(); hexNav = null; }
   },
@@ -169,54 +202,54 @@ function buildTicket(parentEl) {
   panel.style.cssText = [
     'width:' + TICKET_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'border-right:2px solid ' + T.mint + ';',
     'padding-right:' + GAP + 'px;',
   ].join('');
 
   // SAVE / RECALL
   var topRow = document.createElement('div');
-  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;flex-shrink:0;';
+  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;';
 
-  saveBtn = buildButton('//SAVE//', {
-    fill: T.bgLight, color: T.mint, fontSize: '30px', height: BTN_H,
+  saveBtn = buildButton('SAVE', {
+    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleSave(); },
   });
 
-  var recallBtnEl = buildButton('//RECALL//', {
-    fill: T.bgLight, color: T.mint, fontSize: '30px', height: BTN_H,
+  var recallBtnEl = buildButton('RECALL', {
+    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleRecall(); },
   });
 
   topRow.appendChild(saveBtn);
   topRow.appendChild(recallBtnEl);
-  panel.appendChild(topRow);
 
   // Item list
   var itemList = document.createElement('div');
   itemList.id = 'ticket-list';
-  itemList.style.cssText = 'flex:1;overflow:hidden;display:flex;flex-direction:column;gap:4px;';
+  itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
   panel.appendChild(itemList);
 
-  // Summary — IDs for live update
-  var summary = document.createElement('div');
-  summary.style.cssText = 'padding:3px 4px;border-top:1px solid ' + T.bgLight + ';flex-shrink:0;';
-  summary.appendChild(buildSummaryRow('Subtotal', '$0.00', 'ticket-subtotal'));
-  summary.appendChild(buildSummaryRow('Tax',      '$0.00', 'ticket-tax'));
-  panel.appendChild(summary);
+  // Summary + Totals — combined card with sunken bevel
+  var summaryTotals = document.createElement('div');
+  summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;flex-shrink:0;';
+  applySunkenStyle(summaryTotals);
+  summaryTotals.appendChild(buildSummaryRow('Subtotal', '$0.00', 'ticket-subtotal'));
+  summaryTotals.appendChild(buildSummaryRow('Tax',      '$0.00', 'ticket-tax'));
+  var mintSep = document.createElement('div');
+  mintSep.style.cssText = 'height:2px;background:' + T.mint + ';margin:2px 0;';
+  summaryTotals.appendChild(mintSep);
+  summaryTotals.appendChild(buildTotalRow('Total', '$0.00', 'ticket-total'));
+  summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
+  panel.appendChild(summaryTotals);
 
-  // Totals — IDs for live update
-  var totals = document.createElement('div');
-  totals.style.cssText = 'background:' + T.bgDark + ';padding:4px;border-top:2px solid ' + T.bgLight + ';flex-shrink:0;';
-  totals.appendChild(buildTotalRow('Total', '$0.00', 'ticket-total'));
-  totals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
-  panel.appendChild(totals);
+  // SAVE / RECALL below totals
+  panel.appendChild(topRow);
 
   return panel;
 }
 
 function buildSummaryRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:18px;color:' + T.dimText + ';line-height:1.6;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';line-height:0.92;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
@@ -227,7 +260,7 @@ function buildSummaryRow(label, value, id) {
 
 function buildTotalRow(label, value, id) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:22px;font-weight:bold;color:' + T.gold + ';line-height:1.7;';
+  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.gold + ';line-height:0.92;';
   var valEl = document.createElement('span');
   if (id) valEl.id = id;
   valEl.textContent = value;
@@ -251,7 +284,7 @@ function buildPrefixCard() {
 
   // Label
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.dimText + ';flex-shrink:0;margin-right:2px;';
+  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mutedText + ';flex-shrink:0;margin-right:2px;';
   lbl.textContent = 'PREFIX:';
   card.appendChild(lbl);
 
@@ -262,7 +295,7 @@ function buildPrefixCard() {
     pair.wrap.style.height = '40px';
     pair.wrap.style.flex   = '1';
     pair.inner.style.fontFamily = T.fb;
-    pair.inner.style.fontSize   = '18px';
+    pair.inner.style.fontSize   = T.fsBtn;
     pair.inner.style.color      = activePrefix === p.id ? p.textColor : p.color;
     pair.inner.textContent = p.label;
     // Shadow always matches the prefix color
@@ -305,7 +338,7 @@ function buildMain(parentEl, params) {
   canvas.id = 'hex-canvas';
   canvas.style.cssText = [
     'flex:1;background:' + T.bg5 + ';',
-    'border:2px solid ' + T.mint + ';',
+    'border:7px solid ' + T.mint + ';',
     'margin-bottom:0;padding-bottom:' + OVERLAP + 'px;',
     'position:relative;overflow:hidden;',
   ].join('');
@@ -315,41 +348,41 @@ function buildMain(parentEl, params) {
   bottom.style.cssText = [
     'display:grid;',
     'grid-template-columns:1fr 1fr 1fr 1fr 1.3fr;',
-    'grid-template-rows:' + BTN_H + 'px ' + BTN_H + 'px;',
-    'gap:3px;padding:3px;padding-top:0;',
+    'grid-template-rows:1fr 1fr;',
+    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;',
     'position:relative;z-index:2;',
     'margin-top:-' + OVERLAP + 'px;',
   ].join('');
 
-  var tabItems = buildButton('< items >', {
-    fill: T.mint, color: T.bg, fontSize: '26px', height: BTN_H,
+  var tabItems = buildButton('ADD ITEMS', {
+    fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { switchTab('items', canvas, tabItems, tabMods); },
   });
   tabItems.style.gridColumn = '1 / 3';
   tabItems.style.gridRow    = '1';
 
-  var tabMods = buildButton('< modifiers >', {
-    fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H,
+  var tabMods = buildButton('MODIFY ITEMS', {
+    fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { switchTab('modifiers', canvas, tabItems, tabMods); },
   });
   tabMods.style.gridColumn = '3 / 5';
   tabMods.style.gridRow    = '1';
 
-  var send = buildButton('//SEND//', {
-    fill: T.goGreen, color: T.bg, fontSize: '36px',
+  var send = buildButton('SEND', {
+    fill: T.goGreen, color: T.bg, fontSize: '30px', fontFamily: T.fh,
     onTap: function() { handleSend(); },
   });
   send.style.gridColumn = '5';
   send.style.gridRow    = '1 / 3';
 
-  var disc  = buildButton('//DISC//', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H });
-  var voidB = buildButton('//VOID//', { fill: T.red,     color: '#fff', fontSize: '26px', height: BTN_H,
+  var disc  = buildButton('DISC', { fill: T.mint, color: T.bgDark, fontSize: '26px', fontFamily: T.fh });
+  var voidB = buildButton('VOID', { fill: T.red,     color: '#fff', fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleVoid(); },
   });
   voidB.id = 'void-btn';
-  var print = buildButton('//PRINT//',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H });
+  var print = buildButton('PRINT',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', fontFamily: T.fh });
 
-  var pay = buildButton('//PAY//', { fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H,
+  var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handlePay(params); },
   });
 
@@ -359,6 +392,7 @@ function buildMain(parentEl, params) {
   pay.style.gridColumn   = '4'; pay.style.gridRow   = '2';
 
   [tabItems, tabMods, send, disc, voidB, print, pay].forEach(function(b) {
+    b.style.height = '100%';
     bottom.appendChild(b);
   });
   main.appendChild(bottom);
@@ -366,7 +400,7 @@ function buildMain(parentEl, params) {
   requestAnimationFrame(function() {
     hexNav = new HexNav(canvas, {
       data: MENU_DATA,
-      onSelect: function(item) { addToTicket(item); },
+      onSelect: function(item) { handleItemSelect(item); },
     });
   });
 
@@ -391,8 +425,62 @@ function switchTab(tab, canvas, tabItems, tabMods) {
 }
 
 // ── TICKET ────────────────────────────────────────
+function getMenuCat(id) {
+  return MENU_DATA.find(function(c) { return c.id === id; });
+}
+
+function handleItemSelect(item) {
+  var name  = item.label || item;
+  var price = typeof item.price === 'number' ? item.price : 0;
+
+  // ── Combo flow: picking side or soda ──
+  if (comboFlow) {
+    if (comboFlow.step === 'side') {
+      comboFlow.ticketItem.mods.push({ name: name, price: 0, charged: false });
+      comboFlow.step = 'soda';
+      var sodaCat = getMenuCat('soda');
+      hexNav.showPickList('SODA', sodaCat.color, sodaCat.textColor, sodaCat.subcats[0].items);
+      renderTicket();
+      updateBottomBar();
+      return;
+    }
+    if (comboFlow.step === 'soda') {
+      comboFlow.ticketItem.mods.push({ name: name, price: 0, charged: false });
+      comboFlow = null;
+      hexNav.unlockNav();
+      hexNav.reset();
+      renderTicket();
+      updateBottomBar();
+      return;
+    }
+  }
+
+  // ── Start combo flow if selected from COMBO category ──
+  if (hexNav && hexNav.getCatId() === 'combo') {
+    var ticketItem = {
+      id:        ++ticketSeq,
+      name:      'Combo ' + name,
+      unitPrice: price,
+      mods:      [],
+      selected:  false,
+      sent:      false,
+    };
+    ticket.push(ticketItem);
+    comboFlow = { step: 'side', ticketItem: ticketItem };
+    hexNav.lockNav();
+    var sidesCat = getMenuCat('sides');
+    hexNav.showPickList('SIDES', sidesCat.color, sidesCat.textColor, sidesCat.subcats[0].items);
+    renderTicket();
+    updateBottomBar();
+    return;
+  }
+
+  addToTicket(item);
+}
+
 function addToTicket(item) {
-  var name = item.label || item;
+  var name  = item.label || item;
+  var price = typeof item.price === 'number' ? item.price : 0;
 
   if (activeTab === 'modifiers') {
     // Apply modifier to all selected instances
@@ -400,15 +488,16 @@ function addToTicket(item) {
     if (selected.length === 0) return;
     var pfx = PREFIXES.find(function(p) { return p.id === activePrefix; });
     var modName = (pfx ? pfx.label + ' ' : '') + name;
+    var charged = price > 0;
     selected.forEach(function(inst) {
-      inst.mods.push({ name: modName, price: 0, charged: false });
+      inst.mods.push({ name: modName, price: price, charged: charged });
     });
   } else {
     // New item instance
     ticket.push({
       id:        ++ticketSeq,
       name:      name,
-      unitPrice: STUB_PRICE,
+      unitPrice: price,
       mods:      [],
       selected:  false,
       sent:      false,
@@ -459,11 +548,11 @@ function renderTicket() {
       gRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
 
       var gName = document.createElement('span');
-      gName.style.cssText = 'font-family:' + T.fb + ';font-size:18px;font-weight:bold;color:' + T.mint + ';';
+      gName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.mint + ';';
       gName.textContent = (instances.length > 1 ? instances.length + '\u00d7 ' : '') + name;
 
       var gPrice = document.createElement('span');
-      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.mint + ';';
+      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.mint + ';';
       gPrice.textContent = '$' + groupPrice.toFixed(2);
 
       gRow.appendChild(gName);
@@ -514,11 +603,11 @@ function renderTicket() {
         iRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
 
         var iName = document.createElement('span');
-        iName.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + fg + ';';
+        iName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + fg + ';';
         iName.textContent = inst.name;
 
         var iPrice = document.createElement('span');
-        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:15px;font-weight:bold;color:' + fg + ';';
+        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + fg + ';';
         var total = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
         iPrice.textContent = '$' + total.toFixed(2);
 
@@ -569,7 +658,7 @@ function renderTicket() {
 // ── SEPARATOR + MOD ROW helpers ───────────────────
 function buildSeparator() {
   var sep = document.createElement('div');
-  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:9px;color:' + T.mintEdgeD + ';letter-spacing:2px;';
+  sep.style.cssText = 'padding:0 8px;font-family:' + T.fb + ';font-size:' + T.fsMod + ';color:' + T.mintEdgeD + ';letter-spacing:2px;overflow:hidden;white-space:nowrap;line-height:1;';
   sep.textContent = '- - - - - - - - - - - - - - - - - -';
   return sep;
 }
@@ -579,7 +668,7 @@ function buildModRow(name, price, dark, showPrice) {
   row.style.cssText = [
     'display:flex;justify-content:space-between;',
     'padding:2px 8px 2px 20px;',
-    'font-family:' + T.fb + ';font-size:12px;font-weight:bold;',
+    'font-family:' + T.fb + ';font-size:' + T.fsMod + ';font-weight:bold;',
     'color:' + (dark ? '#1a1a1a' : T.gold) + ';',
   ].join('');
   var n = document.createElement('span');
@@ -595,6 +684,7 @@ function handleVoid() {
   var selected = ticket.filter(function(i) { return i.selected; });
   var hasSelected = selected.length > 0;
   var anyUnsent = hasSelected && selected.every(function(i) { return !i.sent; });
+  var voidingEntireOrder = !hasSelected;
 
   if (hasSelected && anyUnsent) {
     // Silent delete — unsent selected items, no pin required
@@ -604,20 +694,22 @@ function handleVoid() {
     return;
   }
 
+  if (voidingEntireOrder && ticket.length === 0) return;
+
   // VOID flow — PIN then reason
   interrupt('void-pin', {
     reason: 'void',
     onBuild: function(el) { buildPinOverlay(el, function(pinOk) {
       if (!pinOk) { cancelInterrupt(); return; }
-      var targets = selected.length > 0 ? selected : ticket;
       resolveInterrupt();
       // Defer to next microtask so activeInterrupt is fully cleared
-      setTimeout(function() { showVoidReasons(targets); }, 0);
+      var vTargets = voidingEntireOrder ? ticket : selected;
+      setTimeout(function() { showVoidReasons(vTargets, voidingEntireOrder); }, 0);
     }); },
   }).catch(function() {});
 }
 
-function showVoidReasons(targets) {
+function showVoidReasons(targets, isFullVoid) {
   interrupt('void-reason', {
     onBuild: function(el) {
       var panel = document.createElement('div');
@@ -628,8 +720,8 @@ function showVoidReasons(targets) {
       ].join('');
 
       var lbl = document.createElement('div');
-      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.red + ';letter-spacing:2px;margin-bottom:4px;';
-      lbl.textContent = '// VOID REASON //';
+      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.red + ';letter-spacing:2px;margin-bottom:4px;';
+      lbl.textContent = isFullVoid ? '// VOID ENTIRE ORDER //' : '// VOID REASON //';
       panel.appendChild(lbl);
 
       VOID_REASONS.forEach(function(r) {
@@ -639,13 +731,39 @@ function showVoidReasons(targets) {
             targets.forEach(function(inst) { inst.voided = true; inst.voidReason = r; });
             ticket = ticket.filter(function(i) { return !i.voided; });
             resolveInterrupt();
-            renderTicket();
-            updateBottomBar();
+
+            if (isFullVoid && currentOrderId) {
+              fetch(API + '/orders/' + currentOrderId + '/void', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: r }),
+              }).catch(function(err) {
+                console.error('[KINDpos] Void API error:', err);
+              }).then(function() {
+                currentOrderId = null;
+                currentCheckNumber = null;
+                replace('login');
+              });
+            } else if (isFullVoid) {
+              currentOrderId = null;
+              currentCheckNumber = null;
+              replace('login');
+            } else {
+              renderTicket();
+              updateBottomBar();
+            }
           },
         });
         btn.style.width = '240px';
         panel.appendChild(btn);
       });
+
+      var cancelBtn = buildButton('CANCEL', {
+        fill: T.bgLight, color: T.red, fontSize: T.fsSmall, height: 40,
+        onTap: function() { cancelInterrupt(); },
+      });
+      cancelBtn.style.width = '240px';
+      panel.appendChild(cancelBtn);
 
       el.appendChild(panel);
     },
@@ -653,7 +771,7 @@ function showVoidReasons(targets) {
 }
 
 // ── PIN OVERLAY ───────────────────────────────────
-var MANAGER_PIN = '0000'; // TODO: load from employee config
+var MANAGER_PIN = '1234'; // demo seed manager PIN
 
 function buildPinOverlay(el, cb) {
   // Child panel — never override el positioning styles
@@ -662,10 +780,11 @@ function buildPinOverlay(el, cb) {
     'display:flex;flex-direction:column;align-items:center;',
     'gap:14px;background:#1a1a1a;',
     'border:4px solid ' + T.mint + ';padding:20px;',
+    'max-height:90vh;overflow-y:auto;',
   ].join('');
 
   var lbl = document.createElement('div');
-  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.mint + ';letter-spacing:2px;';
+  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';letter-spacing:2px;';
   lbl.textContent = '// MANAGER PIN //';
   panel.appendChild(lbl);
 
@@ -683,13 +802,18 @@ function buildPinOverlay(el, cb) {
   panel.appendChild(numpad);
 
   var cancelBtn = buildButton('CANCEL', {
-    fill: T.bgLight, color: T.mint, fontSize: '22px', height: 40,
+    fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 40,
     onTap: function() { cb(false); },
   });
   cancelBtn.style.width = '332px'; // matches numpad component width
   panel.appendChild(cancelBtn);
 
   el.appendChild(panel);
+
+  // Backdrop tap dismisses interrupt
+  el.addEventListener('pointerup', function(e) {
+    if (e.target === el) cb(false);
+  });
 }
 
 async function handleSend() {
@@ -708,11 +832,14 @@ async function handleSend() {
         body: JSON.stringify({
           order_type:  'quick_service',
           guest_count: 1,
+          customer_name: customerName || null,
         }),
       });
       if (!createRes.ok) throw new Error('Order create failed: ' + createRes.status);
       var created = await createRes.json();
       currentOrderId = created.order_id;   // use the backend-generated ID
+      currentCheckNumber = created.check_number;
+      setSceneName(currentCheckNumber);
     }
 
     // Step 2 — post only unsent instances, each with their own modifiers
@@ -747,6 +874,7 @@ async function handleSend() {
 
   } catch (err) {
     console.warn('[KINDpos] Send failed:', err);
+    throw err;
   } finally {
     isSending = false;
   }
@@ -773,18 +901,32 @@ function deepCopyTicket(src) {
 // ── SAVE ─────────────────────────────────────────
 function handleSave() {
   if (ticket.length === 0) return;
-  savedTabs.push({
-    id:     ++saveSeq,
-    name:   'CHECK-' + String(saveSeq).padStart(3, '0'),
-    ticket: deepCopyTicket(ticket),   // deep copy — no shared references
+  var seq = ++saveSeq;
+  var checkNum = 'CHECK-' + String(seq).padStart(3, '0');
+  var snap = deepCopyTicket(ticket);   // deep copy — no shared references
+  var finishSave = function(label) {
+    savedTabs.push({
+      id:       seq,
+      checkNum: checkNum,
+      label:    label || '',
+      ticket:   snap,
+    });
+    if (saveBtn) {
+      saveBtn.style.background = T.goGreen;
+      saveBtn.querySelector && (function() {
+        var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
+        if (inner) inner.style.color = T.bg;
+      })();
+    }
+  };
+  showKeyboard({
+    placeholder: 'Name this tab (optional)',
+    initialValue: '',
+    maxLength: 20,
+    onDone: function(val) { finishSave(val ? val.toUpperCase() : ''); },
+    onDismiss: function() { finishSave(''); },
+    dismissOnDone: true,
   });
-  if (saveBtn) {
-    saveBtn.style.background = T.goGreen;
-    saveBtn.querySelector && (function() {
-      var inner = saveBtn.querySelector('[data-inner]') || saveBtn.firstChild;
-      if (inner) inner.style.color = T.bg;
-    })();
-  }
 }
 
 // ── RECALL ───────────────────────────────────────
@@ -800,10 +942,10 @@ function handleRecall() {
       var hdr = document.createElement('div');
       hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;';
       var title = document.createElement('span');
-      title.style.cssText = 'font-family:' + T.fb + ';font-size:14px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
+      title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
       title.textContent = '// RECALL //';
       var closeBtn = buildButton('\u2715', {
-        fill: T.red, color: T.mint, fontSize: '20px', height: 30,
+        fill: T.red, color: T.mint, fontSize: T.fsBtn, height: 30,
         onTap: function() { dismissOverlay(); },
       });
       closeBtn.style.width = '30px';
@@ -817,7 +959,7 @@ function handleRecall() {
 
       if (savedTabs.length === 0) {
         var empty = document.createElement('div');
-        empty.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:#333;font-size:13px;text-align:center;padding:40px 0;';
+        empty.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:40px;text-align:center;padding:40px 0;';
         empty.textContent = 'No saved tabs';
         grid.appendChild(empty);
       } else {
@@ -826,8 +968,11 @@ function handleRecall() {
             return s + i.unitPrice + i.mods.reduce(function(ms, m) { return ms + m.price; }, 0);
           }, 0);
 
-          var card = buildButton(tab.name + '\n$' + total.toFixed(2), {
-            fill: '#333333', color: T.mint, fontSize: '20px', height: 76,
+          var cardLabel = tab.label
+            ? tab.label + '\n' + tab.checkNum + '\n$' + total.toFixed(2)
+            : tab.checkNum + '\n$' + total.toFixed(2);
+          var card = buildButton(cardLabel, {
+            fill: '#333333', color: T.mint, fontSize: T.fsBtn, height: 90,
             onTap: function() { recallTabInterrupt(tab, grid, panel); },
           });
           grid.appendChild(card);
@@ -846,6 +991,8 @@ function recallTabInterrupt(tab, grid, overlayEl) {
     savedTabs = savedTabs.filter(function(t) { return t.id !== tab.id; });
     ticketSeq = ticket.reduce(function(mx, i) { return Math.max(mx, i.id); }, 0);
     currentOrderId = null;
+    currentCheckNumber = null;
+    customerName = tab.label || '';
     dismissOverlay();
     renderTicket();
     updateBottomBar();
@@ -865,30 +1012,37 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       var panel = document.createElement('div');
       panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:360px;background:#1a1a1a;border:4px solid ' + T.mint + ';padding:20px;';
 
-      var lbl = document.createElement('div');
-      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;font-weight:bold;color:' + T.mint + ';letter-spacing:1px;margin-bottom:6px;';
-      lbl.textContent = tab.name;
-      panel.appendChild(lbl);
+      if (tab.label) {
+        var nameLbl = document.createElement('div');
+        nameLbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:1px;';
+        nameLbl.textContent = tab.label;
+        panel.appendChild(nameLbl);
+      }
+      var checkLbl = document.createElement('div');
+      checkLbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + (tab.label ? '16px' : T.fsSmall) + ';color:' + (tab.label ? T.mutedText : T.mint) + ';letter-spacing:1px;margin-bottom:6px;';
+      checkLbl.textContent = tab.checkNum;
+      panel.appendChild(checkLbl);
 
-      var recallBtn = buildButton('//RECALL//', {
+      var recallBtn = buildButton('RECALL', {
         fill: T.goGreen, color: T.bg, fontSize: '26px', height: 50,
         onTap: function() {
           if (ticket.length > 0) {
+            resolveInterrupt(); // close recall-action so confirm-clear can open
             interrupt('confirm-clear', {
               onBuild: function(cel) {
                 var cpanel = document.createElement('div');
                 cpanel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:320px;background:#1a1a1a;border:4px solid ' + T.gold + ';padding:20px;';
                 var clbl = document.createElement('div');
-                clbl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.gold + ';letter-spacing:1px;text-align:center;';
+                clbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:1px;text-align:center;';
                 clbl.textContent = 'Clear current ticket?';
                 cpanel.appendChild(clbl);
                 var yesBtn = buildButton('YES — CLEAR', {
-                  fill: T.red, color: '#fff', fontSize: '24px', height: 46,
+                  fill: T.red, color: '#fff', fontSize: T.fsSmall, height: 46,
                   onTap: function() { resolveInterrupt(); doLoad(); },
                 });
                 yesBtn.style.width = '240px';
                 var noBtn = buildButton('CANCEL', {
-                  fill: T.bgLight, color: T.mint, fontSize: '24px', height: 46,
+                  fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 46,
                   onTap: function() { cancelInterrupt(); },
                 });
                 noBtn.style.width = '240px';
@@ -904,14 +1058,14 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       });
       recallBtn.style.width = '280px';
 
-      var deleteBtn = buildButton('//DELETE//', {
+      var deleteBtn = buildButton('DELETE', {
         fill: T.red, color: '#fff', fontSize: '26px', height: 50,
         onTap: doDelete,
       });
       deleteBtn.style.width = '280px';
 
       var cancelBtn = buildButton('CANCEL', {
-        fill: T.bgLight, color: T.mint, fontSize: '22px', height: 40,
+        fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 40,
         onTap: function() { cancelInterrupt(); },
       });
       cancelBtn.style.width = '280px';
@@ -929,8 +1083,8 @@ function updateBottomBar() {
   if (!voidBtn) return;
   var selected = ticket.filter(function(i) { return i.selected; });
   var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
-  var inner = voidBtn.firstElementChild && voidBtn.firstElementChild.firstElementChild;
-  if (inner) inner.textContent = unsentSelected ? '//DELETE//' : '//VOID//';
+  var inner = voidBtn.firstElementChild;
+  if (inner) inner.textContent = unsentSelected ? 'DELETE' : 'VOID';
 }
 
 async function handlePay(params) {
@@ -938,7 +1092,12 @@ async function handlePay(params) {
 
   // If SEND was never tapped, create the order now before navigating
   if (!currentOrderId) {
-    await handleSend();
+    try {
+      await handleSend();
+    } catch (err) {
+      console.warn('[KINDpos] Send failed during pay — cannot proceed to payment');
+      return;
+    }
   }
 
   if (!currentOrderId) {
@@ -953,7 +1112,7 @@ async function handlePay(params) {
 
   push('receipt-review', {
     orderId:     currentOrderId,
-    checkId:     'QS-001',
+    checkId:     currentCheckNumber,
     items:       items,
     subtotal:    totals.subtotal,
     tax:         totals.tax,

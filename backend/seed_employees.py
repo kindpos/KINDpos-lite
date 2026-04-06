@@ -15,10 +15,10 @@ from app.core.event_ledger import EventLedger
 from app.core.events import create_event, EventType
 
 STAFF = [
-    {"employee_id": "alex",   "first_name": "Alex",   "last_name": "M.",      "display_name": "Alex M.",   "role_id": "manager", "pin": "1234", "hourly_rate": 0.0},
-    {"employee_id": "jordan", "first_name": "Jordan", "last_name": "K.",      "display_name": "Jordan K.", "role_id": "server",  "pin": "5678", "hourly_rate": 0.0},
-    {"employee_id": "casey",  "first_name": "Casey",  "last_name": "R.",      "display_name": "Casey R.",  "role_id": "server",  "pin": "9012", "hourly_rate": 0.0},
-    {"employee_id": "sam",    "first_name": "Sam",    "last_name": "T.",      "display_name": "Sam T.",    "role_id": "server",  "pin": "3456", "hourly_rate": 0.0},
+    {"employee_id": "rose",    "first_name": "Rose",    "last_name": "N.",  "display_name": "Rose N.",    "role_ids": ["manager", "bartender", "server"], "pin": "1234", "hourly_rate": 0.0},
+    {"employee_id": "blanch",  "first_name": "Blanch",  "last_name": "D.",  "display_name": "Blanch D.",  "role_ids": ["server", "host"],                "pin": "5678", "hourly_rate": 0.0},
+    {"employee_id": "dorothy", "first_name": "Dorothy", "last_name": "S.",  "display_name": "Dorothy S.", "role_ids": ["cook"],                           "pin": "1111", "hourly_rate": 0.0},
+    {"employee_id": "sophia",  "first_name": "Sophia",  "last_name": "P.",  "display_name": "Sophia P.",  "role_ids": ["busser", "cook", "server"],       "pin": "2222", "hourly_rate": 0.0},
 ]
 
 async def main():
@@ -40,7 +40,7 @@ async def main():
             payload={**emp, "active": True},
         )
         await ledger.append(event)
-        print(f"  added {emp['display_name']}  [{emp['role_id']}]  PIN: {emp['pin']}")
+        print(f"  added {emp['display_name']}  {emp['role_ids']}  PIN: {emp['pin']}")
         seeded += 1
 
     await ledger.close()

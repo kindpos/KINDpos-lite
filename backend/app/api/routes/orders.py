@@ -25,7 +25,9 @@ from app.core.events import (
     payment_confirmed,
     payment_failed,
     order_closed,
+    order_reopened,
     order_voided,
+    cash_refund_due,
     ticket_printed,
     batch_submitted,
     day_closed,
@@ -33,6 +35,10 @@ from app.core.events import (
     EventType,
 )
 from app.core.projections import project_order, project_orders, Order
+from decimal import Decimal
+from app.core.money import money_round
+
+_ZERO = Decimal('0')
 from app.core.event_ledger import get_open_orders
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -59,6 +65,14 @@ class CreateOrderRequest(BaseModel):
     server_name: Optional[str] = None
     order_type: str = "dine_in"
     guest_count: int = 1
+    customer_name: Optional[str] = None
+
+
+class InlineModifier(BaseModel):
+    """Modifier sent inline with an item from the frontend."""
+    name: str
+    price: float = 0.0
+    charged: Optional[bool] = True
 
 
 class AddItemRequest(BaseModel):
@@ -70,6 +84,7 @@ class AddItemRequest(BaseModel):
     category: Optional[str] = None
     notes: Optional[str] = None
     seat_number: Optional[int] = None
+    modifiers: Optional[list[InlineModifier]] = None
 
 
 class ModifyItemRequest(BaseModel):
@@ -137,9 +152,11 @@ class PaymentResponse(BaseModel):
 class OrderResponse(BaseModel):
     """Response model for an order."""
     order_id: str
+    check_number: Optional[str] = None
     table: Optional[str]
     server_id: Optional[str]
     server_name: Optional[str]
+    customer_name: Optional[str] = None
     order_type: str
     guest_count: int
     status: str
@@ -158,9 +175,11 @@ class OrderResponse(BaseModel):
         """Convert an Order projection to a response."""
         return cls(
             order_id=order.order_id,
+            check_number=order.check_number,
             table=order.table,
             server_id=order.server_id,
             server_name=order.server_name,
+            customer_name=order.customer_name,
             order_type=order.order_type,
             guest_count=order.guest_count,
             status=order.status,
@@ -232,6 +251,22 @@ async def create_order(
     """Create a new order."""
     order_id = f"order_{uuid.uuid4().hex[:12]}"
 
+    # Generate sequential check number with order-type prefix
+    ORDER_TYPE_PREFIXES = {
+        "quick_service": "QS",
+        "dine_in": "DI",
+        "to_go": "TG",
+        "bar_tab": "BT",
+        "delivery": "DL",
+        "staff": "ST",
+    }
+    order_type = request.order_type or "dine_in"
+    prefix = ORDER_TYPE_PREFIXES.get(order_type, "OR")
+    type_count = await ledger.count_events_by_type_and_payload(
+        EventType.ORDER_CREATED, "order_type", order_type
+    )
+    check_number = f"{prefix}-{type_count + 1:03d}"
+
     event = order_created(
         terminal_id=settings.terminal_id,
         order_id=order_id,
@@ -240,6 +275,8 @@ async def create_order(
         server_name=request.server_name,
         order_type=request.order_type,
         guest_count=request.guest_count,
+        customer_name=request.customer_name,
+        check_number=check_number,
     )
     # Set correlation_id for ORDER_CREATED
     event = event.model_copy(update={"correlation_id": order_id})
@@ -307,56 +344,226 @@ async def list_open_orders(
 
 
 @router.get("/day-summary")
-async def get_day_summary(ledger: EventLedger = Depends(get_ledger)):
-    """Get current day summary without closing anything."""
+async def get_day_summary(
+    server_id: str = None,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Full day aggregation for all reporting scenes.
+
+    Optional ?server_id= filter for server checkout view.
+    """
     all_events = await get_current_day_events(ledger)
     all_orders = project_orders(all_events)
 
+    # Collect TIP_ADJUSTED events keyed by payment_id (last wins)
+    tip_map = {}
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            tip_map[e.payload.get("payment_id")] = e.payload.get("tip_amount", 0.0)
+
+    # Filter orders by server if requested
+    orders = all_orders.values()
+    if server_id:
+        orders = [o for o in orders if o.server_id == server_id]
+
     open_count = 0
     closed_count = 0
-    total_sales = 0.0
-    total_tips = 0.0
-    cash_total = 0.0
-    card_total = 0.0
+    voided_count = 0
+    gross_sales = _ZERO
+    void_total = _ZERO
+    discount_total = _ZERO
+    discount_count = 0
+    tax_total = _ZERO
+    cash_total = _ZERO
+    card_total = _ZERO
+    cash_count = 0
+    card_count = 0
+    total_tips = _ZERO
+    card_tips = _ZERO
+    cash_tips = _ZERO
+    guest_count = 0
+    categories = {}
     payments_list = []
+    checks_list = []
+    closed_order_ids = []
+    hourly = {}
 
-    for order in all_orders.values():
+    for order in orders:
+        if order.status == "voided":
+            voided_count += 1
+            void_total += Decimal(str(order.subtotal))
+            # Add voided orders to checks list for the Void tab
+            check_label = order.check_number if order.check_number else order.order_id
+            checks_list.append({
+                "checkId": order.order_id,
+                "checkLabel": check_label,
+                "paymentId": None,
+                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                "amount": money_round(order.subtotal),
+                "tip": 0,
+                "adjusted": True,
+                "method": None,
+                "status": "voided",
+            })
+            continue
         if order.status == "open":
             open_count += 1
         elif order.status in ("closed", "paid"):
             closed_count += 1
-            total_sales += order.total
-            for p in order.payments:
-                if p.status == "confirmed":
-                    payments_list.append({
-                        "order_id": order.order_id,
-                        "payment_id": p.payment_id,
-                        "amount": p.amount,
-                        "method": p.method,
-                        "tip": p.tip_amount,
-                    })
-                    if p.method == "cash":
-                        cash_total += p.amount
-                    else:
-                        card_total += p.amount
+            closed_order_ids.append(order.order_id)
 
-    for e in all_events:
-        if e.event_type == EventType.TIP_ADJUSTED:
-            tip_amt = e.payload.get("tip_amount", 0.0)
-            total_tips += tip_amt
-            pid = e.payload.get("payment_id")
-            for pm in payments_list:
-                if pm["payment_id"] == pid:
-                    pm["tip"] = tip_amt
+        gross_sales += Decimal(str(order.subtotal))
+        order_disc = Decimal(str(order.discount_total))
+        discount_total += order_disc
+        if order_disc > 0:
+            discount_count += 1
+        tax_total += Decimal(str(order.tax))
+        guest_count += order.guest_count
+
+        # Hourly bucket for daypart breakdown
+        if order.created_at:
+            h = order.created_at.hour
+            if h not in hourly:
+                hourly[h] = {"net": _ZERO, "checks": 0}
+            hourly[h]["net"] += Decimal(str(order.subtotal)) - order_disc
+            hourly[h]["checks"] += 1
+
+        # Category breakdown from items
+        for item in order.items:
+            cat = item.category or "Uncategorized"
+            if cat not in categories:
+                categories[cat] = {"name": cat, "total": _ZERO, "count": 0}
+            categories[cat]["total"] += Decimal(str(item.subtotal))
+            categories[cat]["count"] += 1
+
+        # Payment breakdown
+        order_tip = _ZERO
+        for p in order.payments:
+            if p.status != "confirmed":
+                continue
+            tip = Decimal(str(tip_map.get(p.payment_id, p.tip_amount)))
+            payments_list.append({
+                "order_id": order.order_id,
+                "payment_id": p.payment_id,
+                "amount": p.amount,
+                "method": p.method,
+                "tip": float(tip),
+            })
+            total_tips += tip
+            order_tip += tip
+            if p.method == "cash":
+                cash_total += Decimal(str(p.amount))
+                cash_count += 1
+                cash_tips += tip
+            else:
+                card_total += Decimal(str(p.amount))
+                card_count += 1
+                card_tips += tip
+
+        # Build check entry for tip-adjustment view
+        if order.status in ("closed", "paid"):
+            has_card = any(p.method != "cash" and p.status == "confirmed" for p in order.payments)
+            if has_card:
+                # Find the first confirmed card payment for tip-adjust
+                card_payment = next(
+                    (p for p in order.payments if p.method != "cash" and p.status == "confirmed"),
+                    None,
+                )
+                check_label = order.check_number if order.check_number else order.order_id
+                checks_list.append({
+                    "checkId": order.order_id,
+                    "checkLabel": check_label,
+                    "paymentId": card_payment.payment_id if card_payment else None,
+                    "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                    "amount": money_round(order.total),
+                    "tip": float(order_tip),
+                    "adjusted": any(tip_map.get(p.payment_id) is not None for p in order.payments),
+                    "method": "card",
+                    "status": "closed",
+                })
+            else:
+                # Cash-only closed orders — no tip adjustment needed
+                check_label = order.check_number if order.check_number else order.order_id
+                checks_list.append({
+                    "checkId": order.order_id,
+                    "checkLabel": check_label,
+                    "paymentId": None,
+                    "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                    "amount": money_round(order.total),
+                    "tip": 0,
+                    "adjusted": True,
+                    "method": "cash",
+                    "status": "closed",
+                })
+        elif order.status == "open":
+            check_label = order.check_number if order.check_number else order.order_id
+            checks_list.append({
+                "checkId": order.order_id,
+                "checkLabel": check_label,
+                "paymentId": None,
+                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                "amount": money_round(order.subtotal),
+                "tip": 0,
+                "adjusted": False,
+                "method": None,
+                "status": "open",
+            })
+
+    net_sales = float(gross_sales - void_total - discount_total)
+    total_checks = closed_count + open_count
+    avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
+    unadjusted = sum(1 for c in checks_list if not c["adjusted"])
+
+    # Build daypart breakdown from hourly buckets
+    dayparts = []
+    am_net, am_chk = _ZERO, 0
+    pm_net, pm_chk = _ZERO, 0
+    late_net, late_chk = _ZERO, 0
+    for h, bucket in hourly.items():
+        if h < 12:
+            am_net += bucket["net"]; am_chk += bucket["checks"]
+        elif h < 17:
+            pm_net += bucket["net"]; pm_chk += bucket["checks"]
+        else:
+            late_net += bucket["net"]; late_chk += bucket["checks"]
+    if am_chk:
+        dayparts.append({"name": "AM", "sales": money_round(float(am_net)), "checks": am_chk})
+    if pm_chk:
+        dayparts.append({"name": "PM", "sales": money_round(float(pm_net)), "checks": pm_chk})
+    if late_chk:
+        dayparts.append({"name": "Late", "sales": money_round(float(late_net)), "checks": late_chk})
 
     return {
+        "date": __import__("datetime").date.today().isoformat(),
         "open_orders": open_count,
         "closed_orders": closed_count,
-        "total_sales": round(total_sales, 2),
-        "total_tips": round(total_tips, 2),
-        "cash_total": round(cash_total, 2),
-        "card_total": round(card_total, 2),
+        "voided_orders": voided_count,
+        "gross_sales": money_round(float(gross_sales)),
+        "void_total": money_round(float(void_total)),
+        "void_count": voided_count,
+        "discount_total": money_round(float(discount_total)),
+        "discount_count": discount_count,
+        "net_sales": money_round(net_sales),
+        "tax_total": money_round(float(tax_total)),
+        "cash_total": money_round(float(cash_total)),
+        "cash_count": cash_count,
+        "card_total": money_round(float(card_total)),
+        "card_count": card_count,
+        "total_sales": money_round(net_sales + float(tax_total)),
+        "total_tips": money_round(float(total_tips)),
+        "card_tips": money_round(float(card_tips)),
+        "cash_tips": money_round(float(cash_tips)),
+        "total_checks": total_checks,
+        "avg_check": avg_check,
+        "guest_count": guest_count,
+        "unadjusted_tips": unadjusted,
+        "dayparts": dayparts,
+        "categories": [
+            {**c, "total": money_round(float(c["total"]))} for c in categories.values()
+        ],
         "payments": payments_list,
+        "checks": checks_list,
+        "closed_order_ids": closed_order_ids,
     }
 
 
@@ -417,6 +624,19 @@ async def add_item(
         seat_number=request.seat_number,
     )
     await ledger.append(event)
+
+    # Emit MODIFIER_APPLIED events for inline modifiers from the frontend
+    for mod in (request.modifiers or []):
+        mod_event = modifier_applied(
+            terminal_id=settings.terminal_id,
+            order_id=order_id,
+            item_id=item_id,
+            modifier_id=f"mod_{uuid.uuid4().hex[:8]}",
+            modifier_name=mod.name,
+            modifier_price=mod.price if mod.charged else 0.0,
+            action="add",
+        )
+        await ledger.append(mod_event)
 
     # Return updated order
     order = await get_order_or_404(ledger, order_id)
@@ -629,6 +849,36 @@ async def close_order(
     return OrderResponse.from_order(order)
 
 
+@router.post("/{order_id}/reopen", response_model=OrderResponse)
+async def reopen_order(
+        order_id: str,
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Reopen a closed order."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status == "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order is already open"
+        )
+
+    if order.status == "voided":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reopen a voided order"
+        )
+
+    event = order_reopened(
+        terminal_id=settings.terminal_id,
+        order_id=order_id,
+    )
+    await ledger.append(event)
+
+    order = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(order)
+
+
 @router.post("/{order_id}/void", response_model=OrderResponse)
 async def void_order(
         order_id: str,
@@ -649,6 +899,51 @@ async def void_order(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot void a closed order"
         )
+
+    # Reverse confirmed card payments on the payment device
+    from .payment_routes import get_payment_manager, _ensure_devices
+    from app.core.adapters.base_payment import TransactionRequest as TxReq
+    device_void_errors = []
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+    for p in order.payments:
+        if p.status == "confirmed" and p.method != "cash" and p.transaction_id:
+            device = manager.get_device_for_terminal(settings.terminal_id)
+            if device and hasattr(device, 'initiate_void'):
+                try:
+                    void_req = TxReq(
+                        order_id=order_id,
+                        amount=p.amount,
+                        terminal_id=settings.terminal_id,
+                        transaction_id=p.transaction_id,
+                    )
+                    result = await device.initiate_void(void_req)
+                    if result.status.value != "APPROVED":
+                        device_void_errors.append(
+                            f"Device void failed for payment {p.payment_id}: {result.status.value}"
+                        )
+                except Exception as e:
+                    device_void_errors.append(
+                        f"Device void error for payment {p.payment_id}: {str(e)}"
+                    )
+
+    if device_void_errors:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Cannot void order — card reversal failed: {'; '.join(device_void_errors)}",
+        )
+
+    # Emit refund-due events for any confirmed cash payments
+    for p in order.payments:
+        if p.status == "confirmed" and p.method == "cash":
+            refund_evt = cash_refund_due(
+                terminal_id=settings.terminal_id,
+                order_id=order_id,
+                payment_id=p.payment_id,
+                amount=p.amount,
+                reason=request.reason or "Order voided after cash payment",
+            )
+            await ledger.append(refund_evt)
 
     event = order_voided(
         terminal_id=settings.terminal_id,
@@ -732,45 +1027,63 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     closed_count = 0
     closed_order_ids = []
 
+    voided_at_close = 0
     for oid in open_ids:
         events = await ledger.get_events_by_correlation(oid)
         order = project_order(events)
         if order and order.status == "open":
-            evt = order_closed(
-                terminal_id=settings.terminal_id,
-                order_id=oid,
-                total=order.total,
-            )
-            await ledger.append(evt)
-            closed_count += 1
-            closed_order_ids.append(oid)
+            if order.is_fully_paid:
+                # Fully paid — safe to close
+                evt = order_closed(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    total=order.total,
+                )
+                await ledger.append(evt)
+                closed_count += 1
+                closed_order_ids.append(oid)
+            else:
+                # Unpaid or underpaid — void instead of closing
+                evt = order_voided(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    reason="Auto-voided at batch close (unpaid)",
+                    approved_by="system",
+                )
+                await ledger.append(evt)
+                voided_at_close += 1
 
     # Compute batch totals from current-day orders
     day_events = await get_current_day_events(ledger)
     all_orders = project_orders(day_events)
 
-    batch_total = 0.0
-    batch_cash = 0.0
-    batch_card = 0.0
+    batch_total = _ZERO
+    batch_cash = _ZERO
+    batch_card = _ZERO
     all_order_ids = []
     for order in all_orders.values():
         if order.status in ("closed", "paid"):
-            batch_total += order.total
+            batch_total += Decimal(str(order.total))
             all_order_ids.append(order.order_id)
             for p in order.payments:
                 if p.status == "confirmed":
                     if p.method == "cash":
-                        batch_cash += p.amount
+                        batch_cash += Decimal(str(p.amount))
                     else:
-                        batch_card += p.amount
+                        batch_card += Decimal(str(p.amount))
+
+    # Convert to float for event factories
+    batch_total_f = money_round(float(batch_total))
+    batch_cash_f = money_round(float(batch_cash))
+    batch_card_f = money_round(float(batch_card))
 
     # Emit BATCH_SUBMITTED with full settlement record
     submit_evt = batch_submitted(
         terminal_id=settings.terminal_id,
         order_count=len(all_order_ids),
-        total_amount=batch_total,
-        cash_total=batch_cash,
-        card_total=batch_card,
+        total_amount=batch_total_f,
+        cash_total=batch_cash_f,
+        card_total=batch_card_f,
         order_ids=all_order_ids,
     )
     await ledger.append(submit_evt)
@@ -786,9 +1099,9 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     return {
         "success": True,
         "orders_closed_now": closed_count,
-        "batch_total": round(batch_total, 2),
-        "cash_total": round(batch_cash, 2),
-        "card_total": round(batch_card, 2),
+        "batch_total": batch_total_f,
+        "cash_total": batch_cash_f,
+        "card_total": batch_card_f,
         "order_count": len(all_order_ids),
     }
 
@@ -811,52 +1124,71 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         events = await ledger.get_events_by_correlation(oid)
         order = project_order(events)
         if order and order.status in ("open", "paid"):
-            evt = order_closed(
-                terminal_id=settings.terminal_id,
-                order_id=oid,
-                total=order.total,
-            )
-            await ledger.append(evt)
-            closed_count += 1
+            if order.is_fully_paid:
+                evt = order_closed(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    total=order.total,
+                )
+                await ledger.append(evt)
+                closed_count += 1
+            else:
+                evt = order_voided(
+                    terminal_id=settings.terminal_id,
+                    order_id=oid,
+                    reason="Auto-voided at day close (unpaid)",
+                    approved_by="system",
+                )
+                await ledger.append(evt)
 
     # Build day summary BEFORE emitting boundary events
     all_events = await get_current_day_events(ledger)
     all_orders = project_orders(all_events)
 
     total_orders = len(all_orders)
-    total_sales = 0.0
-    total_tips = 0.0
-    cash_total = 0.0
-    card_total = 0.0
+    total_sales = _ZERO
+    total_tips = _ZERO
+    cash_total = _ZERO
+    card_total = _ZERO
     order_ids = []
     payment_count = 0
 
     for order in all_orders.values():
         if order.status in ("closed", "paid"):
-            total_sales += order.total
+            total_sales += Decimal(str(order.total))
             order_ids.append(order.order_id)
             for p in order.payments:
                 if p.status == "confirmed":
                     payment_count += 1
                     if p.method == "cash":
-                        cash_total += p.amount
+                        cash_total += Decimal(str(p.amount))
                     else:
-                        card_total += p.amount
+                        card_total += Decimal(str(p.amount))
 
+    # Use last-write-wins per payment_id (same logic as day-summary)
+    # to avoid double-counting when a tip is re-adjusted
+    tip_map: dict[str, float] = {}
     for e in all_events:
         if e.event_type == EventType.TIP_ADJUSTED:
-            total_tips += e.payload.get("tip_amount", 0.0)
+            tip_map[e.payload.get("payment_id", "")] = e.payload.get("tip_amount", 0.0)
+    total_tips = sum((Decimal(str(v)) for v in tip_map.values()), _ZERO)
 
     # First event timestamp = when the day started
     opened_at = all_events[0].timestamp.isoformat() if all_events else None
+
+    # Convert Decimal accumulators to float for event factories and output
+    total_sales_f = money_round(float(total_sales))
+    total_tips_f = money_round(float(total_tips))
+    cash_total_f = money_round(float(cash_total))
+    card_total_f = money_round(float(card_total))
 
     # Emit BATCH_SUBMITTED (settlement record)
     submit_evt = batch_submitted(
         terminal_id=settings.terminal_id,
         order_count=total_orders,
-        total_amount=total_sales,
-        cash_total=cash_total,
-        card_total=card_total,
+        total_amount=total_sales_f,
+        cash_total=cash_total_f,
+        card_total=card_total_f,
         order_ids=order_ids,
     )
     await ledger.append(submit_evt)
@@ -867,10 +1199,10 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         terminal_id=settings.terminal_id,
         date=today,
         total_orders=total_orders,
-        total_sales=total_sales,
-        total_tips=total_tips,
-        cash_total=cash_total,
-        card_total=card_total,
+        total_sales=total_sales_f,
+        total_tips=total_tips_f,
+        cash_total=cash_total_f,
+        card_total=card_total_f,
         order_ids=order_ids,
         payment_count=payment_count,
         opened_at=opened_at,
@@ -881,10 +1213,10 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         "date": today,
         "total_orders": total_orders,
         "orders_closed_now": closed_count,
-        "total_sales": round(total_sales, 2),
-        "total_tips": round(total_tips, 2),
-        "cash_total": round(cash_total, 2),
-        "card_total": round(card_total, 2),
+        "total_sales": total_sales_f,
+        "total_tips": total_tips_f,
+        "cash_total": cash_total_f,
+        "card_total": card_total_f,
         "order_ids": order_ids,
         "payment_count": payment_count,
         "opened_at": opened_at,

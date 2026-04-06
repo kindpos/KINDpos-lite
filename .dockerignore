@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+.venv
+.env
+*.db
+*.db-wal
+*.db-shm
+data/
+.git
+.idea
+*.md
+systemd/
+kindnostic/

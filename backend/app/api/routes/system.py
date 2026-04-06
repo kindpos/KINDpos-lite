@@ -23,9 +23,22 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/system", tags=["system"])
 
-# Project root: system.py is at core/backend/app/api/routes/system.py
-# So parents[5] = KINDpos project root
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
+# Project root: walk up from system.py until we find a directory containing 'backend' or 'app'
+# Works both locally (deep nesting) and in Docker (/app/app/api/routes/system.py)
+def _find_project_root() -> Path:
+    p = Path(__file__).resolve()
+    for parent in p.parents:
+        if (parent / "pytest.ini").exists() or (parent / "fly.toml").exists():
+            return parent
+        if (parent / "backend").is_dir() and (parent / "frontend").is_dir():
+            return parent
+    # Fallback: 5 levels up (original layout)
+    try:
+        return p.parents[5]
+    except IndexError:
+        return p.parents[len(p.parents) - 1]
+
+PROJECT_ROOT = _find_project_root()
 
 
 def classify_line(line: str) -> str:

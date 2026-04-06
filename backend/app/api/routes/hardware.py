@@ -7,10 +7,13 @@ MAC-as-identity: IPs change, MACs don't.
 import asyncio
 import os
 import socket
+import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional
 
 import aiosqlite
+import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -29,7 +32,7 @@ PRINTER_PORTS     = [9100, 9101, 9102]
 # LPD, IPP, HTTP management (some Epson models expose HTTP)
 PRINTER_PORTS_EXT = [515, 631, 80]
 # Dejavoo SPIN and common card reader ports
-CARD_READER_PORTS = [8443, 9443, 443, 8080]
+CARD_READER_PORTS = [8443, 9443, 443, 8080, 10009, 4443, 9000]
 
 ALL_SCAN_PORTS    = PRINTER_PORTS + PRINTER_PORTS_EXT + CARD_READER_PORTS
 
@@ -39,14 +42,26 @@ async def _ensure_db():
     async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS devices (
-                mac      TEXT PRIMARY KEY,
-                ip       TEXT NOT NULL,
-                type     TEXT NOT NULL,
-                name     TEXT NOT NULL,
-                port     INTEGER NOT NULL DEFAULT 9100,
-                saved_at TEXT NOT NULL
+                mac         TEXT PRIMARY KEY,
+                ip          TEXT NOT NULL,
+                type        TEXT NOT NULL,
+                name        TEXT NOT NULL,
+                port        INTEGER NOT NULL DEFAULT 9100,
+                register_id TEXT NOT NULL DEFAULT '',
+                tpn         TEXT NOT NULL DEFAULT '',
+                auth_key    TEXT NOT NULL DEFAULT '',
+                saved_at    TEXT NOT NULL
             )
         """)
+        # Migrate: add columns if missing (existing DBs)
+        async with db.execute("PRAGMA table_info(devices)") as cur:
+            cols = [row[1] async for row in cur]
+        if 'register_id' not in cols:
+            await db.execute("ALTER TABLE devices ADD COLUMN register_id TEXT NOT NULL DEFAULT ''")
+        if 'tpn' not in cols:
+            await db.execute("ALTER TABLE devices ADD COLUMN tpn TEXT NOT NULL DEFAULT ''")
+        if 'auth_key' not in cols:
+            await db.execute("ALTER TABLE devices ADD COLUMN auth_key TEXT NOT NULL DEFAULT ''")
         await db.commit()
 
 # ── Models ────────────────────────────────────────────────────────────────────
@@ -57,6 +72,9 @@ class DeviceRecord(BaseModel):
     type: str        # 'kitchen' | 'receipt' | 'card_reader'
     name: str
     port: int = 9100
+    register_id: str = ''  # SPIn Register ID for card readers
+    tpn: str = ''          # SPIn Terminal Processing Number
+    auth_key: str = ''     # SPIn Auth Key for card readers
 
 class TestRequest(BaseModel):
     mac: str
@@ -169,18 +187,28 @@ async def _probe_host(host: str):
         try:
             hit = await asyncio.wait_for(
                 loop.run_in_executor(None, _tcp_probe, host, port),
-                timeout=0.4
+                timeout=1.0
             )
             if hit:
                 mac   = _get_mac(host)
                 dtype = 'printer' if port in PRINTER_PORTS + PRINTER_PORTS_EXT else 'card_reader'
-                return {
+                result = {
                     'ip':   host,
                     'port': port,
                     'mac':  mac or f"UNKNOWN-{host.replace('.', '-')}",
                     'type': dtype,
                     'name': 'Thermal Printer' if dtype == 'printer' else 'Card Reader',
                 }
+                # Auto-detect SPIn details for card readers
+                if dtype == 'card_reader':
+                    spin = await _probe_spin(host, port)
+                    if spin.get('register_id'):
+                        result['register_id'] = spin['register_id']
+                    if spin.get('model'):
+                        result['name'] = spin['model']
+                    elif spin.get('status'):
+                        result['name'] = 'Dejavoo'
+                return result
         except (asyncio.TimeoutError, Exception):
             continue
     return None
@@ -189,7 +217,7 @@ async def _probe_host(host: str):
 def _tcp_probe(host: str, port: int) -> bool:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.35)
+            s.settimeout(0.8)
             s.connect((host, port))
             return True
     except Exception:
@@ -212,6 +240,32 @@ def _get_mac(ip: str) -> Optional[str]:
             continue
     return None
 
+
+async def _probe_spin(ip: str, port: int) -> dict:
+    """Probe a Dejavoo device via SPIn GET to auto-detect RegisterId and serial."""
+    xml = "<request><function>GetStatus</function><RegisterId></RegisterId></request>"
+    encoded = urllib.parse.quote(xml, safe='')
+    url = f"http://{ip}:{port}/spin/cgi.html?TerminalTransaction={encoded}"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200 and resp.text.strip():
+                body = resp.text.strip()
+                if body.startswith("<xmp>"): body = body[5:]
+                if body.endswith("</xmp>"): body = body[:-6]
+                body = urllib.parse.unquote(body.strip())
+                root = ET.fromstring(body)
+                return {
+                    "register_id": root.findtext("RegisterId") or root.findtext("TerminalId") or "",
+                    "serial":      root.findtext("SN") or root.findtext("SerialNo") or "",
+                    "model":       root.findtext("Model") or "",
+                    "status":      root.findtext("RespMSG") or root.findtext("Message") or "",
+                }
+    except Exception:
+        pass
+    return {}
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DEVICE CRUD
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -233,16 +287,19 @@ async def save_device(device: DeviceRecord):
     now = datetime.utcnow().isoformat()
     async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
         await db.execute("""
-            INSERT INTO devices (mac, ip, type, name, port, saved_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO devices (mac, ip, type, name, port, register_id, tpn, auth_key, saved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(mac) DO UPDATE SET
-                ip       = excluded.ip,
-                type     = excluded.type,
-                name     = excluded.name,
-                port     = excluded.port,
-                saved_at = excluded.saved_at
+                ip          = excluded.ip,
+                type        = excluded.type,
+                name        = excluded.name,
+                port        = excluded.port,
+                register_id = excluded.register_id,
+                tpn         = excluded.tpn,
+                auth_key    = excluded.auth_key,
+                saved_at    = excluded.saved_at
         """, (device.mac.upper(), device.ip, device.type,
-              device.name, device.port, now))
+              device.name, device.port, device.register_id, device.tpn, device.auth_key, now))
         await db.commit()
     return {**device.dict(), 'mac': device.mac.upper(), 'saved_at': now}
 
@@ -353,4 +410,32 @@ async def hardware_status():
         "status": "online",
         "db_path": HARDWARE_DB_PATH,
         "default_subnet": "10.0.0",
+        "endpoints": [
+            "/api/v1/hardware/scan",
+            "/api/v1/hardware/devices",
+            "/api/v1/hardware/test",
+            "/api/v1/hardware/test-print",
+            "/api/v1/hardware/test-connection",
+            "/api/v1/hardware/status",
+        ],
     }
+
+
+class TestConnectionRequest(BaseModel):
+    ip: str
+    port: int
+    timeout: float = 2.0
+
+
+@router.post("/test-connection")
+async def test_connection(req: TestConnectionRequest):
+    """Test raw TCP connectivity to an IP:port."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(req.timeout)
+        s.connect((req.ip, req.port))
+        s.close()
+        status = "online"
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        status = "unreachable"
+    return {"ip": req.ip, "port": req.port, "status": status}
