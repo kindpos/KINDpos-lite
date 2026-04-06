@@ -428,9 +428,9 @@ function buildMain(parentEl, params) {
   var bottom = document.createElement('div');
   bottom.style.cssText = [
     'display:grid;',
-    'grid-template-columns:1fr 1fr 1fr 1fr 1.3fr;',
-    'grid-template-rows:1fr 1fr;',
-    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;',
+    'grid-template-columns:1fr 1fr 1fr 1fr 1fr;',
+    'grid-template-rows:auto auto;',
+    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;row-gap:16px;',
     'position:relative;z-index:2;',
     'margin-top:-' + OVERLAP + 'px;',
   ].join('');
@@ -455,11 +455,11 @@ function buildMain(parentEl, params) {
   _tabModsBtn  = tabMods;
 
   var send = buildButton('SEND', {
-    fill: T.goGreen, color: T.bg, fontSize: '30px', fontFamily: T.fh,
+    fill: T.goGreen, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleSend(); },
   });
   send.style.gridColumn = '5';
-  send.style.gridRow    = '1 / 3';
+  send.style.gridRow    = '2';
 
   var disc  = buildButton('DISC', { fill: T.mint, color: T.bgDark, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleDiscount(); },
