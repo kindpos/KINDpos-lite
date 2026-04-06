@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════
 
 import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
-import { buildButton } from '../components.js';
+import { buildButton, showToast } from '../components.js';
 import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
@@ -860,17 +860,35 @@ async function handleSend() {
         }),
       });
     });
-    await Promise.all(itemPromises);
+    var results = await Promise.allSettled(itemPromises);
+    var anyFailed = false;
+    results.forEach(function(r, idx) {
+      if (r.status === 'fulfilled' && r.value.ok) {
+        unsentInstances[idx].sent = true;
+      } else {
+        anyFailed = true;
+        console.warn('[KINDpos] Item POST failed:', unsentInstances[idx].name,
+          r.status === 'rejected' ? r.reason : 'HTTP ' + r.value.status);
+      }
+    });
+    if (anyFailed) {
+      renderTicket();
+      throw new Error('Some items failed to send');
+    }
 
     // Step 3 — send to kitchen + trigger kitchen ticket print
     await fetch(API + '/orders/' + currentOrderId + '/send', { method: 'POST' });
 
-    // Mark all current instances as sent
+    // Mark remaining items as sent (order-level confirmation)
     ticket.forEach(function(inst) { inst.sent = true; });
 
     // Fire kitchen print — non-blocking, dispatcher handles retry
     fetch(API + '/print/ticket/' + currentOrderId, { method: 'POST' })
-      .catch(function(err) { console.warn('[KINDpos] Kitchen print failed:', err); });
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+      .catch(function(err) {
+        console.warn('[KINDpos] Kitchen print failed:', err);
+        showToast('Kitchen ticket print failed — check printer');
+      });
 
   } catch (err) {
     console.warn('[KINDpos] Send failed:', err);

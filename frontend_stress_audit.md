@@ -28,8 +28,8 @@
 | Severity | Count | Fixed | Open |
 |----------|-------|-------|------|
 | 🔴 CRITICAL | 5 | 5 | 0 |
-| 🟡 WARNING | 12 | 9 | 3 |
-| 🟢 INFO | 5 | 0 | 5 |
+| 🟡 WARNING | 12 | 11 | 0 |
+| 🟢 INFO | 6 | 0 | 6 |
 | 🆕 NEW (post-merge) | 4 | 4 | 0 |
 
 ---
@@ -118,33 +118,30 @@ Even if the second call arrives after `currentOrderId` is set, it re-POSTs all i
 
 ---
 
-### W-03: Promise.all partial failure leaves inconsistent item state
+### W-03: ~~Promise.all partial failure leaves inconsistent item state~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/order-entry.js:714-736`
+**File:** `frontend/js/scenes/order-entry.js:863`
+**Fix:** Replaced `Promise.all` with `Promise.allSettled`. Each item is now individually marked `sent: true` on success. If any fail, the ticket re-renders showing unsent items and throws so the user can retry.
 **Reproduction:** SEND with multiple items when server is partially reachable
-**Root cause:** `Promise.all(itemPromises)` rejects if ANY item POST fails. But some items may already be created server-side. All items stay `sent: false` locally (line 736 never executes), so retry re-POSTs already-created items as duplicates.
-
-**Suggested fix:** Use `Promise.allSettled()` and mark individual items as sent based on individual results. Or use a single batch POST endpoint.
+**Root cause:** `Promise.all(itemPromises)` rejects if ANY item POST fails. But some items may already be created server-side. All items stay `sent: false` locally, so retry re-POSTs already-created items as duplicates.
 
 ---
 
-### W-04: Fire-and-forget print calls with no retry or notification
+### W-04: ~~Fire-and-forget print calls with no retry or notification~~ ✅ FIXED
 
-**Files:** `payment.js:400-412`, `order-entry.js:739-740`
+**Files:** `payment.js:807`, `order-entry.js:872`, `components.js:38`
+**Fix:** Added `showToast()` utility to components.js. Print failures now show a self-dismissing toast ("Receipt print failed — check printer" / "Kitchen ticket print failed — check printer") for 4 seconds. Also checks HTTP status, not just network errors.
 **Reproduction:** Payment confirms, receipt printer is offline
-**Root cause:** Print calls use `.catch(function(err) { console.warn(...); })`. No retry. No user notification. Customer may not receive receipt; kitchen may not receive ticket.
-
-**Suggested fix:** Track print status and show a toast/alert if print fails. Add retry logic or at minimum surface the failure in UI.
+**Root cause:** Print calls used `.catch(function(err) { console.warn(...); })`. No user notification. Customer may not receive receipt; kitchen may not receive ticket.
 
 ---
 
-### W-05: Card CHARGE button fires without card reader confirmation
+### W-05: Card CHARGE button tappable before card insert → downgraded to INFO
 
-**File:** `frontend/js/scenes/payment.js:315-323`
+**File:** `frontend/js/scenes/payment.js:377-380`
+**Status:** Downgraded to 🟢 INFO. On re-inspection, `handleConfirm` POSTs to `/api/v1/payments/sale` for card payments (line 780), which contacts the card reader server-side. The backend gates authorization — tapping CHARGE early results in a proper DECLINED/ERROR result, not a false approval. No frontend fix needed.
 **Reproduction:** On card payment screen, tap CHARGE before card is inserted
-**Root cause:** `buildConfirmBtn` (line 316) is always visible and tappable. For card mode, `handleConfirm` skips the fetch (line 392-394, comment says "PaymentManager handles it") and proceeds directly to `replace('change-due')` at line 419 — showing "PAYMENT APPROVED" without actual card authorization.
-
-**Suggested fix:** Disable CHARGE button until card reader signals authorization, or gate `replace('change-due')` behind PaymentManager confirmation.
+**Root cause:** CHARGE button is always visible and tappable, but backend correctly handles premature taps.
 
 ---
 

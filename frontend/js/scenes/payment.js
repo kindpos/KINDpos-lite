@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer, applySunkenStyle, buildStyledButton } from '../tokens.js';
-import { buildButton } from '../components.js';
+import { buildButton, showToast } from '../components.js';
 import { registerScene, replace, overlay, dismissOverlay } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
@@ -805,7 +805,11 @@ async function handleConfirm(params) {
     // ── Receipt printing ──
     function queueReceipt(copyType) {
       fetch(API + '/print/receipt/' + params.orderId + '?copy_type=' + copyType, { method: 'POST' })
-        .catch(function(err) { console.warn('[KINDpos] Receipt print failed (' + copyType + '):', err); });
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+        .catch(function(err) {
+          console.warn('[KINDpos] Receipt print failed (' + copyType + '):', err);
+          showToast('Receipt print failed — check printer');
+        });
     }
 
     queueReceipt('customer');
