@@ -285,7 +285,23 @@ function handleClockOverlay(emp) {
       return { role_id: rid, name: matched ? matched.name : rid };
     });
 
-    showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects);
+    if (isClockedIn) {
+      // Fetch day summary to check for open orders / unadjusted tips
+      fetch('/api/v1/orders/day-summary?server_id=' + encodeURIComponent(emp.id))
+        .then(function(r) { return r.json(); })
+        .then(function(summary) {
+          var blockers = {
+            openChecks: summary.open_orders || 0,
+            unadjustedTips: summary.unadjusted_tips || 0,
+          };
+          showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects, blockers);
+        })
+        .catch(function() {
+          showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects, null);
+        });
+    } else {
+      showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects, null);
+    }
   }).catch(function() {
     if (_pinPromptEl) {
       _pinPromptEl.textContent = 'Network error';
@@ -294,7 +310,7 @@ function handleClockOverlay(emp) {
   });
 }
 
-function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
+function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects, blockers) {
   overlay('clock-io', {
     onBuild: function(el) {
       var panel = document.createElement('div');
@@ -340,10 +356,30 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects) {
         infoEl.textContent = 'Clocked in since ' + timeStr;
         panel.appendChild(infoEl);
 
+        // Check for blockers before allowing clock-out
+        var hasBlockers = blockers && (blockers.openChecks > 0 || blockers.unadjustedTips > 0);
+
+        if (hasBlockers) {
+          var blockerEl = document.createElement('div');
+          blockerEl.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.red + ';text-align:center;line-height:1.4;';
+          var reasons = [];
+          if (blockers.openChecks > 0) reasons.push(blockers.openChecks + ' open check' + (blockers.openChecks > 1 ? 's' : ''));
+          if (blockers.unadjustedTips > 0) reasons.push(blockers.unadjustedTips + ' unadjusted tip' + (blockers.unadjustedTips > 1 ? 's' : ''));
+          blockerEl.textContent = reasons.join(', ');
+          panel.appendChild(blockerEl);
+
+          var hintEl = document.createElement('div');
+          hintEl.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.mutedText + ';text-align:center;';
+          hintEl.textContent = 'Complete checkout before clocking out';
+          panel.appendChild(hintEl);
+        }
+
         var outBtn = buildButton('CLOCK OUT', {
-          fill: T.red, color: '#ffffff', fontSize: '40px',
+          fill: hasBlockers ? T.darkBtn : T.red,
+          color: hasBlockers ? T.mutedText : '#ffffff',
+          fontSize: '40px',
           width: 340, height: 70,
-          onTap: function() { doClockOut(emp, empRoleObjects[0].name, statusEl); },
+          onTap: hasBlockers ? function() {} : function() { doClockOut(emp, empRoleObjects[0].name, statusEl); },
         });
         panel.appendChild(outBtn);
       } else if (empRoleObjects.length === 1) {
