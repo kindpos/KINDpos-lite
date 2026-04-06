@@ -555,7 +555,10 @@ function addToTicket(item) {
   if (activeTab === 'modifiers') {
     // Apply modifier to all selected instances
     var selected = ticket.filter(function(i) { return i.selected; });
-    if (selected.length === 0) return;
+    if (selected.length === 0) {
+      showToast('Select an item first', { bg: '#555', duration: 2000 });
+      return;
+    }
     var pfx = PREFIXES.find(function(p) { return p.id === activePrefix; });
     var modName = (pfx ? pfx.label + ' ' : '') + name;
     var charged = price > 0;
