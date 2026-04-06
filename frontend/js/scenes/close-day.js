@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
-import { buildButton, buildGap } from '../components.js';
+import { buildButton, buildGap, showToast } from '../components.js';
 import { registerScene, push, pop, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
@@ -510,7 +510,10 @@ function doZeroAll(state) {
     fetch('/api/v1/payments/zero-unadjusted', { method: 'POST' })
       .then(function(r) { return r.json(); })
       .then(function() { refreshScene(); })
-      .catch(function(err) { console.error('[KINDpos] Zero all failed:', err); });
+      .catch(function(err) {
+        console.error('[KINDpos] Zero all failed:', err);
+        showToast('Zero-all failed — check connection');
+      });
   }).catch(function() {});
 }
 
@@ -921,14 +924,17 @@ function openPinGate(onSuccess) {
 
 function doCloseDay(state) {
   fetch('/api/v1/orders/close-day', { method: 'POST' })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function(data) {
       console.log('[KINDpos] Day closed:', data);
       pop();
     })
     .catch(function(err) {
       console.error('[KINDpos] Close day failed:', err);
-      pop();
+      showToast('Close day failed — check connection');
     });
 }
 
