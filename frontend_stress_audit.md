@@ -30,7 +30,7 @@
 | 🔴 CRITICAL | 5 | 5 | 0 |
 | 🟡 WARNING | 12 | 3 | 9 |
 | 🟢 INFO | 5 | 0 | 5 |
-| 🆕 NEW (post-merge) | 4 | 0 | 4 |
+| 🆕 NEW (post-merge) | 4 | 4 | 0 |
 
 ---
 
@@ -262,42 +262,43 @@ PIN entry numpad allows rapid digit entry. Not a crash risk (maxDigits: 6 caps i
 
 ## 🆕 New Findings (Post-Merge Re-Audit)
 
-### N-01: Unguarded async saveDevice in settings — ADD ANYWAY button
+### N-01: ~~Unguarded async saveDevice in settings — ADD ANYWAY button~~ ✅ FIXED
 
 **File:** `frontend/js/scenes/settings.js:791`
+**Fix:** `_savingDevice` guard flag — checked at entry, set true, reset in finally block.
 **Reproduction:** Tap //ADD ANYWAY// twice rapidly on manual device add screen
 **Root cause:** `onTap: async function() { await saveDevice({...}); }` — no guard flag. Two rapid taps = two POST `/api/v1/hardware/devices` with same MAC.
 **Impact:** Duplicate device entries in device registry.
-**Suggested fix:** Add `isSavingDevice` guard flag, same pattern as `isSending` in order-entry.js.
 
 ---
 
-### N-02: Unguarded async saveDevice in settings — SAVE confirm button
+### N-02: ~~Unguarded async saveDevice in settings — SAVE confirm button~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/settings.js:1062`
+**File:** `frontend/js/scenes/settings.js:1067`
+**Fix:** `_savingDevice` guard flag — same pattern as N-01.
 **Reproduction:** Tap //SAVE// twice rapidly on device confirm screen
 **Root cause:** Same as N-01 — `await saveDevice()` with no concurrency guard.
 **Impact:** Duplicate device save.
-**Suggested fix:** Same `isSavingDevice` guard.
 
 ---
 
-### N-03: Unguarded async saveDevice in settings — SAVE edit button
+### N-03: ~~Unguarded async saveDevice in settings — SAVE edit button~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/settings.js:1317`
+**File:** `frontend/js/scenes/settings.js:1322`
+**Fix:** `_savingDevice` guard flag — same pattern as N-01.
 **Reproduction:** Tap //SAVE// twice rapidly on device edit screen
 **Root cause:** Same pattern — unguarded async saveDevice call.
-**Suggested fix:** Same `isSavingDevice` guard.
 
 ---
 
-### N-04: Unguarded async deleteDevice in settings — Remove button (no confirmation)
+### N-04: ~~Unguarded async deleteDevice in settings — Remove button~~ ✅ FIXED
 
-**File:** `frontend/js/scenes/settings.js:1333`
+**File:** `frontend/js/scenes/settings.js:1338`
+**Fix:** `_savingDevice` guard flag — prevents double-tap firing two DELETE requests.
 **Reproduction:** Tap Remove twice rapidly on device list
 **Root cause:** `onTap: async function() { await deleteDevice(dev.mac); }` — no guard, no confirmation interrupt.
 **Impact:** Double DELETE request. No undo.
-**Suggested fix:** Add `isDeletingDevice` guard flag AND a confirmation interrupt before delete.
+**Note:** Confirmation interrupt before delete would be ideal but requires importing `interrupt` from scene-manager (out of scope for this fix).
 
 ---
 

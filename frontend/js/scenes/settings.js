@@ -45,6 +45,7 @@ var state = {
 };
 
 var rootEl = null;
+var _savingDevice = false;   // guard against double-tap on save/delete
 
 var HW_NAVS = [
   { id: 'readers',  label: 'Card Readers'   },
@@ -789,18 +790,22 @@ function renderManualAdd(ip, card) {
   footer.appendChild(buildButton('//ADD ANYWAY//', {
     fill: GOLD, color: DARK, fontSize: T.fsBtn, height: 48,
     onTap: async function() {
-      await saveDevice({
-        mac:  'MANUAL-' + ip.replace(/\./g, '-'),
-        ip:   ip,
-        type: selectedType,
-        name: deviceName || selectedType,
-        port: selectedType === 'card_reader' ? 9000 : 9100,
-        register_id: selectedType === 'card_reader' ? registerId : '',
-        tpn: selectedType === 'card_reader' ? tpnVal : '',
-        auth_key: selectedType === 'card_reader' ? authVal : '',
-      });
-      state.addStep = 'choose';
-      renderCurrentState();
+      if (_savingDevice) return;
+      _savingDevice = true;
+      try {
+        await saveDevice({
+          mac:  'MANUAL-' + ip.replace(/\./g, '-'),
+          ip:   ip,
+          type: selectedType,
+          name: deviceName || selectedType,
+          port: selectedType === 'card_reader' ? 9000 : 9100,
+          register_id: selectedType === 'card_reader' ? registerId : '',
+          tpn: selectedType === 'card_reader' ? tpnVal : '',
+          auth_key: selectedType === 'card_reader' ? authVal : '',
+        });
+        state.addStep = 'choose';
+        renderCurrentState();
+      } finally { _savingDevice = false; }
     },
   }));
 
@@ -1060,15 +1065,19 @@ function renderConfirmDevice(card) {
   footer.appendChild(buildButton('//SAVE//', {
     fill: GOLD, color: DARK, fontSize: T.fsSmall, height: 48,
     onTap: async function() {
-      await saveDevice({
-        mac: dev.mac, ip: dev.ip, type: selectedType,
-        name: deviceName || selectedType,
-        port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
-        register_id: selectedType === 'card_reader' ? registerId2 : '',
-        tpn: selectedType === 'card_reader' ? tpnVal2 : '',
-        auth_key: selectedType === 'card_reader' ? authVal2 : '',
-      });
-      state.addStep = 'choose'; state.foundDevice = null; renderCurrentState();
+      if (_savingDevice) return;
+      _savingDevice = true;
+      try {
+        await saveDevice({
+          mac: dev.mac, ip: dev.ip, type: selectedType,
+          name: deviceName || selectedType,
+          port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
+          register_id: selectedType === 'card_reader' ? registerId2 : '',
+          tpn: selectedType === 'card_reader' ? tpnVal2 : '',
+          auth_key: selectedType === 'card_reader' ? authVal2 : '',
+        });
+        state.addStep = 'choose'; state.foundDevice = null; renderCurrentState();
+      } finally { _savingDevice = false; }
     },
   }));
   footer.appendChild(buildButton('Back', {
@@ -1315,25 +1324,33 @@ function renderEditDevice(card) {
   footer.appendChild(buildButton('//SAVE//', {
     fill: GOLD, color: DARK, fontSize: T.fsBtn, height: 44,
     onTap: async function() {
-      await saveDevice({
-        mac: dev.mac, ip: dev.ip, type: selectedType,
-        name: deviceName || selectedType,
-        port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
-        register_id: selectedType === 'card_reader' ? registerId3 : '',
-        tpn: selectedType === 'card_reader' ? tpnVal3 : '',
-        auth_key: selectedType === 'card_reader' ? authVal3 : '',
-      });
-      state.editingDevice = null;
-      renderCurrentState();
+      if (_savingDevice) return;
+      _savingDevice = true;
+      try {
+        await saveDevice({
+          mac: dev.mac, ip: dev.ip, type: selectedType,
+          name: deviceName || selectedType,
+          port: selectedType === 'card_reader' ? (dev.port || 9000) : (dev.port || 9100),
+          register_id: selectedType === 'card_reader' ? registerId3 : '',
+          tpn: selectedType === 'card_reader' ? tpnVal3 : '',
+          auth_key: selectedType === 'card_reader' ? authVal3 : '',
+        });
+        state.editingDevice = null;
+        renderCurrentState();
+      } finally { _savingDevice = false; }
     },
   }));
 
   footer.appendChild(buildButton('Remove', {
     fill: T.red, color: '#fff', fontSize: T.fsBtn, height: 44,
     onTap: async function() {
-      await deleteDevice(dev.mac);
-      state.editingDevice = null;
-      renderCurrentState();
+      if (_savingDevice) return;
+      _savingDevice = true;
+      try {
+        await deleteDevice(dev.mac);
+        state.editingDevice = null;
+        renderCurrentState();
+      } finally { _savingDevice = false; }
     },
   }));
 
