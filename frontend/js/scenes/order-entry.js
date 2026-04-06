@@ -845,7 +845,7 @@ function renderAppliedModsLog(panel) {
 
   if (modifierSession.appliedMods.length === 0) {
     var empty = document.createElement('div');
-    empty.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.dimText + ';text-align:center;padding:4px 0;';
+    empty.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mutedText + ';text-align:center;padding:4px 0;';
     empty.textContent = 'No modifiers applied';
     log.appendChild(empty);
     return;
@@ -1122,15 +1122,15 @@ function renderTicket() {
       ].join('');
 
       var gRow = document.createElement('div');
-      gRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
+      gRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:3px 8px;';
 
       var allSent = instances.every(function(i) { return i.sent; });
       var gName = document.createElement('span');
-      gName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.mint + ';';
+      gName.style.cssText = 'font-family:' + T.fb + ';font-size:26px;font-weight:bold;color:' + T.mint + ';';
       gName.textContent = (allSent ? '\u2713 ' : '') + (instances.length > 1 ? instances.length + '\u00d7 ' : '') + name;
 
       var gPrice = document.createElement('span');
-      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.mint + ';';
+      gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:26px;font-weight:bold;color:' + T.mint + ';';
       gPrice.textContent = '$' + groupPrice.toFixed(2);
 
       gRow.appendChild(gName);
@@ -1149,8 +1149,8 @@ function renderTicket() {
         gc.appendChild(sep);
         chargedMods.forEach(function(m) {
           var dn = m.name;
-          if (m.prefix === 'Left') dn = '(L) ' + m.name;
-          else if (m.prefix === 'Right') dn = '(R) ' + m.name;
+          if (m.prefix === 'Left' && dn.indexOf('(L)') === -1) dn = '(L) ' + m.name;
+          else if (m.prefix === 'Right' && dn.indexOf('(R)') === -1) dn = '(R) ' + m.name;
           gc.appendChild(buildModRow(dn, m.price, true, false));
         });
       }
@@ -1174,29 +1174,29 @@ function renderTicket() {
       // ── Individual instance cards ─────────────────
       instances.forEach(function(inst) {
         var active = isSelected(inst);
-        // New selection style: mint left border + subtle bg tint
-        var bg     = active ? 'rgba(198,255,187,0.08)' : '#333333';
+        var bg     = active ? '#2a3a28' : '#333333';
         var fg     = T.mint;
-        var borderColor = T.mint;
+        var fsName = active ? T.fsItem : '26px';
+        var fsMod  = active ? T.fsMod  : '24px';
 
         var ic = document.createElement('div');
         ic.style.cssText = [
           'flex-shrink:0;cursor:pointer;touch-action:manipulation;',
           'background:' + bg + ';',
-          'border:4px solid ' + borderColor + ';',
+          'border:4px solid ' + T.mint + ';',
           (active ? 'border-left:4px solid ' + T.mint + ';' : ''),
           'margin-bottom:2px;',
         ].join('');
 
         var iRow = document.createElement('div');
-        iRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
+        iRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:' + (active ? '5px 8px' : '3px 8px') + ';';
 
         var iName = document.createElement('span');
-        iName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + fg + ';';
+        iName.style.cssText = 'font-family:' + T.fb + ';font-size:' + fsName + ';font-weight:bold;color:' + fg + ';';
         iName.textContent = (inst.sent ? '\u2713 ' : '') + (active ? '\u25cf ' : '') + inst.name;
 
         var iPrice = document.createElement('span');
-        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + fg + ';';
+        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + fsName + ';font-weight:bold;color:' + fg + ';';
         var total = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
         iPrice.textContent = '$' + total.toFixed(2);
 
@@ -1210,31 +1210,30 @@ function renderTicket() {
           : inst.mods.filter(function(m) { return m.charged; });
 
         if (visibleMods.length > 0) {
-          ic.appendChild(buildSeparator());
+          // Partition into whole / left / right
+          var wholeMods = [];
+          var leftMods = [];
+          var rightMods = [];
           visibleMods.forEach(function(m) {
-            var displayName = m.name;
-            if (m.prefix === 'Left') displayName = '(L) ' + m.name;
-            else if (m.prefix === 'Right') displayName = '(R) ' + m.name;
-            var modRow = buildModRow(displayName, m.price, false, true);
-            // Tap mod row to remove modifier when in modifiers tab and item is selected
-            if (active && activeTab === 'modifiers') {
-              modRow.style.cursor = 'pointer';
-              modRow.style.textDecoration = 'none';
-              modRow.addEventListener('pointerenter', function() { modRow.style.opacity = '0.6'; });
-              modRow.addEventListener('pointerleave', function() { modRow.style.opacity = '1'; });
-              (function(targetInst, targetMod) {
-                modRow.addEventListener('pointerup', function(e) {
-                  e.stopPropagation();
-                  var mi = targetInst.mods.indexOf(targetMod);
-                  if (mi !== -1) targetInst.mods.splice(mi, 1);
-                  modHistory = modHistory.filter(function(h) { return h.mod !== targetMod; });
-                  renderTicket();
-                  rebuildBottomBar();
-                });
-              })(inst, m);
-            }
-            ic.appendChild(modRow);
+            if (m.prefix === 'Left' || m.name.indexOf('(L)') !== -1) leftMods.push(m);
+            else if (m.prefix === 'Right' || m.name.indexOf('(R)') !== -1) rightMods.push(m);
+            else wholeMods.push(m);
           });
+
+          var hasHalf = leftMods.length > 0 || rightMods.length > 0;
+
+          // Render whole mods flat
+          if (wholeMods.length > 0) {
+            ic.appendChild(buildSeparator());
+            wholeMods.forEach(function(m) {
+              ic.appendChild(buildModRowSized(m.name, m.price, fsMod));
+            });
+          }
+
+          // Render L/R as a two-column table
+          if (hasHalf) {
+            ic.appendChild(buildHalfTable(leftMods, rightMods, fsMod));
+          }
         }
 
         ic.addEventListener('pointerup', function() {
@@ -1292,6 +1291,80 @@ function buildModRow(name, price, dark, showPrice) {
   row.appendChild(n);
   row.appendChild(p);
   return row;
+}
+
+function buildModRowSized(name, price, fontSize) {
+  var row = document.createElement('div');
+  row.style.cssText = [
+    'display:flex;justify-content:space-between;',
+    'padding:1px 8px 1px 16px;',
+    'font-family:' + T.fb + ';font-size:' + fontSize + ';font-weight:bold;',
+    'color:' + T.gold + ';',
+  ].join('');
+  var n = document.createElement('span');
+  n.textContent = name;
+  var p = document.createElement('span');
+  p.textContent = price > 0 ? '+$' + price.toFixed(2) : '';
+  row.appendChild(n);
+  if (price > 0) row.appendChild(p);
+  return row;
+}
+
+function buildHalfTable(leftMods, rightMods, fontSize) {
+  var table = document.createElement('div');
+  table.style.cssText = 'padding:2px 8px;';
+
+  // Divider
+  var divTop = document.createElement('div');
+  divTop.style.cssText = 'display:flex;border-bottom:1px solid ' + T.mintEdgeD + ';margin-bottom:1px;';
+  var hdrL = document.createElement('div');
+  hdrL.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';font-weight:bold;color:' + T.gold + ';text-align:center;';
+  hdrL.textContent = 'LEFT';
+  var hdrSep = document.createElement('div');
+  hdrSep.style.cssText = 'width:1px;background:' + T.mintEdgeD + ';margin:0 4px;';
+  var hdrR = document.createElement('div');
+  hdrR.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';font-weight:bold;color:' + T.gold + ';text-align:center;';
+  hdrR.textContent = 'RIGHT';
+  divTop.appendChild(hdrL);
+  divTop.appendChild(hdrSep);
+  divTop.appendChild(hdrR);
+  table.appendChild(divTop);
+
+  // Rows — zip left and right
+  var maxRows = Math.max(leftMods.length, rightMods.length);
+  for (var i = 0; i < maxRows; i++) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;';
+
+    var cellL = document.createElement('div');
+    cellL.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + T.mint + ';padding:0 4px;';
+    // Strip (L)/(R) and prefix from display name for cleaner table
+    cellL.textContent = leftMods[i] ? stripPlacementPrefix(leftMods[i].name) : '';
+
+    var sep = document.createElement('div');
+    sep.style.cssText = 'width:1px;background:' + T.mintEdgeD + ';margin:0 4px;';
+
+    var cellR = document.createElement('div');
+    cellR.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + T.mint + ';padding:0 4px;text-align:right;';
+    cellR.textContent = rightMods[i] ? stripPlacementPrefix(rightMods[i].name) : '';
+
+    row.appendChild(cellL);
+    row.appendChild(sep);
+    row.appendChild(cellR);
+    table.appendChild(row);
+  }
+
+  // Bottom divider
+  var divBot = document.createElement('div');
+  divBot.style.cssText = 'border-top:1px solid ' + T.mintEdgeD + ';margin-top:1px;';
+  table.appendChild(divBot);
+
+  return table;
+}
+
+function stripPlacementPrefix(name) {
+  // Remove "(L) ", "(R) " and prefix labels like "Add ", "No ", etc.
+  return name.replace(/^\(L\)\s*/, '').replace(/^\(R\)\s*/, '');
 }
 
 function handleVoid() {
