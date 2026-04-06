@@ -22,6 +22,7 @@ from ..events import (
     create_event
 )
 from ..event_ledger import EventLedger
+from ..money import money_round
 
 logger = logging.getLogger("kindpos.payment.manager")
 
@@ -54,7 +55,6 @@ class PaymentManager:
 
     async def initiate_sale(self, request: TransactionRequest, tax: float = 0.0) -> TransactionResult:
         """Core sale entry point with idempotency and event emission."""
-        self._pending_tax = tax  # stash for _emit_result_event
 
         # 5.1 Idempotency check
         existing_result = await self._check_idempotency(request.transaction_id)
@@ -68,7 +68,7 @@ class PaymentManager:
             return self._error_result(request.transaction_id, PaymentErrorCategory.SYSTEM, "NO_DEVICE", f"No payment device mapped to terminal {request.terminal_id}")
 
         device = self._devices[device_id]
-        
+
         # 5.2 Event Emission - Initiated
         event = self._create_payment_event(EventType.PAYMENT_INITIATED, request.dict())
         await self._ledger.append(event)
@@ -98,9 +98,8 @@ class PaymentManager:
             )
 
         # 5.2 Event Emission - Result (include tax captured at payment time)
-        from ..money import money_round
-        await self._emit_result_event(request, result, extra={"tax": money_round(self._pending_tax)})
-        
+        await self._emit_result_event(request, result, extra={"tax": money_round(tax)})
+
         return result
 
     async def _check_idempotency(self, transaction_id: str) -> Optional[TransactionResult]:
