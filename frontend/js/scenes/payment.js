@@ -6,7 +6,7 @@
 
 import { T, chamfer, applySunkenStyle, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, replace, overlay, dismissOverlay } from '../scene-manager.js';
+import { registerScene, replace, overlay, dismissOverlay, interrupt, resolveInterrupt } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
@@ -399,15 +399,135 @@ function buildCardPanel(params) {
 // ═══════════════════════════════════════════════════
 
 function activateResult(params, change) {
-  // Navigate to the change-due interrupt screen
-  var isCash = params.paymentMode === 'cash';
-  var amount = isCash ? params.cashPrice : params.cardTotal;
+  var isCash    = params.paymentMode === 'cash';
+  var hasChange = isCash && change > 0;
+  var amount    = isCash ? params.cashPrice : params.cardTotal;
+  var postAction = (window.KINDpos && window.KINDpos.postPaymentAction) || 'quick-service';
+  var countdownTimer = null;
 
-  replace('change-due', {
-    change:      change,
-    paymentMode: params.paymentMode,
-    total:       amount,
-    returnScene: params.returnScene || 'order-entry',
+  interrupt('change-due', {
+    reason: 'payment-complete',
+    onBuild: function(el) {
+      el.style.flexDirection = 'column';
+      el.style.gap = '20px';
+
+      // ── Interrupt card ──
+      var card = document.createElement('div');
+      card.style.cssText = [
+        'display:flex;flex-direction:column;align-items:center;',
+        'padding:32px 64px 28px;',
+        'background:' + T.bgDark + ';',
+        'min-width:480px;',
+      ].join('');
+      applySunkenStyle(card);
+
+      // Top label
+      var topLabel = document.createElement('div');
+      topLabel.style.cssText = [
+        'font-family:' + T.fh + ';font-size:32px;letter-spacing:0.18em;',
+        'color:' + T.mint + ';margin-bottom:20px;',
+      ].join('');
+      topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
+      card.appendChild(topLabel);
+
+      if (hasChange) {
+        var changeLabel = document.createElement('div');
+        changeLabel.style.cssText = [
+          'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';letter-spacing:0.14em;',
+          'color:' + T.mint + ';margin-bottom:4px;',
+        ].join('');
+        changeLabel.textContent = 'CHANGE DUE';
+        card.appendChild(changeLabel);
+
+        var changeAmount = document.createElement('div');
+        changeAmount.style.cssText = [
+          'font-family:' + T.fb + ';font-size:96px;font-weight:bold;',
+          'color:' + T.gold + ';line-height:1;letter-spacing:0.02em;',
+        ].join('');
+        changeAmount.textContent = '$' + change.toFixed(2);
+        card.appendChild(changeAmount);
+      } else {
+        var paidLabel = document.createElement('div');
+        paidLabel.style.cssText = [
+          'font-family:' + T.fh + ';font-size:40px;font-weight:bold;letter-spacing:0.1em;',
+          'color:' + T.mint + ';margin-bottom:8px;',
+        ].join('');
+        paidLabel.textContent = isCash ? 'EXACT CHANGE' : 'PAYMENT APPROVED';
+        card.appendChild(paidLabel);
+      }
+
+      // Charged sub-line
+      var chargedLine = document.createElement('div');
+      chargedLine.style.cssText = [
+        'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
+        'margin-top:12px;letter-spacing:0.06em;',
+      ].join('');
+      chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + amount.toFixed(2);
+      card.appendChild(chargedLine);
+
+      // Receipt printing
+      var printLine = document.createElement('div');
+      printLine.style.cssText = [
+        'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
+        'letter-spacing:0.12em;margin-top:16px;',
+      ].join('');
+      printLine.textContent = 'RECEIPT PRINTING...';
+      card.appendChild(printLine);
+
+      el.appendChild(card);
+
+      // ── Button row ──
+      var btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:20px;';
+
+      var confirmBtn = buildButton('NEW ORDER', {
+        fill: T.goGreen, color: T.bgDark, fontSize: '32px',
+        width: 220, height: 64,
+        onTap: function() {
+          if (countdownTimer) clearInterval(countdownTimer);
+          resolveInterrupt('order-entry');
+        },
+      });
+      btnRow.appendChild(confirmBtn);
+
+      var logoutBtn = buildButton('LOGOUT', {
+        fill: T.red, color: '#fff', fontSize: '32px',
+        width: 220, height: 64,
+        onTap: function() {
+          if (countdownTimer) clearInterval(countdownTimer);
+          resolveInterrupt('login');
+        },
+      });
+      btnRow.appendChild(logoutBtn);
+
+      el.appendChild(btnRow);
+
+      // Auto-logout countdown if configured
+      if (postAction === 'logout') {
+        var autoHint = document.createElement('div');
+        autoHint.style.cssText = [
+          'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
+          'letter-spacing:0.1em;',
+        ].join('');
+        autoHint.textContent = 'auto-logout in 8s...';
+        el.appendChild(autoHint);
+
+        var countdown = 8;
+        countdownTimer = setInterval(function() {
+          countdown--;
+          if (countdown <= 0) {
+            clearInterval(countdownTimer);
+            resolveInterrupt('login');
+          } else {
+            autoHint.textContent = 'auto-logout in ' + countdown + 's...';
+          }
+        }, 1000);
+      }
+    },
+  }).then(function(target) {
+    replace(target || 'order-entry', {});
+  }).catch(function() {
+    // Interrupt cancelled by navigation — no action needed
   });
 }
 
