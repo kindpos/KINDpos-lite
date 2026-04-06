@@ -80,9 +80,13 @@ must choose before the item is added to the ticket.
 
 ### Placement
 
-Mandatory modifier hexes (mod-groups, choices, and DONE) use `preferSpace: true`
-in `placeChain()`, which sorts candidate positions by **maximum border clearance**
-(farthest from the nearest edge). This prevents mod hexes from jamming into corners.
+All hex placement uses two strategies to avoid corner-jamming:
+1. **Center-facing**: `getChildPositions()` starts from the hex face pointing toward
+   the viewport center, so children bloom inward rather than into edges.
+2. **Look-ahead scoring**: `placeChain()` scores each candidate position by how many
+   child slots it opens up (phantom hex + future `getChildPositions` check). The
+   position with the most available child slots wins. This ensures parents "plan"
+   where to land so their children have room to bloom.
 
 ### Pulse Animation
 

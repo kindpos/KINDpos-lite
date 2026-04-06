@@ -87,22 +87,15 @@ export function HexNav(container, opts) {
     return occ;
   }
 
-  function getChildPositions(parent, childR, allHexes, towardCenter) {
+  function getChildPositions(parent, childR, allHexes) {
     var occ  = getOccupiedFaces(parent, allHexes);
     var dist = (parent.r + childR) * GAP + 8;
     var positions = [];
-    var startFace;
-    if (towardCenter) {
-      // Pick the face that points toward the viewport center
-      var toCenterAngle = Math.atan2(svgH / 2 - parent.y, svgW / 2 - parent.x);
-      // Convert angle to face index (face 0 = top, goes clockwise)
-      var normAngle = toCenterAngle + Math.PI / 2; // offset to match hex face 0 = top
-      if (normAngle < 0) normAngle += Math.PI * 2;
-      startFace = Math.round(normAngle / (Math.PI / 3)) % 6;
-    } else {
-      // Seed from parent position — deterministic per hex, varied between hexes
-      startFace = Math.abs(Math.floor(parent.x * 7 + parent.y * 3)) % 6;
-    }
+    // Always start from the face pointing toward the viewport center
+    var toCenterAngle = Math.atan2(svgH / 2 - parent.y, svgW / 2 - parent.x);
+    var normAngle = toCenterAngle + Math.PI / 2;
+    if (normAngle < 0) normAngle += Math.PI * 2;
+    var startFace = Math.round(normAngle / (Math.PI / 3)) % 6;
     for (var i = 0; i < 6; i++) {
       var face = (startFace + i) % 6;
       if (occ[face]) continue;
@@ -223,9 +216,8 @@ export function HexNav(container, opts) {
   // First child off parent, subsequent children off the
   // already-placed child nearest to parent, preferring
   // positions that face back toward the parent
-  function placeChain(parent, items, childR, locked, gravity, opts) {
+  function placeChain(parent, items, childR, locked, gravity) {
   var grav = gravity || parent;
-  var preferSpace = opts && opts.preferSpace;
   var placed = [];
 
   items.forEach(function(item, idx) {
@@ -234,7 +226,7 @@ export function HexNav(container, opts) {
     var candidates = [];
 
     sources.forEach(function(src) {
-      getChildPositions(src, childR, allHexes, preferSpace).forEach(function(pos) {
+      getChildPositions(src, childR, allHexes).forEach(function(pos) {
         candidates.push(pos);
       });
     });
@@ -255,29 +247,21 @@ export function HexNav(container, opts) {
       return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
     });
 
+    // Look-ahead: score each position by how many children it can fit
     var pos = null;
-    if (preferSpace) {
-      // Look-ahead: score each position by how many children it can fit
-      var bestScore = -1;
-      for (var j = 0; j < unique.length; j++) {
-        if (!noCollision(unique[j].x, unique[j].y, childR, allHexes)) continue;
-        var phantom = { x: unique[j].x, y: unique[j].y, r: childR };
-        var futureHexes = allHexes.concat([phantom]);
-        var slots = getChildPositions(phantom, childR, futureHexes, true);
-        var freeSlots = 0;
-        for (var s = 0; s < slots.length; s++) {
-          if (noCollision(slots[s].x, slots[s].y, childR, futureHexes)) freeSlots++;
-        }
-        if (freeSlots > bestScore) {
-          bestScore = freeSlots;
-          pos = unique[j];
-        }
+    var bestScore = -1;
+    for (var j = 0; j < unique.length; j++) {
+      if (!noCollision(unique[j].x, unique[j].y, childR, allHexes)) continue;
+      var phantom = { x: unique[j].x, y: unique[j].y, r: childR };
+      var futureHexes = allHexes.concat([phantom]);
+      var slots = getChildPositions(phantom, childR, futureHexes);
+      var freeSlots = 0;
+      for (var s = 0; s < slots.length; s++) {
+        if (noCollision(slots[s].x, slots[s].y, childR, futureHexes)) freeSlots++;
       }
-    } else {
-      for (var j = 0; j < unique.length; j++) {
-        if (noCollision(unique[j].x, unique[j].y, childR, allHexes)) {
-          pos = unique[j]; break;
-        }
+      if (freeSlots > bestScore) {
+        bestScore = freeSlots;
+        pos = unique[j];
       }
     }
 
@@ -484,7 +468,7 @@ export function HexNav(container, opts) {
     var allSatisfied = modState.groups.every(function(g) { return modState.satisfied[g.id]; });
     var totalCount = groupItems.length + (allSatisfied ? 1 : 0);
     var r = adaptiveR(SUBCAT_R, totalCount, svgW, svgH);
-    var placed = placeChain(itemHex, groupItems, r, locked, itemHex, { preferSpace: true });
+    var placed = placeChain(itemHex, groupItems, r, locked, itemHex);
     var catColor = state.cat ? state.cat.color : itemHex.color;
     var catText  = state.cat ? (state.cat.textColor || '#1a1a1a') : (itemHex.textColor || '#1a1a1a');
     placed.forEach(function(h) {
@@ -503,7 +487,7 @@ export function HexNav(container, opts) {
     // DONE hex — only when all groups satisfied, in cat/item color
     if (allSatisfied) {
       var doneItems = [{ id: '__done__', label: 'DONE', isDone: true }];
-      var donePlaced = placeChain(itemHex, doneItems, r, locked.concat(placed), itemHex, { preferSpace: true });
+      var donePlaced = placeChain(itemHex, doneItems, r, locked.concat(placed), itemHex);
       donePlaced.forEach(function(h) {
         h.type = 'done';
         h.color = catColor;
@@ -531,7 +515,7 @@ export function HexNav(container, opts) {
     });
 
     var r = adaptiveR(ITEM_R, choiceItems.length, svgW, svgH);
-    var placed = placeChain(modGroupHex, choiceItems, r, locked, modGroupHex, { preferSpace: true });
+    var placed = placeChain(modGroupHex, choiceItems, r, locked, modGroupHex);
     placed.forEach(function(h) {
       h.type = 'mod';
       h.color = T.mint;
