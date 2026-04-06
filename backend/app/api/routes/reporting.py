@@ -2,13 +2,14 @@
 Reporting API Routes
 
 Endpoints for sales and labor reporting summaries.
-Wired to real event ledger data — aggregates from today's orders and clock events.
+Supports both current-day and historical date queries via the event ledger.
 """
 
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
 from decimal import Decimal
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from collections import defaultdict
 
 from app.api.dependencies import get_ledger
 from app.core.event_ledger import EventLedger
@@ -20,6 +21,9 @@ router = APIRouter(prefix="/reports", tags=["reporting"])
 
 _ZERO = Decimal("0")
 
+# Revenue category map — items in these categories count as "Beverage"
+_BEVERAGE_CATS = {"Drinks", "Soda", "Beverage"}
+
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +31,17 @@ async def _get_current_day_events(ledger: EventLedger, limit: int = 50000):
     """Get events since the last day close (current business day)."""
     boundary = await ledger.get_last_day_close_sequence()
     return await ledger.get_events_since(boundary, limit=limit)
+
+
+async def _get_events_for_date(ledger: EventLedger, date_str: str, limit: int = 50000):
+    """Get events for a specific date — uses date range query for historical,
+    current-day query for today."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if date_str == today:
+        return await _get_current_day_events(ledger, limit=limit)
+    # Historical: query by date range
+    next_day = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+    return await ledger.get_events_by_date_range(date_str, next_day, limit=limit)
 
 
 def _hour_label(h: int) -> str:
@@ -52,7 +67,9 @@ def _aggregate_orders(orders, tip_map):
     total_checks = 0
     guest_count = 0
     table_set = set()
-    hourly = {}  # hour -> {net, checks}
+    hourly = {}          # hour -> {net, checks, tables, food, drink, other}
+    item_revenue = {}    # item_name -> {revenue, category, count}
+    tip_amounts = []     # list of individual tip values
 
     for order in orders:
         if order.status == "voided":
@@ -68,13 +85,39 @@ def _aggregate_orders(orders, tip_map):
 
         order_net = Decimal(str(order.subtotal)) - Decimal(str(order.discount_total))
 
+        # Per-item tracking
+        food_total = _ZERO
+        drink_total = _ZERO
+        for item in order.items:
+            item_sub = Decimal(str(item.subtotal))
+            cat = item.category or ""
+            if cat in _BEVERAGE_CATS:
+                drink_total += item_sub
+            else:
+                food_total += item_sub
+
+            # Top items tracking
+            key = item.name
+            if key not in item_revenue:
+                item_revenue[key] = {"revenue": _ZERO, "category": cat, "count": 0}
+            item_revenue[key]["revenue"] += item_sub
+            item_revenue[key]["count"] += item.quantity
+
+        other_total = order_net - food_total - drink_total
+        if other_total < 0:
+            other_total = _ZERO
+
         # Hourly bucket
         if order.created_at:
             h = order.created_at.hour
             if h not in hourly:
-                hourly[h] = {"net": _ZERO, "checks": 0, "tables": set()}
+                hourly[h] = {"net": _ZERO, "checks": 0, "tables": set(),
+                             "food": _ZERO, "drink": _ZERO, "other": _ZERO}
             hourly[h]["net"] += order_net
             hourly[h]["checks"] += 1
+            hourly[h]["food"] += food_total
+            hourly[h]["drink"] += drink_total
+            hourly[h]["other"] += other_total
             if order.table:
                 hourly[h]["tables"].add(order.table)
 
@@ -84,6 +127,8 @@ def _aggregate_orders(orders, tip_map):
                 continue
             tip = Decimal(str(tip_map.get(p.payment_id, p.tip_amount)))
             total_tips += tip
+            if float(tip) > 0:
+                tip_amounts.append(float(tip))
             if p.method == "cash":
                 cash_total += Decimal(str(p.amount))
                 cash_tips += tip
@@ -104,7 +149,50 @@ def _aggregate_orders(orders, tip_map):
         "guest_count": guest_count,
         "table_count": len(table_set),
         "hourly": hourly,
+        "item_revenue": item_revenue,
+        "tip_amounts": tip_amounts,
     }
+
+
+def _build_top_items(item_revenue, limit=10):
+    """Build top items list sorted by revenue descending."""
+    sorted_items = sorted(item_revenue.items(), key=lambda x: x[1]["revenue"], reverse=True)
+    return [
+        {
+            "name": name,
+            "revenue": money_round(float(data["revenue"])),
+            "category": data["category"],
+            "count": data["count"],
+        }
+        for name, data in sorted_items[:limit]
+    ]
+
+
+def _build_tip_buckets(tip_amounts):
+    """Build tip distribution histogram buckets."""
+    ranges = [
+        ("$0-3", 0, 3),
+        ("$3-5", 3, 5),
+        ("$5-8", 5, 8),
+        ("$8-12", 8, 12),
+        ("$12-15", 12, 15),
+        ("$15-20", 15, 20),
+        ("$20+", 20, 9999),
+    ]
+    buckets = []
+    for label, lo, hi in ranges:
+        count = sum(1 for t in tip_amounts if lo <= t < hi)
+        buckets.append({"range": label, "count": count})
+    return buckets
+
+
+def _build_tip_map(events):
+    """Build tip map from events (last-write-wins per payment_id)."""
+    tip_map = {}
+    for e in events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            tip_map[e.payload.get("payment_id")] = e.payload.get("tip_amount", 0.0)
+    return tip_map
 
 
 # ── sales-summary ──────────────────────────────────────────────────────────
@@ -120,14 +208,9 @@ async def get_sales_summary(
     Manager view (no server_id) returns house-level stats.
     Server view (with server_id) returns individual stats with tip details.
     """
-    all_events = await _get_current_day_events(ledger)
+    all_events = await _get_events_for_date(ledger, date)
     all_orders = project_orders(all_events)
-
-    # Build tip map (last-write-wins per payment_id)
-    tip_map = {}
-    for e in all_events:
-        if e.event_type == EventType.TIP_ADJUSTED:
-            tip_map[e.payload.get("payment_id")] = e.payload.get("tip_amount", 0.0)
+    tip_map = _build_tip_map(all_events)
 
     # Filter by server if requested
     orders = list(all_orders.values())
@@ -139,7 +222,7 @@ async def get_sales_summary(
     checks = agg["total_checks"]
     check_avg = money_round(net / checks) if checks > 0 else 0.0
 
-    # Build hourly_sales sorted by hour
+    # Build hourly_sales sorted by hour — include food/drink/other breakdown
     hourly_sales = []
     for h in sorted(agg["hourly"].keys()):
         bucket = agg["hourly"][h]
@@ -147,7 +230,65 @@ async def get_sales_summary(
             "hour": _hour_label(h),
             "net": money_round(float(bucket["net"])),
             "checks": bucket["checks"],
+            "food": money_round(float(bucket["food"])),
+            "drink": money_round(float(bucket["drink"])),
+            "other": money_round(float(bucket.get("other", 0))),
         })
+
+    # ── Last week comparison ──────────────────────────────────────────────
+    last_week_hourly = []
+    try:
+        lw_date = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=7)).strftime("%Y-%m-%d")
+        lw_events = await _get_events_for_date(ledger, lw_date)
+        lw_orders = project_orders(lw_events)
+        lw_tip_map = _build_tip_map(lw_events)
+        lw_list = list(lw_orders.values())
+        if server_id:
+            lw_list = [o for o in lw_list if o.server_id == server_id]
+        lw_agg = _aggregate_orders(lw_list, lw_tip_map)
+        for h in sorted(lw_agg["hourly"].keys()):
+            bucket = lw_agg["hourly"][h]
+            last_week_hourly.append({
+                "hour": _hour_label(h),
+                "net": money_round(float(bucket["net"])),
+                "checks": bucket["checks"],
+            })
+    except Exception:
+        pass
+
+    # ── Top items ─────────────────────────────────────────────────────────
+    top_items = _build_top_items(agg["item_revenue"])
+
+    # ── Peak hours heatmap (past 7 days) ──────────────────────────────────
+    peak_hours = []
+    try:
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        target_date = datetime.strptime(date, "%Y-%m-%d")
+        # Build grid for each of the last 7 days ending on target_date
+        for i in range(6, -1, -1):
+            d = target_date - timedelta(days=i)
+            d_str = d.strftime("%Y-%m-%d")
+            d_events = await _get_events_for_date(ledger, d_str)
+            d_orders = project_orders(d_events)
+            d_tip_map = _build_tip_map(d_events)
+            d_list = list(d_orders.values())
+            if server_id:
+                d_list = [o for o in d_list if o.server_id == server_id]
+            d_agg = _aggregate_orders(d_list, d_tip_map)
+            hours_data = []
+            for h in range(11, 23):  # 11am to 10pm
+                bucket = d_agg["hourly"].get(h, {})
+                hours_data.append({"hour": h, "value": bucket.get("checks", 0) if isinstance(bucket, dict) and "checks" in bucket else 0})
+            peak_hours.append({
+                "day": day_names[d.weekday()],
+                "hours": hours_data,
+            })
+    except Exception:
+        pass
+
+    # ── Tip buckets ───────────────────────────────────────────────────────
+    tip_buckets = _build_tip_buckets(agg["tip_amounts"])
+    tip_avg = money_round(sum(agg["tip_amounts"]) / len(agg["tip_amounts"])) if agg["tip_amounts"] else 0.0
 
     base = {
         "date": date,
@@ -157,8 +298,12 @@ async def get_sales_summary(
         "cash_total": money_round(float(agg["cash_total"])),
         "card_total": money_round(float(agg["card_total"])),
         "hourly_sales": hourly_sales,
-        "last_week_hourly": [],       # no historical data available yet
-        "daily_check_avg": [],        # no weekly trend data available yet
+        "last_week_hourly": last_week_hourly,
+        "top_items": top_items,
+        "peak_hours": peak_hours,
+        "tip_buckets": tip_buckets,
+        "tip_avg": tip_avg,
+        "daily_check_avg": [],
     }
 
     if server_id:
@@ -208,35 +353,30 @@ async def get_labor_summary(
     Manager view returns house-level labor stats.
     Server view returns individual employee details.
     """
-    # Get clock events
-    login_events = await ledger.get_events_by_type(EventType.USER_LOGGED_IN)
-    logout_events = await ledger.get_events_by_type(EventType.USER_LOGGED_OUT)
+    # Get clock events for the requested date
+    day_events = await _get_events_for_date(ledger, date)
 
-    # Build per-employee clock records: {eid: {name, clock_in, clock_out, hours}}
-    clock_ins = {}   # eid -> latest login event
-    clock_outs = {}  # eid -> latest logout event
+    # Filter login/logout events for this day
+    clock_ins = {}   # eid -> login event
+    clock_outs = {}  # eid -> logout event
     emp_names = {}   # eid -> name
 
-    for e in sorted(login_events, key=lambda x: x.sequence_number or 0):
-        eid = e.payload["employee_id"]
-        clock_ins[eid] = e
-        emp_names[eid] = e.payload["employee_name"]
-
-    for e in sorted(logout_events, key=lambda x: x.sequence_number or 0):
-        eid = e.payload["employee_id"]
-        clock_outs[eid] = e
-        emp_names[eid] = e.payload.get("employee_name", emp_names.get(eid, "Unknown"))
+    for e in sorted(day_events, key=lambda x: x.sequence_number or 0):
+        if e.event_type == EventType.USER_LOGGED_IN:
+            eid = e.payload["employee_id"]
+            clock_ins[eid] = e
+            emp_names[eid] = e.payload["employee_name"]
+        elif e.event_type == EventType.USER_LOGGED_OUT:
+            eid = e.payload["employee_id"]
+            clock_outs[eid] = e
+            emp_names[eid] = e.payload.get("employee_name", emp_names.get(eid, "Unknown"))
 
     # Also get order data for tip calculations
-    all_events = await _get_current_day_events(ledger)
-    all_orders = project_orders(all_events)
-
-    tip_map = {}
-    for e in all_events:
-        if e.event_type == EventType.TIP_ADJUSTED:
-            tip_map[e.payload.get("payment_id")] = e.payload.get("tip_amount", 0.0)
+    all_orders = project_orders(day_events)
+    tip_map = _build_tip_map(day_events)
 
     now = datetime.now(timezone.utc)
+    today_str = now.strftime("%Y-%m-%d")
 
     def _calc_hours(eid):
         """Calculate hours worked for an employee."""
@@ -245,32 +385,104 @@ async def get_labor_summary(
         if not login_ev:
             return 0.0
         start = login_ev.timestamp
-        # If clocked out after clock in, use that; otherwise still on clock
         if logout_ev and logout_ev.timestamp > start:
             end = logout_ev.timestamp
+        elif date == today_str:
+            end = now  # still on clock today
         else:
-            end = now
+            # Historical day without clock-out: assume 8 hour shift
+            end = start + timedelta(hours=8)
         delta = (end - start).total_seconds() / 3600.0
         return round(delta, 1)
 
     def _format_time(ev):
-        """Format event timestamp as HH:MM."""
         if not ev:
             return None
         return ev.timestamp.strftime("%H:%M")
 
     def _is_clocked_in(eid):
-        """Check if employee is currently clocked in."""
         login_ev = clock_ins.get(eid)
         logout_ev = clock_outs.get(eid)
         if not login_ev:
             return False
         if logout_ev and logout_ev.timestamp > login_ev.timestamp:
             return False
+        if date != today_str:
+            return False  # historical days are always "clocked out"
         return True
+
+    # ── Weekly hours: sum hours from past 7 days ──────────────────────────
+    async def _get_weekly_hours(eid):
+        """Sum hours for an employee over the past 7 days."""
+        total = 0.0
+        target = datetime.strptime(date, "%Y-%m-%d")
+        for i in range(7):
+            d = target - timedelta(days=i)
+            d_str = d.strftime("%Y-%m-%d")
+            if d_str == date:
+                total += _calc_hours(eid)
+                continue
+            d_events = await _get_events_for_date(ledger, d_str)
+            d_login = None
+            d_logout = None
+            for e in d_events:
+                if e.event_type == EventType.USER_LOGGED_IN and e.payload["employee_id"] == eid:
+                    d_login = e
+                elif e.event_type == EventType.USER_LOGGED_OUT and e.payload["employee_id"] == eid:
+                    d_logout = e
+            if d_login:
+                start = d_login.timestamp
+                end = d_logout.timestamp if (d_logout and d_logout.timestamp > start) else start + timedelta(hours=8)
+                total += round((end - start).total_seconds() / 3600.0, 1)
+        return round(total, 1)
+
+    # ── Weekly breakdown (for server view) ────────────────────────────────
+    async def _get_weekly_breakdown(eid):
+        """Build daily hours breakdown for the past 7 days."""
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        breakdown = []
+        target = datetime.strptime(date, "%Y-%m-%d")
+        for i in range(6, -1, -1):
+            d = target - timedelta(days=i)
+            d_str = d.strftime("%Y-%m-%d")
+            d_in = None
+            d_out = None
+            d_hours = 0.0
+            if d_str == date:
+                login_ev = clock_ins.get(eid)
+                logout_ev = clock_outs.get(eid)
+                d_in = _format_time(login_ev)
+                d_out = _format_time(logout_ev) if (logout_ev and login_ev and logout_ev.timestamp > login_ev.timestamp) else None
+                d_hours = _calc_hours(eid)
+            else:
+                d_events = await _get_events_for_date(ledger, d_str)
+                for e in d_events:
+                    if e.event_type == EventType.USER_LOGGED_IN and e.payload["employee_id"] == eid:
+                        d_in = e.timestamp.strftime("%H:%M")
+                        start_ts = e.timestamp
+                    elif e.event_type == EventType.USER_LOGGED_OUT and e.payload["employee_id"] == eid:
+                        d_out = e.timestamp.strftime("%H:%M")
+                if d_in:
+                    if d_out:
+                        start_ts_obj = datetime.strptime(d_in, "%H:%M")
+                        end_ts_obj = datetime.strptime(d_out, "%H:%M")
+                        d_hours = round((end_ts_obj - start_ts_obj).total_seconds() / 3600.0, 1)
+                        if d_hours < 0:
+                            d_hours = 0.0
+                    else:
+                        d_hours = 8.0
+            breakdown.append({
+                "day": day_names[d.weekday()],
+                "hours": d_hours,
+                "in": d_in,
+                "out": d_out,
+            })
+        return breakdown
 
     if server_id:
         hours = _calc_hours(server_id)
+        weekly_hours = await _get_weekly_hours(server_id)
+        weekly_breakdown = await _get_weekly_breakdown(server_id)
         login_ev = clock_ins.get(server_id)
         logout_ev = clock_outs.get(server_id)
 
@@ -284,18 +496,18 @@ async def get_labor_summary(
             "clock_in": clock_in_time,
             "clock_out": clock_out_time,
             "today_hours": hours,
-            "weekly_hours": hours,          # only today's data available
-            "weekly_breakdown": [],         # no historical data available yet
-            "ot_projected": hours,          # simple projection from current pace
-            "ot_buffer": max(0.0, 40.0 - hours),
-            "ot_status": "warning" if hours >= 8.0 else "ok",
+            "weekly_hours": weekly_hours,
+            "weekly_breakdown": weekly_breakdown,
+            "ot_projected": weekly_hours,
+            "ot_buffer": max(0.0, 40.0 - weekly_hours),
+            "ot_status": "warning" if weekly_hours >= 35.0 else "ok",
         }
 
     # Manager view — aggregate all employees
     all_eids = set(list(clock_ins.keys()) + list(clock_outs.keys()))
 
     # Compute per-server tips from orders
-    server_tips = {}  # eid -> total tips
+    server_tips = {}
     for order in all_orders.values():
         if order.status == "voided":
             continue
@@ -317,6 +529,7 @@ async def get_labor_summary(
     for eid in all_eids:
         hours = _calc_hours(eid)
         tips = float(server_tips.get(eid, 0))
+        weekly_hours = await _get_weekly_hours(eid)
         total_hours += Decimal(str(hours))
         card_tips_total += Decimal(str(tips))
 
@@ -327,24 +540,64 @@ async def get_labor_summary(
             "clock_in": _format_time(clock_ins.get(eid)),
             "clock_out": _format_time(clock_outs.get(eid)) if not _is_clocked_in(eid) else None,
             "tips": money_round(tips),
-            "weekly_hours": hours,  # only today's data available
+            "weekly_hours": weekly_hours,
         })
 
     tipout_percent = 2
     tipout_deducted = money_round(float(card_tips_total) * tipout_percent / 100)
     tip_pool = money_round(float(card_tips_total) - tipout_deducted)
 
-    # OT alerts: anyone at or over 8 hours today
+    # OT alerts: anyone at or over 35 weekly hours
     ot_alerts = []
     for emp in employees:
-        if emp["hours"] >= 8.0:
+        if emp["weekly_hours"] >= 35.0:
             ot_alerts.append({
                 "id": emp["id"],
                 "name": emp["name"],
-                "weekly_hours": emp["hours"],
-                "projected": emp["hours"],  # simple same-day projection
-                "status": "warning",
+                "weekly_hours": emp["weekly_hours"],
+                "projected": emp["weekly_hours"],
+                "status": "critical" if emp["weekly_hours"] > 40 else "warning",
             })
+
+    # ── COB trend (past 7 days) ───────────────────────────────────────────
+    cob_trend = []
+    try:
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        target = datetime.strptime(date, "%Y-%m-%d")
+        for i in range(6, -1, -1):
+            d = target - timedelta(days=i)
+            d_str = d.strftime("%Y-%m-%d")
+            # Get sales for the day
+            d_events = await _get_events_for_date(ledger, d_str)
+            d_orders = project_orders(d_events)
+            d_tip_map = _build_tip_map(d_events)
+            d_agg = _aggregate_orders(list(d_orders.values()), d_tip_map)
+            d_sales = float(d_agg["net_sales"])
+
+            # Get labor hours and cost for the day
+            d_labor_hours = 0.0
+            d_logins = {}
+            d_logouts = {}
+            for e in d_events:
+                if e.event_type == EventType.USER_LOGGED_IN:
+                    d_logins[e.payload["employee_id"]] = e
+                elif e.event_type == EventType.USER_LOGGED_OUT:
+                    d_logouts[e.payload["employee_id"]] = e
+            for eid, login_ev in d_logins.items():
+                logout_ev = d_logouts.get(eid)
+                start = login_ev.timestamp
+                end = logout_ev.timestamp if (logout_ev and logout_ev.timestamp > start) else start + timedelta(hours=8)
+                d_labor_hours += (end - start).total_seconds() / 3600.0
+
+            # Estimate labor cost at $15/hr average
+            labor_cost = d_labor_hours * 15.0
+            cob_pct = round(labor_cost / d_sales * 100, 1) if d_sales > 0 else 0.0
+            cob_trend.append({
+                "day": day_names[d.weekday()],
+                "percent": cob_pct,
+            })
+    except Exception:
+        pass
 
     return {
         "date": date,
@@ -353,8 +606,8 @@ async def get_labor_summary(
         "card_tips_total": money_round(float(card_tips_total)),
         "tipout_percent": tipout_percent,
         "tipout_deducted": tipout_deducted,
-        "cob_percent": 0.0,         # no expense data available yet
+        "cob_percent": cob_trend[-1]["percent"] if cob_trend else 0.0,
         "employees": employees,
         "ot_alerts": ot_alerts,
-        "cob_trend": [],             # no historical data available yet
+        "cob_trend": cob_trend,
     }

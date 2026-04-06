@@ -384,6 +384,48 @@ class EventLedger:
         row = await cursor.fetchone()
         return row[0] if row else 0
 
+    async def get_events_by_date_range(
+            self,
+            start_date: str,
+            end_date: str,
+            limit: int = 50000
+    ) -> list[Event]:
+        """Get events within a date range (YYYY-MM-DD format).
+
+        Returns events whose timestamp falls on or after start_date
+        and before end_date.
+        """
+        cursor = await self._db.execute(
+            """
+            SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
+                   payload, user_id, user_role, correlation_id, previous_checksum, checksum
+            FROM events
+            WHERE timestamp >= ? AND timestamp < ?
+            ORDER BY sequence_number ASC
+            LIMIT ?
+            """,
+            (start_date, end_date, limit)
+        )
+        rows = await cursor.fetchall()
+        return [self._row_to_event(row) for row in rows]
+
+    async def get_day_close_before_date(self, date_str: str) -> int:
+        """Get the sequence number of the DAY_CLOSED event just before a date.
+
+        Returns 0 if no day close exists before that date.
+        """
+        cursor = await self._db.execute(
+            """
+            SELECT sequence_number FROM events
+            WHERE event_type = 'day.closed' AND timestamp < ?
+            ORDER BY sequence_number DESC
+            LIMIT 1
+            """,
+            (date_str,)
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else 0
+
     async def get_unsynced_events(self, limit: int = 100) -> list[Event]:
         """Get events that haven't been synced to cloud."""
         cursor = await self._db.execute(

@@ -1,32 +1,38 @@
 {
   "employees": [
     {
-      "employee_id": "emp-001",
-      "name": "Alex",
+      "employee_id": "rose",
+      "name": "Rose N.",
       "role": "manager",
       "pin": "1234"
     },
     {
-      "employee_id": "emp-002",
-      "name": "Jordan",
+      "employee_id": "blanch",
+      "name": "Blanch D.",
       "role": "server",
       "pin": "5678"
     },
     {
-      "employee_id": "emp-003",
-      "name": "Sam",
+      "employee_id": "dorothy",
+      "name": "Dorothy S.",
       "role": "server",
-      "pin": "9012"
+      "pin": "1111"
     },
     {
-      "employee_id": "emp-004",
-      "name": "Casey",
-      "role": "server",
+      "employee_id": "sophia",
+      "name": "Sophia P.",
+      "role": "cook",
+      "pin": "2222"
+    },
+    {
+      "employee_id": "stan",
+      "name": "Stan Z.",
+      "role": "cook",
       "pin": "3456"
     }
   ],
   "restaurant": {
-    "name": "KIND BBQ",
+    "name": "KIND Pizza",
     "tax_rate": 0.06,
     "timezone": "America/New_York"
   }

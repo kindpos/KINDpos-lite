@@ -1,6 +1,6 @@
 """
 Seed script — appends menu categories, items, and modifier groups for the demo
-food truck menu.
+pizza shop menu.
 
 Usage (from backend/ directory):
     python seed_demo_data.py
@@ -20,58 +20,65 @@ from app.core.events import create_event, EventType
 # ── Categories ────────────────────────────────────────────────────────────────
 
 CATEGORIES = [
-    {"category_id": "combo",      "name": "Combo",      "label": "COMBO",      "color": "#d4a017", "display_order": 1},
-    {"category_id": "ribs",       "name": "Ribs",       "label": "RIBS",       "color": "#c0392b", "display_order": 2},
-    {"category_id": "sandwiches", "name": "Sandwiches", "label": "SANDWICHES", "color": "#7ac943", "display_order": 3},
-    {"category_id": "sides",      "name": "Sides",      "label": "SIDES",      "color": "#00bcd4", "display_order": 4},
-    {"category_id": "soda",       "name": "Soda",       "label": "SODA",       "color": "#2196f3", "display_order": 5},
+    {"category_id": "pizza",  "name": "Pizza",       "label": "PIZZA",  "color": "#c0392b", "display_order": 1},
+    {"category_id": "apps",   "name": "Appetizers",  "label": "APPS",   "color": "#d4a017", "display_order": 2},
+    {"category_id": "subs",   "name": "Subs",        "label": "SUBS",   "color": "#7ac943", "display_order": 3},
+    {"category_id": "sides",  "name": "Sides",       "label": "SIDES",  "color": "#00bcd4", "display_order": 4},
+    {"category_id": "drinks", "name": "Drinks",      "label": "DRINKS", "color": "#2196f3", "display_order": 5},
 ]
 
 # ── Menu Items ────────────────────────────────────────────────────────────────
 
 MENU_ITEMS = [
-    # Combo
-    {"item_id": "combo_half_rack",   "name": "Combo Half Rack",    "price": 16.00, "category": "Combo",      "display_order": 1},
-    {"item_id": "combo_pulled_pork", "name": "Combo Pulled Pork",  "price": 14.00, "category": "Combo",      "display_order": 2},
-    # Ribs
-    {"item_id": "full_rack",         "name": "Full Rack",          "price": 18.00, "category": "Ribs",       "display_order": 1},
-    {"item_id": "half_rack",         "name": "Half Rack",          "price": 12.00, "category": "Ribs",       "display_order": 2},
-    # Sandwiches
-    {"item_id": "pulled_pork",       "name": "Pulled Pork",        "price": 10.00, "category": "Sandwiches", "display_order": 1},
-    {"item_id": "sliced_brisket",    "name": "Sliced Brisket",     "price": 12.00, "category": "Sandwiches", "display_order": 2},
+    # Pizza
+    {"item_id": "lg_cheese",    "name": "Large Cheese",    "price": 14.00, "category": "Pizza",       "display_order": 1},
+    {"item_id": "lg_pepperoni", "name": "Large Pepperoni", "price": 16.00, "category": "Pizza",       "display_order": 2},
+    {"item_id": "lg_supreme",   "name": "Large Supreme",   "price": 18.00, "category": "Pizza",       "display_order": 3},
+    {"item_id": "sl_cheese",    "name": "Slice Cheese",    "price":  3.50, "category": "Pizza",       "display_order": 4},
+    {"item_id": "sl_pepperoni", "name": "Slice Pepperoni", "price":  4.00, "category": "Pizza",       "display_order": 5},
+    {"item_id": "calzone",      "name": "Calzone",         "price": 12.00, "category": "Pizza",       "display_order": 6},
+    # Appetizers
+    {"item_id": "garlic_knots", "name": "Garlic Knots",    "price":  6.00, "category": "Appetizers",  "display_order": 1},
+    {"item_id": "mozz_sticks",  "name": "Mozz Sticks",     "price":  8.00, "category": "Appetizers",  "display_order": 2},
+    {"item_id": "buffalo_wings","name": "Buffalo Wings",    "price": 10.00, "category": "Appetizers",  "display_order": 3},
+    {"item_id": "garlic_bread", "name": "Garlic Bread",    "price":  5.00, "category": "Appetizers",  "display_order": 4},
+    # Subs
+    {"item_id": "italian_sub",  "name": "Italian Sub",     "price": 10.00, "category": "Subs",        "display_order": 1},
+    {"item_id": "meatball_sub", "name": "Meatball Sub",    "price":  9.00, "category": "Subs",        "display_order": 2},
+    {"item_id": "chx_parm_sub", "name": "Chicken Parm Sub","price": 11.00, "category": "Subs",        "display_order": 3},
     # Sides
-    {"item_id": "fries",             "name": "Fries",              "price":  4.00, "category": "Sides",      "display_order": 1},
-    {"item_id": "baked_potato",      "name": "Baked Potato",       "price":  5.00, "category": "Sides",      "display_order": 2},
-    {"item_id": "slaw",              "name": "Slaw",               "price":  3.00, "category": "Sides",      "display_order": 3},
-    # Soda
-    {"item_id": "coke",              "name": "Coke",               "price":  3.00, "category": "Soda",       "display_order": 1},
-    {"item_id": "sprite",            "name": "Sprite",             "price":  3.00, "category": "Soda",       "display_order": 2},
-    {"item_id": "diet_coke",         "name": "Diet Coke",          "price":  3.00, "category": "Soda",       "display_order": 3},
-    {"item_id": "fanta",             "name": "Fanta",              "price":  3.00, "category": "Soda",       "display_order": 4},
+    {"item_id": "house_salad",  "name": "House Salad",     "price":  7.00, "category": "Sides",       "display_order": 1},
+    {"item_id": "caesar_salad", "name": "Caesar Salad",    "price":  8.00, "category": "Sides",       "display_order": 2},
+    {"item_id": "fries",        "name": "Fries",           "price":  4.00, "category": "Sides",       "display_order": 3},
+    # Drinks
+    {"item_id": "soda",         "name": "Soda",            "price":  2.50, "category": "Drinks",      "display_order": 1},
+    {"item_id": "iced_tea",     "name": "Iced Tea",        "price":  2.50, "category": "Drinks",      "display_order": 2},
+    {"item_id": "water",        "name": "Water",           "price":  1.50, "category": "Drinks",      "display_order": 3},
 ]
 
 # ── Modifier Groups ──────────────────────────────────────────────────────────
 
 MODIFIER_GROUPS = [
     {
-        "group_id": "sauce",
-        "name": "Sauce",
+        "group_id": "toppings",
+        "name": "Toppings",
         "modifiers": [
-            {"modifier_id": "sweet",   "name": "Sweet",   "price": 0.00},
-            {"modifier_id": "hot",     "name": "Hot",     "price": 0.00},
-            {"modifier_id": "mild",    "name": "Mild",    "price": 0.00},
-            {"modifier_id": "vinegar", "name": "Vinegar", "price": 0.00},
-            {"modifier_id": "mustard", "name": "Mustard", "price": 0.00},
+            {"modifier_id": "pepperoni",    "name": "Pepperoni",    "price": 1.50},
+            {"modifier_id": "sausage",      "name": "Sausage",      "price": 1.50},
+            {"modifier_id": "mushrooms",    "name": "Mushrooms",    "price": 1.00},
+            {"modifier_id": "onions",       "name": "Onions",       "price": 1.00},
+            {"modifier_id": "peppers",      "name": "Peppers",      "price": 1.00},
+            {"modifier_id": "extra_cheese", "name": "Extra Cheese", "price": 2.00},
         ],
     },
     {
-        "group_id": "extras",
-        "name": "Extras",
+        "group_id": "dressing",
+        "name": "Dressing",
         "modifiers": [
-            {"modifier_id": "extra_meat", "name": "Extra Meat",  "price": 3.00},
-            {"modifier_id": "cheese",     "name": "Cheese",      "price": 1.00},
-            {"modifier_id": "jalapenos",  "name": "Jalape\u00f1os",    "price": 0.50},
-            {"modifier_id": "onions",     "name": "Onions",      "price": 0.00},
+            {"modifier_id": "ranch",       "name": "Ranch",       "price": 0.00},
+            {"modifier_id": "blue_cheese", "name": "Blue Cheese", "price": 0.00},
+            {"modifier_id": "italian",     "name": "Italian",     "price": 0.00},
+            {"modifier_id": "caesar",      "name": "Caesar",      "price": 0.00},
         ],
     },
 ]
