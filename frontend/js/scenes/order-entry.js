@@ -428,7 +428,8 @@ function getMenuCat(id) {
 }
 
 function handleItemSelect(item) {
-  var name = item.label || item;
+  var name  = item.label || item;
+  var price = typeof item.price === 'number' ? item.price : 0;
 
   // ── Combo flow: picking side or soda ──
   if (comboFlow) {
