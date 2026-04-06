@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-06
 **Scope:** All event types written to the immutable SHA-256 hash-chained SQLite ledger
-**Status:** Phase 0 + Phase 1 complete. Awaiting approval before any modifications.
+**Status:** Phase 0 + Phase 1 + Phase 2 complete. All findings resolved.
 
 ---
 
@@ -518,18 +518,22 @@ Each event type assigned exactly one category.
 
 ---
 
-## PHASE 2 — Awaiting Approval
+## PHASE 2 — Implementation Complete
 
-**No code modifications have been made.** This report is read-only.
+All findings have been resolved. Changes made:
 
-Before proposing an implementation plan, explicit approval is required for:
+| Finding | Resolution |
+|---|---|
+| **C1-C4** | Created `EphemeralLog` (`backend/app/core/ephemeral_log.py`) — non-chained SQLite log. Redirected 13 event types out of immutable hash chain in `printer_manager.py` and `payment_health.py`. |
+| **C5** | Fixed `EMPLOYEE_REGISTERED` -> `EMPLOYEE_CREATED` in `config.py:198`. |
+| **W1** | Removed redundant `BATCH_CLOSED` emission from `orders.py`. Removed `BATCH_CLOSED` from `EventType` enum. |
+| **W2-W6** | All ephemeral printer/drawer events already redirected to `EphemeralLog` in C1-C4. |
+| **W7** | Added `correlation_id=server_id` to `CASH_TIPS_DECLARED` in `staff.py`. |
+| **I1** | Pruned 49 dead enum values and their unused factory functions from `events.py`. Enum reduced from 91 to 42 active types. Each section annotated with LEDGER_CORE / LEDGER_OPERATIONAL / EPHEMERAL. |
+| **I2** | Added `PAYMENT_DECLINED`, `PAYMENT_CANCELLED`, `PAYMENT_TIMED_OUT`, `PAYMENT_ERROR` handling in `projections.py`. All now set payment status to "failed". |
+| **I3** | `TICKET_REPRINTED` kept in ledger (LEDGER_OPERATIONAL) — reprint audit trail is valuable. |
+| **I4** | Documented naming convention in `EventType` docstring: new types should use dot.notation; legacy UPPERCASE kept for backward-compat with existing ledger data. |
+| **I5** | No change. `BATCH_SUBMITTED` emitted once per `close_batch()` and once per `close_day()` — these are distinct user actions, not duplicates. |
+| **A6** | Fixed dead read paths in `print_context_builder.py`: replaced `ITEM_VOIDED`/`ITEM_COMPED`/`DISCOUNT_APPLIED` with `DISCOUNT_APPROVED`. |
 
-1. **CRITICAL C1-C4:** Move 13 ephemeral event types to a separate non-chained log
-2. **CRITICAL C5:** Fix `EMPLOYEE_REGISTERED` -> `EMPLOYEE_CREATED` bug in `config.py:198`
-3. **WARNING W1:** Remove redundant `BATCH_CLOSED` emission
-4. **WARNING W2-W6:** Confirm ephemeral classification for printer/drawer events
-5. **WARNING W7:** Add `correlation_id` to `CASH_TIPS_DECLARED`
-6. **INFO I1:** Prune or mark 48 dead enum values
-7. **INFO I2:** Add handling for PAYMENT_CANCELLED/TIMED_OUT/ERROR in projections
-
-Please review and approve which findings to action before Phase 2 begins.
+**All 589 tests pass.**

@@ -283,14 +283,6 @@ async def test_full_daily_workflow(ledger):
     assert batch_events[0].payload["order_count"] == 2
     assert batch_events[0].payload["total_amount"] == round(total_sales, 2)
 
-    # Also emit BATCH_CLOSED for backward compat
-    batch_close_evt = create_event(
-        event_type=EventType.BATCH_CLOSED,
-        terminal_id=TERMINAL,
-        payload={"order_count": 0},
-    )
-    await ledger.append(batch_close_evt)
-
     # ─── 12. CLOCK OUT ───────────────────────────────────────────
     clock_out_evt = user_logged_out(
         terminal_id=TERMINAL,
@@ -360,7 +352,6 @@ async def test_full_daily_workflow(ledger):
     assert EventType.PAYMENT_CONFIRMED in event_types
     assert EventType.ORDER_CLOSED in event_types
     assert EventType.TIP_ADJUSTED in event_types
-    assert EventType.BATCH_CLOSED in event_types
     assert EventType.BATCH_SUBMITTED in event_types
     assert EventType.DAY_CLOSED in event_types
 

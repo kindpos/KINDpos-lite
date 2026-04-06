@@ -293,13 +293,18 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                 if order.is_fully_paid and order.status == "open":
                     order.status = "paid"
 
-        elif event.event_type == EventType.PAYMENT_FAILED:
+        elif event.event_type in (
+            EventType.PAYMENT_DECLINED,
+            EventType.PAYMENT_CANCELLED,
+            EventType.PAYMENT_TIMED_OUT,
+            EventType.PAYMENT_ERROR,
+        ):
             if order:
                 pid = payload.get("payment_id") or payload.get("transaction_id")
                 for payment in order.payments:
                     if payment.payment_id == pid:
                         payment.status = "failed"
-                        payment.error = payload.get("error")
+                        payment.error = payload.get("error") or payload.get("processor_message")
                         break
 
         elif event.event_type == EventType.TIP_ADJUSTED:

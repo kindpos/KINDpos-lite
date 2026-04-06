@@ -48,7 +48,6 @@ from ..events import (
     printer_registered,
     printer_status_changed,
     printer_error,
-    printer_role_assigned,
     printer_role_created,
     printer_fallback_assigned,
     printer_reboot_started,
