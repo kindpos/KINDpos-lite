@@ -238,8 +238,23 @@ export function HexNav(container, opts) {
     });
 
     if (preferSpace) {
-      // Prefer positions with the most clearance from all 4 borders
+      // Pack with siblings first, then prefer border clearance as tiebreaker.
+      // Centroid = average position of already-placed siblings (or parent if none yet).
+      var cx = parent.x, cy = parent.y;
+      if (placed.length > 0) {
+        var sx = 0, sy = 0;
+        placed.forEach(function(p) { sx += p.x; sy += p.y; });
+        cx = sx / placed.length;
+        cy = sy / placed.length;
+      }
       unique.sort(function(a, b) {
+        var dxA = a.x - cx, dyA = a.y - cy;
+        var dxB = b.x - cx, dyB = b.y - cy;
+        var distA = dxA * dxA + dyA * dyA;
+        var distB = dxB * dxB + dyB * dyB;
+        // Primary: closeness to sibling centroid
+        if (Math.abs(distA - distB) > childR * childR) return distA - distB;
+        // Tiebreaker: more border clearance
         var clearA = Math.min(a.x - childR, svgW - a.x - childR, a.y - childR, svgH - a.y - childR);
         var clearB = Math.min(b.x - childR, svgW - b.x - childR, b.y - childR, svgH - b.y - childR);
         return clearB - clearA;
