@@ -1423,17 +1423,18 @@ function handleVoid() {
   // VOID flow — PIN then reason
   interrupt('void-pin', {
     reason: 'void',
-    onBuild: function(el) { buildPinOverlay(el, function(pinOk) {
-      if (!pinOk) { cancelInterrupt(); return; }
+    onBuild: function(el) { buildPinOverlay(el, function(manager) {
+      if (!manager) { cancelInterrupt(); return; }
       resolveInterrupt();
       // Defer to next microtask so activeInterrupt is fully cleared
       var vTargets = voidingEntireOrder ? ticket : selected;
-      setTimeout(function() { showVoidReasons(vTargets, voidingEntireOrder); }, 0);
+      var approvedBy = manager.id || manager.name || 'manager';
+      setTimeout(function() { showVoidReasons(vTargets, voidingEntireOrder, approvedBy); }, 0);
     }); },
   }).catch(function() {});
 }
 
-function showVoidReasons(targets, isFullVoid) {
+function showVoidReasons(targets, isFullVoid, approvedBy) {
   interrupt('void-reason', {
     onBuild: function(el) {
       var panel = document.createElement('div');
@@ -1460,7 +1461,7 @@ function showVoidReasons(targets, isFullVoid) {
               fetch(API + '/orders/' + currentOrderId + '/void', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason: r }),
+                body: JSON.stringify({ reason: r, approved_by: approvedBy }),
               }).then(function(res) {
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 currentOrderId = null;
@@ -1539,15 +1540,16 @@ function handleDiscount() {
   // Show discount options — requires manager PIN first
   interrupt('disc-pin', {
     reason: 'discount',
-    onBuild: function(el) { buildPinOverlay(el, function(pinOk) {
-      if (!pinOk) { cancelInterrupt(); return; }
+    onBuild: function(el) { buildPinOverlay(el, function(manager) {
+      if (!manager) { cancelInterrupt(); return; }
       resolveInterrupt();
-      showDiscountOptions(selected);
+      var approvedBy = manager.id || manager.name || 'manager';
+      showDiscountOptions(selected, approvedBy);
     }); },
   }).catch(function() {});
 }
 
-function showDiscountOptions(targets) {
+function showDiscountOptions(targets, approvedBy) {
   interrupt('disc-select', {
     onBuild: function(el) {
       var panel = document.createElement('div');
@@ -1586,6 +1588,7 @@ function showDiscountOptions(targets) {
                   discount_type: opt,
                   amount: discountAmt,
                   reason: 'Manager discount: ' + opt,
+                  approved_by: approvedBy,
                   item_ids: itemIds,
                 }),
               }).catch(function(err) {
@@ -1643,7 +1646,7 @@ function buildPinOverlay(el, cb) {
             return e.pin === pin && (e.role === 'manager' || (e.roles && e.roles.indexOf('manager') !== -1));
           });
           if (match) {
-            cb(true);
+            cb(match);
           } else {
             numpad.setError('WRONG PIN');
           }
