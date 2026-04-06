@@ -611,7 +611,7 @@ function renderTicket() {
 
       var gc = document.createElement('div');
       gc.style.cssText = [
-        'flex-shrink:0;cursor:pointer;',
+        'flex-shrink:0;cursor:pointer;touch-action:manipulation;',
         'background:#333333;',
         'border:4px solid ' + T.mint + ';',
       ].join('');
@@ -666,7 +666,7 @@ function renderTicket() {
 
         var ic = document.createElement('div');
         ic.style.cssText = [
-          'flex-shrink:0;cursor:pointer;',
+          'flex-shrink:0;cursor:pointer;touch-action:manipulation;',
           'background:' + bg + ';',
           'border:4px solid ' + border + ';',
           'margin-bottom:2px;',

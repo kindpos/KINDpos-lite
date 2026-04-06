@@ -156,6 +156,7 @@ export function buildStyledButton(fillColor) {
   wrap.style.cursor = 'pointer';
   wrap.style.userSelect = 'none';
   wrap.style.webkitUserSelect = 'none';
+  wrap.style.touchAction = 'manipulation';
 
   var inner = document.createElement('div');
   inner.style.background = fill;

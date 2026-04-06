@@ -38,7 +38,7 @@ export function HexNav(container, opts) {
 
   // ── Build SVG ──────────────────────────────────
   var svg = document.createElementNS(svgNS, 'svg');
-  svg.style.cssText = 'width:100%;height:100%;display:block;';
+  svg.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;';
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   container.appendChild(svg);
 
@@ -161,15 +161,26 @@ export function HexNav(container, opts) {
       g.appendChild(text);
     });
 
-    // Press animation
-    g.addEventListener('pointerdown', function() {
+    // Press animation + tap handling
+    var pressed = false;
+    g.addEventListener('pointerdown', function(e) {
+      pressed = true;
       g.setAttribute('transform', 'translate(3,4)');
+      g.setPointerCapture(e.pointerId);
     });
     g.addEventListener('pointerup', function() {
+      if (pressed) {
+        pressed = false;
+        g.setAttribute('transform', '');
+        onHexTap(h);
+      }
+    });
+    g.addEventListener('pointercancel', function() {
+      pressed = false;
       g.setAttribute('transform', '');
-      onHexTap(h);
     });
     g.addEventListener('pointerleave', function() {
+      // Don't clear pressed — pointerup with capture will still fire
       g.setAttribute('transform', '');
     });
 
@@ -329,7 +340,7 @@ export function HexNav(container, opts) {
 
   function onHexTap(h) {
     var now = Date.now();
-    if (now - lastTapTime < 250) return;
+    if (now - lastTapTime < 100) return;
     lastTapTime = now;
 
     if (h.locked) {
