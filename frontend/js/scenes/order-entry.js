@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
+import { T, buildStyledButton, applySunkenStyle, bevelEdges, shadowColor } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -642,6 +642,117 @@ function openModifierSession() {
   renderTicket();
 }
 
+function buildPlacementPill() {
+  var PILL_H = 38;
+  var fill = T.darkBtn;
+  var edges = bevelEdges(fill);
+  var shadow = shadowColor(fill);
+  var b = T.bevelBtn;
+  var activeColor = MOD_COLORS.pizza.color;
+  var textColor = MOD_COLORS.pizza.textColor;
+  var dimText = '#7a4045';
+
+  // Outer wrap with drop-shadow
+  var wrap = document.createElement('div');
+  wrap.style.cssText = [
+    'filter:drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ');',
+    'flex-shrink:0;cursor:pointer;user-select:none;-webkit-user-select:none;',
+    'touch-action:manipulation;',
+  ].join('');
+
+  // Inner pill with rounded ends and bevel
+  var inner = document.createElement('div');
+  inner.style.cssText = [
+    'display:flex;align-items:stretch;height:' + PILL_H + 'px;',
+    'background:' + fill + ';',
+    'border-top:' + b + 'px solid ' + edges.light + ';',
+    'border-left:' + b + 'px solid ' + edges.light + ';',
+    'border-bottom:' + b + 'px solid ' + edges.dark + ';',
+    'border-right:' + b + 'px solid ' + edges.dark + ';',
+    'border-radius:' + (PILL_H / 2 + b) + 'px;',
+    'overflow:hidden;box-sizing:border-box;',
+  ].join('');
+
+  var segments = {};
+  var order = ['left', 'whole', 'right'];
+
+  order.forEach(function(id, i) {
+    var pl = PIZZA_PLACEMENTS.find(function(p) { return p.id === id; });
+    if (!pl) return;
+    var isActive = modifierSession.activePlacement === id;
+
+    var seg = document.createElement('div');
+    seg.style.cssText = [
+      'flex:' + (id === 'whole' ? '2' : '1') + ';',
+      'display:flex;align-items:center;justify-content:center;',
+      'font-family:' + T.fh + ';font-size:22px;',
+      'background:' + (isActive ? activeColor : 'transparent') + ';',
+      'color:' + (isActive ? textColor : dimText) + ';',
+      'transition:background 80ms,color 80ms;',
+    ].join('');
+    seg.textContent = pl.label;
+
+    seg.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      modifierSession.activePlacement = id;
+      refreshPlacementPill();
+    });
+
+    // Add divider before this segment (except first)
+    if (i > 0) {
+      var div = document.createElement('div');
+      div.style.cssText = 'width:2px;background:' + edges.dark + ';flex-shrink:0;';
+      inner.appendChild(div);
+    }
+
+    inner.appendChild(seg);
+    segments[id] = seg;
+  });
+
+  // Analog key press effect on the whole pill
+  wrap.addEventListener('pointerdown', function() {
+    inner.style.borderTop = b + 'px solid ' + edges.dark;
+    inner.style.borderLeft = b + 'px solid ' + edges.dark;
+    inner.style.borderBottom = b + 'px solid ' + edges.light;
+    inner.style.borderRight = b + 'px solid ' + edges.light;
+    wrap.style.filter = 'drop-shadow(0px 0px 0px transparent)';
+    wrap.style.transform = 'translate(' + T.shadowX + 'px,' + T.shadowY + 'px)';
+  });
+  var release = function() {
+    inner.style.borderTop = b + 'px solid ' + edges.light;
+    inner.style.borderLeft = b + 'px solid ' + edges.light;
+    inner.style.borderBottom = b + 'px solid ' + edges.dark;
+    inner.style.borderRight = b + 'px solid ' + edges.dark;
+    wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ')';
+    wrap.style.transform = '';
+  };
+  wrap.addEventListener('pointerup', release);
+  wrap.addEventListener('pointerleave', release);
+
+  wrap.appendChild(inner);
+  wrap._segments = segments;
+  wrap._activeColor = activeColor;
+  wrap._textColor = textColor;
+  wrap._dimText = dimText;
+  return wrap;
+}
+
+function refreshPlacementPill() {
+  var panel = modifierSession.panelEl;
+  if (!panel || !panel._placementPill) return;
+  var pill = panel._placementPill;
+  var segs = pill._segments;
+  if (!segs) return;
+
+  ['left', 'whole', 'right'].forEach(function(id) {
+    var seg = segs[id];
+    if (!seg) return;
+    var isActive = modifierSession.activePlacement === id;
+    seg.style.background = isActive ? pill._activeColor : 'transparent';
+    seg.style.color = isActive ? pill._textColor : pill._dimText;
+  });
+}
+
 function buildModifierPanel(catIds) {
   var panel = document.createElement('div');
   panel.style.cssText = [
@@ -683,38 +794,12 @@ function buildModifierPanel(catIds) {
   });
   panel.appendChild(prefixRow);
 
-  // ── PIZZA PLACEMENT ROW (only when pizza items selected) ──
+  // ── PIZZA PLACEMENT PILL (only when pizza items selected) ──
   if (modifierSession.hasPizza) {
-    var placementRow = document.createElement('div');
-    placementRow.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
-    panel._placementBtns = {};
-
-    // Default to 'whole'
     if (!modifierSession.activePlacement) modifierSession.activePlacement = 'whole';
-
-    PIZZA_PLACEMENTS.forEach(function(pl) {
-      var isActive = modifierSession.activePlacement === pl.id;
-      var plColor = MOD_COLORS.pizza.textColor;
-
-      var btn = buildButton(pl.label, {
-        fill: isActive ? MOD_COLORS.pizza.color : T.darkBtn,
-        color: isActive ? plColor : MOD_COLORS.pizza.textColor,
-        fontSize: '26px',
-        fontFamily: T.fh,
-      });
-      btn.style.flex = '1';
-      btn.style.height = '38px';
-
-      btn.addEventListener('pointerup', function(e) {
-        e.stopPropagation();
-        modifierSession.activePlacement = pl.id;
-        refreshModifierPanel();
-      });
-
-      panel._placementBtns[pl.id] = btn;
-      placementRow.appendChild(btn);
-    });
-    panel.appendChild(placementRow);
+    var pillWrap = buildPlacementPill();
+    panel._placementPill = pillWrap;
+    panel.appendChild(pillWrap);
   }
 
   // ── MODIFIER HEXNAV ──
@@ -817,19 +902,8 @@ function refreshModifierPanel() {
     }
   });
 
-  // Refresh placement button states (pizza)
-  if (panel._placementBtns) {
-    PIZZA_PLACEMENTS.forEach(function(pl) {
-      var btn = panel._placementBtns[pl.id];
-      if (!btn) return;
-      var isActive = modifierSession.activePlacement === pl.id;
-      var inner = btn.firstElementChild || btn.querySelector('div');
-      if (inner) {
-        inner.style.background = isActive ? MOD_COLORS.pizza.color : T.darkBtn;
-        inner.style.color = MOD_COLORS.pizza.textColor;
-      }
-    });
-  }
+  // Refresh placement pill (pizza)
+  refreshPlacementPill();
 
   // Refresh applied mods log
   renderAppliedModsLog(panel);
