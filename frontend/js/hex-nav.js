@@ -11,7 +11,7 @@ var SUBCAT_R = 70;
 var ITEM_R   = 48;
 var MOD_R    = 40;
 // Gap multipliers per depth — breathing room between hexes
-var GAPS = [1.27, 1.21, 1.19, 1.17, 1.17];
+var GAPS = [1.12, 1.21, 1.19, 1.17, 1.17];
 function gapForLevel(level) { return GAPS[level] || GAPS[GAPS.length - 1]; }
 
 // ═══════════════════════════════════════════════════
