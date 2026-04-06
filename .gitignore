@@ -3,6 +3,8 @@ __pycache__/
 *.pyc
 **/data/
 !backend/data/demo_seed.json
+!frontend/js/data/
+!frontend/js/data/**
 hardware_config.db
 *.db
 .env
