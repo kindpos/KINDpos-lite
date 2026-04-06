@@ -134,27 +134,6 @@ registerScene('login', {
     });
     center.appendChild(_numpadRef);
 
-    // Version label at bottom with multi-color spans
-    var version = document.createElement('div');
-    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:40px;padding:4px 0;margin-right:0;';
-    var parts = [
-      { text: 'KIND', color: T.gold, fontFamily: T.fh, fontSize: '36px' },
-      { text: 'pos', color: T.red },
-      { text: '_lite', color: T.gold },
-      { text: ' // ', color: T.mint },
-      { text: 'Vz', color: T.mint },
-      { text: '1.0', color: T.gold },
-    ];
-    parts.forEach(function(p) {
-      var span = document.createElement('span');
-      span.style.color = p.color;
-      if (p.fontFamily) span.style.fontFamily = p.fontFamily;
-      if (p.fontSize) span.style.fontSize = p.fontSize;
-      span.textContent = p.text;
-      version.appendChild(span);
-    });
-    center.appendChild(version);
-
     el.appendChild(center);
 
     // ── RIGHT COLUMN ── (Quick Service, Recall Table, Tip Adjustment)
@@ -184,6 +163,27 @@ registerScene('login', {
     });
     registerActionButton(tipBtn, 'tip-adjustment', T.cyan);
     right.appendChild(tipBtn);
+
+    // Version label at bottom-right with multi-color spans
+    var version = document.createElement('div');
+    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:40px;padding:4px 0;';
+    var parts = [
+      { text: 'KIND', color: T.gold, fontFamily: T.fh, fontSize: '36px' },
+      { text: 'pos', color: T.red },
+      { text: '_lite', color: T.gold },
+      { text: ' // ', color: T.mint },
+      { text: 'Vz', color: T.mint },
+      { text: '1.0', color: T.gold },
+    ];
+    parts.forEach(function(p) {
+      var span = document.createElement('span');
+      span.style.color = p.color;
+      if (p.fontFamily) span.style.fontFamily = p.fontFamily;
+      if (p.fontSize) span.style.fontSize = p.fontSize;
+      span.textContent = p.text;
+      version.appendChild(span);
+    });
+    right.appendChild(version);
 
     el.appendChild(right);
   },
