@@ -10,6 +10,7 @@ from .base_payment import (
 )
 from ..events import EventType, create_event
 from ..event_ledger import EventLedger
+from ..ephemeral_log import EphemeralLog
 
 logger = logging.getLogger("kindpos.payment.health")
 
@@ -19,8 +20,9 @@ class PaymentHealthMonitor:
     Tracks status, detects transitions, feeds Weather Report.
     """
 
-    def __init__(self, ledger: EventLedger, terminal_id: str, devices: List[BasePaymentDevice]):
+    def __init__(self, ledger: EventLedger, terminal_id: str, devices: List[BasePaymentDevice], ephemeral_log: Optional[EphemeralLog] = None):
         self._ledger = ledger
+        self._ephemeral = ephemeral_log or ledger
         self._terminal_id = terminal_id
         self._devices = devices
         self._stop_event = asyncio.Event()
@@ -79,7 +81,7 @@ class PaymentHealthMonitor:
                 "timestamp": datetime.now().isoformat()
             }
         )
-        await self._ledger.append(event)
+        await self._ephemeral.append(event)
 
         # SIM Failover Signal detection (IDLE -> ONLINE means LAN ok, WAN suspect)
         if old_status == PaymentDeviceStatus.IDLE and new_status == PaymentDeviceStatus.ONLINE:

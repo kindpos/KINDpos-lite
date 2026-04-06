@@ -14,7 +14,7 @@ import sys
 from app.api.routes.printing import print_queue
 from app.printing.print_dispatcher import PrintDispatcher
 from app.config import settings
-from app.api.dependencies import init_ledger, close_ledger, set_printer_manager
+from app.api.dependencies import init_ledger, close_ledger, set_printer_manager, get_ephemeral_log
 from app.services.demo_seeder import seed_demo_data_if_empty
 from app.core.adapters.printer_manager import PrinterManager
 from app.core.adapters.mock_thermal import MockThermalPrinter
@@ -36,11 +36,11 @@ _dispatcher: PrintDispatcher = None
 HARDWARE_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'hardware_config.db')
 
 
-async def _init_printer_manager(ledger):
+async def _init_printer_manager(ledger, ephemeral_log=None):
     """Load saved printers from hardware_config.db, fall back to mock."""
     import aiosqlite
 
-    manager = PrinterManager(ledger, settings.terminal_id)
+    manager = PrinterManager(ledger, settings.terminal_id, ephemeral_log=ephemeral_log)
     printer_found = False
 
     if os.path.exists(HARDWARE_DB_PATH):
@@ -106,7 +106,8 @@ async def lifespan(app: FastAPI):
 
     await seed_demo_data_if_empty(ledger)
 
-    printer_manager = await _init_printer_manager(ledger)
+    eph_log = await get_ephemeral_log()
+    printer_manager = await _init_printer_manager(ledger, ephemeral_log=eph_log)
     print(f"PrinterManager initialized ({len(printer_manager._printers)} printers)")
 
     await print_queue.connect()
