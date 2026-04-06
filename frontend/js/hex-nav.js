@@ -212,8 +212,9 @@ export function HexNav(container, opts) {
   // First child off parent, subsequent children off the
   // already-placed child nearest to parent, preferring
   // positions that face back toward the parent
-  function placeChain(parent, items, childR, locked, gravity) {
+  function placeChain(parent, items, childR, locked, gravity, opts) {
   var grav = gravity || parent;
+  var preferSpace = opts && opts.preferSpace;
   var placed = [];
 
   items.forEach(function(item, idx) {
@@ -236,12 +237,21 @@ export function HexNav(container, opts) {
       if (!isDup) unique.push(c);
     });
 
-    // Prefer positions closest to gravity (cat)
-    unique.sort(function(a, b) {
-      var dxA = a.x - grav.x, dyA = a.y - grav.y;
-      var dxB = b.x - grav.x, dyB = b.y - grav.y;
-      return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
-    });
+    if (preferSpace) {
+      // Prefer positions with the most clearance from all 4 borders
+      unique.sort(function(a, b) {
+        var clearA = Math.min(a.x - childR, svgW - a.x - childR, a.y - childR, svgH - a.y - childR);
+        var clearB = Math.min(b.x - childR, svgW - b.x - childR, b.y - childR, svgH - b.y - childR);
+        return clearB - clearA;
+      });
+    } else {
+      // Prefer positions closest to gravity (cat)
+      unique.sort(function(a, b) {
+        var dxA = a.x - grav.x, dyA = a.y - grav.y;
+        var dxB = b.x - grav.x, dyB = b.y - grav.y;
+        return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
+      });
+    }
 
     var pos = null;
     for (var j = 0; j < unique.length; j++) {
@@ -445,22 +455,26 @@ export function HexNav(container, opts) {
     var allSatisfied = modState.groups.every(function(g) { return modState.satisfied[g.id]; });
     var totalCount = groupItems.length + (allSatisfied ? 1 : 0);
     var r = adaptiveR(SUBCAT_R, totalCount, svgW, svgH);
-    var placed = placeChain(itemHex, groupItems, r, locked, itemHex);
+    var placed = placeChain(itemHex, groupItems, r, locked, itemHex, { preferSpace: true });
+    var catColor = state.cat ? state.cat.color : itemHex.color;
+    var catText  = state.cat ? (state.cat.textColor || '#1a1a1a') : (itemHex.textColor || '#1a1a1a');
     placed.forEach(function(h) {
       h.type = 'modgroup';
       if (modState.satisfied[h.data.id]) {
         h.locked = true;  // filled = satisfied
+        h.color = catColor;
+        h.textColor = catText;
       } else {
         h.pulse = true;   // pulsate = needs selection
+        h.color = T.mint;
+        h.textColor = '#1a1a1a';
       }
     });
 
     // DONE hex — only when all groups satisfied, in cat/item color
     if (allSatisfied) {
-      var catColor = state.cat ? state.cat.color : itemHex.color;
-      var catText  = state.cat ? (state.cat.textColor || '#1a1a1a') : (itemHex.textColor || '#1a1a1a');
       var doneItems = [{ id: '__done__', label: 'DONE', isDone: true }];
-      var donePlaced = placeChain(itemHex, doneItems, r, locked.concat(placed), itemHex);
+      var donePlaced = placeChain(itemHex, doneItems, r, locked.concat(placed), itemHex, { preferSpace: true });
       donePlaced.forEach(function(h) {
         h.type = 'done';
         h.color = catColor;
@@ -488,7 +502,7 @@ export function HexNav(container, opts) {
     });
 
     var r = adaptiveR(ITEM_R, choiceItems.length, svgW, svgH);
-    var placed = placeChain(modGroupHex, choiceItems, r, locked, modGroupHex);
+    var placed = placeChain(modGroupHex, choiceItems, r, locked, modGroupHex, { preferSpace: true });
     placed.forEach(function(h) {
       h.type = 'mod';
       h.color = T.mint;

@@ -74,9 +74,15 @@ must choose before the item is added to the ticket.
 
 | Element | Unsatisfied | Satisfied |
 |---------|------------|-----------|
-| Mod-group hex | Pulsating stroke, shows group name (`SAUCE`) | Locked (filled), label = selected choice (`Hot`) |
+| Mod-group hex | **Mint** (`T.mint`), pulsating stroke, shows group name (`SAUCE`) | Locked (filled) in **cat color**, label = selected choice (`Hot`) |
 | Modifier choice hex | Mint (`T.mint`), pulsating | N/A (auto-returns on tap) |
-| DONE hex | Hidden | Appears in **item/cat color**, label `DONE` |
+| DONE hex | Hidden | Appears in **cat color** (filled), label `DONE` |
+
+### Placement
+
+Mandatory modifier hexes (mod-groups, choices, and DONE) use `preferSpace: true`
+in `placeChain()`, which sorts candidate positions by **maximum border clearance**
+(farthest from the nearest edge). This prevents mod hexes from jamming into corners.
 
 ### Pulse Animation
 
