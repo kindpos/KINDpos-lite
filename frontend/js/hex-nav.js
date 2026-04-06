@@ -318,7 +318,7 @@ export function HexNav(container, opts) {
     resize();
     state.level = 2; state.cat = catHex; state.subcat = null;
     catHex.locked = true;
-    var items = catHex.data.subcats[0].items;
+    var items = (catHex.data.subcats && catHex.data.subcats[0]) ? catHex.data.subcats[0].items : [];
     var placed = placeChain(catHex, items, SUBCAT_R, [catHex], catHex);
     placed.forEach(function(h) { h.type = 'item'; });
     state.hexes = [catHex].concat(placed);
