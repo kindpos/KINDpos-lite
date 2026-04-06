@@ -228,7 +228,7 @@ async def test_list_and_filter_orders(client):
     await client.post("/api/v1/orders", json={"table": "T-1", "server_id": "s1", "server_name": "A"})
     resp2 = await client.post("/api/v1/orders", json={"table": "T-2", "server_id": "s2", "server_name": "B"})
     oid2 = resp2.json()["order_id"]
-    await client.post(f"/api/v1/orders/{oid2}/void", json={"reason": "test"})
+    await client.post(f"/api/v1/orders/{oid2}/void", json={"reason": "test", "approved_by": "mgr-1"})
 
     # All orders
     resp = await client.get("/api/v1/orders")

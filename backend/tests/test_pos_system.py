@@ -258,8 +258,8 @@ class TestFinancialAccuracy:
         assert order.subtotal == 1.00
 
     @pytest.mark.asyncio
-    async def test_discount_exceeding_subtotal(self, ledger):
-        """$5 discount on $3 item → taxable base should not be negative."""
+    async def test_discount_exceeding_subtotal_clamped(self, ledger):
+        """$5 discount on $3 item → taxable clamped to 0, total = 0."""
         oid = _oid()
         await _create_order(ledger, oid)
         await _add_item(ledger, oid, "i1", "Side", 3.00)
@@ -272,14 +272,9 @@ class TestFinancialAccuracy:
         )
         await ledger.append(disc)
         order = await _get_order(ledger, oid)
-        # taxable = 3.00 - 5.00 = -2.00 → tax on negative base
-        # NOTE: This documents current behavior. The system does NOT clamp
-        # the taxable base to 0. tax = money_round(-2.00 * 0.07) = -0.14
-        # total = 3.00 - 5.00 + (-0.14) = -2.14
-        # This is a known gap — discount > subtotal produces negative total.
         assert order.discount_total == 5.00
-        taxable = order.subtotal - order.discount_total
-        assert taxable < 0  # GAP: no clamping
+        assert order.tax == 0.00  # taxable clamped to 0
+        assert order.total == 0.00  # total clamped to 0
 
     @pytest.mark.asyncio
     async def test_tip_precision_rounding(self, ledger):
@@ -333,19 +328,21 @@ class TestTransactionFlow:
         assert order.voided_at is not None
 
     @pytest.mark.asyncio
-    async def test_void_without_approved_by_still_works(self, ledger):
-        """GAP: approved_by is optional — void succeeds without manager auth."""
+    async def test_void_api_rejects_without_manager(self, ledger):
+        """Void API route requires approved_by — rejects empty string."""
+        from fastapi import HTTPException
+        from app.api.routes.orders import void_order, VoidOrderRequest
+
         oid = _oid()
         await _create_order(ledger, oid)
         await _add_item(ledger, oid, "i1", "Burger", 10.00)
-        evt = order_voided(
-            terminal_id=TERMINAL, order_id=oid,
-            reason="test void", approved_by=None,
-        )
-        await ledger.append(evt)
-        order = await _get_order(ledger, oid)
-        assert order.status == "voided"
-        # NOTE: No enforcement — any terminal can void without manager PIN
+
+        # Pydantic now requires approved_by as a non-optional str,
+        # but even if passed as empty the route rejects it
+        with pytest.raises(HTTPException) as exc_info:
+            req = VoidOrderRequest(reason="test void", approved_by="")
+            await void_order(oid, req, ledger)
+        assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_reopen_after_close(self, ledger):
@@ -439,6 +436,86 @@ class TestTransactionFlow:
         assert order.amount_paid == 0.00
         assert order.payments[0].status == "failed"
         assert order.status == "open"
+
+    @pytest.mark.asyncio
+    async def test_refund_full_payment(self, ledger):
+        """Full refund on a confirmed cash payment via refund endpoint."""
+        from app.api.routes.payment_routes import process_refund, RefundRequest
+
+        oid = _oid()
+        await _create_order(ledger, oid)
+        await _add_item(ledger, oid, "i1", "Burger", 10.00)
+        await _pay(ledger, oid, "p1", 10.70, method="cash")
+
+        req = RefundRequest(
+            order_id=oid, payment_id="p1",
+            reason="Customer complaint", approved_by="mgr-1",
+        )
+        result = await process_refund(req, ledger)
+        assert result["success"] is True
+        assert result["refund_amount"] == 10.70
+
+        # Verify PAYMENT_REFUNDED event in ledger
+        events = await ledger.get_events_by_correlation(oid)
+        refunds = [e for e in events if e.event_type == EventType.PAYMENT_REFUNDED]
+        assert len(refunds) == 1
+        assert refunds[0].payload["amount"] == 10.70
+
+    @pytest.mark.asyncio
+    async def test_refund_partial_amount(self, ledger):
+        """Partial refund of $5 on a $10.70 payment."""
+        from app.api.routes.payment_routes import process_refund, RefundRequest
+
+        oid = _oid()
+        await _create_order(ledger, oid)
+        await _add_item(ledger, oid, "i1", "Burger", 10.00)
+        await _pay(ledger, oid, "p1", 10.70, method="cash")
+
+        req = RefundRequest(
+            order_id=oid, payment_id="p1", amount=5.00,
+            reason="Partial refund", approved_by="mgr-1",
+        )
+        result = await process_refund(req, ledger)
+        assert result["refund_amount"] == 5.00
+
+    @pytest.mark.asyncio
+    async def test_refund_exceeding_payment_rejected(self, ledger):
+        """Refund > original payment amount → rejected."""
+        from fastapi import HTTPException
+        from app.api.routes.payment_routes import process_refund, RefundRequest
+
+        oid = _oid()
+        await _create_order(ledger, oid)
+        await _add_item(ledger, oid, "i1", "Burger", 10.00)
+        await _pay(ledger, oid, "p1", 10.70, method="cash")
+
+        with pytest.raises(HTTPException) as exc_info:
+            req = RefundRequest(
+                order_id=oid, payment_id="p1", amount=20.00,
+                reason="Too much", approved_by="mgr-1",
+            )
+            await process_refund(req, ledger)
+        assert exc_info.value.status_code == 400
+        assert "exceeds" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_refund_requires_manager_approval(self, ledger):
+        """Refund without manager → 403."""
+        from fastapi import HTTPException
+        from app.api.routes.payment_routes import process_refund, RefundRequest
+
+        oid = _oid()
+        await _create_order(ledger, oid)
+        await _add_item(ledger, oid, "i1", "Burger", 10.00)
+        await _pay(ledger, oid, "p1", 10.70, method="cash")
+
+        with pytest.raises(HTTPException) as exc_info:
+            req = RefundRequest(
+                order_id=oid, payment_id="p1",
+                reason="refund", approved_by="",
+            )
+            await process_refund(req, ledger)
+        assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_double_close_idempotent(self, ledger):
@@ -1053,20 +1130,22 @@ class TestUserFlowPermissions:
         assert void_evts[0].payload["approved_by"] == "mgr-42"
 
     @pytest.mark.asyncio
-    async def test_void_without_manager_is_gap(self, ledger):
-        """GAP DOCUMENTATION: Void succeeds with approved_by=None.
-        In production, this should require manager PIN."""
+    async def test_void_api_enforces_manager_approval(self, ledger):
+        """Void API route now enforces approved_by — returns 403 without it."""
+        from fastapi import HTTPException
+        from app.api.routes.orders import void_order, VoidOrderRequest
+
         oid = _oid()
         await _create_order(ledger, oid)
         await _add_item(ledger, oid, "i1", "Burger", 10.00)
-        evt = order_voided(
-            terminal_id=TERMINAL, order_id=oid,
-            reason="no manager", approved_by=None,
-        )
-        await ledger.append(evt)
-        events = await ledger.get_events_by_correlation(oid)
-        void_evts = [e for e in events if e.event_type == EventType.ORDER_VOIDED]
-        # Currently passes — this is the gap: no enforcement layer
-        assert void_evts[0].payload["approved_by"] is None
-        order = await _get_order(ledger, oid)
-        assert order.status == "voided"
+
+        # Empty string rejected
+        with pytest.raises(HTTPException) as exc_info:
+            req = VoidOrderRequest(reason="test", approved_by="   ")
+            await void_order(oid, req, ledger)
+        assert exc_info.value.status_code == 403
+
+        # With valid manager ID it works
+        req = VoidOrderRequest(reason="test", approved_by="mgr-1")
+        result = await void_order(oid, req, ledger)
+        assert result.status == "voided"

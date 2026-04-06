@@ -121,9 +121,9 @@ class FailPaymentRequest(BaseModel):
 
 
 class VoidOrderRequest(BaseModel):
-    """Request to void an order."""
+    """Request to void an order. Requires manager approval."""
     reason: str
-    approved_by: Optional[str] = None
+    approved_by: str  # Manager ID required — voids are sensitive operations
 
 
 class OrderItemResponse(BaseModel):
@@ -885,7 +885,13 @@ async def void_order(
         request: VoidOrderRequest,
         ledger: EventLedger = Depends(get_ledger),
 ):
-    """Void an order."""
+    """Void an order. Requires manager approval (approved_by)."""
+    if not request.approved_by or not request.approved_by.strip():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manager approval required to void an order"
+        )
+
     order = await get_order_or_404(ledger, order_id)
 
     if order.status == "voided":

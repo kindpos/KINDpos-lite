@@ -106,14 +106,15 @@ class Order:
 
     @property
     def tax(self) -> float:
-        """Calculate tax on subtotal after discounts."""
-        taxable = self.subtotal - self.discount_total
+        """Calculate tax on subtotal after discounts (clamped to zero)."""
+        taxable = max(0.0, self.subtotal - self.discount_total)
         return money_round(taxable * self.tax_rate)
 
     @property
     def total(self) -> float:
-        """Final total."""
-        return money_round(self.subtotal - self.discount_total + self.tax)
+        """Final total (clamped to zero — discount cannot make total negative)."""
+        raw = self.subtotal - self.discount_total + self.tax
+        return money_round(max(0.0, raw))
 
     @property
     def amount_paid(self) -> float:

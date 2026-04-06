@@ -484,6 +484,83 @@ async def zero_unadjusted_tips(
     return {"success": True, "zeroed_count": zeroed}
 
 
+# =============================================================================
+# REFUND
+# =============================================================================
+
+class RefundRequest(BaseModel):
+    order_id: str
+    payment_id: str
+    amount: Optional[float] = None  # None = full refund of original payment
+    reason: str = "Customer refund"
+    approved_by: str  # Manager approval required
+
+
+@router.post("/refund")
+async def process_refund(
+    request: RefundRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Process a refund on a confirmed payment. Requires manager approval."""
+    if not request.approved_by or not request.approved_by.strip():
+        raise HTTPException(status_code=403, detail="Manager approval required for refunds")
+
+    events = await ledger.get_events_by_correlation(request.order_id)
+    if not events:
+        raise HTTPException(status_code=404, detail=f"Order {request.order_id} not found")
+    order = project_order(events)
+    if not order:
+        raise HTTPException(status_code=404, detail=f"Order {request.order_id} not found")
+
+    # Find the target payment
+    target = None
+    for p in order.payments:
+        if p.payment_id == request.payment_id:
+            target = p
+            break
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Payment {request.payment_id} not found")
+    if target.status != "confirmed":
+        raise HTTPException(status_code=400, detail="Can only refund confirmed payments")
+
+    # Check for existing refund on this payment
+    existing_refunds = [
+        e for e in events
+        if e.event_type == EventType.PAYMENT_REFUNDED
+        and e.payload.get("payment_id") == request.payment_id
+    ]
+    already_refunded = money_round(sum(e.payload.get("amount", 0) for e in existing_refunds))
+
+    refund_amount = money_round(request.amount if request.amount is not None else target.amount)
+    if refund_amount <= 0:
+        raise HTTPException(status_code=400, detail="Refund amount must be positive")
+    if refund_amount > money_round(target.amount - already_refunded):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Refund amount ${refund_amount:.2f} exceeds remaining refundable "
+                   f"${money_round(target.amount - already_refunded):.2f}"
+        )
+
+    from ...core.events import cash_refund_due
+    refund_evt = cash_refund_due(
+        terminal_id=settings.terminal_id,
+        order_id=request.order_id,
+        payment_id=request.payment_id,
+        amount=refund_amount,
+        reason=request.reason,
+    )
+    await ledger.append(refund_evt)
+
+    return {
+        "success": True,
+        "order_id": request.order_id,
+        "payment_id": request.payment_id,
+        "refund_amount": refund_amount,
+        "reason": request.reason,
+        "approved_by": request.approved_by,
+    }
+
+
 @router.get("/device-status")
 async def get_device_status(manager: PaymentManager = Depends(get_payment_manager)):
     """All devices: id, name, status, last_checked."""
