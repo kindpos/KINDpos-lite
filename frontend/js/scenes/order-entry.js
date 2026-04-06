@@ -27,6 +27,7 @@ var API = '/api/v1';
 
 // ── Order ID — one per transaction, reset on fresh enter ──
 var currentOrderId = null;
+var sendLock = false;
 
 // ── Menu data ─────────────────────────────────────
 var MENU_DATA = [
@@ -105,6 +106,9 @@ var savedTabs    = [];    // [{ id, name, ticket }] — in-memory for pilot
 var saveSeq      = 0;     // saved tab ID counter
 var saveBtn      = null;  // DOM ref for SAVE button state
 
+// ── Void reasons ─────────────────────────────────
+var VOID_REASONS = ['Mistake', 'Kitchen Error', 'Customer Request', 'Manager Comp', 'Other'];
+
 // ── Prefix definitions ────────────────────────────
 var PREFIXES = [
   { id: 'add',     label: 'Add',     color: T.goGreen,  textColor: '#1a2a1a' },
@@ -126,6 +130,7 @@ registerScene('order-entry', {
     prefixCard     = null;
     saveBtn        = null;
     currentOrderId = null;   // soft reset — ID assigned on first SEND
+    sendLock       = false;
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -340,12 +345,20 @@ function buildMain(parentEl, params) {
   send.style.gridColumn = '5';
   send.style.gridRow    = '1 / 3';
 
-  var disc  = buildButton('//DISC//', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H });
+  var disc  = buildButton('//DISC//', { fill: T.bgLight, color: T.mint, fontSize: '26px', height: BTN_H,
+    onTap: function() { handleDiscount(); },
+  });
   var voidB = buildButton('//VOID//', { fill: T.red,     color: '#fff', fontSize: '26px', height: BTN_H,
     onTap: function() { handleVoid(); },
   });
   voidB.id = 'void-btn';
-  var print = buildButton('//PRINT//',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H });
+  var print = buildButton('//PRINT//',{ fill: T.cyan,    color: T.bg,   fontSize: '26px', height: BTN_H,
+    onTap: function() {
+      if (!currentOrderId) return;
+      fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
+        .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
+    },
+  });
 
   var pay = buildButton('//PAY//', { fill: T.gold, color: T.bg, fontSize: '26px', height: BTN_H,
     onTap: function() { handlePay(params); },
@@ -456,9 +469,10 @@ function renderTicket() {
       var gRow = document.createElement('div');
       gRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
 
+      var allSent = instances.every(function(i) { return i.sent; });
       var gName = document.createElement('span');
       gName.style.cssText = 'font-family:' + T.fb + ';font-size:18px;font-weight:bold;color:' + T.mint + ';';
-      gName.textContent = (instances.length > 1 ? instances.length + '\u00d7 ' : '') + name;
+      gName.textContent = (allSent ? '\u2713 ' : '') + (instances.length > 1 ? instances.length + '\u00d7 ' : '') + name;
 
       var gPrice = document.createElement('span');
       gPrice.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.mint + ';';
@@ -513,7 +527,7 @@ function renderTicket() {
 
         var iName = document.createElement('span');
         iName.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + fg + ';';
-        iName.textContent = inst.name;
+        iName.textContent = (inst.sent ? '\u2713 ' : '') + inst.name;
 
         var iPrice = document.createElement('span');
         iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:15px;font-weight:bold;color:' + fg + ';';
@@ -648,6 +662,94 @@ function showVoidReasons(targets) {
   }).catch(function() {});
 }
 
+// ── DISCOUNT OVERLAY ─────────────────────────────
+var DISCOUNT_OPTIONS = ['10%', '15%', '20%', '25%', '50%', 'Comp (100%)'];
+
+function handleDiscount() {
+  if (ticket.length === 0) return;
+  var selected = ticket.filter(function(i) { return i.selected; });
+  if (selected.length === 0) {
+    // Nothing selected — show hint via interrupt
+    interrupt('disc-hint', {
+      reason: 'no-selection',
+      onBuild: function(el) {
+        var panel = document.createElement('div');
+        panel.style.cssText = [
+          'display:flex;flex-direction:column;align-items:center;',
+          'gap:10px;background:#1a1a1a;',
+          'border:4px solid ' + T.gold + ';padding:20px;min-width:280px;',
+        ].join('');
+        var lbl = document.createElement('div');
+        lbl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';text-align:center;';
+        lbl.textContent = 'Select item(s) first, then tap DISC';
+        panel.appendChild(lbl);
+        var okBtn = buildButton('OK', {
+          fill: T.gold, color: T.bg, fontSize: '22px', height: 40,
+          onTap: function() { resolveInterrupt(); },
+        });
+        okBtn.style.width = '200px';
+        panel.appendChild(okBtn);
+        el.appendChild(panel);
+      },
+    }).catch(function() {});
+    return;
+  }
+
+  // Show discount options — requires manager PIN first
+  interrupt('disc-pin', {
+    reason: 'discount',
+    onBuild: function(el) { buildPinOverlay(el, function(pinOk) {
+      if (!pinOk) { cancelInterrupt(); return; }
+      resolveInterrupt();
+      showDiscountOptions(selected);
+    }); },
+  }).catch(function() {});
+}
+
+function showDiscountOptions(targets) {
+  interrupt('disc-select', {
+    onBuild: function(el) {
+      var panel = document.createElement('div');
+      panel.style.cssText = [
+        'display:flex;flex-direction:column;align-items:center;',
+        'gap:10px;background:#1a1a1a;',
+        'border:4px solid ' + T.gold + ';padding:20px;min-width:280px;',
+      ].join('');
+
+      var lbl = document.createElement('div');
+      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+      lbl.textContent = '// DISCOUNT //';
+      panel.appendChild(lbl);
+
+      DISCOUNT_OPTIONS.forEach(function(opt) {
+        var btn = buildButton(opt, {
+          fill: T.bgLight, color: T.mint, fontSize: '26px', height: 44,
+          onTap: function() {
+            // Placeholder — mark items as discounted visually
+            targets.forEach(function(inst) {
+              inst.discount = opt;
+            });
+            resolveInterrupt();
+            renderTicket();
+            updateBottomBar();
+          },
+        });
+        btn.style.width = '240px';
+        panel.appendChild(btn);
+      });
+
+      var cancelBtn = buildButton('CANCEL', {
+        fill: T.bgLight, color: T.mint, fontSize: '22px', height: 40,
+        onTap: function() { cancelInterrupt(); },
+      });
+      cancelBtn.style.width = '240px';
+      panel.appendChild(cancelBtn);
+
+      el.appendChild(panel);
+    },
+  }).catch(function() {});
+}
+
 // ── PIN OVERLAY ───────────────────────────────────
 var MANAGER_PIN = '0000'; // TODO: load from employee config
 
@@ -690,6 +792,8 @@ function buildPinOverlay(el, cb) {
 
 async function handleSend() {
   if (ticket.length === 0) return;
+  if (sendLock) return;
+  sendLock = true;
 
   var totals = computeTotals();
 
@@ -741,6 +845,8 @@ async function handleSend() {
 
   } catch (err) {
     console.warn('[KINDpos] Send failed:', err);
+  } finally {
+    sendLock = false;
   }
 
   // Reset hex nav — ticket stays visible for PAY

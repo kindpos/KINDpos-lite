@@ -20,6 +20,7 @@ var tendered   = 0;
 var numpadStr  = '';
 var sceneEl    = null;
 var sceneData  = {};
+var confirmLock = false;
 
 registerScene('payment', {
   onEnter: function(el, params) {
@@ -30,6 +31,7 @@ registerScene('payment', {
     sceneData = params;
     tendered  = 0;
     numpadStr = '';
+    confirmLock = false;
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -368,30 +370,31 @@ var API = '/api/v1';
 
 // ── CONFIRM ───────────────────────────────────────
 async function handleConfirm(params) {
+  if (confirmLock) return;
+  confirmLock = true;
+
   var isCash = params.paymentMode === 'cash';
   var change = isCash ? Math.max(0, tendered - params.cashPrice) : 0;
   var amount = isCash ? params.cashPrice : params.cardTotal;
 
   try {
-    if (isCash) {
-      var res = await fetch(API + '/payments/cash', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id:       params.orderId,
-          amount:         amount,
-          tip:            0.0,
-          payment_method: 'cash',
-        }),
-      });
-      if (!res.ok) {
-        var err = await res.json().catch(function() { return {}; });
-        console.error('[KINDpos] Cash payment failed:', err);
-        return;  // stay on screen, let operator retry
-      }
+    var payEndpoint = isCash ? '/payments/cash' : '/payments/cash';
+    var res = await fetch(API + payEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_id:       params.orderId,
+        amount:         amount,
+        tip:            0.0,
+        payment_method: isCash ? 'cash' : 'card',
+      }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      console.error('[KINDpos] Payment failed:', err);
+      confirmLock = false;
+      return;  // stay on screen, let operator retry
     }
-    // Card payments confirmed by device — no fetch needed here,
-    // the PaymentManager handles it via the SPIN adapter
 
     // ── Receipt printing ──────────────────────────────────────────────────
     // Config flags — will be driven by settings scene once wired

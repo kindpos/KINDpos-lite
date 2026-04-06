@@ -6,7 +6,7 @@
 
 import { T } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, push } from '../scene-manager.js';
+import { registerScene, push, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var PAD      = 16;
@@ -287,8 +287,7 @@ function buildPricePanel(params) {
     fill: T.bgLight, color: T.mint, fontSize: '28px',
     height: BTN_H,
     onTap: function() {
-      // Returns to wherever PAY was tapped from
-      history.go(-1);
+      pop();
     },
   });
   panel.appendChild(backBtn);

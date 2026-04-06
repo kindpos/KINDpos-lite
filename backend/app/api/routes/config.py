@@ -144,7 +144,7 @@ async def item_restore(item_id: str, background_tasks: BackgroundTasks, ledger: 
         payload={"item_id": item_id}
     )
     await ledger.append(event)
-    background_tasks.add_task(background_tasks.add_task, broadcast_config_update, ["menu"])
+    background_tasks.add_task(broadcast_config_update, ["menu"])
     return {"status": "ok", "event_id": event.sequence_number}
 
 @router.post("/roles")
