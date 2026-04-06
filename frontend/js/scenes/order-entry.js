@@ -11,6 +11,7 @@ import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
 import { showKeyboard } from '../keyboard.js';
+import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 
 var PAD      = 16;
 var GAP      = 16;
@@ -129,12 +130,13 @@ var MOD_DATA = [
   },
   {
     id: 'extras', label: 'EXTRAS', color: T.lavender, textColor: '#1a0030',
+    half_placement: true,
     subcats: [
       { id: 'extras-items', label: 'Extras', items: [
-        { label: 'Extra Meat', price: 3.00 },
-        { label: 'Cheese', price: 1.00 },
-        { label: 'Jalape\u00f1os', price: 0.50 },
-        { label: 'Onions', price: 0 },
+        { label: 'Extra Meat', price: 3.00, half_price: 1.50 },
+        { label: 'Cheese', price: 1.00, half_price: 0.50 },
+        { label: 'Jalape\u00f1os', price: 0.50, half_price: 0.25 },
+        { label: 'Onions', price: 0, half_price: null },
       ] },
     ]
   },
@@ -524,6 +526,10 @@ function getMenuCat(id) {
   return MENU_DATA.find(function(c) { return c.id === id; });
 }
 
+function getModCat(id) {
+  return MOD_DATA.find(function(c) { return c.id === id; });
+}
+
 function handleItemSelect(item) {
   var name  = item.label || item;
   var price = typeof item.price === 'number' ? item.price : 0;
@@ -590,11 +596,41 @@ function addToTicket(item) {
       showToast('Select an item first', { bg: '#555', duration: 2000 });
       return;
     }
+
+    // Check if current modifier category has half_placement
+    var modCatId = hexNav ? hexNav.getCatId() : null;
+    var modCat = modCatId ? getModCat(modCatId) : null;
+    if (modCat && modCat.half_placement) {
+      var halfPrice = typeof item.half_price === 'number' ? item.half_price : null;
+      // Use first selected item for overlay context
+      var targetInst = selected[0];
+      showHalfPlacementOverlay(targetInst.name, name, price, halfPrice, targetInst.mods)
+        .then(function(result) {
+          selected.forEach(function(inst) {
+            // Re-selection: if same mod on other side, move it
+            var otherSide = result.side === 'Left' ? 'Right' : 'Left';
+            for (var i = inst.mods.length - 1; i >= 0; i--) {
+              if (inst.mods[i].name === name && inst.mods[i].prefix === otherSide) {
+                inst.mods.splice(i, 1);
+              }
+            }
+            var modPrice = halfPrice != null ? halfPrice : 0;
+            var mod = { name: name, price: modPrice, half_price: halfPrice, charged: modPrice > 0, prefix: result.side };
+            inst.mods.push(mod);
+            modHistory.push({ inst: inst, mod: mod });
+          });
+          renderTicket();
+          updateBottomBar();
+        })
+        .catch(function() { /* cancelled */ });
+      return;
+    }
+
     var pfx = PREFIXES.find(function(p) { return p.id === activePrefix; });
     var modName = (pfx ? pfx.label + ' ' : '') + name;
     var charged = price > 0;
     selected.forEach(function(inst) {
-      var mod = { name: modName, price: price, charged: charged };
+      var mod = { name: modName, price: price, charged: charged, prefix: null };
       inst.mods.push(mod);
       modHistory.push({ inst: inst, mod: mod });
     });
@@ -683,7 +719,10 @@ function renderTicket() {
         var sep = buildSeparator();
         gc.appendChild(sep);
         chargedMods.forEach(function(m) {
-          gc.appendChild(buildModRow(m.name, m.price, true, false));
+          var dn = m.name;
+          if (m.prefix === 'Left') dn = '(L) ' + m.name;
+          else if (m.prefix === 'Right') dn = '(R) ' + m.name;
+          gc.appendChild(buildModRow(dn, m.price, true, false));
         });
       }
 
@@ -736,7 +775,10 @@ function renderTicket() {
         if (visibleMods.length > 0) {
           ic.appendChild(buildSeparator());
           visibleMods.forEach(function(m) {
-            var modRow = buildModRow(m.name, m.price, active, active);
+            var displayName = m.name;
+            if (m.prefix === 'Left') displayName = '(L) ' + m.name;
+            else if (m.prefix === 'Right') displayName = '(R) ' + m.name;
+            var modRow = buildModRow(displayName, m.price, active, active);
             // Tap mod row to remove modifier when in modifiers tab and item is selected
             if (active && activeTab === 'modifiers') {
               modRow.style.cursor = 'pointer';
@@ -1117,7 +1159,7 @@ async function handleSend() {
           quantity:     1,
           category:     'general',
           modifiers:    inst.mods.map(function(m) {
-            return { name: m.name, price: m.price, charged: m.charged };
+            return { name: m.name, price: m.price, charged: m.charged, prefix: m.prefix || null, half_price: m.half_price != null ? m.half_price : null };
           }),
         }),
       });
@@ -1170,7 +1212,7 @@ function deepCopyTicket(src) {
       name:      inst.name,
       unitPrice: inst.unitPrice,
       mods:      inst.mods.map(function(m) {
-        return { name: m.name, price: m.price, charged: m.charged };
+        return { name: m.name, price: m.price, charged: m.charged, prefix: m.prefix || null, half_price: m.half_price != null ? m.half_price : null };
       }),
       selected:  false,   // always reset selection on copy
       sent:      inst.sent,
