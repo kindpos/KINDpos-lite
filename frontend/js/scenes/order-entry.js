@@ -796,9 +796,6 @@ function applyModifier(mod) {
 
   renderTicket();
   refreshModifierPanel();
-
-  // Reset hex nav back to categories for next pick
-  if (modifierSession.hexNav) modifierSession.hexNav.reset();
 }
 
 function refreshModifierPanel() {
