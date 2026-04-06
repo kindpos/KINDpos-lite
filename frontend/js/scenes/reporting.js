@@ -539,7 +539,7 @@ function buildManagerLaborPanels(labor, fullSize) {
   var otAlerts = l.ot_alerts || [];
   var svgW = fullSize ? 900 : 400;
   var svgH = fullSize ? 380 : 160;
-  var lblW = fullSize ? 80 : 55;
+  var lblW = fullSize ? 120 : 80;
   var fontSize = fullSize ? T.fsSmall : T.fsBtn;
 
   // TOTAL HRS — horizontal bars: employees by hours
