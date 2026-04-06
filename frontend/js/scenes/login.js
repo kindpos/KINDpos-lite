@@ -138,7 +138,7 @@ registerScene('login', {
 
     // ── RIGHT COLUMN ── (Quick Service, Recall Table, Tip Adjustment)
     var right = document.createElement('div');
-    right.style.cssText = 'display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;';
+    right.style.cssText = 'display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;position:relative;';
 
     var qsBtn = buildButton('QUICK SERVICE', {
       fill: T.grayBtn, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
@@ -166,7 +166,7 @@ registerScene('login', {
 
     // Version label at bottom-right with multi-color spans
     var version = document.createElement('div');
-    version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:40px;padding:4px 0;';
+    version.style.cssText = 'position:absolute;bottom:0;right:0;font-family:' + T.fb + ';font-size:40px;padding:4px 0;';
     var parts = [
       { text: 'KIND', color: T.gold, fontFamily: T.fh, fontSize: '36px' },
       { text: 'pos', color: T.red },
