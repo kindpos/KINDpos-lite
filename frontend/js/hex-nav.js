@@ -246,9 +246,12 @@ export function HexNav(container, opts) {
   // Generate flat-top honeycomb grid slots centered on (cx, cy).
   // Same math as honeycombLayout but centered on parent, not viewport.
   // Generates enough slots to cover children, sorted nearest-first.
-  function gridSlotsAround(cx, cy, r, count, gap) {
-    var colStep = r * 1.5 * gap;
-    var rowStep = r * Math.sqrt(3) * gap;
+  function gridSlotsAround(cx, cy, r, count, gap, parentR) {
+    // Use the larger of parent/child radius for grid step so children
+    // clear the parent and tile correctly with each other
+    var gridR = Math.max(r, parentR || r);
+    var colStep = gridR * 1.5 * gap;
+    var rowStep = gridR * Math.sqrt(3) * gap;
     // Generate a grid large enough: spread columns/rows around center
     var spread = Math.max(3, Math.ceil(Math.sqrt(count)) + 2);
     var slots = [];
@@ -281,7 +284,7 @@ export function HexNav(container, opts) {
     var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
     var gap = gapForLevel(state.level);
 
-    var slots = gridSlotsAround(parentHex.x, parentHex.y, r, childItems.length, gap);
+    var slots = gridSlotsAround(parentHex.x, parentHex.y, r, childItems.length, gap, parentHex.r);
 
     // Filter out slots that overlap ANY locked hex
     var freeSlots = [];
