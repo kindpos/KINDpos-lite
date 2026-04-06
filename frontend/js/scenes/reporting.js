@@ -140,6 +140,19 @@ function buildLeftCard(params, sales, labor) {
     var btnArea = document.createElement('div');
     btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
 
+    var detailBtn = buildStyledButton(T.darkBtn);
+    detailBtn.inner.textContent = 'Sales Detail';
+    detailBtn.inner.style.fontFamily = T.fh;
+    detailBtn.inner.style.fontSize = T.fsSmall;
+    detailBtn.inner.style.color = T.mint;
+    detailBtn.inner.style.padding = '4px 10px';
+    detailBtn.wrap.style.alignSelf = 'stretch';
+    detailBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('sales-summary', { role: params.role, employeeId: params.employeeId });
+    });
+    btnArea.appendChild(detailBtn.wrap);
+
     var closeDayBtn = buildStyledButton(T.red);
     closeDayBtn.inner.textContent = 'Close Day';
     closeDayBtn.inner.style.fontFamily = T.fh;
