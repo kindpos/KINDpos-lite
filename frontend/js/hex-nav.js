@@ -265,7 +265,8 @@ export function HexNav(container, opts) {
   // For flat-top hexes, the 6 neighbor offsets in axial (q, r) are:
   //   (+1,0) (-1,0) (0,+1) (0,-1) (+1,-1) (-1,+1)
   // Convert axial to pixel: x = r * 1.5 * q, y = r * sqrt(3) * (r_ax + q/2)
-  function gridSlotsAround(cx, cy, r, count, gap) {
+  function gridSlotsAround(cx, cy, r, count, gap, childR) {
+    var actualR = childR || r;  // actual child radius for boundary checks
     var size = r * gap;
     // Axial to pixel conversion for flat-top hexes
     function axToPixel(q, rax) {
@@ -286,8 +287,8 @@ export function HexNav(container, opts) {
         if (q === 0 && rax === 0) continue;
         var pos = axToPixel(q, rax);
         // Keep in viewport
-        if (pos.x - r < 2 || pos.x + r > svgW - 2) continue;
-        if (pos.y - r < 2 || pos.y + r > svgH - 2) continue;
+        if (pos.x - actualR < 2 || pos.x + actualR > svgW - 2) continue;
+        if (pos.y - actualR < 2 || pos.y + actualR > svgH - 2) continue;
         slots.push(pos);
       }
     }
@@ -317,7 +318,7 @@ export function HexNav(container, opts) {
 
     // Use average radius for grid spacing so ring-1 aligns at edge-sharing distance
     var gridR = (parentHex.r + r) / 2;
-    var slots = gridSlotsAround(parentHex.x, parentHex.y, gridR, childItems.length, gap);
+    var slots = gridSlotsAround(parentHex.x, parentHex.y, gridR, childItems.length, gap, r);
 
     // Filter out slots that overlap ANY locked hex
     var freeSlots = [];
@@ -590,7 +591,7 @@ export function HexNav(container, opts) {
     state.level = 2; state.subcat = null;
     var centerHex = {
       id: 'pick-center', label: label,
-      x: 0, y: 0, r: CAT_R,
+      x: svgW / 2, y: svgH / 2, r: CAT_R,
       color: color, textColor: textColor || '#1a1a1a',
       locked: true, type: 'cat', data: { subcats: [] },
     };
