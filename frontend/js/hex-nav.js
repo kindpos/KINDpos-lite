@@ -9,8 +9,9 @@ import { T } from './tokens.js';
 var CAT_R    = 80;
 var SUBCAT_R = 70;
 var ITEM_R   = 48;
-// Gap multipliers per depth — tighter as you drill deeper
-var GAPS = [1.12, 1.06, 1.02, 1.00, 1.00];
+var MOD_R    = 40;
+// Gap multipliers per depth — breathing room between hexes
+var GAPS = [1.15, 1.10, 1.08, 1.06, 1.06];
 function gapForLevel(level) { return GAPS[level] || GAPS[GAPS.length - 1]; }
 
 // ═══════════════════════════════════════════════════
@@ -439,7 +440,7 @@ export function HexNav(container, opts) {
       groupItems.push({ id: '__done__', label: 'DONE', isDone: true });
     }
 
-    state.hexes = buildGrid(locked, groupItems, SUBCAT_R, 'modgroup');
+    state.hexes = buildGrid(locked, groupItems, ITEM_R, 'modgroup');
     // Style the mod-group hexes
     state.hexes.forEach(function(h) {
       if (h.type !== 'modgroup') return;
@@ -474,7 +475,7 @@ export function HexNav(container, opts) {
       return { id: c.label, label: c.label, price: c.price, groupId: groupData.id };
     });
 
-    state.hexes = buildGrid(locked, choiceItems, ITEM_R, 'mod');
+    state.hexes = buildGrid(locked, choiceItems, MOD_R, 'mod');
     // Style mod choices
     state.hexes.forEach(function(h) {
       if (h.type !== 'mod') return;
