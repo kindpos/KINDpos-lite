@@ -308,14 +308,11 @@ export function HexNav(container, opts) {
     return slots;
   }
 
-  // Build hex layout: children match parent size for edge-sharing.
-  // Only shrink if too many to fit at parent size.
+  // Build hex layout: children use their own radius, scaling down
+  // at each drill-down level. Axial coords handle mixed-size tiling.
   function buildGrid(lockedHexes, childItems, childR, childType) {
     var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
-    // Children match parent radius for uniform edge-sharing tiling
-    var r = parentHex.r;
-    // If too many children to fit at parent size, shrink
-    r = adaptiveR(r, childItems.length + lockedHexes.length, svgW, svgH);
+    var r = adaptiveR(childR, childItems.length, svgW, svgH);
     var gap = gapForLevel(state.level);
 
     var slots = gridSlotsAround(parentHex.x, parentHex.y, r, childItems.length, gap);
