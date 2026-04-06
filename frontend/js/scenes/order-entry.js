@@ -12,7 +12,7 @@ import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
 import { showKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
-import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, MOD_COLORS } from '../data/universal-modifiers.js';
+import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
 
 var PAD      = 16;
 var GAP      = 16;
@@ -645,6 +645,71 @@ function openModifierSession() {
   renderTicket();
 }
 
+function buildPlacementBar() {
+  var plColor = MOD_COLORS.pizza.color;
+  var plText  = MOD_COLORS.pizza.textColor;
+  var dimText = '#7a4045';
+
+  var styled = buildStyledButton(T.darkBtn);
+  styled.wrap.style.flexShrink = '0';
+  styled.inner.style.height = '38px';
+  styled.inner.style.display = 'flex';
+  styled.inner.style.alignItems = 'stretch';
+  styled.inner.style.justifyContent = 'stretch';
+  styled.inner.style.padding = '0';
+
+  var segments = {};
+  var order = ['left', 'whole', 'right'];
+
+  order.forEach(function(id, i) {
+    var pl = PIZZA_PLACEMENTS.find(function(p) { return p.id === id; });
+    if (!pl) return;
+    var isActive = modifierSession.activePlacement === id;
+
+    if (i > 0) {
+      var div = document.createElement('div');
+      div.style.cssText = 'width:2px;background:' + T.bgEdge + ';flex-shrink:0;align-self:stretch;';
+      styled.inner.appendChild(div);
+    }
+
+    var seg = document.createElement('div');
+    seg.style.cssText = [
+      'flex:' + (id === 'whole' ? '2' : '1') + ';',
+      'display:flex;align-items:center;justify-content:center;',
+      'font-family:' + T.fh + ';font-size:22px;',
+      'background:' + (isActive ? plColor : 'transparent') + ';',
+      'color:' + (isActive ? plText : dimText) + ';',
+      'cursor:pointer;transition:background 80ms,color 80ms;',
+    ].join('');
+    seg.textContent = pl.label;
+
+    seg.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      modifierSession.activePlacement = id;
+      refreshPlacementBar();
+    });
+
+    styled.inner.appendChild(seg);
+    segments[id] = seg;
+  });
+
+  return { wrap: styled.wrap, segments: segments, plColor: plColor, plText: plText, dimText: dimText };
+}
+
+function refreshPlacementBar() {
+  var panel = modifierSession.panelEl;
+  if (!panel || !panel._placeBar) return;
+  var bar = panel._placeBar;
+
+  ['left', 'whole', 'right'].forEach(function(id) {
+    var seg = bar.segments[id];
+    if (!seg) return;
+    var isActive = modifierSession.activePlacement === id;
+    seg.style.background = isActive ? bar.plColor : 'transparent';
+    seg.style.color = isActive ? bar.plText : bar.dimText;
+  });
+}
+
 function buildModifierPanel(catIds) {
   var panel = document.createElement('div');
   panel.style.cssText = [
@@ -686,9 +751,12 @@ function buildModifierPanel(catIds) {
   });
   panel.appendChild(prefixRow);
 
-  // Default placement for pizza
-  if (modifierSession.hasPizza && !modifierSession.activePlacement) {
-    modifierSession.activePlacement = 'whole';
+  // ── PIZZA PLACEMENT CARD — wide chamfered bar with 3 segments ──
+  if (modifierSession.hasPizza) {
+    if (!modifierSession.activePlacement) modifierSession.activePlacement = 'whole';
+    var placeBar = buildPlacementBar();
+    panel._placeBar = placeBar;
+    panel.appendChild(placeBar.wrap);
   }
 
   // ── MODIFIER HEXNAV ──
@@ -734,15 +802,6 @@ function buildModifierPanel(catIds) {
 }
 
 function applyModifier(mod) {
-  // Placement hex taps set the active placement, not a modifier
-  if (mod.isPlacement) {
-    var plId = mod.id.replace('__place_', '').replace('__', '');
-    modifierSession.activePlacement = plId;
-    var plLabel = plId.charAt(0).toUpperCase() + plId.slice(1);
-    showToast('Placement: ' + plLabel, { bg: '#555', duration: 1500 });
-    return;
-  }
-
   if (!modifierSession.activePrefix) {
     showToast('Select a prefix first', { bg: '#555', duration: 2000 });
     return;
@@ -808,6 +867,9 @@ function refreshModifierPanel() {
       inner.style.color = isActive ? pTextColor : pColor;
     }
   });
+
+  // Refresh placement bar (pizza)
+  refreshPlacementBar();
 
   // Refresh applied mods log
   renderAppliedModsLog(panel);
