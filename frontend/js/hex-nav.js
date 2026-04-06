@@ -103,8 +103,9 @@ export function HexNav(container, opts) {
       poly.setAttribute('stroke', h.color);
       poly.setAttribute('stroke-width', '7');
     } else {
-      poly.setAttribute('fill', 'transparent');
-      poly.setAttribute('stroke', h.color);
+      poly.setAttribute('fill', h.color);
+      poly.setAttribute('fill-opacity', '0.25');
+      poly.setAttribute('stroke', h.textColor || h.color);
       poly.setAttribute('stroke-width', '7');
     }
     g.appendChild(poly);
@@ -141,7 +142,7 @@ export function HexNav(container, opts) {
       text.setAttribute('font-family', T.fb);
       text.setAttribute('font-size', fontSize);
       text.setAttribute('font-weight', 'bold');
-      text.setAttribute('fill', h.locked ? h.textColor : h.color);
+      text.setAttribute('fill', h.textColor || h.color);
       text.setAttribute('pointer-events', 'none');
       text.textContent = line;
       g.appendChild(text);
