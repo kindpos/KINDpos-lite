@@ -102,7 +102,7 @@ registerScene('login', {
     left.appendChild(reportBtn);
 
     var configBtn = buildButton('CONFIGURATION', {
-      fill: T.gold, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      fill: T.gold, color: T.bg, fontSize: '28px', fontFamily: T.fh,
       width: BTN_W, height: BTN_H,
       onTap: function() { handleAction('configuration'); },
     });
@@ -127,7 +127,7 @@ registerScene('login', {
       masked: true,
       displayH: 60,
       gap: 16,
-      keyH: 72,
+      keyH: 84,
       keyGap: 12,
       cardPad: 18,
       onSubmit: function(pin) { handlePinSubmit(pin, pinPrompt); },
@@ -138,7 +138,7 @@ registerScene('login', {
     var version = document.createElement('div');
     version.style.cssText = 'margin-top:auto;align-self:flex-end;font-family:' + T.fb + ';font-size:40px;padding:4px 0;margin-right:0;';
     var parts = [
-      { text: 'KIND', color: T.gold },
+      { text: 'KIND', color: T.gold, fontFamily: T.fh, fontSize: '36px' },
       { text: 'pos', color: T.red },
       { text: '_lite', color: T.gold },
       { text: ' // ', color: T.mint },
@@ -148,6 +148,8 @@ registerScene('login', {
     parts.forEach(function(p) {
       var span = document.createElement('span');
       span.style.color = p.color;
+      if (p.fontFamily) span.style.fontFamily = p.fontFamily;
+      if (p.fontSize) span.style.fontSize = p.fontSize;
       span.textContent = p.text;
       version.appendChild(span);
     });

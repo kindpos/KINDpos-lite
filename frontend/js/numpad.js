@@ -104,19 +104,19 @@ export function buildNumpad(opts) {
   ];
 
   layout.forEach(function(key) {
-    var fill, textColor, fontSize;
+    var fill, textColor, fontSize, fontFamily;
     if (key.type === 'clear') {
-      fill = T.red; textColor = T.mint; fontSize = T.fsClr;
+      fill = T.red; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
     } else if (key.type === 'submit') {
-      fill = T.goGreen; textColor = T.mint; fontSize = T.fsClr;
+      fill = T.goGreen; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
     } else {
-      fill = T.darkBtn; textColor = T.gold; fontSize = T.fsNumpad;
+      fill = T.darkBtn; textColor = T.gold; fontSize = '72px'; fontFamily = T.fh;
     }
 
     var pair = buildStyledButton(fill);
     pair.wrap.style.width = PAD.keyW + 'px';
     pair.wrap.style.height = keyH + 'px';
-    pair.inner.style.fontFamily = T.fb;
+    pair.inner.style.fontFamily = fontFamily;
     pair.inner.style.fontSize = fontSize;
     pair.inner.style.color = textColor;
     pair.inner.style.lineHeight = '1';
