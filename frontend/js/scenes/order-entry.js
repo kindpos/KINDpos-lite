@@ -871,8 +871,6 @@ function showDiscountOptions(targets) {
 }
 
 // ── PIN OVERLAY ───────────────────────────────────
-var MANAGER_PIN = '1234'; // demo seed manager PIN
-
 function buildPinOverlay(el, cb) {
   // Child panel — never override el positioning styles
   var panel = document.createElement('div');
@@ -892,11 +890,22 @@ function buildPinOverlay(el, cb) {
     maxDigits: 4,
     masked:    true,
     onSubmit:  function(pin) {
-      if (pin === MANAGER_PIN) {
-        cb(true);
-      } else {
-        numpad.setError('WRONG PIN');
-      }
+      // Validate against backend employee roster — accept any manager PIN
+      fetch(API + '/servers')
+        .then(function(r) { return r.json(); })
+        .then(function(employees) {
+          var match = employees.find(function(e) {
+            return e.pin === pin && e.role === 'manager';
+          });
+          if (match) {
+            cb(true);
+          } else {
+            numpad.setError('WRONG PIN');
+          }
+        })
+        .catch(function() {
+          numpad.setError('NETWORK ERROR');
+        });
     },
   });
   panel.appendChild(numpad);

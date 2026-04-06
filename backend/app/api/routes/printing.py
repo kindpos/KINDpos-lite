@@ -154,7 +154,7 @@ async def print_server_checkout(
 @router.post("/test")
 async def print_test(template_name: str = Body(..., embed=True), printer_mac: str = Body(..., embed=True)):
     """Fire a fixture template to a printer (test panel)."""
-    fixture_path = Path(f"core/backend/app/printing/fixtures/{template_name}.json")
+    fixture_path = Path(__file__).resolve().parents[2] / "printing" / "fixtures" / f"{template_name}.json"
     if not fixture_path.exists():
         raise HTTPException(status_code=404, detail=f"Fixture {template_name} not found")
     
