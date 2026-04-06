@@ -20,66 +20,58 @@ from app.core.events import create_event, EventType
 # ── Categories ────────────────────────────────────────────────────────────────
 
 CATEGORIES = [
-    {"category_id": "mains",  "name": "Mains",  "label": "MAINS",  "color": "#7ac943", "display_order": 1},
-    {"category_id": "sides",  "name": "Sides",  "label": "SIDES",  "color": "#00bcd4", "display_order": 2},
-    {"category_id": "drinks", "name": "Drinks", "label": "DRINKS", "color": "#ff9800", "display_order": 3},
-    {"category_id": "combos", "name": "Combos", "label": "COMBOS", "color": "#b48efa", "display_order": 4},
+    {"category_id": "combo",      "name": "Combo",      "label": "COMBO",      "color": "#d4a017", "display_order": 1},
+    {"category_id": "ribs",       "name": "Ribs",       "label": "RIBS",       "color": "#c0392b", "display_order": 2},
+    {"category_id": "sandwiches", "name": "Sandwiches", "label": "SANDWICHES", "color": "#7ac943", "display_order": 3},
+    {"category_id": "sides",      "name": "Sides",      "label": "SIDES",      "color": "#00bcd4", "display_order": 4},
+    {"category_id": "soda",       "name": "Soda",       "label": "SODA",       "color": "#2196f3", "display_order": 5},
 ]
 
 # ── Menu Items ────────────────────────────────────────────────────────────────
 
 MENU_ITEMS = [
-    # Mains
-    {"item_id": "smash_burger",      "name": "Smash Burger",       "price": 10.00, "category": "Mains",  "display_order": 1},
-    {"item_id": "bbq_pulled_pork",   "name": "BBQ Pulled Pork",    "price": 12.00, "category": "Mains",  "display_order": 2},
-    {"item_id": "fish_tacos",        "name": "Fish Tacos",         "price": 11.00, "category": "Mains",  "display_order": 3},
-    {"item_id": "chicken_wrap",      "name": "Chicken Wrap",       "price": 10.00, "category": "Mains",  "display_order": 4},
-    {"item_id": "loaded_hot_dog",    "name": "Loaded Dog",         "price":  8.00, "category": "Mains",  "display_order": 5},
-    {"item_id": "veggie_burger",     "name": "Veggie Burger",      "price": 11.00, "category": "Mains",  "display_order": 6},
+    # Combo
+    {"item_id": "combo_half_rack",   "name": "Combo Half Rack",    "price": 16.00, "category": "Combo",      "display_order": 1},
+    {"item_id": "combo_pulled_pork", "name": "Combo Pulled Pork",  "price": 14.00, "category": "Combo",      "display_order": 2},
+    # Ribs
+    {"item_id": "full_rack",         "name": "Full Rack",          "price": 18.00, "category": "Ribs",       "display_order": 1},
+    {"item_id": "half_rack",         "name": "Half Rack",          "price": 12.00, "category": "Ribs",       "display_order": 2},
+    # Sandwiches
+    {"item_id": "pulled_pork",       "name": "Pulled Pork",        "price": 10.00, "category": "Sandwiches", "display_order": 1},
+    {"item_id": "sliced_brisket",    "name": "Sliced Brisket",     "price": 12.00, "category": "Sandwiches", "display_order": 2},
     # Sides
-    {"item_id": "fries",             "name": "Fries",              "price":  4.00, "category": "Sides",  "display_order": 1},
-    {"item_id": "onion_rings",       "name": "Onion Rings",        "price":  5.00, "category": "Sides",  "display_order": 2},
-    {"item_id": "mac_cheese",        "name": "Mac & Cheese",       "price":  6.00, "category": "Sides",  "display_order": 3},
-    {"item_id": "street_corn",       "name": "Street Corn",        "price":  5.00, "category": "Sides",  "display_order": 4},
-    # Drinks
-    {"item_id": "lemonade",          "name": "Lemonade",           "price":  4.00, "category": "Drinks", "display_order": 1},
-    {"item_id": "iced_tea",          "name": "Iced Tea",           "price":  3.00, "category": "Drinks", "display_order": 2},
-    {"item_id": "craft_soda",        "name": "Craft Soda",         "price":  4.00, "category": "Drinks", "display_order": 3},
-    {"item_id": "water",             "name": "Water",              "price":  2.00, "category": "Drinks", "display_order": 4},
-    # Combos
-    {"item_id": "burger_combo",      "name": "Burger Combo",       "price": 14.00, "category": "Combos", "display_order": 1},
-    {"item_id": "taco_combo",        "name": "Taco Combo",         "price": 15.00, "category": "Combos", "display_order": 2},
-    {"item_id": "kids_combo",        "name": "Kid's Combo",        "price":  8.00, "category": "Combos", "display_order": 3},
+    {"item_id": "fries",             "name": "Fries",              "price":  4.00, "category": "Sides",      "display_order": 1},
+    {"item_id": "baked_potato",      "name": "Baked Potato",       "price":  5.00, "category": "Sides",      "display_order": 2},
+    {"item_id": "slaw",              "name": "Slaw",               "price":  3.00, "category": "Sides",      "display_order": 3},
+    # Soda
+    {"item_id": "coke",              "name": "Coke",               "price":  3.00, "category": "Soda",       "display_order": 1},
+    {"item_id": "sprite",            "name": "Sprite",             "price":  3.00, "category": "Soda",       "display_order": 2},
+    {"item_id": "diet_coke",         "name": "Diet Coke",          "price":  3.00, "category": "Soda",       "display_order": 3},
+    {"item_id": "fanta",             "name": "Fanta",              "price":  3.00, "category": "Soda",       "display_order": 4},
 ]
 
 # ── Modifier Groups ──────────────────────────────────────────────────────────
 
 MODIFIER_GROUPS = [
     {
-        "group_id": "proteins",
-        "name": "Proteins",
+        "group_id": "sauce",
+        "name": "Sauce",
         "modifiers": [
-            {"modifier_id": "add_chicken", "name": "Add Chicken", "price": 3.00},
-            {"modifier_id": "add_shrimp",  "name": "Add Shrimp",  "price": 4.00},
-            {"modifier_id": "add_bacon",   "name": "Add Bacon",   "price": 2.00},
+            {"modifier_id": "sweet",   "name": "Sweet",   "price": 0.00},
+            {"modifier_id": "hot",     "name": "Hot",     "price": 0.00},
+            {"modifier_id": "mild",    "name": "Mild",    "price": 0.00},
+            {"modifier_id": "vinegar", "name": "Vinegar", "price": 0.00},
+            {"modifier_id": "mustard", "name": "Mustard", "price": 0.00},
         ],
     },
     {
-        "group_id": "sizes",
-        "name": "Sizes",
+        "group_id": "extras",
+        "name": "Extras",
         "modifiers": [
-            {"modifier_id": "size_small",   "name": "Small",   "price": 0.00},
-            {"modifier_id": "size_regular", "name": "Regular", "price": 0.00},
-            {"modifier_id": "size_large",   "name": "Large",   "price": 2.00},
-        ],
-    },
-    {
-        "group_id": "add_ons",
-        "name": "Add-Ons",
-        "modifiers": [
-            {"modifier_id": "extra_cheese", "name": "Extra Cheese", "price": 1.00},
-            {"modifier_id": "avocado",      "name": "Avocado",      "price": 2.00},
-            {"modifier_id": "jalapenos",    "name": "Jalape\u00f1os",     "price": 0.50},
+            {"modifier_id": "extra_meat", "name": "Extra Meat",  "price": 3.00},
+            {"modifier_id": "cheese",     "name": "Cheese",      "price": 1.00},
+            {"modifier_id": "jalapenos",  "name": "Jalape\u00f1os",    "price": 0.50},
+            {"modifier_id": "onions",     "name": "Onions",      "price": 0.00},
         ],
     },
 ]
