@@ -247,12 +247,12 @@ export function HexNav(container, opts) {
   // Same math as honeycombLayout but centered on parent, not viewport.
   // Generates enough slots to cover children, sorted nearest-first.
   function gridSlotsAround(cx, cy, r, count, gap, parentR) {
-    // Use the larger of parent/child radius for grid step so children
-    // clear the parent and tile correctly with each other
-    var gridR = Math.max(r, parentR || r);
-    var colStep = gridR * 1.5 * gap;
-    var rowStep = gridR * Math.sqrt(3) * gap;
-    // Generate a grid large enough: spread columns/rows around center
+    // Child-sized grid spacing for tight child-to-child tiling
+    var colStep = r * 1.5 * gap;
+    var rowStep = r * Math.sqrt(3) * gap;
+    // Minimum distance from parent center to child center
+    var minDist = ((parentR || r) + r) * gap;
+
     var spread = Math.max(3, Math.ceil(Math.sqrt(count)) + 2);
     var slots = [];
     for (var col = -spread; col <= spread; col++) {
@@ -260,8 +260,9 @@ export function HexNav(container, opts) {
         var yOff = (Math.abs(col) % 2 === 1) ? rowStep / 2 : 0;
         var x = cx + col * colStep;
         var y = cy + row * rowStep + yOff;
-        // Skip the center (parent sits there)
-        if (Math.abs(x - cx) < 1 && Math.abs(y - cy) < 1) continue;
+        // Skip slots too close to parent center
+        var dx = x - cx, dy = y - cy;
+        if (Math.sqrt(dx * dx + dy * dy) < minDist - 1) continue;
         // Keep in viewport
         if (x - r < 2 || x + r > svgW - 2) continue;
         if (y - r < 2 || y + r > svgH - 2) continue;
