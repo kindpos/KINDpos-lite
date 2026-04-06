@@ -396,7 +396,7 @@ export function drawHorizontalBars(svg, data, options) {
     var barColor = data[i].color || options.color || DATA.orange;
     var barWidth = (data[i].value / maxVal) * chartW;
 
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: barColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = data[i].label;
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barWidth, height: barH, fill: barColor }));
 
     if (data[i].sublabel) {
@@ -825,13 +825,14 @@ export function drawParetoHBar(svg, data, options) {
     var strokeColor = sorted[i].color || DATA.orange;
 
     // Item name label
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = sorted[i].label;
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: strokeColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = sorted[i].label;
 
     // Bar
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barW, height: barH, fill: fill, stroke: strokeColor, 'stroke-width': '1.5' }));
 
     // Dollar label with glow
-    svg.appendChild(svgEl('text', { x: padLeft + barW + 4, y: y + rowH / 2 + 4, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'start', filter: GLOW.coral })).textContent = '$' + sorted[i].value;
+    var glowKey = strokeColor === DATA.pink ? 'pink' : strokeColor === DATA.orange ? 'orange' : 'coral';
+    svg.appendChild(svgEl('text', { x: padLeft + barW + 4, y: y + rowH / 2 + 4, fill: strokeColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'start', filter: GLOW[glowKey] || GLOW.coral })).textContent = '$' + sorted[i].value;
 
     // Cumulative %
     cumul += sorted[i].value;
