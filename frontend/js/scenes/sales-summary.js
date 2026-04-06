@@ -63,7 +63,7 @@ registerScene('sales-summary', {
     var stats = getStats(role);
 
     setSceneName('Sales Summary');
-    setHeaderBack(true);
+    setHeaderBack({ back: true });
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -83,7 +83,7 @@ registerScene('sales-summary', {
     ].join('');
 
     var titleLabel = document.createElement('span');
-    titleLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mintDim + ';letter-spacing:0.1em;';
+    titleLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.dimText + ';letter-spacing:0.1em;';
     titleLabel.textContent = 'SALES SUMMARY';
 
     var roleLabel = document.createElement('span');
@@ -110,7 +110,7 @@ registerScene('sales-summary', {
       { label: 'Comps',          value: '-' + fmt(stats.comps), color: T.red },
       { label: 'Discounts',      value: '-' + fmt(stats.discounts), color: T.red },
       { label: 'Net Sales',      value: fmt(stats.netSales), color: T.gold, big: true },
-      { label: 'Tax Collected',  value: fmt(stats.taxCollected), color: T.mintDim },
+      { label: 'Tax Collected',  value: fmt(stats.taxCollected), color: T.dimText },
     ]));
 
     // Right column — Payment breakdown
@@ -118,7 +118,7 @@ registerScene('sales-summary', {
       { label: 'Cash (' + stats.cashCount + ')',  value: fmt(stats.cashSales), color: T.mint },
       { label: 'Card (' + stats.cardCount + ')',  value: fmt(stats.cardSales), color: T.gold },
       { label: 'Total Checks',                    value: '' + stats.totalChecks, color: T.mint },
-      { label: 'Avg Check',                       value: fmt(stats.avgCheck), color: T.mintDim },
+      { label: 'Avg Check',                       value: fmt(stats.avgCheck), color: T.dimText },
       { label: 'Total Tips',                      value: fmt(stats.totalTips), color: T.gold, big: true },
     ]));
 
@@ -155,7 +155,7 @@ function buildSection(title, rows) {
     'padding:8px 14px;',
     'border-bottom:2px solid ' + T.bgLight + ';',
     'background:' + T.bg4 + ';',
-    'font-family:' + T.fb + ';font-size:14px;color:' + T.mintDim + ';',
+    'font-family:' + T.fb + ';font-size:14px;color:' + T.dimText + ';',
     'letter-spacing:0.12em;',
   ].join('');
   header.textContent = title;
@@ -181,7 +181,7 @@ function buildSection(title, rows) {
     }
 
     var label = document.createElement('span');
-    label.style.color = T.mintDim;
+    label.style.color = T.dimText;
     label.textContent = r.label;
 
     var value = document.createElement('span');
