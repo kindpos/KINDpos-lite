@@ -267,15 +267,9 @@ class PrintContextBuilder:
             gross_sales += order_subtotal
             tax_collected += order_tax
 
-            # ── Aggregate voids/comps from events ─────────────────────────────
-            for e in order_events:
-                payload = e.payload or {}
-                if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += Decimal(str(payload.get("amount", 0)))
-                elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += Decimal(str(payload.get("amount", 0)))
-                elif e.event_type == EventType.DISCOUNT_APPLIED:
-                    discounts_total += Decimal(str(payload.get("amount", 0)))
+            # Use projection's discount_total (sourced from DISCOUNT_APPROVED events)
+            # for consistent deduction model across all calculation paths.
+            discounts_total += Decimal(str(order.discount_total or 0))
 
             # ── Payment details ───────────────────────────────────────────────
             for p in (order.payments or []):
@@ -307,7 +301,7 @@ class PrintContextBuilder:
                         "tip_open": tip_open,
                     })
 
-        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
+        net_sales = float(gross_sales - discounts_total)
         cc_tips_total = sum(t["tip"] for t in cc_transactions)
         gross_tips = cc_tips_total + (declared_cash_tips or 0.0)
 
@@ -516,18 +510,11 @@ class PrintContextBuilder:
 
             covers += max(len(seats), 1)  # At least 1 guest per check
 
-            # Voids / comps / discounts from events
-            for e in order_events:
-                payload = e.payload or {}
-                if e.event_type == EventType.ITEM_VOIDED:
-                    voids_total += Decimal(str(payload.get("amount", 0)))
-                    voids_count += 1
-                elif e.event_type == EventType.ITEM_COMPED:
-                    comps_total += Decimal(str(payload.get("amount", 0)))
-                    comps_count += 1
-                elif e.event_type == EventType.DISCOUNT_APPLIED:
-                    discounts_total += Decimal(str(payload.get("amount", 0)))
-                    discounts_count += 1
+            # Use projection's discount_total for consistent deduction model
+            order_disc = Decimal(str(order.discount_total or 0))
+            discounts_total += order_disc
+            if order_disc > 0:
+                discounts_count += 1
 
             # Payments
             for p in (order.payments or []):
@@ -546,7 +533,7 @@ class PrintContextBuilder:
                     card_count += 1
                     card_tips += tip
 
-        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
+        net_sales = float(gross_sales - discounts_total)
         total_payments = float(cash_sales + card_sales)
         avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
         per_person_avg = money_round(net_sales / covers) if covers > 0 else 0.0
@@ -603,7 +590,7 @@ class PrintContextBuilder:
             "total_tips": money_round(float(total_tips)),
             "cash_tips": money_round(float(cash_tips)),
             "card_tips": money_round(float(card_tips)),
-            "cash_expected": money_round(float(cash_sales + cash_tips)),
+            "cash_expected": money_round(float(cash_sales - card_tips)),
             "category_sales": category_sales,
             "total_checks": total_checks,
             "avg_check": avg_check,

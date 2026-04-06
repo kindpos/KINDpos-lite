@@ -144,7 +144,7 @@ class SalesRecapTemplate(BaseTemplate):
         cmds.append({'type': 'text', 'content': self._money_line('Total Payments', total_payments, cpl), 'bold': True})
 
         # Cash expected (cash sales + cash tips)
-        cash_expected = ctx.get('cash_expected', cash_sales + ctx.get('cash_tips', 0.0))
+        cash_expected = ctx.get('cash_expected', cash_sales - ctx.get('card_tips', 0.0))
         cmds.append({'type': 'text', 'content': self._money_line('Cash Expected', cash_expected, cpl)})
 
         # Tip total

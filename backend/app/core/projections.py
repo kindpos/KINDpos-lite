@@ -36,9 +36,9 @@ class OrderItem:
 
     @property
     def subtotal(self) -> float:
-        """Calculate item subtotal including modifiers."""
+        """Calculate item subtotal including modifiers (no intermediate rounding)."""
         modifier_total = sum(m.get("price", 0) for m in self.modifiers)
-        return money_round((self.price + modifier_total) * self.quantity)
+        return (self.price + modifier_total) * self.quantity
 
 
 @dataclass
@@ -53,6 +53,7 @@ class Payment:
     initiated_at: Optional[datetime] = None
     confirmed_at: Optional[datetime] = None
     tip_amount: float = 0.0
+    tax_amount: float = 0.0  # Tax captured at payment time
 
 
 @dataclass
@@ -89,13 +90,13 @@ class Order:
 
     @property
     def subtotal(self) -> float:
-        """Sum of all items."""
-        return money_round(sum(item.subtotal for item in self.items))
+        """Sum of all items (no intermediate rounding)."""
+        return sum(item.subtotal for item in self.items)
 
     @property
     def discount_total(self) -> float:
-        """Sum of all discounts."""
-        return money_round(sum(d.get("amount", 0) for d in self.discounts))
+        """Sum of all discounts (no intermediate rounding)."""
+        return sum(d.get("amount", 0) for d in self.discounts)
 
     @property
     def tax_rate(self) -> float:
@@ -106,9 +107,13 @@ class Order:
 
     @property
     def tax(self) -> float:
-        """Calculate tax on subtotal after discounts (clamped to zero)."""
+        """Tax collected — prefer event-sourced value from confirmed payments.
+        Falls back to computed tax only when no payment has captured tax."""
+        captured = sum(p.tax_amount for p in self.payments if p.status == "confirmed")
+        if captured > 0:
+            return captured
         taxable = max(0.0, self.subtotal - self.discount_total)
-        return money_round(taxable * self.tax_rate)
+        return taxable * self.tax_rate
 
     @property
     def total(self) -> float:
@@ -118,8 +123,8 @@ class Order:
 
     @property
     def amount_paid(self) -> float:
-        """Sum of confirmed payments."""
-        return money_round(sum(p.amount for p in self.payments if p.status == "confirmed"))
+        """Sum of confirmed payments (no intermediate rounding)."""
+        return sum(p.amount for p in self.payments if p.status == "confirmed")
 
     @property
     def balance_due(self) -> float:
@@ -287,6 +292,7 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                         payment.status = "confirmed"
                         payment.transaction_id = payload.get("transaction_id")
                         payment.confirmed_at = event.timestamp
+                        payment.tax_amount = payload.get("tax", 0.0)
                         break
 
                 # Auto-update order status if fully paid

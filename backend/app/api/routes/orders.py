@@ -9,7 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+import logging
 import uuid
+
+_logger = logging.getLogger("kindpos.orders")
 
 from app.config import settings
 from app.api.dependencies import get_ledger
@@ -805,6 +808,7 @@ async def confirm_payment(
         payment_id=payment_id,
         transaction_id=request.transaction_id,
         amount=request.amount,
+        tax=order.tax,
     )
     await ledger.append(event)
 
@@ -1108,9 +1112,16 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     day_events = await get_current_day_events(ledger)
     all_orders = project_orders(day_events)
 
+    # Build tip map (last-write-wins per payment_id)
+    batch_tip_map: dict[str, float] = {}
+    for e in day_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            batch_tip_map[e.payload.get("payment_id", "")] = e.payload.get("tip_amount", 0.0)
+
     batch_total = _ZERO
     batch_cash = _ZERO
     batch_card = _ZERO
+    batch_card_tips = _ZERO
     all_order_ids = []
     for order in all_orders.values():
         if order.status in ("closed", "paid"):
@@ -1122,11 +1133,16 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
                         batch_cash += Decimal(str(p.amount))
                     else:
                         batch_card += Decimal(str(p.amount))
+                        tip = Decimal(str(batch_tip_map.get(p.payment_id, p.tip_amount)))
+                        batch_card_tips += tip
+
+    # Settlement = card sales + card tips (what the processor will settle)
+    batch_settlement = batch_card + batch_card_tips
 
     # Convert to float for event factories
     batch_total_f = money_round(float(batch_total))
     batch_cash_f = money_round(float(batch_cash))
-    batch_card_f = money_round(float(batch_card))
+    batch_card_f = money_round(float(batch_settlement))
 
     # Emit BATCH_SUBMITTED with full settlement record
     submit_evt = batch_submitted(
@@ -1147,6 +1163,15 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     )
     await ledger.append(batch_evt)
 
+    # Tender reconciliation check
+    tender_sum = batch_cash_f + batch_card_f
+    recon_diff = money_round(abs(batch_total_f - tender_sum))
+    if recon_diff > 0.01:
+        _logger.warning(
+            "Tender reconciliation mismatch: batch_total=%.2f, cash+card=%.2f, diff=%.2f",
+            batch_total_f, tender_sum, recon_diff,
+        )
+
     return {
         "success": True,
         "orders_closed_now": closed_count,
@@ -1161,12 +1186,22 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
 # CLOSE DAY (manager action)
 # =============================================================================
 
+class CloseDayRequest(BaseModel):
+    """Optional body for close-day with actual cash count."""
+    actual_cash_counted: Optional[float] = None
+
+
 @router.post("/close-day")
-async def close_day(ledger: EventLedger = Depends(get_ledger)):
+async def close_day(
+    body: Optional[CloseDayRequest] = None,
+    ledger: EventLedger = Depends(get_ledger),
+):
     """
     End-of-day: close remaining orders, settle batch, store auditable
     day summary as a DAY_CLOSED event. After this, the next business
     day starts fresh — all day-scoped queries will only see new events.
+
+    Optionally accepts `actual_cash_counted` to compute Over/Short.
     """
     # Close any remaining open orders
     open_ids = await get_open_orders(ledger)
@@ -1204,6 +1239,14 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
     order_ids = []
     payment_count = 0
 
+    # Use last-write-wins per payment_id (same logic as day-summary)
+    # to avoid double-counting when a tip is re-adjusted
+    tip_map: dict[str, float] = {}
+    for e in all_events:
+        if e.event_type == EventType.TIP_ADJUSTED:
+            tip_map[e.payload.get("payment_id", "")] = e.payload.get("tip_amount", 0.0)
+
+    card_tips_total = _ZERO
     for order in all_orders.values():
         if order.status in ("closed", "paid"):
             total_sales += Decimal(str(order.total))
@@ -1215,23 +1258,22 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
                         cash_total += Decimal(str(p.amount))
                     else:
                         card_total += Decimal(str(p.amount))
+                        tip = Decimal(str(tip_map.get(p.payment_id, p.tip_amount)))
+                        card_tips_total += tip
 
-    # Use last-write-wins per payment_id (same logic as day-summary)
-    # to avoid double-counting when a tip is re-adjusted
-    tip_map: dict[str, float] = {}
-    for e in all_events:
-        if e.event_type == EventType.TIP_ADJUSTED:
-            tip_map[e.payload.get("payment_id", "")] = e.payload.get("tip_amount", 0.0)
     total_tips = sum((Decimal(str(v)) for v in tip_map.values()), _ZERO)
 
     # First event timestamp = when the day started
     opened_at = all_events[0].timestamp.isoformat() if all_events else None
 
+    # Card settlement = card sales + card tips
+    card_settlement = card_total + card_tips_total
+
     # Convert Decimal accumulators to float for event factories and output
     total_sales_f = money_round(float(total_sales))
     total_tips_f = money_round(float(total_tips))
     cash_total_f = money_round(float(cash_total))
-    card_total_f = money_round(float(card_total))
+    card_total_f = money_round(float(card_settlement))
 
     # Emit BATCH_SUBMITTED (settlement record)
     submit_evt = batch_submitted(
@@ -1260,6 +1302,26 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
     )
     await ledger.append(close_evt)
 
+    # Tender reconciliation check
+    tender_sum = cash_total_f + card_total_f
+    recon_diff = money_round(abs(total_sales_f - tender_sum))
+    if recon_diff > 0.01:
+        _logger.warning(
+            "Day close reconciliation mismatch: total_sales=%.2f, cash+card=%.2f, diff=%.2f",
+            total_sales_f, tender_sum, recon_diff,
+        )
+
+    # Over/Short: Cash Expected = Cash Sales − Card Tips
+    cash_sales_only = money_round(float(cash_total))  # raw cash payments (before settlement adjustment)
+    card_tips_f = money_round(float(card_tips_total))
+    cash_expected = money_round(cash_sales_only - card_tips_f)
+
+    over_short = None
+    actual_cash = None
+    if body and body.actual_cash_counted is not None:
+        actual_cash = money_round(body.actual_cash_counted)
+        over_short = money_round(actual_cash - cash_expected)
+
     summary = {
         "date": today,
         "total_orders": total_orders,
@@ -1271,6 +1333,10 @@ async def close_day(ledger: EventLedger = Depends(get_ledger)):
         "order_ids": order_ids,
         "payment_count": payment_count,
         "opened_at": opened_at,
+        "reconciliation_diff": recon_diff,
+        "cash_expected": cash_expected,
+        "actual_cash_counted": actual_cash,
+        "over_short": over_short,
     }
 
     return {"success": True, "summary": summary}
