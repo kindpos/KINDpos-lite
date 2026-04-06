@@ -27,6 +27,7 @@ var NBTH     = 1.15; // neighbor threshold multiplier
 export function HexNav(container, opts) {
   var o        = opts || {};
   var onSelect = o.onSelect || function() {};
+  var onToast  = o.onToast  || function() {};
   var data     = o.data    || [];
 
   var svgNS = 'http://www.w3.org/2000/svg';
@@ -255,9 +256,28 @@ export function HexNav(container, opts) {
     });
 
     var pos = null;
-    for (var j = 0; j < unique.length; j++) {
-      if (noCollision(unique[j].x, unique[j].y, childR, allHexes)) {
-        pos = unique[j]; break;
+    if (preferSpace) {
+      // Look-ahead: score each position by how many children it can fit
+      var bestScore = -1;
+      for (var j = 0; j < unique.length; j++) {
+        if (!noCollision(unique[j].x, unique[j].y, childR, allHexes)) continue;
+        var phantom = { x: unique[j].x, y: unique[j].y, r: childR };
+        var futureHexes = allHexes.concat([phantom]);
+        var slots = getChildPositions(phantom, childR, futureHexes, true);
+        var freeSlots = 0;
+        for (var s = 0; s < slots.length; s++) {
+          if (noCollision(slots[s].x, slots[s].y, childR, futureHexes)) freeSlots++;
+        }
+        if (freeSlots > bestScore) {
+          bestScore = freeSlots;
+          pos = unique[j];
+        }
+      }
+    } else {
+      for (var j = 0; j < unique.length; j++) {
+        if (noCollision(unique[j].x, unique[j].y, childR, allHexes)) {
+          pos = unique[j]; break;
+        }
       }
     }
 
@@ -428,10 +448,18 @@ export function HexNav(container, opts) {
       modState.active = true;
       modState.itemHex = itemHex;
       modState.itemData = itemHex.data;
-      modState.groups = itemHex.data.requiredMods;
+      modState.groups = itemHex.data.requiredMods.filter(function(g) {
+        return g.choices && g.choices.length > 0;
+      });
       modState.selectedMods = [];
       modState.satisfied = {};
       modState.currentGroup = null;
+      // If no valid groups remain, skip mod flow entirely
+      if (modState.groups.length === 0) {
+        resetModState();
+        onSelect(itemHex.data);
+        return;
+      }
     }
 
     itemHex.locked = true;
@@ -566,9 +594,13 @@ export function HexNav(container, opts) {
         else showCats();
         return;
       }
-      // Tap satisfied mod-group to re-pick
+      // Tap locked mod-group: at level 4 go back to groups, at level 3 re-pick
       if (modState.active && h.type === 'modgroup') {
-        showModChoices(h);
+        if (state.level === 4) {
+          showModGroups(modState.itemHex, false);
+        } else {
+          showModChoices(h);
+        }
         return;
       }
       if (h.type === 'cat')    showCats();
@@ -600,6 +632,7 @@ export function HexNav(container, opts) {
   // ── Public API ─────────────────────────────────
   this.setData = function(newData) {
     data = newData;
+    resetModState();
     resize();
     showCats();
   };

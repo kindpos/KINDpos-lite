@@ -552,11 +552,17 @@ function handleItemSelect(item) {
 
   // ── Start combo flow if selected from COMBO category ──
   if (hexNav && hexNav.getCatId() === 'combo') {
+    var comboMods = [];
+    if (item.selectedMods) {
+      item.selectedMods.forEach(function(sm) {
+        comboMods.push({ name: sm.label, price: sm.price || 0, charged: sm.price > 0 });
+      });
+    }
     var ticketItem = {
       id:        ++ticketSeq,
       name:      'Combo ' + name,
       unitPrice: price,
-      mods:      [],
+      mods:      comboMods,
       selected:  false,
       sent:      false,
     };
