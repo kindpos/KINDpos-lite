@@ -246,12 +246,10 @@ export function HexNav(container, opts) {
   // Generate flat-top honeycomb grid slots centered on (cx, cy).
   // Same math as honeycombLayout but centered on parent, not viewport.
   // Generates enough slots to cover children, sorted nearest-first.
-  function gridSlotsAround(cx, cy, r, count, gap, parentR) {
-    // Child-sized grid spacing for tight child-to-child tiling
+  function gridSlotsAround(cx, cy, r, count, gap) {
+    // Same flat-top grid math as categories — uniform radius tiling
     var colStep = r * 1.5 * gap;
     var rowStep = r * Math.sqrt(3) * gap;
-    // Minimum distance from parent center to child center
-    var minDist = ((parentR || r) + r) * gap;
 
     var spread = Math.max(3, Math.ceil(Math.sqrt(count)) + 2);
     var slots = [];
@@ -260,26 +258,22 @@ export function HexNav(container, opts) {
         var yOff = (Math.abs(col) % 2 === 1) ? rowStep / 2 : 0;
         var x = cx + col * colStep;
         var y = cy + row * rowStep + yOff;
-        // Skip slots too close to parent center
-        var dx = x - cx, dy = y - cy;
-        if (Math.sqrt(dx * dx + dy * dy) < minDist - 1) continue;
+        // Skip center (parent sits there)
+        if (col === 0 && row === 0) continue;
         // Keep in viewport
         if (x - r < 2 || x + r > svgW - 2) continue;
         if (y - r < 2 || y + r > svgH - 2) continue;
         slots.push({ x: x, y: y });
       }
     }
-    // Sort by distance to parent (nearest first), with bias toward
-    // viewport center so children fill toward available space
+    // Sort: nearest to parent first, bias toward viewport center
     var vcx = svgW / 2, vcy = svgH / 2;
     slots.sort(function(a, b) {
       var dxA = a.x - cx, dyA = a.y - cy;
       var dxB = b.x - cx, dyB = b.y - cy;
       var distA = dxA * dxA + dyA * dyA;
       var distB = dxB * dxB + dyB * dyB;
-      // Primary: distance to parent
       if (Math.abs(distA - distB) > colStep * colStep * 0.5) return distA - distB;
-      // Tiebreaker: prefer slots closer to viewport center (more space)
       var vdxA = a.x - vcx, vdyA = a.y - vcy;
       var vdxB = b.x - vcx, vdyB = b.y - vcy;
       return (vdxA * vdxA + vdyA * vdyA) - (vdxB * vdxB + vdyB * vdyB);
@@ -287,14 +281,17 @@ export function HexNav(container, opts) {
     return slots;
   }
 
-  // Build hex layout: locked parents keep positions, children fill
-  // flat-top grid slots nearest to the parent — tight cluster.
+  // Build hex layout: children match parent size for edge-sharing.
+  // Only shrink if too many to fit at parent size.
   function buildGrid(lockedHexes, childItems, childR, childType) {
-    var r = adaptiveR(childR, childItems.length, svgW, svgH);
     var parentHex = lockedHexes[lockedHexes.length - 1] || lockedHexes[0];
+    // Children match parent radius for uniform edge-sharing tiling
+    var r = parentHex.r;
+    // If too many children to fit at parent size, shrink
+    r = adaptiveR(r, childItems.length + lockedHexes.length, svgW, svgH);
     var gap = gapForLevel(state.level);
 
-    var slots = gridSlotsAround(parentHex.x, parentHex.y, r, childItems.length, gap, parentHex.r);
+    var slots = gridSlotsAround(parentHex.x, parentHex.y, r, childItems.length, gap);
 
     // Filter out slots that overlap ANY locked hex
     var freeSlots = [];
