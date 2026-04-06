@@ -651,16 +651,17 @@ function buildPlacementPill() {
   var activeColor = MOD_COLORS.pizza.color;
   var textColor = MOD_COLORS.pizza.textColor;
   var dimText = '#7a4045';
+  var rad = (PILL_H + b * 2) / 2;
 
   // Outer wrap with drop-shadow
   var wrap = document.createElement('div');
   wrap.style.cssText = [
     'filter:drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ');',
     'flex-shrink:0;cursor:pointer;user-select:none;-webkit-user-select:none;',
-    'touch-action:manipulation;',
+    'touch-action:manipulation;transition:transform 50ms,filter 50ms;',
   ].join('');
 
-  // Inner pill with rounded ends and bevel
+  // Inner pill — override global border-radius:0 with !important
   var inner = document.createElement('div');
   inner.style.cssText = [
     'display:flex;align-items:stretch;height:' + PILL_H + 'px;',
@@ -669,9 +670,9 @@ function buildPlacementPill() {
     'border-left:' + b + 'px solid ' + edges.light + ';',
     'border-bottom:' + b + 'px solid ' + edges.dark + ';',
     'border-right:' + b + 'px solid ' + edges.dark + ';',
-    'border-radius:' + (PILL_H / 2 + b) + 'px;',
     'overflow:hidden;box-sizing:border-box;',
   ].join('');
+  inner.style.setProperty('border-radius', rad + 'px', 'important');
 
   var segments = {};
   var order = ['left', 'whole', 'right'];
@@ -696,9 +697,10 @@ function buildPlacementPill() {
       e.stopPropagation();
       modifierSession.activePlacement = id;
       refreshPlacementPill();
+      doRelease();
     });
 
-    // Add divider before this segment (except first)
+    // Divider before this segment (except first)
     if (i > 0) {
       var div = document.createElement('div');
       div.style.cssText = 'width:2px;background:' + edges.dark + ';flex-shrink:0;';
@@ -709,25 +711,26 @@ function buildPlacementPill() {
     segments[id] = seg;
   });
 
-  // Analog key press effect on the whole pill
-  wrap.addEventListener('pointerdown', function() {
+  // Analog key press/release
+  function doPress() {
     inner.style.borderTop = b + 'px solid ' + edges.dark;
     inner.style.borderLeft = b + 'px solid ' + edges.dark;
     inner.style.borderBottom = b + 'px solid ' + edges.light;
     inner.style.borderRight = b + 'px solid ' + edges.light;
     wrap.style.filter = 'drop-shadow(0px 0px 0px transparent)';
     wrap.style.transform = 'translate(' + T.shadowX + 'px,' + T.shadowY + 'px)';
-  });
-  var release = function() {
+  }
+  function doRelease() {
     inner.style.borderTop = b + 'px solid ' + edges.light;
     inner.style.borderLeft = b + 'px solid ' + edges.light;
     inner.style.borderBottom = b + 'px solid ' + edges.dark;
     inner.style.borderRight = b + 'px solid ' + edges.dark;
     wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ')';
     wrap.style.transform = '';
-  };
-  wrap.addEventListener('pointerup', release);
-  wrap.addEventListener('pointerleave', release);
+  }
+  wrap.addEventListener('pointerdown', doPress);
+  wrap.addEventListener('pointerup', doRelease);
+  wrap.addEventListener('pointerleave', doRelease);
 
   wrap.appendChild(inner);
   wrap._segments = segments;
