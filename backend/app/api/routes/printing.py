@@ -17,14 +17,6 @@ router = APIRouter(prefix="/print", tags=["printing"])
 print_queue = PrintJobQueue()
 # Note: In production, PrintContextBuilder would be injected with the ledger
 
-@router.on_event("startup")
-async def startup():
-    await print_queue.connect()
-
-@router.on_event("shutdown")
-async def shutdown():
-    await print_queue.close()
-
 @router.post("/receipt/{order_id}")
 async def print_receipt(
     order_id: str,

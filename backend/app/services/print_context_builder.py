@@ -319,9 +319,9 @@ class PrintContextBuilder:
             eid = payload.get("employee_id") or payload.get("server_id")
             if eid != server_id:
                 continue
-            if e.event_type == EventType.CLOCK_IN:
+            if e.event_type == EventType.USER_LOGGED_IN:
                 clock_in = e.timestamp.isoformat() if e.timestamp else None
-            elif e.event_type == EventType.CLOCK_OUT:
+            elif e.event_type == EventType.USER_LOGGED_OUT:
                 clock_out = e.timestamp.isoformat() if e.timestamp else None
 
         # Shift duration
