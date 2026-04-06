@@ -749,12 +749,19 @@ function showVoidReasons(targets, isFullVoid) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason: r }),
-              }).catch(function(err) {
-                console.error('[KINDpos] Void API error:', err);
-              }).then(function() {
+              }).then(function(res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 currentOrderId = null;
                 currentCheckNumber = null;
                 replace('login');
+              }).catch(function(err) {
+                console.error('[KINDpos] Void API error:', err);
+                showToast('Void failed — check connection');
+                // Re-add items to ticket so state isn't lost
+                targets.forEach(function(inst) { inst.voided = false; inst.voidReason = null; });
+                ticket = ticket.concat(targets);
+                renderTicket();
+                updateBottomBar();
               });
             } else if (isFullVoid) {
               currentOrderId = null;
@@ -845,10 +852,33 @@ function showDiscountOptions(targets) {
         var btn = buildButton(opt, {
           fill: T.bgLight, color: T.mint, fontSize: '26px', height: 44,
           onTap: function() {
-            // Placeholder — mark items as discounted visually
+            // Parse percentage from label
+            var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
+            var discountAmt = 0;
             targets.forEach(function(inst) {
+              var itemTotal = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
+              discountAmt += itemTotal * pct;
               inst.discount = opt;
             });
+            discountAmt = Math.round(discountAmt * 100) / 100;
+
+            // Post discount event to backend
+            if (currentOrderId) {
+              var itemIds = targets.map(function(inst) { return inst.id; });
+              fetch(API + '/orders/' + currentOrderId + '/discount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  discount_type: opt,
+                  amount: discountAmt,
+                  reason: 'Manager discount: ' + opt,
+                  item_ids: itemIds,
+                }),
+              }).catch(function(err) {
+                console.warn('[KINDpos] Discount event failed:', err);
+              });
+            }
+
             resolveInterrupt();
             renderTicket();
             updateBottomBar();

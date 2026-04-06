@@ -958,6 +958,51 @@ async def void_order(
 
 
 # =============================================================================
+# DISCOUNT
+# =============================================================================
+
+class ApplyDiscountRequest(BaseModel):
+    discount_type: str          # e.g. "10%", "25%", "Comp (100%)"
+    amount: float               # dollar amount of discount
+    reason: Optional[str] = None
+    approved_by: Optional[str] = None
+    item_ids: Optional[list[str]] = None  # specific items, or None for whole order
+
+@router.post("/{order_id}/discount", response_model=OrderResponse)
+async def apply_discount(
+        order_id: str,
+        request: ApplyDiscountRequest,
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Apply a manager-approved discount to an order."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status not in ("open", "printed"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot discount a {order.status} order"
+        )
+
+    event = create_event(
+        event_type=EventType.DISCOUNT_APPROVED,
+        terminal_id=settings.terminal_id,
+        correlation_id=order_id,
+        payload={
+            "order_id": order_id,
+            "discount_type": request.discount_type,
+            "amount": request.amount,
+            "reason": request.reason or f"Manager discount: {request.discount_type}",
+            "approved_by": request.approved_by,
+            "item_ids": request.item_ids,
+        },
+    )
+    await ledger.append(event)
+
+    order = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(order)
+
+
+# =============================================================================
 # SEND TO KITCHEN
 # =============================================================================
 
