@@ -777,6 +777,10 @@ async function handleConfirm(params) {
       // Show processing overlay for card payments
       proc = showProcessingOverlay(amount);
 
+      // 95s client-side timeout (backend has 90s device timeout)
+      var controller = new AbortController();
+      var cardTimeout = setTimeout(function() { controller.abort(); }, 95000);
+
       var res = await fetch(API + '/payments/sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -785,7 +789,10 @@ async function handleConfirm(params) {
           amount:      amount,
           terminal_id: 'terminal_01',
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(cardTimeout);
 
       if (proc) proc.dismiss();
 

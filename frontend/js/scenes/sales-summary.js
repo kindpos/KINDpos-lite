@@ -5,52 +5,24 @@
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer, buildStyledButton } from '../tokens.js';
-import { buildButton } from '../components.js';
+import { buildButton, showToast } from '../components.js';
 import { registerScene, pop } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var PAD   = 16;
 var GAP   = 12;
 var BTN_H = 50;
-
-// ── Mock stats — replace with API call ──────────
-function getStats(role) {
-  if (role === 'manager') {
-    return {
-      grossSales:   4812.00,
-      voids:        135.00,
-      comps:         57.00,
-      discounts:     12.00,
-      netSales:     4608.00,
-      taxCollected:  322.56,
-      cashSales:    1240.00,
-      cashCount:    18,
-      cardSales:    3368.00,
-      cardCount:    29,
-      totalChecks:  47,
-      avgCheck:     102.38,
-      totalTips:    487.25,
-    };
-  }
-  return {
-    grossSales:   1320.00,
-    voids:         72.50,
-    comps:          0.00,
-    discounts:      0.00,
-    netSales:     1247.50,
-    taxCollected:   87.33,
-    cashSales:     380.00,
-    cashCount:      5,
-    cardSales:     867.50,
-    cardCount:     11,
-    totalChecks:   16,
-    avgCheck:       77.97,
-    totalTips:    145.50,
-  };
-}
+var API   = '/api/v1';
 
 function fmt(n) {
   return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
 }
 
 // ═══════════════════════════════════════════════════
@@ -59,8 +31,7 @@ function fmt(n) {
 
 registerScene('sales-summary', {
   onEnter: function(el, params) {
-    var role  = params.role || 'server';
-    var stats = getStats(role);
+    var role = params.role || 'server';
 
     setSceneName('Sales Summary');
     setHeaderBack({ back: true });
@@ -94,7 +65,7 @@ registerScene('sales-summary', {
     titleBar.appendChild(roleLabel);
     el.appendChild(titleBar);
 
-    // ── Stats grid ──
+    // ── Content area (populated after fetch) ──
     var grid = document.createElement('div');
     grid.style.cssText = [
       'flex:1;',
@@ -103,25 +74,14 @@ registerScene('sales-summary', {
       'overflow-y:auto;',
     ].join('');
 
-    // Left column — Sales breakdown
-    grid.appendChild(buildSection('SALES', [
-      { label: 'Gross Sales',    value: fmt(stats.grossSales), color: T.mint },
-      { label: 'Voids',          value: '-' + fmt(stats.voids), color: T.red },
-      { label: 'Comps',          value: '-' + fmt(stats.comps), color: T.red },
-      { label: 'Discounts',      value: '-' + fmt(stats.discounts), color: T.red },
-      { label: 'Net Sales',      value: fmt(stats.netSales), color: T.gold, big: true },
-      { label: 'Tax Collected',  value: fmt(stats.taxCollected), color: T.dimText },
-    ]));
-
-    // Right column — Payment breakdown
-    grid.appendChild(buildSection('PAYMENTS', [
-      { label: 'Cash (' + stats.cashCount + ')',  value: fmt(stats.cashSales), color: T.mint },
-      { label: 'Card (' + stats.cardCount + ')',  value: fmt(stats.cardSales), color: T.gold },
-      { label: 'Total Checks',                    value: '' + stats.totalChecks, color: T.mint },
-      { label: 'Avg Check',                       value: fmt(stats.avgCheck), color: T.dimText },
-      { label: 'Total Tips',                      value: fmt(stats.totalTips), color: T.gold, big: true },
-    ]));
-
+    // Loading indicator
+    var loading = document.createElement('div');
+    loading.style.cssText = [
+      'grid-column:1/3;display:flex;align-items:center;justify-content:center;',
+      'font-family:' + T.fb + ';font-size:24px;color:' + T.dimText + ';',
+    ].join('');
+    loading.textContent = 'Loading...';
+    grid.appendChild(loading);
     el.appendChild(grid);
 
     // ── Back button ──
@@ -131,10 +91,82 @@ registerScene('sales-summary', {
       onTap: function() { pop(); },
     });
     el.appendChild(backBtn);
+
+    // ── Fetch from API ──
+    var url = API + '/reporting/sales-summary?date=' + todayStr();
+    if (role !== 'manager' && params.employeeId) {
+      url += '&server_id=' + encodeURIComponent(params.employeeId);
+    }
+
+    fetch(url)
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        grid.innerHTML = '';
+        renderStats(grid, data, role);
+      })
+      .catch(function(err) {
+        console.error('[KINDpos] Sales summary fetch failed:', err);
+        grid.innerHTML = '';
+        var errMsg = document.createElement('div');
+        errMsg.style.cssText = [
+          'grid-column:1/3;display:flex;align-items:center;justify-content:center;',
+          'font-family:' + T.fb + ';font-size:20px;color:' + T.red + ';',
+        ].join('');
+        errMsg.textContent = 'Failed to load sales data';
+        grid.appendChild(errMsg);
+      });
   },
   cache: false,
   timeoutMs: 0,
 });
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+
+function renderStats(grid, data, role) {
+  var net      = data.net_sales || 0;
+  var checks   = data.total_checks || 0;
+  var avgCheck = data.check_avg || 0;
+  var cash     = data.cash_total || 0;
+  var card     = data.card_total || 0;
+  var tips     = data.tips_collected || data.total_tips || 0;
+
+  // Left column — Sales breakdown
+  var salesRows = [
+    { label: 'Net Sales',     value: fmt(net), color: T.gold, big: true },
+    { label: 'Total Checks',  value: '' + checks, color: T.mint },
+    { label: 'Avg Check',     value: fmt(avgCheck), color: T.dimText },
+  ];
+
+  if (role !== 'manager' && data.total_guests != null) {
+    salesRows.push({ label: 'Guests',  value: '' + data.total_guests, color: T.mint });
+    salesRows.push({ label: 'Tables',  value: '' + data.total_tables, color: T.dimText });
+  }
+
+  grid.appendChild(buildSection('SALES', salesRows));
+
+  // Right column — Payment breakdown
+  var payRows = [
+    { label: 'Cash',   value: fmt(cash), color: T.mint },
+    { label: 'Card',   value: fmt(card), color: T.gold },
+  ];
+
+  if (tips > 0) {
+    payRows.push({ label: 'Tips', value: fmt(tips), color: T.gold, big: true });
+  }
+  if (data.tipout_amount != null) {
+    payRows.push({ label: 'Tipout', value: '-' + fmt(data.tipout_amount), color: T.red });
+  }
+  if (data.take_home != null) {
+    payRows.push({ label: 'Take Home', value: fmt(data.take_home), color: T.mint, big: true });
+  }
+
+  grid.appendChild(buildSection('PAYMENTS', payRows));
+}
 
 // ═══════════════════════════════════════════════════
 //  SECTION BUILDER
