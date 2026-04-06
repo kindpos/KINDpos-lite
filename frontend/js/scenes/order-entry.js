@@ -12,7 +12,7 @@ import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
 import { showKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
-import { PREFIXES as UNI_PREFIXES, getModifiersForCategories } from '../data/universal-modifiers.js';
+import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
 
 var PAD      = 16;
 var GAP      = 16;
@@ -161,8 +161,11 @@ var modifierSession = {
   active: false,
   selectedItems: [],      // ticket item ids currently selected
   activePrefix: null,     // currently active prefix id or null
-  appliedMods: [],        // [{ prefixId, prefixLabel, modId, modLabel, affectedItemIds, modRefs }]
+  activePlacement: null,  // 'whole'|'left'|'right' for pizza, null otherwise
+  appliedMods: [],        // [{ prefixId, prefixLabel, modId, modLabel, affectedItemIds, modRefs, placement }]
   panelEl: null,          // DOM ref for modifier panel
+  hexNav: null,           // HexNav instance for modifier browsing
+  hasPizza: false,        // whether selected items include pizza category
 };
 
 // ── Void reasons ─────────────────────────────────
@@ -194,7 +197,7 @@ registerScene('order-entry', {
     currentCheckNumber = null;
     customerName   = '';     // reset tab name
     modHistory     = [];     // reset undo stack
-    modifierSession = { active: false, selectedItems: [], activePrefix: null, appliedMods: [], panelEl: null };
+    modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _bottomBar     = null;
     _mainArea      = null;
 
@@ -615,13 +618,21 @@ function openModifierSession() {
   modifierSession.active = true;
   modifierSession.selectedItems = items.map(function(i) { return i.id; });
   modifierSession.activePrefix = null;
+  modifierSession.activePlacement = null;
   modifierSession.appliedMods = [];
+
+  // Detect pizza items for placement
+  var catIds = [];
+  items.forEach(function(i) {
+    if (i.category && catIds.indexOf(i.category) === -1) catIds.push(i.category);
+  });
+  modifierSession.hasPizza = hasPizzaCategory(catIds);
+  modifierSession._catIds = catIds;
 
   // Hide hex canvas, show modifier panel
   if (_tabCanvas) _tabCanvas.style.display = 'none';
-  if (prefixCard) prefixCard.style.display = 'none';
 
-  var panel = buildModifierPanel();
+  var panel = buildModifierPanel(catIds);
   modifierSession.panelEl = panel;
   if (_mainArea && _bottomBar) {
     _mainArea.insertBefore(panel, _bottomBar);
@@ -631,13 +642,13 @@ function openModifierSession() {
   renderTicket();
 }
 
-function buildModifierPanel() {
+function buildModifierPanel(catIds) {
   var panel = document.createElement('div');
   panel.style.cssText = [
-    'flex:1;display:flex;flex-direction:column;gap:6px;',
+    'flex:1;display:flex;flex-direction:column;gap:4px;',
     'background:' + T.bg5 + ';',
     'border:7px solid ' + T.gold + ';',
-    'padding:8px;overflow:hidden;',
+    'padding:6px;overflow:hidden;',
     'margin-bottom:0;padding-bottom:' + OVERLAP + 'px;',
   ].join('');
 
@@ -648,7 +659,6 @@ function buildModifierPanel() {
 
   UNI_PREFIXES.forEach(function(p) {
     var isActive = modifierSession.activePrefix === p.id;
-    // Match existing PREFIXES array for colors
     var pDef = PREFIXES.find(function(x) { return x.id === p.id; }) || {};
     var pColor = pDef.color || T.bgLight;
     var pTextColor = pDef.textColor || '#fff';
@@ -673,110 +683,122 @@ function buildModifierPanel() {
   });
   panel.appendChild(prefixRow);
 
-  // ── MODIFIER GRID ──
-  var gridWrap = document.createElement('div');
-  gridWrap.style.cssText = 'flex:1;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;';
-  var grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;';
-  gridWrap.appendChild(grid);
-  panel._grid = grid;
-  panel.appendChild(gridWrap);
+  // ── PIZZA PLACEMENT ROW (only when pizza items selected) ──
+  if (modifierSession.hasPizza) {
+    var placementRow = document.createElement('div');
+    placementRow.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
+    panel._placementBtns = {};
+
+    // Default to 'whole'
+    if (!modifierSession.activePlacement) modifierSession.activePlacement = 'whole';
+
+    PIZZA_PLACEMENTS.forEach(function(pl) {
+      var isActive = modifierSession.activePlacement === pl.id;
+      var plColor = MOD_COLORS.pizza.textColor;
+
+      var btn = buildButton(pl.label, {
+        fill: isActive ? MOD_COLORS.pizza.color : T.darkBtn,
+        color: isActive ? plColor : MOD_COLORS.pizza.textColor,
+        fontSize: '26px',
+        fontFamily: T.fh,
+      });
+      btn.style.flex = '1';
+      btn.style.height = '38px';
+
+      btn.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        modifierSession.activePlacement = pl.id;
+        refreshModifierPanel();
+      });
+
+      panel._placementBtns[pl.id] = btn;
+      placementRow.appendChild(btn);
+    });
+    panel.appendChild(placementRow);
+  }
+
+  // ── MODIFIER HEXNAV ──
+  var hexCanvas = document.createElement('div');
+  hexCanvas.style.cssText = 'flex:1;position:relative;overflow:hidden;';
+  panel._hexCanvas = hexCanvas;
+  panel.appendChild(hexCanvas);
+
+  // Build HexNav data filtered by categories
+  var modData = getModHexData(catIds || []);
+  requestAnimationFrame(function() {
+    var nav = new HexNav(hexCanvas, {
+      data: modData,
+      onSelect: function(item) { applyModifier(item); },
+      onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
+    });
+    modifierSession.hexNav = nav;
+  });
 
   // ── APPLIED MODS LOG ──
   var logWrap = document.createElement('div');
   logWrap.style.cssText = [
-    'max-height:120px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
+    'max-height:100px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
     'background:' + T.bgDark + ';padding:4px 8px;flex-shrink:0;',
   ].join('');
   applySunkenStyle(logWrap);
   panel._log = logWrap;
   panel.appendChild(logWrap);
 
-  // Populate grid
-  populateModifierGrid(panel);
+  // Init log
+  renderAppliedModsLog(panel);
 
   return panel;
 }
 
-function populateModifierGrid(panel) {
-  var grid = panel._grid;
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  // Get union of categories from selected items
-  var catIds = [];
-  modifierSession.selectedItems.forEach(function(id) {
-    var item = ticket.find(function(i) { return i.id === id; });
-    if (item && item.category && catIds.indexOf(item.category) === -1) {
-      catIds.push(item.category);
-    }
-  });
-
-  var mods = getModifiersForCategories(catIds);
-  var hasPrefix = modifierSession.activePrefix != null;
-
-  mods.forEach(function(mod) {
-    var btn = buildButton(mod.label, {
-      fill: T.bgDark,
-      color: hasPrefix ? T.mint : T.dimText,
-      fontSize: '26px',
-      fontFamily: T.fb,
-    });
-    btn.style.minHeight = '64px';
-
-    if (!hasPrefix) {
-      btn.style.opacity = '0.4';
-      btn.style.pointerEvents = 'none';
-    }
-
-    // Check if already applied this session
-    var alreadyApplied = modifierSession.appliedMods.some(function(a) {
-      return a.modId === mod.id && a.prefixId === modifierSession.activePrefix;
-    });
-    if (alreadyApplied) {
-      var inner = btn.firstElementChild || btn.querySelector('div');
-      if (inner) {
-        inner.style.borderColor = T.mint;
-        inner.style.color = T.mint;
-      }
-    }
-
-    btn.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
-      applyModifier(mod);
-    });
-
-    grid.appendChild(btn);
-  });
-}
-
 function applyModifier(mod) {
-  if (!modifierSession.activePrefix) return;
+  if (!modifierSession.activePrefix) {
+    showToast('Select a prefix first', { bg: '#555', duration: 2000 });
+    return;
+  }
   var prefix = UNI_PREFIXES.find(function(p) { return p.id === modifierSession.activePrefix; });
   if (!prefix) return;
 
-  var modName = prefix.label + ' ' + mod.label;
+  var placement = modifierSession.hasPizza ? (modifierSession.activePlacement || 'whole') : null;
+  var placementPrefix = '';
+  if (placement === 'left') placementPrefix = '(L) ';
+  else if (placement === 'right') placementPrefix = '(R) ';
+
+  var modName = prefix.label + ' ' + placementPrefix + mod.label;
   var modRefs = [];
 
   modifierSession.selectedItems.forEach(function(id) {
     var inst = ticket.find(function(i) { return i.id === id; });
     if (!inst) return;
-    var modObj = { name: modName, price: 0, charged: false, prefix: null };
+    // Only apply placement to pizza items
+    var isPizza = inst.category === 'pizza';
+    var thisPlacement = isPizza ? placement : null;
+    var thisName = isPizza ? modName : (prefix.label + ' ' + mod.label);
+    var halfSide = null;
+    if (isPizza && thisPlacement === 'left') halfSide = 'Left';
+    else if (isPizza && thisPlacement === 'right') halfSide = 'Right';
+
+    var modObj = { name: thisName, price: 0, charged: false, prefix: halfSide };
     inst.mods.push(modObj);
     modRefs.push({ inst: inst, mod: modObj });
   });
 
+  var logLabel = prefix.label + ' ' + (placementPrefix || '') + mod.label;
   modifierSession.appliedMods.push({
     prefixId: prefix.id,
     prefixLabel: prefix.label,
-    modId: mod.id,
+    modId: mod.id || mod.label,
     modLabel: mod.label,
+    placement: placement,
     affectedItemIds: modifierSession.selectedItems.slice(),
     modRefs: modRefs,
+    logLabel: logLabel,
   });
 
   renderTicket();
   refreshModifierPanel();
+
+  // Reset hex nav back to categories for next pick
+  if (modifierSession.hexNav) modifierSession.hexNav.reset();
 }
 
 function refreshModifierPanel() {
@@ -798,8 +820,19 @@ function refreshModifierPanel() {
     }
   });
 
-  // Refresh modifier grid
-  populateModifierGrid(panel);
+  // Refresh placement button states (pizza)
+  if (panel._placementBtns) {
+    PIZZA_PLACEMENTS.forEach(function(pl) {
+      var btn = panel._placementBtns[pl.id];
+      if (!btn) return;
+      var isActive = modifierSession.activePlacement === pl.id;
+      var inner = btn.firstElementChild || btn.querySelector('div');
+      if (inner) {
+        inner.style.background = isActive ? MOD_COLORS.pizza.color : T.darkBtn;
+        inner.style.color = MOD_COLORS.pizza.textColor;
+      }
+    });
+  }
 
   // Refresh applied mods log
   renderAppliedModsLog(panel);
@@ -821,7 +854,7 @@ function renderAppliedModsLog(panel) {
   modifierSession.appliedMods.forEach(function(entry) {
     var row = document.createElement('div');
     row.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.gold + ';line-height:1.2;';
-    row.textContent = entry.prefixLabel + ' \u2192 ' + entry.modLabel;
+    row.textContent = entry.logLabel || (entry.prefixLabel + ' \u2192 ' + entry.modLabel);
     log.appendChild(row);
   });
 
@@ -867,7 +900,15 @@ function finalizeSession() {
 function endModifierSession() {
   modifierSession.active = false;
   modifierSession.activePrefix = null;
+  modifierSession.activePlacement = null;
   modifierSession.appliedMods = [];
+  modifierSession.hasPizza = false;
+
+  // Destroy modifier hex nav
+  if (modifierSession.hexNav) {
+    modifierSession.hexNav.destroy();
+    modifierSession.hexNav = null;
+  }
 
   // Remove panel
   if (modifierSession.panelEl && modifierSession.panelEl.parentNode) {
