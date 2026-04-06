@@ -384,16 +384,11 @@ export function HexNav(container, opts) {
 
     itemHex.locked = true;
     state.level = 3;
-    // Anchor cat top-left, item hex beside it
-    if (state.cat && state.cat !== itemHex) {
-      anchorTopLeft(state.cat);
-      itemHex.x = state.cat.x + (state.cat.r + itemHex.r) * gapForLevel(3) + 8;
-      itemHex.y = state.cat.y;
-    } else {
-      anchorTopLeft(itemHex);
-    }
     var locked = [itemHex];
-    if (state.cat && state.cat !== itemHex) locked.unshift(state.cat);
+    if (state.cat && state.cat !== itemHex) {
+      state.cat.locked = true;
+      locked.unshift(state.cat);
+    }
 
     // Build group items with label swap for satisfied groups
     var groupItems = modState.groups.map(function(g) {
