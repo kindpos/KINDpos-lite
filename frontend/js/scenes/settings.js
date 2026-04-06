@@ -43,11 +43,13 @@ var state = {
   taxRate:      '7.0',
   cashDiscount: '4.0',
   maskPinDigits: true,
+  postPaymentAction: 'quick-service',  // 'quick-service' or 'logout'
 };
 
 var rootEl = null;
 window.KINDpos = window.KINDpos || {};
 window.KINDpos.maskPinDigits = state.maskPinDigits;
+window.KINDpos.postPaymentAction = state.postPaymentAction;
 var _savingDevice = false;   // guard against double-tap on save/delete
 var _scanGen = 0;            // generation counter to ignore stale EventSource messages
 
@@ -1492,6 +1494,29 @@ function renderTermContent(card) {
     });
     toggleRow.appendChild(toggleBtn.wrap);
     inner.appendChild(toggleRow);
+
+    // Toggle: Post-Payment Action
+    var ppaRow = document.createElement('div');
+    ppaRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 0;';
+
+    var ppaLabel = makeLabel('After Payment', GOLD, T.fsSmall);
+    ppaRow.appendChild(ppaLabel);
+
+    var isLogout = state.postPaymentAction === 'logout';
+    var ppaBtn = buildStyledButton(isLogout ? T.red : T.goGreen);
+    ppaBtn.wrap.style.width = '160px';
+    ppaBtn.wrap.style.height = '48px';
+    ppaBtn.inner.style.fontFamily = T.fb;
+    ppaBtn.inner.style.fontSize = T.fsSmall;
+    ppaBtn.inner.style.color = isLogout ? '#fff' : DARK;
+    ppaBtn.inner.textContent = isLogout ? 'LOGOUT' : 'NEW ORDER';
+    ppaBtn.wrap.addEventListener('pointerup', function() {
+      state.postPaymentAction = state.postPaymentAction === 'logout' ? 'quick-service' : 'logout';
+      window.KINDpos.postPaymentAction = state.postPaymentAction;
+      renderCurrentState();
+    });
+    ppaRow.appendChild(ppaBtn.wrap);
+    inner.appendChild(ppaRow);
   }
 }
 

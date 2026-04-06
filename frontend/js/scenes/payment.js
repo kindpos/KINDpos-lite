@@ -129,7 +129,7 @@ function buildReceiptPanel(params) {
     qty.style.cssText = 'text-align:right;color:' + T.mutedText + ';';
     qty.textContent = item.qty + '\u00D7';
     var price = document.createElement('div');
-    price.style.textAlign = 'right';
+    price.style.cssText = 'text-align:right;color:' + T.gold + ';';
     price.textContent = '$' + (item.unitPrice * item.qty).toFixed(2);
     var spacer = document.createElement('div');
     row.appendChild(name);
@@ -156,10 +156,10 @@ function buildReceiptPanel(params) {
 
   if (isCash) {
     footer.appendChild(totalsRow('Cash Price', '$' + params.cashPrice.toFixed(2), true, T.gold));
-    var tendRow = totalsRow('Tendered', '$0.00', true, T.mint);
+    var tendRow = totalsRow('Tendered', '$0.00', true, T.gold);
     tendRow.querySelector('[data-val]').id = 'pay-tendered';
     footer.appendChild(tendRow);
-    var changeRow = totalsRow('Change', '$0.00', true, T.cyan);
+    var changeRow = totalsRow('Change', '$0.00', true, T.gold);
     changeRow.querySelector('[data-val]').id = 'pay-change';
     changeRow.style.display = 'none';
     changeRow.id = 'pay-change-row';
@@ -226,8 +226,20 @@ function buildCashPanel(params) {
 
   [5, 10, 15, 20, 50, 100].forEach(function(val) {
     var btn = buildButton('$' + val, {
-      fill: T.mint, color: T.bgDark, fontSize: '50px',
-      onTap: function() { addTendered(val, params); },
+      fill: T.darkBtn, color: T.gold, fontSize: '50px',
+      onTap: function() {
+        addTendered(val, params);
+        // Flash mint highlight
+        var inner = btn.querySelector('div');
+        if (inner) {
+          inner.style.background = T.mint;
+          inner.style.color = T.bgDark;
+          setTimeout(function() {
+            inner.style.background = '';
+            inner.style.color = T.gold;
+          }, 180);
+        }
+      },
     });
     grid.appendChild(btn);
   });
@@ -285,7 +297,7 @@ function buildCashPanel(params) {
   changeStrip.style.cssText = [
     'flex-shrink:0;display:none;padding:8px 16px;',
     'background:' + T.bgDark + ';',
-    'font-family:' + T.fb + ';font-size:40px;color:' + T.cyan + ';',
+    'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';',
     'text-align:center;letter-spacing:0.08em;',
   ].join('');
   applySunkenStyle(changeStrip);
@@ -391,122 +403,16 @@ function buildCardPanel(params) {
 // ═══════════════════════════════════════════════════
 
 function activateResult(params, change) {
-  if (!rightCol || !sceneEl) return;
+  // Navigate to the change-due interrupt screen
+  var isCash = params.paymentMode === 'cash';
+  var amount = isCash ? params.cashPrice : params.cardTotal;
 
-  // Stop dot timer
-  if (dotTimer) { clearInterval(dotTimer); dotTimer = null; }
-
-  // Replace right column
-  var newRight = document.createElement('div');
-  newRight.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:' + GAP + 'px;';
-
-  var isCash    = params.paymentMode === 'cash';
-  var hasChange = isCash && change > 0;
-  var amount    = isCash ? params.cashPrice : params.cardTotal;
-
-  // ── Result panel ──
-  var panel = document.createElement('div');
-  panel.style.cssText = [
-    'flex:1;background:' + T.bgDark + ';',
-    'display:flex;flex-direction:column;',
-    'align-items:center;justify-content:center;gap:16px;',
-    'padding:24px;',
-  ].join('');
-  applySunkenStyle(panel);
-  // Highlight border
-  panel.style.borderColor = T.mint;
-
-  // Status icon
-  var icon = document.createElement('div');
-  icon.style.cssText = [
-    'width:80px;height:80px;',
-    'background:' + (hasChange ? T.cyan : T.mint) + ';',
-    'display:flex;align-items:center;justify-content:center;',
-    'font-size:40px;color:' + T.bgDark + ';font-weight:bold;',
-    'clip-path:' + chamfer(8) + ';',
-  ].join('');
-  icon.textContent = hasChange ? '$' : '✓';
-  panel.appendChild(icon);
-
-  // Heading
-  var heading = document.createElement('div');
-  heading.style.cssText = [
-    'font-family:' + T.fh + ';font-size:40px;',
-    'color:' + T.mint + ';letter-spacing:0.1em;text-align:center;',
-  ].join('');
-  if (hasChange) {
-    heading.textContent = 'CHANGE DUE';
-  } else if (isCash) {
-    heading.textContent = 'EXACT CHANGE';
-  } else {
-    heading.textContent = 'APPROVED';
-  }
-  panel.appendChild(heading);
-
-  // Change amount (large)
-  if (hasChange) {
-    var changeAmt = document.createElement('div');
-    changeAmt.style.cssText = [
-      'font-family:' + T.fb + ';font-size:72px;font-weight:bold;',
-      'color:' + T.cyan + ';line-height:1;letter-spacing:0.02em;',
-    ].join('');
-    changeAmt.textContent = '$' + change.toFixed(2);
-    panel.appendChild(changeAmt);
-  }
-
-  // Charged line
-  var charged = document.createElement('div');
-  charged.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mutedText + ';letter-spacing:0.06em;';
-  charged.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + amount.toFixed(2);
-  panel.appendChild(charged);
-
-  // Receipt printing
-  var printLine = document.createElement('div');
-  printLine.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';letter-spacing:0.1em;margin-top:12px;';
-  printLine.textContent = 'RECEIPT PRINTING...';
-  panel.appendChild(printLine);
-
-  // Progress bar
-  var AUTO_MS = 4000;
-  var track = document.createElement('div');
-  track.style.cssText = [
-    'width:60%;height:4px;margin-top:8px;',
-    'background:' + T.bg3 + ';',
-    'clip-path:' + chamfer(2) + ';',
-  ].join('');
-  var fill = document.createElement('div');
-  fill.style.cssText = [
-    'height:100%;width:0%;',
-    'background:' + T.mint + ';',
-    'transition:width ' + AUTO_MS + 'ms linear;',
-  ].join('');
-  track.appendChild(fill);
-  panel.appendChild(track);
-
-  // Tap hint
-  var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.dimText + ';letter-spacing:0.08em;margin-top:4px;';
-  hint.textContent = 'tap to continue';
-  panel.appendChild(hint);
-
-  newRight.appendChild(panel);
-
-  // Tap to dismiss
-  panel.addEventListener('pointerup', function() {
-    doReturn(params.returnScene);
+  replace('change-due', {
+    change:      change,
+    paymentMode: params.paymentMode,
+    total:       amount,
+    returnScene: params.returnScene || 'order-entry',
   });
-
-  // Replace in DOM
-  sceneEl.replaceChild(newRight, rightCol);
-  rightCol = newRight;
-
-  // Kick progress bar
-  requestAnimationFrame(function() { fill.style.width = '100%'; });
-
-  // Auto-return
-  returnTimer = setTimeout(function() {
-    doReturn(params.returnScene);
-  }, AUTO_MS);
 }
 
 function doReturn(returnScene) {

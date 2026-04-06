@@ -1,172 +1,161 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Change Due Scene
-//  Full-screen change display → auto-return to order
+//  Interrupt-style screen with Confirm + Logout
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer, applySunkenStyle } from '../tokens.js';
+import { buildButton } from '../components.js';
 import { registerScene, replace } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
-var AUTO_RETURN_MS = 4000;
-var returnTimer    = null;
-var returned       = false;
+var returned = false;
+var sceneEl  = null;
 
 registerScene('change-due', {
   onEnter: function(el, params) {
+    sceneEl = el;
     setSceneName(null);
-    setHeaderBack({ x: true });
+    setHeaderBack({});  // no back/X — must use buttons
     returned = false;
-
-    // params shape:
-    // {
-    //   change:      number,   // 0 for card or exact cash
-    //   paymentMode: 'cash' | 'card',
-    //   total:       number,   // amount charged
-    //   returnScene: 'order-entry' | 'check-grid',
-    // }
 
     el.style.cssText = [
       'width:100%;height:100%;',
       'display:flex;flex-direction:column;',
       'align-items:center;justify-content:center;',
-      'gap:0;cursor:pointer;',
-      'background:' + T.bg + ';',
+      'gap:0;',
+      'background:rgba(0,0,0,0.85);',
     ].join('');
 
-    // Tap anywhere to dismiss early
-    el.addEventListener('pointerup', function() {
-      doReturn(params.returnScene);
-    });
-
-    var isCash   = params.paymentMode === 'cash';
+    var isCash    = params.paymentMode === 'cash';
     var hasChange = isCash && params.change > 0;
 
-    // ── Top label ────────────────────────────────
+    // ── Interrupt card ──────────────────────────────
+    var card = document.createElement('div');
+    card.style.cssText = [
+      'display:flex;flex-direction:column;align-items:center;',
+      'padding:32px 64px 28px;',
+      'background:' + T.bgDark + ';',
+      'min-width:480px;',
+    ].join('');
+    applySunkenStyle(card);
+
+    // Top label
     var topLabel = document.createElement('div');
     topLabel.style.cssText = [
-      'font-family:' + T.fh + ';font-size:40px;letter-spacing:0.18em;',
-      'color:' + T.mint + ';margin-bottom:24px;',
+      'font-family:' + T.fh + ';font-size:32px;letter-spacing:0.18em;',
+      'color:' + T.mint + ';margin-bottom:20px;',
     ].join('');
     topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
-    el.appendChild(topLabel);
-
-    // ── Main amount block ─────────────────────────
-    var amountBlock = document.createElement('div');
-    amountBlock.style.cssText = [
-      'display:flex;flex-direction:column;align-items:center;',
-      'padding:40px 80px;',
-      'background:' + T.bgDark + ';',
-    ].join('');
-    applySunkenStyle(amountBlock);
+    card.appendChild(topLabel);
 
     if (hasChange) {
-      // Change due label
       var changeLabel = document.createElement('div');
       changeLabel.style.cssText = [
         'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';letter-spacing:0.14em;',
-        'color:' + T.mint + ';margin-bottom:8px;',
+        'color:' + T.mint + ';margin-bottom:4px;',
       ].join('');
       changeLabel.textContent = 'CHANGE DUE';
-      amountBlock.appendChild(changeLabel);
+      card.appendChild(changeLabel);
 
-      // Change amount — big cyan
       var changeAmount = document.createElement('div');
       changeAmount.style.cssText = [
         'font-family:' + T.fb + ';font-size:96px;font-weight:bold;',
-        'color:' + T.cyan + ';line-height:1;letter-spacing:0.02em;',
+        'color:' + T.gold + ';line-height:1;letter-spacing:0.02em;',
       ].join('');
       changeAmount.textContent = '$' + params.change.toFixed(2);
-      amountBlock.appendChild(changeAmount);
-
+      card.appendChild(changeAmount);
     } else {
-      // No change — paid exact or card
-      var paidIcon = document.createElement('div');
-      paidIcon.style.cssText = 'font-size:64px;margin-bottom:16px;';
-      paidIcon.textContent = isCash ? '$' : '◈';
-      amountBlock.appendChild(paidIcon);
-
       var paidLabel = document.createElement('div');
       paidLabel.style.cssText = [
         'font-family:' + T.fh + ';font-size:40px;font-weight:bold;letter-spacing:0.1em;',
-        'color:' + T.mint + ';',
+        'color:' + T.mint + ';margin-bottom:8px;',
       ].join('');
       paidLabel.textContent = isCash ? 'EXACT CHANGE' : 'PAYMENT APPROVED';
-      amountBlock.appendChild(paidLabel);
+      card.appendChild(paidLabel);
     }
 
     // Charged amount sub-line
     var chargedLine = document.createElement('div');
     chargedLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
-      'margin-top:16px;letter-spacing:0.06em;',
+      'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
+      'margin-top:12px;letter-spacing:0.06em;',
     ].join('');
     chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + params.total.toFixed(2);
-    amountBlock.appendChild(chargedLine);
+    card.appendChild(chargedLine);
 
-    el.appendChild(amountBlock);
-
-    // ── Receipt printing indicator ────────────────
+    // Receipt printing indicator
     var printLine = document.createElement('div');
     printLine.style.cssText = [
-      'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
-      'letter-spacing:0.12em;margin-top:32px;',
+      'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
+      'letter-spacing:0.12em;margin-top:16px;',
     ].join('');
     printLine.textContent = 'RECEIPT PRINTING...';
-    el.appendChild(printLine);
+    card.appendChild(printLine);
 
-    // ── Progress bar ──────────────────────────────
-    var progressTrack = document.createElement('div');
-    progressTrack.style.cssText = [
-      'width:320px;height:4px;margin-top:20px;',
-      'background:' + T.bg3 + ';',
-      'clip-path:' + chamfer(2) + ';',
-    ].join('');
+    el.appendChild(card);
 
-    var progressFill = document.createElement('div');
-    progressFill.style.cssText = [
-      'height:100%;width:0%;',
-      'background:' + T.mint + ';',
-      'transition:width ' + AUTO_RETURN_MS + 'ms linear;',
-    ].join('');
-    progressTrack.appendChild(progressFill);
-    el.appendChild(progressTrack);
+    // ── Button row ────────────────────────────────
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:20px;margin-top:24px;';
 
-    // ── Tap to dismiss hint ───────────────────────
-    var hint = document.createElement('div');
-    hint.style.cssText = [
-      'font-family:' + T.fb + ';font-size:40px;color:' + T.mutedText + ';',
-      'letter-spacing:0.1em;margin-top:12px;',
-    ].join('');
-    hint.textContent = 'tap anywhere to continue';
-    el.appendChild(hint);
+    var postAction = (window.KINDpos && window.KINDpos.postPaymentAction) || 'quick-service';
 
-    // Kick off progress bar animation
-    requestAnimationFrame(function() {
-      progressFill.style.width = '100%';
+    // New Order button
+    var confirmBtn = buildButton('NEW ORDER', {
+      fill: T.goGreen, color: T.bgDark, fontSize: '32px',
+      width: 220, height: 64,
+      onTap: function() { doReturn('order-entry'); },
     });
+    btnRow.appendChild(confirmBtn);
 
-    // Auto-return timer
-    returnTimer = setTimeout(function() {
-      doReturn(params.returnScene);
-    }, AUTO_RETURN_MS);
+    // Logout button
+    var logoutBtn = buildButton('LOGOUT', {
+      fill: T.red, color: '#fff', fontSize: '32px',
+      width: 220, height: 64,
+      onTap: function() { doReturn('login'); },
+    });
+    btnRow.appendChild(logoutBtn);
+
+    el.appendChild(btnRow);
+
+    // Auto-logout countdown if configured
+    if (postAction === 'logout') {
+      var autoHint = document.createElement('div');
+      autoHint.style.cssText = [
+        'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
+        'letter-spacing:0.1em;margin-top:12px;',
+      ].join('');
+      autoHint.textContent = 'auto-logout in 8s...';
+      el.appendChild(autoHint);
+
+      var countdown = 8;
+      el._countdownTimer = setInterval(function() {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(el._countdownTimer);
+          doReturn('login');
+        } else {
+          autoHint.textContent = 'auto-logout in ' + countdown + 's...';
+        }
+      }, 1000);
+    }
   },
 
   onExit: function() {
-    if (returnTimer) {
-      clearTimeout(returnTimer);
-      returnTimer = null;
+    if (sceneEl && sceneEl._countdownTimer) {
+      clearInterval(sceneEl._countdownTimer);
+      sceneEl._countdownTimer = null;
     }
   },
 });
 
-function doReturn(returnScene) {
+function doReturn(target) {
   if (returned) return;
   returned = true;
-  if (returnTimer) {
-    clearTimeout(returnTimer);
-    returnTimer = null;
+  if (sceneEl && sceneEl._countdownTimer) {
+    clearInterval(sceneEl._countdownTimer);
+    sceneEl._countdownTimer = null;
   }
-  // replace so back button can't return to change-due screen
-  replace(returnScene || 'order-entry', {});
+  replace(target || 'order-entry', {});
 }
