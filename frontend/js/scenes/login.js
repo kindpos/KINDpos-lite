@@ -113,7 +113,7 @@ registerScene('login', {
 
     // ── CENTER COLUMN ── (PIN prompt + Numpad + Version)
     var center = document.createElement('div');
-    center.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;';
+    center.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;';
 
     // PIN prompt — hidden until an action button is tapped
     var pinPrompt = document.createElement('div');
@@ -122,9 +122,11 @@ registerScene('login', {
     _pinPromptEl = pinPrompt;
     center.appendChild(pinPrompt);
 
+    var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
+      ? window.KINDpos.maskPinDigits : true;
     _numpadRef = buildNumpad({
       maxDigits: 6,
-      masked: true,
+      masked: maskSetting,
       displayH: 60,
       gap: 16,
       keyH: 84,
