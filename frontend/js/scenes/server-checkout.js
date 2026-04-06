@@ -896,6 +896,7 @@ function buildFinalizeButton(state) {
     pair.wrap.style.pointerEvents = 'none';
   } else {
     pair.wrap.addEventListener('pointerup', function() {
+      if (isBlocked(state)) return;
       doFinalize(state);
     });
   }

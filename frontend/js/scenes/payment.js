@@ -20,6 +20,7 @@ var tendered   = 0;
 var numpadStr  = '';
 var sceneEl    = null;
 var sceneData  = {};
+var isProcessing = false;   // guard against double-tap on confirm
 
 registerScene('payment', {
   onEnter: function(el, params) {
@@ -28,6 +29,7 @@ registerScene('payment', {
 
     sceneEl   = el;
     sceneData = params;
+    isProcessing = false;
     tendered  = 0;
     numpadStr = '';
 
@@ -368,6 +370,9 @@ var API = '/api/v1';
 
 // ── CONFIRM ───────────────────────────────────────
 async function handleConfirm(params) {
+  if (isProcessing) return;
+  isProcessing = true;
+
   var isCash = params.paymentMode === 'cash';
   var change = isCash ? Math.max(0, tendered - params.cashPrice) : 0;
   var amount = isCash ? params.cashPrice : params.cardTotal;
@@ -413,6 +418,7 @@ async function handleConfirm(params) {
 
   } catch (err) {
     console.error('[KINDpos] Confirm error:', err);
+    isProcessing = false;
     return;
   }
 
