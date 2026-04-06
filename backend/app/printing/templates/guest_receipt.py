@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from .base_template import BaseTemplate
+from .half_placement_utils import has_half_modifiers, get_half_modifiers
 from app.core.money import money_round
 
 class GuestReceiptTemplate(BaseTemplate):
@@ -48,9 +49,13 @@ class GuestReceiptTemplate(BaseTemplate):
             line = f"{qty} {name[:self.chars_per_line-15]:<{self.chars_per_line-15}} ${total:>7.2f}"
             commands.append({'type': 'text', 'content': line, 'bold': True})
             
-            # Modifiers
-            for mod in item.get('modifiers', []):
-                commands.append({'type': 'text', 'content': f"  + {mod}"})
+            # Modifiers — half-placement split or flat
+            item_mods = item.get('modifiers', [])
+            if has_half_modifiers(item_mods):
+                commands.extend(self._render_half_placement_items(item_mods))
+            else:
+                for mod in item_mods:
+                    commands.append({'type': 'text', 'content': f"  + {mod}"})
                 
         commands.append({'type': 'divider'})
         
@@ -85,6 +90,55 @@ class GuestReceiptTemplate(BaseTemplate):
         commands.append({'type': 'feed', 'lines': 3})
         commands.append({'type': 'cut', 'partial': True})
         return commands
+
+    def _render_half_placement_items(self, modifiers: list) -> list:
+        """Render split-column layout for half-placement modifiers with prices."""
+        cmds = []
+        whole_mods, left_mods, right_mods = get_half_modifiers(modifiers)
+
+        # Whole modifiers above the table (flat, with prices)
+        for wm in whole_mods:
+            price = wm['display_price']
+            if price:
+                cmds.append({'type': 'text', 'content': f"  + {wm['name']:<{self.chars_per_line - 12}} ${price:>6.2f}"})
+            else:
+                cmds.append({'type': 'text', 'content': f"  + {wm['name']}"})
+
+        # Split-column table
+        col_w = (self.chars_per_line - 1) // 2
+        right_w = self.chars_per_line - col_w - 1
+        divider_line = '-' * col_w + '+' + '-' * right_w
+
+        cmds.append({'type': 'text', 'content': divider_line})
+        cmds.append({'type': 'text', 'content':
+            f"{'LEFT':<{col_w}}|{'RIGHT':<{right_w}}", 'bold': True})
+        cmds.append({'type': 'text', 'content': divider_line})
+
+        max_rows = max(len(left_mods), len(right_mods), 1) if (left_mods or right_mods) else 0
+        for row in range(max_rows):
+            left_text = self._format_half_col(left_mods[row], col_w) if row < len(left_mods) else ' ' * col_w
+            right_text = self._format_half_col(right_mods[row], right_w) if row < len(right_mods) else ' ' * right_w
+            cmds.append({'type': 'text', 'content': f"{left_text}|{right_text}"})
+
+        cmds.append({'type': 'text', 'content': divider_line})
+        return cmds
+
+    def _format_half_col(self, mod: dict, width: int) -> str:
+        """Format a single half-placement modifier entry within a column."""
+        name = mod['display_name']
+        price = mod['display_price']
+
+        if price:
+            price_str = f"${price:.2f}"
+            # name + space + price must fit in width (with 1-char left pad)
+            max_name = width - len(price_str) - 2  # 1 pad + name + 1 space + price
+            if len(name) > max_name:
+                name = name[:max_name - 1] + '\u2026'
+            return f" {name:<{width - len(price_str) - 1}}{price_str}"
+        else:
+            if len(name) > width - 1:
+                name = name[:width - 2] + '\u2026'
+            return f" {name:<{width - 1}}"
 
     def _render_tip_section(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Render the tip section with optional suggestions."""

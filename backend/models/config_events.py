@@ -107,6 +107,7 @@ class MenuCategory(BaseModel):
     hex_color: str
     tax_rule_id: Optional[str] = None
     enable_placement: bool = False
+    half_placement: bool = False
     active: bool = True
 
 # Floor Plan Models

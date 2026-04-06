@@ -14,6 +14,7 @@ Ticket types: ORIGINAL, REPRINT, VOID, REFIRE
 from typing import List, Dict, Any, Optional, Tuple
 from collections import Counter
 from .base_template import BaseTemplate
+from .half_placement_utils import has_half_modifiers, get_half_modifiers
 
 
 class KitchenTicketTemplate(BaseTemplate):
@@ -229,10 +230,13 @@ class KitchenTicketTemplate(BaseTemplate):
 
             cmds.append({'type': 'text', 'content': item_line, 'bold': True})
 
-            # Modifiers — 6-space indent, prefix in red/bold
-            for mod in modifiers:
-                mod_cmds = self._render_modifier(mod, supports_red)
-                cmds.extend(mod_cmds)
+            # Modifiers — half-placement split or flat
+            if has_half_modifiers(modifiers):
+                cmds.extend(self._render_half_placement_block(modifiers, supports_red))
+            else:
+                for mod in modifiers:
+                    mod_cmds = self._render_modifier(mod, supports_red)
+                    cmds.extend(mod_cmds)
 
             # Special instructions (italic/quoted, below modifiers)
             if special and not self._is_allergy_instruction(special):
@@ -294,6 +298,51 @@ class KitchenTicketTemplate(BaseTemplate):
         else:
             cmds.append({'type': 'text', 'content': f"      {text}"})
 
+        return cmds
+
+    def _render_half_placement_block(
+        self, modifiers: List[Any], supports_red: bool,
+    ) -> List[Dict]:
+        """Render split-column layout for half-placement modifiers (no prices)."""
+        cmds: List[Dict] = []
+        whole_mods, left_mods, right_mods = get_half_modifiers(modifiers)
+
+        # Whole modifiers above the table (flat)
+        for wm in whole_mods:
+            cmds.extend(self._render_modifier(
+                {'name': wm['name'], 'prefix': ''}, supports_red,
+            ))
+
+        # Split-column table
+        col_w = (self.chars_per_line - 1) // 2
+        right_w = self.chars_per_line - col_w - 1
+        divider_line = '-' * col_w + '+' + '-' * right_w
+
+        cmds.append({'type': 'text', 'content': divider_line})
+        cmds.append({'type': 'text', 'content':
+            f"{'LEFT':<{col_w}}|{'RIGHT':<{right_w}}", 'bold': True})
+        cmds.append({'type': 'text', 'content': divider_line})
+
+        # Pair up left and right rows
+        max_rows = max(len(left_mods), len(right_mods))
+        for row in range(max_rows):
+            left_text = ''
+            right_text = ''
+            if row < len(left_mods):
+                name = left_mods[row]['display_name']
+                if len(name) > col_w - 1:
+                    name = name[:col_w - 2] + '\u2026'
+                left_text = ' ' + name
+            if row < len(right_mods):
+                name = right_mods[row]['display_name']
+                if len(name) > right_w - 1:
+                    name = name[:right_w - 2] + '\u2026'
+                right_text = ' ' + name
+
+            line = f"{left_text:<{col_w}}|{right_text:<{right_w}}"
+            cmds.append({'type': 'text', 'content': line})
+
+        cmds.append({'type': 'text', 'content': divider_line})
         return cmds
 
     def _parse_modifier_string(self, mod: str) -> Tuple[str, str]:

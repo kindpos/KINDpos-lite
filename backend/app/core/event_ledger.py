@@ -30,7 +30,7 @@ logger = logging.getLogger("kindpos.ledger")
 _MONETARY_KEYS = frozenset({
     "price", "amount", "tip_amount", "total", "total_amount",
     "cash_total", "card_total", "modifier_price", "total_sales",
-    "total_tips", "previous_tip",
+    "total_tips", "previous_tip", "half_price",
 })
 _TWO_DP = Decimal("0.01")
 
