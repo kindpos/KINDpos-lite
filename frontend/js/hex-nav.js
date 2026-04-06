@@ -315,14 +315,16 @@ export function HexNav(container, opts) {
     var r = adaptiveR(childR, childItems.length, svgW, svgH);
     var gap = gapForLevel(state.level);
 
-    var slots = gridSlotsAround(parentHex.x, parentHex.y, r, childItems.length, gap);
+    // Use average radius for grid spacing so ring-1 aligns at edge-sharing distance
+    var gridR = (parentHex.r + r) / 2;
+    var slots = gridSlotsAround(parentHex.x, parentHex.y, gridR, childItems.length, gap);
 
     // Filter out slots that overlap ANY locked hex
     var freeSlots = [];
     slots.forEach(function(pos) {
       var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
-        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.95;
+        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.85;
       });
       if (!overlaps) freeSlots.push(pos);
     });
