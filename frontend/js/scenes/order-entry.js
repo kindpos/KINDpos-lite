@@ -420,9 +420,6 @@ function buildMain(parentEl, params) {
   main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
   _mainArea = main;
 
-  var pc = buildPrefixCard();
-  main.appendChild(pc);
-
   var canvas = document.createElement('div');
   canvas.id = 'hex-canvas';
   canvas.style.cssText = [
@@ -549,27 +546,16 @@ function rebuildBottomBar(params) {
     _bottomBar.appendChild(addBtn);
     _bottomBar.appendChild(modifyBtn);
   } else {
-    // State A: Idle — ADD ITEMS + MODIFY ITEMS tabs
+    // State A: Idle — ADD ITEMS only (no MODIFY ITEMS tab)
     var tabItems = buildButton('ADD ITEMS', {
       fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { switchTab('items'); },
     });
-    tabItems.style.gridColumn = '1 / 3';
+    tabItems.style.gridColumn = '1 / 5';
     tabItems.style.gridRow    = '1';
     tabItems.style.height = '100%';
     _tabItemsBtn = tabItems;
 
-    var tabMods = buildButton('MODIFY ITEMS', {
-      fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { switchTab('modifiers'); },
-    });
-    tabMods.style.gridColumn = '3 / 5';
-    tabMods.style.gridRow    = '1';
-    tabMods.style.height = '100%';
-    _tabModsBtn = tabMods;
-
     _bottomBar.appendChild(tabItems);
-    _bottomBar.appendChild(tabMods);
   }
 
   // ── Row 2: Action buttons (always present when not in session) ──
@@ -905,22 +891,12 @@ function endModifierSession() {
 
 // ── TAB SWITCHING ─────────────────────────────────
 function switchTab(tab) {
-  activeTab = tab;
-  var isItems = tab === 'items';
-  var canvas = _tabCanvas;
-
-  // Show/hide prefix card
-  if (prefixCard) {
-    prefixCard.style.display = isItems ? 'none' : 'flex';
+  activeTab = tab || 'items';
+  if (_tabCanvas) {
+    _tabCanvas.style.borderColor = T.mint;
+    _tabCanvas.style.borderTop = '';
   }
-
-  // Border color tracks active tab
-  if (canvas) {
-    canvas.style.borderColor  = isItems ? T.mint : T.gold;
-    canvas.style.borderTop    = isItems ? '' : 'none';
-  }
-
-  if (hexNav) hexNav.setData(isItems ? MENU_DATA : MOD_DATA);
+  if (hexNav) hexNav.setData(MENU_DATA);
 }
 
 // ── TICKET ────────────────────────────────────────
