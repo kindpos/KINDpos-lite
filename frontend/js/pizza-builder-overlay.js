@@ -363,12 +363,12 @@ function _buildOverlay(el, sizeItem, builderData) {
       logWrap.appendChild(empty);
       return;
     }
-    appliedMods.forEach(function(entry) {
+    appliedMods.forEach(function(entry, idx) {
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';line-height:1.2;';
+      row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';line-height:1.2;cursor:pointer;';
       var placementTag = '';
-      if (entry.placement === '1st-half') placementTag = ' [1st 1/2]';
-      else if (entry.placement === '2nd-half') placementTag = ' [2nd 1/2]';
+      if (entry.placement === '1st-half') placementTag = ' [1st]';
+      else if (entry.placement === '2nd-half') placementTag = ' [2nd]';
       var nameSpan = document.createElement('span');
       nameSpan.textContent = entry.prefixLabel + ' ' + entry.modLabel + placementTag;
       row.appendChild(nameSpan);
@@ -377,6 +377,12 @@ function _buildOverlay(el, sizeItem, builderData) {
         priceSpan.textContent = '+$' + entry.price.toFixed(2);
         row.appendChild(priceSpan);
       }
+      row.addEventListener('pointerup', (function(i) {
+        return function() {
+          appliedMods.splice(i, 1);
+          renderLog();
+        };
+      })(idx));
       logWrap.appendChild(row);
     });
     logWrap.scrollTop = logWrap.scrollHeight;
