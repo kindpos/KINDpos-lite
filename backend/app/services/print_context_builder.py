@@ -142,6 +142,7 @@ class PrintContextBuilder:
         station_name: str = "General",
         is_reprint: bool = False,
         original_fired_at: Optional[str] = None,
+        station_categories: Optional[list[str]] = None,
     ) -> Dict[str, Any]:
 
         events = await self.ledger.get_events_by_correlation(order_id)
@@ -154,7 +155,7 @@ class PrintContextBuilder:
         fired_at      = datetime.now(timezone.utc).strftime("%I:%M %p")
 
         # ── Items ─────────────────────────────────────────────────────────────
-        items = []
+        all_items = []
         seats = set()
         for item in (order.items or []):
             seat = getattr(item, "seat_number", None)
@@ -164,7 +165,7 @@ class PrintContextBuilder:
             for m in (item.modifiers or []):
                 mods.append(m if isinstance(m, dict) else str(m))
             notes = getattr(item, "notes", None)
-            items.append({
+            all_items.append({
                 "qty":                  item.quantity,
                 "name":                 item.name,
                 "kitchen_text":         item.name,
@@ -174,6 +175,17 @@ class PrintContextBuilder:
                 "category":             getattr(item, "category", None),
                 "seat_number":          seat,
             })
+
+        # ── Station filtering ─────────────────────────────────────────────────
+        # When station_categories is provided, split items into this station's
+        # items vs companion items (going to other stations).
+        if station_categories is not None:
+            cat_set = set(station_categories)
+            items = [it for it in all_items if it.get("category") in cat_set]
+            companion_items = [it for it in all_items if it.get("category") not in cat_set]
+        else:
+            items = all_items
+            companion_items = []
 
         return {
             "order_id":           order_id,
@@ -192,6 +204,7 @@ class PrintContextBuilder:
             "fired_at":           fired_at,
             "original_fired_at":  original_fired_at,
             "items":              items,
+            "companion_items":    companion_items,
             "station_name":       station_name,
             "terminal_id":        settings.terminal_id,
             "supports_red":       False,

@@ -43,6 +43,16 @@ class KitchenTicketTemplate(BaseTemplate):
         # Zone 4 — Alert Block
         commands.extend(self._render_zone4(context, allergies, supports_red))
 
+        # Companion items — "Send with" block for multi-station orders
+        companion = context.get('companion_items', [])
+        if companion:
+            commands.append({'type': 'divider', 'char': '='})
+            names = ', '.join(c.get('name') or c.get('kitchen_text', '') for c in companion)
+            commands.append({
+                'type': 'text', 'content': f"Send with: {names}",
+                'bold': True,
+            })
+
         # Zone 5 — Footer
         commands.extend(self._render_zone5(context, ticket_type))
 
@@ -269,17 +279,6 @@ class KitchenTicketTemplate(BaseTemplate):
                         'content': f"  {allergy_type} ALLERGY  ",
                         'bold': True, 'reverse': True, 'red': supports_red, 'align': 'center',
                     })
-
-            # "Send with" line — show other items on this ticket
-            if len(items) > 1:
-                others = [
-                    it.get('kitchen_text') or it.get('name', '')
-                    for j, it in enumerate(items) if j != i
-                ]
-                cmds.append({
-                    'type': 'text',
-                    'content': f"  Send with: {', '.join(others)}",
-                })
 
             # Item separator
             if i < len(items) - 1:
