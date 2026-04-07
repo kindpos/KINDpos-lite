@@ -17,6 +17,7 @@ from .templates.guest_receipt import GuestReceiptTemplate
 from .templates.kitchen_ticket import KitchenTicketTemplate
 from .templates.clock_hours import ClockHoursTemplate
 from .templates.sales_recap import SalesRecapTemplate
+from ..core.events import ticket_print_failed
 
 logger = logging.getLogger("kindpos.printing.dispatcher")
 
@@ -43,11 +44,14 @@ class PrintDispatcher:
     Call start() once at app startup, stop() at shutdown.
     """
 
-    def __init__(self, queue: PrintJobQueue, poll_interval: float = 3.0):
+    def __init__(self, queue: PrintJobQueue, poll_interval: float = 3.0,
+                 ledger=None, terminal_id: str = "terminal_01"):
         self._queue         = queue
         self._poll_interval = poll_interval
         self._running       = False
         self._task: Optional[asyncio.Task] = None
+        self._ledger        = ledger
+        self._terminal_id   = terminal_id
 
         # Receipt printer: 48 chars per line
         # Kitchen printer: 33 chars per line
@@ -103,6 +107,7 @@ class PrintDispatcher:
         if attempt > MAX_ATTEMPTS:
             await self._queue.mark_failed(job_id)
             logger.error(f"Job {job_id} exceeded max attempts — marked FAILED")
+            await self._emit_print_failed(job, "Exceeded max attempts")
             return
 
         delay = RETRY_DELAYS[attempt - 1]
@@ -135,6 +140,24 @@ class PrintDispatcher:
             if attempt >= MAX_ATTEMPTS:
                 await self._queue.mark_failed(job_id)
                 logger.error(f"Job {job_id} FAILED after {attempt} attempts: {e}")
+                await self._emit_print_failed(job, str(e))
+
+    # ── Ledger event for failed prints ─────────────────────────────────────
+
+    async def _emit_print_failed(self, job: dict, error: str) -> None:
+        if not self._ledger:
+            return
+        try:
+            evt = ticket_print_failed(
+                terminal_id=self._terminal_id,
+                order_id=job.get("order_id", ""),
+                printer_id=job.get("printer_mac", ""),
+                error=error,
+                will_retry=False,
+            )
+            await self._ledger.append(evt)
+        except Exception as ex:
+            logger.warning(f"Could not write TICKET_PRINT_FAILED event: {ex}")
 
     # ── Render ────────────────────────────────────────────────────────────────
 

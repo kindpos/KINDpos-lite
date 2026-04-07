@@ -113,7 +113,7 @@ async def lifespan(app: FastAPI):
     await print_queue.connect()
     print("Print Queue initialized")
 
-    _dispatcher = PrintDispatcher(print_queue)
+    _dispatcher = PrintDispatcher(print_queue, ledger=ledger, terminal_id=settings.terminal_id)
     await _dispatcher.start()
     print("Print Dispatcher started")
 
