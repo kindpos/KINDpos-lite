@@ -127,34 +127,8 @@ function _buildOverlay(el, sizeItem, builderData) {
     'overflow:hidden;',
   ].join('');
 
-  // ═══ PREFIX ROW ═══
-  var prefixRow = document.createElement('div');
-  prefixRow.style.cssText = 'display:flex;gap:4px;padding:2px 4px;flex-shrink:0;';
+  // ═══ PREFIX + PLACEMENT — built here, appended to bottom bar later ═══
   var prefixBtns = {};
-
-  PREFIXES.forEach(function(p) {
-    var isActive = activePrefix === p.id;
-    var btn = document.createElement('div');
-    btn.style.cssText = [
-      'flex:1;height:34px;display:flex;align-items:center;justify-content:center;',
-      'font-family:' + T.fh + ';font-size:22px;cursor:pointer;',
-      'background:' + (isActive ? p.color : T.darkBtn) + ';',
-      'color:' + (isActive ? p.textColor : p.color) + ';',
-      'border:2px solid ' + p.color + ';',
-      'transition:background 80ms,color 80ms;',
-    ].join('');
-    btn.textContent = p.label;
-
-    btn.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
-      activePrefix = p.id;
-      refreshPrefixes();
-    });
-
-    prefixBtns[p.id] = btn;
-    prefixRow.appendChild(btn);
-  });
-  panel.appendChild(prefixRow);
 
   function refreshPrefixes() {
     PREFIXES.forEach(function(p) {
@@ -211,17 +185,46 @@ function _buildOverlay(el, sizeItem, builderData) {
   body.appendChild(rightPanel);
   panel.appendChild(body);
 
-  // ═══ BOTTOM BAR ═══
-  var bottomBar = document.createElement('div');
-  bottomBar.style.cssText = [
-    'display:flex;gap:4px;padding:3px 4px;flex-shrink:0;',
-    'background:' + T.bgDark + ';',
+  // ═══ BOTTOM AREA: prefix row + action row ═══
+  var bottomArea = document.createElement('div');
+  bottomArea.style.cssText = [
+    'flex-shrink:0;background:' + T.bgDark + ';',
     'border-top:2px solid ' + T.catColor('PIZZA') + ';',
+    'display:flex;flex-direction:column;gap:2px;padding:2px 4px;',
   ].join('');
+
+  // ── PREFIX ROW ──
+  var prefixRow = document.createElement('div');
+  prefixRow.style.cssText = 'display:flex;gap:4px;';
+  PREFIXES.forEach(function(p) {
+    var isActive = activePrefix === p.id;
+    var btn = document.createElement('div');
+    btn.style.cssText = [
+      'flex:1;height:30px;display:flex;align-items:center;justify-content:center;',
+      'font-family:' + T.fh + ';font-size:20px;cursor:pointer;',
+      'background:' + (isActive ? p.color : T.darkBtn) + ';',
+      'color:' + (isActive ? p.textColor : p.color) + ';',
+      'border:2px solid ' + p.color + ';',
+      'transition:background 80ms,color 80ms;',
+    ].join('');
+    btn.textContent = p.label;
+    btn.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      activePrefix = p.id;
+      refreshPrefixes();
+    });
+    prefixBtns[p.id] = btn;
+    prefixRow.appendChild(btn);
+  });
+  bottomArea.appendChild(prefixRow);
+
+  // ── ACTION ROW ──
+  var bottomBar = document.createElement('div');
+  bottomBar.style.cssText = 'display:flex;gap:4px;';
 
   // CANCEL
   var cancelPair = buildStyledButton(T.darkBtn);
-  cancelPair.wrap.style.cssText += 'flex:1;height:40px;';
+  cancelPair.wrap.style.cssText += 'flex:1;height:34px;';
   cancelPair.inner.textContent = 'CANCEL';
   cancelPair.inner.style.color = T.mint;
   cancelPair.inner.style.fontSize = T.fsSmall;
@@ -234,7 +237,7 @@ function _buildOverlay(el, sizeItem, builderData) {
 
   // UNDO
   var undoPair = buildStyledButton(T.darkBtn);
-  undoPair.wrap.style.cssText += 'flex:1;height:40px;';
+  undoPair.wrap.style.cssText += 'flex:1;height:34px;';
   undoPair.inner.textContent = 'UNDO';
   undoPair.inner.style.color = T.red;
   undoPair.inner.style.fontSize = T.fsSmall;
@@ -248,7 +251,7 @@ function _buildOverlay(el, sizeItem, builderData) {
 
   // ADD TO ORDER
   var addPair = buildStyledButton(T.goGreen);
-  addPair.wrap.style.cssText += 'flex:2;height:40px;';
+  addPair.wrap.style.cssText += 'flex:2;height:34px;';
   addPair.inner.textContent = 'ADD';
   addPair.inner.style.color = '#1a2a1a';
   addPair.inner.style.fontSize = T.fsSmall;
@@ -290,7 +293,7 @@ function _buildOverlay(el, sizeItem, builderData) {
     var isActive = activePlacement === seg.id;
     var btn = document.createElement('div');
     btn.style.cssText = [
-      'flex:1;height:40px;display:flex;align-items:center;justify-content:center;',
+      'flex:1;height:34px;display:flex;align-items:center;justify-content:center;',
       'font-family:' + T.fh + ';font-size:20px;cursor:pointer;',
       'background:' + (isActive ? pizzaColor : T.darkBtn) + ';',
       'color:' + (isActive ? '#1a0a0a' : pizzaColor) + ';',
@@ -311,7 +314,8 @@ function _buildOverlay(el, sizeItem, builderData) {
   });
   bottomBar.appendChild(placeBar);
 
-  panel.appendChild(bottomBar);
+  bottomArea.appendChild(bottomBar);
+  panel.appendChild(bottomArea);
   el.appendChild(panel);
 
   // ── Init HexNav after DOM layout ──
