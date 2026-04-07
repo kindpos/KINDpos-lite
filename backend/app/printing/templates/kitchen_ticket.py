@@ -228,10 +228,14 @@ class KitchenTicketTemplate(BaseTemplate):
                 prefix = "[VOID] "
             item_line = f"{prefix}{qty}x {name}"
 
-            cmds.append({'type': 'text', 'content': item_line, 'bold': True})
+            # Use double-height for items with half-placement so the table
+            # is clearly associated with the item above it.
+            has_halves = has_half_modifiers(modifiers)
+            cmds.append({'type': 'text', 'content': item_line, 'bold': True,
+                         'double_height': has_halves})
 
             # Modifiers — half-placement split or flat
-            if has_half_modifiers(modifiers):
+            if has_halves:
                 cmds.extend(self._render_half_placement_block(modifiers, supports_red))
             else:
                 for mod in modifiers:
@@ -342,8 +346,7 @@ class KitchenTicketTemplate(BaseTemplate):
                 right_text = ' ' + name
 
             line = f"{left_text:<{col_w}}|{right_text:<{right_w}}"
-            cmds.append({'type': 'text', 'content': line,
-                         'bold': True, 'double_height': True})
+            cmds.append({'type': 'text', 'content': line, 'bold': True})
 
         cmds.append({'type': 'text', 'content': divider_line, 'bold': True})
         return cmds
