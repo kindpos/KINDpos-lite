@@ -303,6 +303,7 @@ registerScene('order-entry', {
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _mainArea      = null;
     _ticketPanel   = null;
+    _actionBar     = null;
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -313,8 +314,8 @@ registerScene('order-entry', {
 
     var ticketPanel = buildTicket(el);
     var mainArea    = buildMain(el, params);
-    el.appendChild(mainArea);
     el.appendChild(ticketPanel);
+    el.appendChild(mainArea);
 
     // Fetch dynamic menu from API (updates MENU_DATA + PIZZA_BUILDER_DATA)
     if (!_menuFetched) fetchMenuFromAPI();
@@ -358,7 +359,7 @@ function buildTicket(parentEl) {
   panel.style.cssText = [
     'width:' + TICKET_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'padding-left:' + GAP + 'px;',
+    'padding-right:' + GAP + 'px;',
   ].join('');
   _ticketPanel = panel;
 
@@ -433,8 +434,8 @@ function buildTicketSummary(panel) {
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
 
-  // Action buttons
-  buildSummaryActions(panel);
+  // Update action bar on the right
+  rebuildActionBar();
 
   // Update totals
   var totals = computeTotals(activeSeat || undefined);
@@ -558,132 +559,6 @@ function buildSeatCardGrid(container) {
   container.appendChild(addPair.wrap);
 }
 
-function buildSummaryActions(panel) {
-  var actions = document.createElement('div');
-  actions.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;padding:4px 0;';
-
-  var hasSelection = modifierSession.selectedItems.length > 0;
-
-  if (modifierSession.active) {
-    var undoBtn = buildButton('UNDO', {
-      fill: T.darkBtn, color: T.red, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { undoLastMod(); renderTicket(); },
-    });
-    actions.appendChild(undoBtn);
-
-    var finalizeBtn = buildButton('FINALIZE', {
-      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { finalizeSession(); },
-    });
-    actions.appendChild(finalizeBtn);
-
-    var cancelBtn = buildButton('CANCEL', {
-      fill: T.red, color: '#fff', fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { cancelSession(); },
-    });
-    cancelBtn.style.gridColumn = '1 / -1';
-    actions.appendChild(cancelBtn);
-  } else if (hasSelection) {
-    var modifyBtn = buildButton('MODIFY', {
-      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { openModifierSession(); },
-    });
-    actions.appendChild(modifyBtn);
-
-    var deselectBtn = buildButton('DESELECT', {
-      fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { clearModifierSelection(); },
-    });
-    actions.appendChild(deselectBtn);
-
-    var addItemBtn = buildButton('ADD ITEM', {
-      fill: T.mint, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() {
-        ticketMode = 'adding';
-        rebuildTicketPanel();
-      },
-    });
-    addItemBtn.style.gridColumn = '1 / -1';
-    actions.appendChild(addItemBtn);
-  } else {
-    var addItemBtn = buildButton('ADD ITEM', {
-      fill: T.mint, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() {
-        ticketMode = 'adding';
-        rebuildTicketPanel();
-      },
-    });
-    addItemBtn.style.gridColumn = '1 / -1';
-    actions.appendChild(addItemBtn);
-
-    var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
-    var hasUnsent = ticket.some(function(i) { return !i.sent; });
-
-    if (hasUnsent) {
-      var sendBtn = buildButton('SEND', {
-        fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-        onTap: function() {
-          handleSend().then(function() { rebuildTicketPanel(); });
-        },
-      });
-      sendBtn.style.gridColumn = '1 / -1';
-      actions.appendChild(sendBtn);
-    }
-
-    if (allSent) {
-      // All sent — PAY is the primary action
-      var payBtn = buildButton('PAY', {
-        fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-        onTap: function() { handlePay(_payParams); },
-      });
-      payBtn.style.gridColumn = '1 / -1';
-      actions.appendChild(payBtn);
-    } else {
-      var payBtn = buildButton('PAY', {
-        fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-        onTap: function() { handlePay(_payParams); },
-      });
-      actions.appendChild(payBtn);
-    }
-
-    var printBtn = buildButton('PRINT', {
-      fill: T.cyan, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() {
-        if (!currentOrderId) return;
-        fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
-          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
-          .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
-      },
-    });
-    actions.appendChild(printBtn);
-
-    var discBtn = buildButton('DISC', {
-      fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { handleDiscount(); },
-    });
-    actions.appendChild(discBtn);
-
-    var voidBtn = buildButton('VOID', {
-      fill: T.red, color: '#fff', fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { handleVoid(); },
-    });
-    actions.appendChild(voidBtn);
-
-    saveBtn = buildButton('SAVE', {
-      fill: T.darkBtn, color: T.mint, fontSize: '20px', height: 38, fontFamily: T.fh,
-      onTap: function() { handleSave(); },
-    });
-    actions.appendChild(saveBtn);
-
-    var recallBtnEl = buildButton('RECALL', {
-      fill: T.darkBtn, color: T.mint, fontSize: '20px', height: 38, fontFamily: T.fh,
-      onTap: function() { handleRecall(); },
-    });
-    actions.appendChild(recallBtnEl);
-  }
-
-  panel.appendChild(actions);
-}
 
 function buildTicketAdding(panel) {
   var isFreshOrder = !currentOrderId && !ticket.some(function(i) { return i.sent; });
@@ -729,75 +604,9 @@ function buildTicketAdding(panel) {
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
 
-  // Action buttons
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;padding:4px 0;';
-
-  var hasSelection = modifierSession.selectedItems.length > 0;
-
-  if (modifierSession.active) {
-    // Modifier session active — UNDO + FINALIZE
-    var undoBtn = buildButton('UNDO', {
-      fill: T.darkBtn, color: T.red, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { undoLastMod(); renderTicket(); },
-    });
-    btnRow.appendChild(undoBtn);
-
-    var finalizeBtn = buildButton('DONE', {
-      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { finalizeSession(); },
-    });
-    btnRow.appendChild(finalizeBtn);
-  } else if (hasSelection) {
-    // Items selected — MODIFY + DESELECT
-    var modifyBtn = buildButton('MODIFY', {
-      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { openModifierSession(); },
-    });
-    btnRow.appendChild(modifyBtn);
-
-    var deselectBtn = buildButton('DESELECT', {
-      fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { clearModifierSelection(); },
-    });
-    btnRow.appendChild(deselectBtn);
-  } else {
-    // No selection — SEND (left) + PAY (right, fresh only)
-    var sendBtn = buildButton('SEND', {
-      fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() {
-        handleSend().then(function() {
-          ticketMode = 'summary';
-          rebuildTicketPanel();
-        }).catch(function() {
-          renderTicket();
-        });
-      },
-    });
-    btnRow.appendChild(sendBtn);
-
-    if (isFreshOrder) {
-      var payBtn = buildButton('PAY', {
-        fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-        onTap: function() { handlePay(_payParams); },
-      });
-      btnRow.appendChild(payBtn);
-    } else {
-      var backBtn2 = buildButton('\u25c0 BACK', {
-        fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
-        onTap: function() {
-          ticketMode = 'summary';
-          rebuildTicketPanel();
-        },
-      });
-      btnRow.appendChild(backBtn2);
-    }
-  }
-
-  panel.appendChild(btnRow);
-
   // Render unsent items only
   renderTicket();
+  rebuildActionBar();
 }
 
 function buildSummaryRow(label, value, id) {
@@ -976,6 +785,8 @@ function buildPrefixCard() {
 }
 
 // ── MAIN AREA ─────────────────────────────────────
+var _actionBar = null;
+
 function buildMain(parentEl, params) {
   var main = document.createElement('div');
   main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
@@ -990,9 +801,18 @@ function buildMain(parentEl, params) {
   ].join('');
   main.appendChild(canvas);
 
+  // Action bar below hex nav
+  var actionBar = document.createElement('div');
+  actionBar.id = 'action-bar';
+  actionBar.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 0;flex-shrink:0;';
+  _actionBar = actionBar;
+  main.appendChild(actionBar);
+
   // Store refs
   _tabCanvas   = canvas;
   _payParams   = params;
+
+  rebuildActionBar();
 
   requestAnimationFrame(function() {
     hexNav = new HexNav(canvas, {
@@ -1003,6 +823,118 @@ function buildMain(parentEl, params) {
   });
 
   return main;
+}
+
+function rebuildActionBar() {
+  if (!_actionBar) return;
+  _actionBar.innerHTML = '';
+  _actionBar.style.gridTemplateColumns = '1fr 1fr';
+
+  var hasSelection = modifierSession.selectedItems.length > 0;
+  var isFreshOrder = !currentOrderId && !ticket.some(function(i) { return i.sent; });
+  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
+  var hasUnsent = ticket.some(function(i) { return !i.sent; });
+
+  if (modifierSession.active) {
+    // Modifier session — UNDO + DONE
+    var undoBtn = buildButton('UNDO', {
+      fill: T.darkBtn, color: T.red, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { undoLastMod(); renderTicket(); },
+    });
+    _actionBar.appendChild(undoBtn);
+
+    var doneBtn = buildButton('DONE', {
+      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { finalizeSession(); },
+    });
+    _actionBar.appendChild(doneBtn);
+  } else if (hasSelection) {
+    // Items selected — MODIFY + DESELECT
+    var modifyBtn = buildButton('MODIFY', {
+      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { openModifierSession(); },
+    });
+    _actionBar.appendChild(modifyBtn);
+
+    var deselectBtn = buildButton('DESELECT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { clearModifierSelection(); },
+    });
+    _actionBar.appendChild(deselectBtn);
+  } else if (ticketMode === 'adding') {
+    // Adding mode — SAVE + SEND + PAY (fresh) or SAVE + SEND (existing)
+    _actionBar.style.gridTemplateColumns = isFreshOrder ? '1fr 1fr 1fr' : '1fr 1fr';
+    var sendBtn = buildButton('SEND', {
+      fill: T.goGreen, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() {
+        handleSend().then(function() {
+          ticketMode = 'summary';
+          rebuildTicketPanel();
+          rebuildActionBar();
+        }).catch(function() {
+          renderTicket();
+        });
+      },
+    });
+    var saveBtn2 = buildButton('SAVE', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { handleSave(); },
+    });
+    _actionBar.appendChild(saveBtn2);
+    _actionBar.appendChild(sendBtn);
+
+    if (isFreshOrder) {
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() { handlePay(_payParams); },
+      });
+      _actionBar.appendChild(payBtn);
+    }
+  } else {
+    // Summary mode — PAY (primary when all sent) + action buttons
+    if (allSent) {
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() { handlePay(_payParams); },
+      });
+      payBtn.style.gridColumn = '1 / -1';
+      _actionBar.appendChild(payBtn);
+    } else if (hasUnsent) {
+      var sendBtn = buildButton('SEND', {
+        fill: T.goGreen, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() {
+          handleSend().then(function() { rebuildTicketPanel(); rebuildActionBar(); });
+        },
+      });
+      _actionBar.appendChild(sendBtn);
+
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() { handlePay(_payParams); },
+      });
+      _actionBar.appendChild(payBtn);
+    }
+
+    var addItemBtn = buildButton('ADD ITEM', {
+      fill: T.mint, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() {
+        ticketMode = 'adding';
+        rebuildTicketPanel();
+        rebuildActionBar();
+      },
+    });
+    var printBtn = buildButton('PRINT', {
+      fill: T.cyan, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() {
+        if (!currentOrderId) return;
+        fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
+          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+          .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
+      },
+    });
+    _actionBar.appendChild(addItemBtn);
+    _actionBar.appendChild(printBtn);
+  }
 }
 
 // ── BOTTOM BAR (legacy — now handled by ticket panel) ──
