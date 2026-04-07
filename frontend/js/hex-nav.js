@@ -9,7 +9,7 @@ import { T } from './tokens.js';
 var CAT_R    = 80;
 var SUBCAT_R = 70;
 var ITEM_R   = 70;
-var MOD_R    = 40;
+var MOD_R    = 70;
 // Gap multipliers per depth — breathing room between hexes
 var GAPS = [1.12, 1.21, 1.19, 1.17, 1.17];
 function gapForLevel(level) { return GAPS[level] || GAPS[GAPS.length - 1]; }
