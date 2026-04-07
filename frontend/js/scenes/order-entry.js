@@ -722,38 +722,66 @@ function buildTicketAdding(panel) {
   var btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;padding:4px 0;';
 
-  var sendBtn = buildButton('SEND', {
-    fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-    onTap: function() {
-      handleSend().then(function() {
-        ticketMode = 'summary';
-        rebuildTicketPanel();
-      }).catch(function() {
-        renderTicket();
-      });
-    },
-  });
+  var hasSelection = modifierSession.selectedItems.length > 0;
 
-  if (isFreshOrder) {
-    // Fresh order: SEND + PAY
-    btnRow.appendChild(sendBtn);
-
-    var payBtn = buildButton('PAY', {
-      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { handlePay(_payParams); },
+  if (modifierSession.active) {
+    // Modifier session active — UNDO + FINALIZE
+    var undoBtn = buildButton('UNDO', {
+      fill: T.darkBtn, color: T.red, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { undoLastMod(); renderTicket(); },
     });
-    btnRow.appendChild(payBtn);
-  } else {
-    // Existing check: BACK + SEND
-    var doneBtn = buildButton('\u25c0 BACK', {
+    btnRow.appendChild(undoBtn);
+
+    var finalizeBtn = buildButton('DONE', {
+      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { finalizeSession(); },
+    });
+    btnRow.appendChild(finalizeBtn);
+  } else if (hasSelection) {
+    // Items selected — MODIFY + DESELECT
+    var modifyBtn = buildButton('MODIFY', {
+      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { openModifierSession(); },
+    });
+    btnRow.appendChild(modifyBtn);
+
+    var deselectBtn = buildButton('DESELECT', {
       fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { clearModifierSelection(); },
+    });
+    btnRow.appendChild(deselectBtn);
+  } else {
+    // No selection — SEND + PAY/BACK
+    var sendBtn = buildButton('SEND', {
+      fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
       onTap: function() {
-        ticketMode = 'summary';
-        rebuildTicketPanel();
+        handleSend().then(function() {
+          ticketMode = 'summary';
+          rebuildTicketPanel();
+        }).catch(function() {
+          renderTicket();
+        });
       },
     });
-    btnRow.appendChild(doneBtn);
-    btnRow.appendChild(sendBtn);
+
+    if (isFreshOrder) {
+      btnRow.appendChild(sendBtn);
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+        onTap: function() { handlePay(_payParams); },
+      });
+      btnRow.appendChild(payBtn);
+    } else {
+      var doneBtn = buildButton('\u25c0 BACK', {
+        fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
+        onTap: function() {
+          ticketMode = 'summary';
+          rebuildTicketPanel();
+        },
+      });
+      btnRow.appendChild(doneBtn);
+      btnRow.appendChild(sendBtn);
+    }
   }
 
   panel.appendChild(btnRow);
@@ -1502,14 +1530,16 @@ function addToTicket(item) {
       name:      name,
       unitPrice: price,
       mods:      mods,
-      selected:  false,
+      selected:  true,
       sent:      false,
       category:  hexNav ? hexNav.getCatId() : null,
       seat:      activeSeat || 1,
     });
+    // Auto-select the new item for immediate modifier access
+    var newId = ticketSeq;
+    modifierSession.selectedItems = [newId];
   }
-  renderTicket();
-  rebuildBottomBar();
+  rebuildTicketPanel();
 }
 
 function renderTicket() {
