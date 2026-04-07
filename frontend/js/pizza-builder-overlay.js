@@ -240,21 +240,27 @@ function _buildOverlay(el, sizeItem, builderData) {
     });
   }
 
-  // ═══ MAIN BODY: HexNav ═══
+  // ═══ MAIN BODY: HexNav (left) + Applied Mods Log (right) ═══
+  var body = document.createElement('div');
+  body.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
+
   var hexArea = document.createElement('div');
   hexArea.style.cssText = 'flex:1;position:relative;overflow:hidden;';
-  panel.appendChild(hexArea);
+  body.appendChild(hexArea);
 
-  // ═══ APPLIED MODS LOG ═══
+  // ═══ APPLIED MODS LOG (right side) ═══
   var logWrap = document.createElement('div');
   logWrap.style.cssText = [
-    'max-height:80px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-    'background:' + T.bgDark + ';padding:4px 8px;flex-shrink:0;',
-    'border-top:2px solid ' + T.border + ';',
+    'width:200px;flex-shrink:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
+    'background:' + T.bgDark + ';padding:6px 8px;',
+    'border-left:2px solid ' + T.border + ';',
+    'display:flex;flex-direction:column;',
   ].join('');
   applySunkenStyle(logWrap);
   renderLog();
-  panel.appendChild(logWrap);
+  body.appendChild(logWrap);
+
+  panel.appendChild(body);
 
   // ═══ BOTTOM BAR ═══
   var bottomBar = document.createElement('div');
