@@ -190,7 +190,7 @@ function buildCardLanding(el, params, sales, labor) {
   //  CENTER — Open Tabs (bordered card)
   // ══════════════════════════════════════════════
   var center = document.createElement('div');
-  center.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;border:3px solid ' + T.mint + ';background:' + T.bgDark + ';box-sizing:border-box;';
+  center.style.cssText = 'grid-column:2;display:flex;flex-direction:column;overflow:hidden;border:3px solid ' + T.mint + ';background:' + T.bgDark + ';box-sizing:border-box;';
 
   var tabHeader = document.createElement('div');
   tabHeader.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.cyan + ';letter-spacing:2px;padding:8px 4px;flex-shrink:0;text-align:center;';
@@ -227,7 +227,7 @@ function buildCardLanding(el, params, sales, labor) {
   //  RIGHT — HOURS (server) or LABOR (manager) Card
   // ══════════════════════════════════════════════
   var rightCol = document.createElement('div');
-  rightCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;';
+  rightCol.style.cssText = 'grid-column:3;grid-row:1/-1;display:flex;align-items:center;justify-content:center;overflow:hidden;';
 
   if (sales !== undefined) {
     var rightCard = buildRightCard(baseParams, sales, labor);
