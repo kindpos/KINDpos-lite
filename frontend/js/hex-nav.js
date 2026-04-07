@@ -128,22 +128,25 @@ export function HexNav(container, opts) {
       poly.appendChild(anim);
     }
 
-    // Label — scale font to fit longest word within hex width
-    var baseFontSize = h.r >= 70 * scale ? Math.round(28 * scale) : h.r > 30 * scale ? Math.round(22 * scale) : Math.round(18 * scale);
+    // Label — scale font to fill hex as much as possible
     var lines    = h.label.split(' ');
-    // Estimate max char width: hex usable width ≈ r * 1.5, each char ≈ fontSize * 0.6
-    var maxWidth = h.r * 1.5;
     var longestWord = '';
     lines.forEach(function(w) { if (w.length > longestWord.length) longestWord = w; });
-    var fontSize = baseFontSize;
-    var estWidth = longestWord.length * fontSize * 0.6;
-    if (estWidth > maxWidth && longestWord.length > 0) {
-      fontSize = Math.max(Math.round(maxWidth / (longestWord.length * 0.6)), Math.round(12 * scale));
-    }
-    // Also shrink if too many lines would overflow vertically
-    var totalTextH = lines.length * fontSize * 1.3;
-    if (totalTextH > h.r * 1.4) {
-      fontSize = Math.max(Math.round((h.r * 1.4) / (lines.length * 1.3)), Math.round(12 * scale));
+    // Start with a font size that fills the hex width for the longest word
+    // Hex usable width ≈ r * 1.7, each char ≈ fontSize * 0.52
+    var maxWidth = h.r * 1.7;
+    var fontSize = longestWord.length > 0
+      ? Math.round(maxWidth / (longestWord.length * 0.52))
+      : Math.round(28 * scale);
+    // Clamp to reasonable range
+    var maxFont = Math.round(38 * scale);
+    var minFont = Math.round(14 * scale);
+    if (fontSize > maxFont) fontSize = maxFont;
+    if (fontSize < minFont) fontSize = minFont;
+    // Also shrink if too many lines overflow vertically
+    var totalTextH = lines.length * fontSize * 1.2;
+    if (totalTextH > h.r * 1.6) {
+      fontSize = Math.max(Math.round((h.r * 1.6) / (lines.length * 1.2)), minFont);
     }
     lines.forEach(function(line, i) {
       var text = document.createElementNS(svgNS, 'text');
