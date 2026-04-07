@@ -313,8 +313,8 @@ registerScene('order-entry', {
 
     var ticketPanel = buildTicket(el);
     var mainArea    = buildMain(el, params);
-    el.appendChild(ticketPanel);
     el.appendChild(mainArea);
+    el.appendChild(ticketPanel);
 
     // Fetch dynamic menu from API (updates MENU_DATA + PIZZA_BUILDER_DATA)
     if (!_menuFetched) fetchMenuFromAPI();
@@ -358,7 +358,7 @@ function buildTicket(parentEl) {
   panel.style.cssText = [
     'width:' + TICKET_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'padding-right:' + GAP + 'px;',
+    'padding-left:' + GAP + 'px;',
   ].join('');
   _ticketPanel = panel;
 
@@ -617,23 +617,34 @@ function buildSummaryActions(panel) {
     actions.appendChild(addItemBtn);
 
     var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
-    var sendLabel = allSent ? 'RESEND' : 'SEND';
     var hasUnsent = ticket.some(function(i) { return !i.sent; });
 
     if (hasUnsent) {
-      var sendBtn = buildButton(sendLabel, {
+      var sendBtn = buildButton('SEND', {
         fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-        onTap: function() { handleSend(); },
+        onTap: function() {
+          handleSend().then(function() { rebuildTicketPanel(); });
+        },
       });
       sendBtn.style.gridColumn = '1 / -1';
       actions.appendChild(sendBtn);
     }
 
-    var payBtn = buildButton('PAY', {
-      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
-      onTap: function() { handlePay(_payParams); },
-    });
-    actions.appendChild(payBtn);
+    if (allSent) {
+      // All sent — PAY is the primary action
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+        onTap: function() { handlePay(_payParams); },
+      });
+      payBtn.style.gridColumn = '1 / -1';
+      actions.appendChild(payBtn);
+    } else {
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+        onTap: function() { handlePay(_payParams); },
+      });
+      actions.appendChild(payBtn);
+    }
 
     var printBtn = buildButton('PRINT', {
       fill: T.cyan, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
@@ -751,7 +762,7 @@ function buildTicketAdding(panel) {
     });
     btnRow.appendChild(deselectBtn);
   } else {
-    // No selection — SEND + PAY/BACK
+    // No selection — SEND (left) + PAY (right, fresh only)
     var sendBtn = buildButton('SEND', {
       fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
       onTap: function() {
@@ -763,24 +774,23 @@ function buildTicketAdding(panel) {
         });
       },
     });
+    btnRow.appendChild(sendBtn);
 
     if (isFreshOrder) {
-      btnRow.appendChild(sendBtn);
       var payBtn = buildButton('PAY', {
         fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
         onTap: function() { handlePay(_payParams); },
       });
       btnRow.appendChild(payBtn);
     } else {
-      var doneBtn = buildButton('\u25c0 BACK', {
+      var backBtn2 = buildButton('\u25c0 BACK', {
         fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
         onTap: function() {
           ticketMode = 'summary';
           rebuildTicketPanel();
         },
       });
-      btnRow.appendChild(doneBtn);
-      btnRow.appendChild(sendBtn);
+      btnRow.appendChild(backBtn2);
     }
   }
 
