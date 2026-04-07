@@ -37,18 +37,26 @@ async def print_receipt(
     return {"status": "queued", "job_id": job_id, "copy_type": copy_type}
 
 @router.post("/ticket/{order_id}")
-async def print_ticket(order_id: str, ledger: EventLedger = Depends(get_ledger)):
-    """Trigger kitchen ticket for order."""
+async def print_ticket(
+    order_id: str,
+    void: bool = False,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Trigger kitchen ticket for order. Pass ?void=true for void tickets."""
     builder = PrintContextBuilder(ledger)
     context = await builder.build_kitchen_context(order_id, station_name="General")
+    if void:
+        context["is_void"] = True
+        context["void_banner"] = "** VOID **"
+    template = "kitchen_ticket_void" if void else "kitchen_ticket"
     job_id = await print_queue.enqueue(
         order_id=order_id,
-        template_id="kitchen_ticket",
+        template_id=template,
         printer_mac="DEFAULT_KITCHEN",
         ticket_number=context.get('ticket_number', 'N/A'),
         context=context
     )
-    return {"status": "queued", "job_id": job_id}
+    return {"status": "queued", "job_id": job_id, "is_void": void}
 
 @router.get("/queue")
 async def get_queue():

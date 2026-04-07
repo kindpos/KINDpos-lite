@@ -1461,6 +1461,9 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
                 body: JSON.stringify({ reason: r, approved_by: approvedBy }),
               }).then(function(res) {
                 if (!res.ok) throw new Error('HTTP ' + res.status);
+                // Send void ticket to kitchen
+                return fetch(API + '/print/ticket/' + currentOrderId + '?void=true', { method: 'POST' });
+              }).then(function() {
                 currentOrderId = null;
                 currentCheckNumber = null;
                 clearSceneCache('order-entry');
@@ -1480,6 +1483,12 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
               clearSceneCache('order-entry');
               replace('login');
             } else {
+              // Individual item void — send void ticket to kitchen if any were already sent
+              var hadSent = targets.some(function(t) { return t.sent; });
+              if (hadSent && currentOrderId) {
+                fetch(API + '/print/ticket/' + currentOrderId + '?void=true', { method: 'POST' })
+                  .catch(function(err) { console.warn('[KINDpos] Void kitchen print failed:', err); });
+              }
               renderTicket();
               rebuildBottomBar();
             }
