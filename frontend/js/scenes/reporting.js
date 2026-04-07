@@ -967,3 +967,8 @@ registerScene('reporting', {
   cache: false,
   timeoutMs: 0,
 });
+
+// ═══════════════════════════════════════════════════
+//  PUBLIC API — reused by landing page
+// ═══════════════════════════════════════════════════
+export { fetchData as fetchReportData, buildLeftCard, buildRightCard, buildCardWrap, buildServerShiftPanels, buildServerHoursPanels, buildManagerSalesPanels, buildManagerLaborPanels };
