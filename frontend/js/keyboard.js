@@ -207,8 +207,8 @@ function _buildRow(keys) {
       : k;
 
     var fill, color;
-    if (def.type === 'modifier') { fill = T.bg; color = T.cyan; }
-    else if (def.type === 'action') { fill = T.gold; color = T.bgDark; }
+    if (def.type === 'modifier') { fill = T.darkBtn; color = T.mint; }
+    else if (def.type === 'action') { fill = T.darkBtn; color = T.mint; }
     else { fill = T.darkBtn; color = T.mint; }
 
     var pair = buildStyledButton(fill);
@@ -251,8 +251,8 @@ function _buildNumpadColumn() {
     var isObj = typeof k !== 'string';
     var label = isObj ? k.label : k;
     var key   = isObj ? k.key   : k;
-    var fill  = isObj ? T.bg : T.darkBtn;
-    var color = isObj ? T.cyan : T.gold;
+    var fill  = T.darkBtn;
+    var color = T.mint;
 
     var pair = buildStyledButton(fill);
     pair.wrap.style.minWidth = '0';

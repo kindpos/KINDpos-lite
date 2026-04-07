@@ -331,7 +331,7 @@ function doZeroAll(state) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('CONFIRM', {
-        fill: T.red, color: '#fff', fontSize: '27px',
+        fill: T.darkBtn, color: T.mint, fontSize: '27px',
         width: 140, height: 44,
         onTap: function() { resolveInterrupt(true); },
       }));
@@ -422,11 +422,11 @@ function getCardDefs(state) {
         el.appendChild(detailRow('Total Tip-Out', fmt(state.tipOutTotal)));
 
         // Adjust % button
-        var adjPair = buildStyledButton(T.gold);
+        var adjPair = buildStyledButton(T.darkBtn);
         adjPair.wrap.style.cssText = 'width:100%;height:36px;margin-top:8px;';
         adjPair.inner.style.fontFamily = T.fb;
         adjPair.inner.style.fontSize = T.fsSmall;
-        adjPair.inner.style.color = '#1a1a1a';
+        adjPair.inner.style.color = T.mint;
         adjPair.inner.textContent = 'Adjust %';
         adjPair.wrap.addEventListener('pointerup', function() {
           openAdjustOverlay(state);
@@ -857,12 +857,12 @@ function openAdjustOverlay(state) {
       cancelPair.inner.textContent = 'CANCEL';
       cancelPair.wrap.addEventListener('pointerup', function() { dismissOverlay(); });
 
-      var confirmPair = buildStyledButton(T.gold);
+      var confirmPair = buildStyledButton(T.darkBtn);
       confirmPair.wrap.style.flex = '1';
       confirmPair.wrap.style.height = '52px';
       confirmPair.inner.style.fontFamily = T.fb;
       confirmPair.inner.style.fontSize = '16px';
-      confirmPair.inner.style.color = '#1a1a1a';
+      confirmPair.inner.style.color = T.mint;
       confirmPair.inner.textContent = 'CONFIRM';
       confirmPair.wrap.addEventListener('pointerup', function() {
         workingRoles.forEach(function(r, i) { state.tipOutRoles[i].percent = r.percent; });
@@ -1008,7 +1008,7 @@ function showCashTipDeclaration(state) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Submit', {
-        fill: T.gold, color: '#1a1a1a', fontSize: '27px',
+        fill: T.darkBtn, color: T.mint, fontSize: '27px',
         width: 130, height: 44,
         onTap: function() {
           var cents = parseInt(tipValue, 10) || 0;

@@ -176,7 +176,7 @@ function renderCurrentState() {
 // ═══════════════════════════════════════════════════
 
 function buildCardWrap(cardInner) {
-  var btn = buildStyledButton(T.mint);
+  var btn = buildStyledButton(T.darkBtn);
   btn.inner.style.padding = '0';
   btn.inner.appendChild(cardInner);
   btn.wrap.style.flex = '1';
@@ -190,7 +190,7 @@ function buildCardWrap(cardInner) {
   btn.inner.style.borderLeftWidth = thick + 'px';
   btn.inner.style.borderBottomWidth = thick + 'px';
   btn.inner.style.borderRightWidth = thick + 'px';
-  var shadow = shadowColor(T.mint);
+  var shadow = shadowColor(T.darkBtn);
   btn.wrap.style.filter = 'drop-shadow(6px 8px 2px ' + shadow + ')';
   btn.wrap._shadow = shadow;
   return btn.wrap;
@@ -243,10 +243,10 @@ function buildHardwareCard() {
   card.appendChild(btns);
 
   // Scan Network button at bottom
-  var scanBtn = buildStyledButton(GOLD);
+  var scanBtn = buildStyledButton(T.darkBtn);
   scanBtn.inner.style.fontFamily = T.fh;
   scanBtn.inner.style.fontSize = '28px';
-  scanBtn.inner.style.color = DARK;
+  scanBtn.inner.style.color = MINT;
   scanBtn.inner.style.padding = '8px 12px';
   scanBtn.inner.textContent = '//Scan Network//';
   scanBtn.wrap.style.cssText = 'width:85%;margin-top:auto;cursor:pointer;align-self:center;';
@@ -408,7 +408,7 @@ function renderAddChoose(card) {
   wrap.appendChild(title);
 
   wrap.appendChild(buildButton('Scan Network', {
-    fill: GOLD, color: DARK, fontSize: T.fsSmall, width: 280, height: 60,
+    fill: T.darkBtn, color: MINT, fontSize: T.fsSmall, width: 280, height: 60,
     onTap: function() {
       state.addStep = 'scanning';
       state.scanResults = [];
@@ -416,7 +416,7 @@ function renderAddChoose(card) {
     },
   }));
   wrap.appendChild(buildButton('Enter IP Address', {
-    fill: BG, color: GOLD, fontSize: T.fsSmall, width: 280, height: 60,
+    fill: T.darkBtn, color: MINT, fontSize: T.fsSmall, width: 280, height: 60,
     onTap: function() { state.addStep = 'enter-ip'; renderHWContent(card); },
   }));
 }
@@ -461,7 +461,7 @@ function renderScanning(card) {
 
   // Enter IP shortcut — larger
   var shortcut = buildButton('Know the IP? Enter it directly →', {
-    fill: BG, color: GOLD, fontSize: T.fsBtn, height: 44, width: 380,
+    fill: T.darkBtn, color: MINT, fontSize: T.fsBtn, height: 44, width: 380,
     onTap: function() {
       if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
       state.addStep = 'enter-ip';
@@ -520,8 +520,8 @@ function renderEnterIP(card) {
   ];
 
   layout.forEach(function(key) {
-    var fill = key.t === 'clear' ? T.red : key.t === 'submit' ? T.goGreen : BG;
-    var color = key.t === 'digit' ? MINT : '#fff';
+    var fill = T.darkBtn;
+    var color = MINT;
 
     var pair = buildStyledButton(fill);
     pair.wrap.style.width = '72px';
@@ -555,7 +555,7 @@ function renderEnterIP(card) {
   inner.appendChild(padGrid);
 
   inner.appendChild(buildButton('CANCEL', {
-    fill: BG, color: GOLD, fontSize: T.fsBtn, width: 200, height: 36,
+    fill: T.darkBtn, color: MINT, fontSize: T.fsBtn, width: 200, height: 36,
     onTap: function() { state.addStep = 'choose'; renderHWContent(card); },
   }));
 }
@@ -1408,7 +1408,7 @@ function renderEditDevice(card) {
   }));
 
   footer.appendChild(buildButton('Remove', {
-    fill: T.red, color: '#fff', fontSize: T.fsBtn, height: 44,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 44,
     onTap: function() {
       interrupt('confirm-delete-device', {
         reason: 'delete-device',
@@ -1428,7 +1428,7 @@ function renderEditDevice(card) {
           var btns = document.createElement('div');
           btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
           btns.appendChild(buildButton('Remove', {
-            fill: T.red, color: '#fff', fontSize: T.fsBtn, width: 120, height: 44,
+            fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 44,
             onTap: function() { resolveInterrupt(); },
           }));
           btns.appendChild(buildButton('Cancel', {
@@ -1534,12 +1534,12 @@ function renderTermContent(card) {
     var toggleLabel = makeLabel('Mask PIN Digits', GOLD, T.fsSmall);
     toggleRow.appendChild(toggleLabel);
 
-    var toggleBtn = buildStyledButton(state.maskPinDigits ? T.goGreen : T.darkBtn);
+    var toggleBtn = buildStyledButton(T.darkBtn);
     toggleBtn.wrap.style.width = '120px';
     toggleBtn.wrap.style.height = '48px';
     toggleBtn.inner.style.fontFamily = T.fb;
     toggleBtn.inner.style.fontSize = T.fsSmall;
-    toggleBtn.inner.style.color = state.maskPinDigits ? DARK : MINT;
+    toggleBtn.inner.style.color = MINT;
     toggleBtn.inner.textContent = state.maskPinDigits ? 'ON' : 'OFF';
     toggleBtn.wrap.addEventListener('pointerup', function() {
       state.maskPinDigits = !state.maskPinDigits;
@@ -1557,12 +1557,12 @@ function renderTermContent(card) {
     ppaRow.appendChild(ppaLabel);
 
     var isLogout = state.postPaymentAction === 'logout';
-    var ppaBtn = buildStyledButton(isLogout ? T.red : T.goGreen);
+    var ppaBtn = buildStyledButton(T.darkBtn);
     ppaBtn.wrap.style.width = '160px';
     ppaBtn.wrap.style.height = '48px';
     ppaBtn.inner.style.fontFamily = T.fb;
     ppaBtn.inner.style.fontSize = T.fsSmall;
-    ppaBtn.inner.style.color = isLogout ? '#fff' : DARK;
+    ppaBtn.inner.style.color = MINT;
     ppaBtn.inner.textContent = isLogout ? 'LOGOUT' : 'NEW ORDER';
     ppaBtn.wrap.addEventListener('pointerup', function() {
       state.postPaymentAction = state.postPaymentAction === 'logout' ? 'quick-service' : 'logout';

@@ -360,12 +360,12 @@ function buildTicket(parentEl) {
   topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;';
 
   saveBtn = buildButton('SAVE', {
-    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
+    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleSave(); },
   });
 
   var recallBtnEl = buildButton('RECALL', {
-    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
+    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
     onTap: function() { handleRecall(); },
   });
 
@@ -493,14 +493,14 @@ function buildPrefixCard() {
   });
   actionRow.appendChild(undoPair.wrap);
 
-  var confirmPair = buildStyledButton(T.goGreen);
+  var confirmPair = buildStyledButton(T.darkBtn);
   confirmPair.wrap.style.height = '40px';
   confirmPair.wrap.style.flex   = '2';
   confirmPair.inner.style.fontFamily = T.fb;
   confirmPair.inner.style.fontSize   = T.fsBtn;
-  confirmPair.inner.style.color      = '#1a2a1a';
+  confirmPair.inner.style.color      = T.mint;
   confirmPair.inner.textContent = 'CONFIRM';
-  confirmPair.wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + T.goGreen + 'aa)';
+  confirmPair.wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + T.darkBtn + 'aa)';
   confirmPair.wrap.addEventListener('pointerup', function() {
     // Deselect all items and clear undo history
     ticket.forEach(function(i) { i.selected = false; });
@@ -580,7 +580,7 @@ function rebuildBottomBar(params) {
 
   if (modifierSession.active) {
     // ── State C: Session Active — UNDO + FINALIZE ──
-    var undoBtn = buildButton('UNDO', { fill: T.darkBtn, color: T.red, fontSize: '26px', fontFamily: T.fh });
+    var undoBtn = buildButton('UNDO', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh });
     undoBtn.style.gridColumn = '1 / 3';
     undoBtn.style.gridRow = '1';
     undoBtn.style.height = '100%';
@@ -619,7 +619,7 @@ function rebuildBottomBar(params) {
       holdFill.style.width = '0';
     });
 
-    var finalizeBtn = buildButton('FINALIZE', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+    var finalizeBtn = buildButton('FINALIZE', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
       onTap: function() { finalizeSession(); },
     });
     finalizeBtn.style.gridColumn = '3 / 6';
@@ -634,7 +634,7 @@ function rebuildBottomBar(params) {
   // ── Row 1: ADD ITEMS tab + optional MODIFY button ──
   if (hasSelection && !modifierSession.active) {
     var addBtn = buildButton('ADD ITEMS', {
-      fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+      fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
       onTap: function() { clearModifierSelection(); },
     });
     addBtn.style.gridColumn = '1 / 3';
@@ -642,7 +642,7 @@ function rebuildBottomBar(params) {
     addBtn.style.height = '100%';
 
     // State B: Items Selected — show MODIFY
-    var modifyBtn = buildButton('MODIFY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+    var modifyBtn = buildButton('MODIFY', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
       onTap: function() { openModifierSession(); },
     });
     modifyBtn.style.gridColumn = '3 / 6';
@@ -654,7 +654,7 @@ function rebuildBottomBar(params) {
   } else {
     // State A: Idle — ADD ITEMS only (no MODIFY ITEMS tab)
     var tabItems = buildButton('ADD ITEMS', {
-      fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+      fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
     });
     tabItems.style.gridColumn = '1 / 5';
     tabItems.style.gridRow    = '1';
@@ -665,14 +665,14 @@ function rebuildBottomBar(params) {
   }
 
   // ── Row 2: Action buttons (always present when not in session) ──
-  var disc  = buildButton('DISC', { fill: T.mint, color: T.bgDark, fontSize: '26px', fontFamily: T.fh,
+  var disc  = buildButton('DISC', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleDiscount(); },
   });
-  var voidB = buildButton('VOID', { fill: T.red, color: '#fff', fontSize: '26px', fontFamily: T.fh,
+  var voidB = buildButton('VOID', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleVoid(); },
   });
   voidB.id = 'void-btn';
-  var print = buildButton('PRINT', { fill: T.cyan, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+  var print = buildButton('PRINT', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
     onTap: function() {
       if (!currentOrderId) return;
       fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
@@ -680,12 +680,12 @@ function rebuildBottomBar(params) {
         .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
     },
   });
-  var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+  var pay = buildButton('PAY', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handlePay(_payParams); },
   });
   var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
   var sendLabel = allSent ? 'RESEND' : 'SEND';
-  var send = buildButton(sendLabel, { fill: T.goGreen, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+  var send = buildButton(sendLabel, { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleSend(); },
   });
 
@@ -1567,7 +1567,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
 
       VOID_REASONS.forEach(function(r) {
         var btn = buildButton(r, {
-          fill: T.bgLight, color: T.mint, fontSize: '26px', height: 44,
+          fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
           onTap: function() {
             targets.forEach(function(inst) { inst.voided = true; inst.voidReason = r; });
             ticket = ticket.filter(function(i) { return !i.voided; });
@@ -1618,7 +1618,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
       });
 
       var cancelBtn = buildButton('CANCEL', {
-        fill: T.bgLight, color: T.red, fontSize: T.fsSmall, height: 40,
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
         onTap: function() { cancelInterrupt(); },
       });
       cancelBtn.style.width = '240px';
@@ -1651,7 +1651,7 @@ function handleDiscount() {
         lbl.textContent = 'Select item(s) first, then tap DISC';
         panel.appendChild(lbl);
         var okBtn = buildButton('OK', {
-          fill: T.gold, color: T.bg, fontSize: '22px', height: 40,
+          fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
           onTap: function() { resolveInterrupt(); },
         });
         okBtn.style.width = '200px';
@@ -1691,7 +1691,7 @@ function showDiscountOptions(targets, approvedBy) {
 
       DISCOUNT_OPTIONS.forEach(function(opt) {
         var btn = buildButton(opt, {
-          fill: T.bgLight, color: T.mint, fontSize: '26px', height: 44,
+          fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
           onTap: function() {
             // Parse percentage from label
             var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
@@ -1734,7 +1734,7 @@ function showDiscountOptions(targets, approvedBy) {
       });
 
       var cancelBtn = buildButton('CANCEL', {
-        fill: T.bgLight, color: T.mint, fontSize: '22px', height: 40,
+        fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
         onTap: function() { cancelInterrupt(); },
       });
       cancelBtn.style.width = '240px';
@@ -1787,7 +1787,7 @@ function buildPinOverlay(el, cb) {
   panel.appendChild(numpad);
 
   var cancelBtn = buildButton('CANCEL', {
-    fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 40,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
     onTap: function() { cb(false); },
   });
   cancelBtn.style.width = '332px'; // matches numpad component width
@@ -2000,7 +2000,7 @@ function handleRecall() {
       title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
       title.textContent = '// RECALL //';
       var closeBtn = buildButton('\u2715', {
-        fill: T.red, color: T.mint, fontSize: T.fsBtn, height: 30,
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 30,
         onTap: function() { dismissOverlay(); },
       });
       closeBtn.style.width = '30px';
@@ -2027,7 +2027,7 @@ function handleRecall() {
             ? tab.label + '\n' + tab.checkNum + '\n$' + total.toFixed(2)
             : tab.checkNum + '\n$' + total.toFixed(2);
           var card = buildButton(cardLabel, {
-            fill: '#333333', color: T.mint, fontSize: T.fsBtn, height: 90,
+            fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 90,
             onTap: function() { recallTabInterrupt(tab, grid, panel); },
           });
           grid.appendChild(card);
@@ -2079,7 +2079,7 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       panel.appendChild(checkLbl);
 
       var recallBtn = buildButton('RECALL', {
-        fill: T.goGreen, color: T.bg, fontSize: '26px', height: 50,
+        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 50,
         onTap: function() {
           if (ticket.length > 0) {
             resolveInterrupt(); // close recall-action so confirm-clear can open
@@ -2092,12 +2092,12 @@ function recallTabInterrupt(tab, grid, overlayEl) {
                 clbl.textContent = 'Clear current ticket?';
                 cpanel.appendChild(clbl);
                 var yesBtn = buildButton('YES — CLEAR', {
-                  fill: T.red, color: '#fff', fontSize: T.fsSmall, height: 46,
+                  fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 46,
                   onTap: function() { resolveInterrupt(); doLoad(); },
                 });
                 yesBtn.style.width = '240px';
                 var noBtn = buildButton('CANCEL', {
-                  fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 46,
+                  fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 46,
                   onTap: function() { cancelInterrupt(); },
                 });
                 noBtn.style.width = '240px';
@@ -2114,13 +2114,13 @@ function recallTabInterrupt(tab, grid, overlayEl) {
       recallBtn.style.width = '280px';
 
       var deleteBtn = buildButton('DELETE', {
-        fill: T.red, color: '#fff', fontSize: '26px', height: 50,
+        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 50,
         onTap: doDelete,
       });
       deleteBtn.style.width = '280px';
 
       var cancelBtn = buildButton('CANCEL', {
-        fill: T.bgLight, color: T.mint, fontSize: T.fsSmall, height: 40,
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
         onTap: function() { cancelInterrupt(); },
       });
       cancelBtn.style.width = '280px';

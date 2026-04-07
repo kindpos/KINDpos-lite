@@ -150,6 +150,7 @@ export function buildStyledButton(fillColor) {
   var shadow = shadowColor(fill);
   var b = T.bevelBtn;
 
+
   var wrap = document.createElement('div');
   wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ')';
   wrap.style.transition = 'transform 50ms, filter 50ms';
@@ -172,6 +173,7 @@ export function buildStyledButton(fillColor) {
   inner.style.justifyContent = 'center';
   inner.style.textAlign = 'center';
   inner.style.boxSizing = 'border-box';
+  inner.style.padding = '8px 12px';
 
   wrap.appendChild(inner);
   wrap._edges = edges;
@@ -218,7 +220,7 @@ export function applySunkenStyle(el) {
 }
 
 export function applyRaisedStyle(el, fillColor) {
-  var fill = fillColor || T.mint;
+  var fill = fillColor || T.darkBtn;
   var edges = bevelEdges(fill);
   var b = T.bevel;
   el.style.background = fill;

@@ -103,7 +103,7 @@ registerScene('change-due', {
 
     // New Order button
     var confirmBtn = buildButton('NEW ORDER', {
-      fill: T.goGreen, color: T.bgDark, fontSize: '32px',
+      fill: T.darkBtn, color: T.mint, fontSize: '32px',
       width: 220, height: 64,
       onTap: function() { doReturn('order-entry'); },
     });
@@ -111,7 +111,7 @@ registerScene('change-due', {
 
     // Logout button
     var logoutBtn = buildButton('LOGOUT', {
-      fill: T.red, color: '#fff', fontSize: '32px',
+      fill: T.darkBtn, color: T.mint, fontSize: '32px',
       width: 220, height: 64,
       onTap: function() { doReturn('login'); },
     });

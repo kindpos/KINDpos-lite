@@ -31,14 +31,14 @@ registerScene('login', {
     leftCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:40px;';
 
     var clockBtn = buildButton('CLOCK IN/OUT', {
-      fill: T.cyan, color: T.bg, fontSize: T.fsBtn, fontFamily: T.fh,
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, fontFamily: T.fh,
       width: 220, height: 80,
       onTap: function() { handleClockOverlay(); },
     });
     leftCol.appendChild(clockBtn);
 
     var qsBtn = buildButton('QUICK SERVICE', {
-      fill: T.mint, color: T.bgDark, fontSize: T.fsBtn, fontFamily: T.fh,
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, fontFamily: T.fh,
       width: 220, height: 80,
       onTap: function() { handleQuickService(); },
     });
@@ -200,7 +200,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects, blocker
       title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.cyan + ';letter-spacing:2px;';
       title.textContent = '// CLOCK IN/OUT //';
       var closeBtn = buildButton('\u2715', {
-        fill: T.red, color: '#ffffff', fontSize: T.fsSmall,
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
         width: 38, height: 38,
         onTap: function() { dismissOverlay(); },
       });
@@ -241,8 +241,8 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects, blocker
         }
 
         var outBtn = buildButton('CLOCK OUT', {
-          fill: hasBlockers ? T.darkBtn : T.red,
-          color: hasBlockers ? T.mutedText : '#ffffff',
+          fill: T.darkBtn,
+          color: hasBlockers ? T.mutedText : T.mint,
           fontSize: '40px', width: 340, height: 70,
           onTap: hasBlockers ? function() {} : function() { doClockAction(emp, empRoleObjects[0].name, 'out', statusEl); },
         });
@@ -266,7 +266,7 @@ function showClockOverlay(emp, isClockedIn, clockRecord, empRoleObjects, blocker
         btnRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;';
         empRoleObjects.forEach(function(role) {
           var btn = buildButton(role.name.toUpperCase(), {
-            fill: T.goGreen, color: '#ffffff', fontSize: '28px',
+            fill: T.darkBtn, color: T.mint, fontSize: '28px',
             width: empRoleObjects.length <= 2 ? 200 : 140, height: 64,
             onTap: function() { doClockAction(emp, role.name, 'in', statusEl); },
           });

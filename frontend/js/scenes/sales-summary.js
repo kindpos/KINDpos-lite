@@ -86,7 +86,7 @@ registerScene('sales-summary', {
 
     // ── Back button ──
     var backBtn = buildButton('\u2190 BACK', {
-      fill: T.bgLight, color: T.mint, fontSize: '28px',
+      fill: T.darkBtn, color: T.mint, fontSize: '28px',
       height: BTN_H,
       onTap: function() { pop(); },
     });

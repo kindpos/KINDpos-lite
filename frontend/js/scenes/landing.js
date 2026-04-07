@@ -227,7 +227,7 @@ function buildCardLanding(el, params, sales, labor) {
     configRow.style.cssText = 'grid-column:2;display:flex;justify-content:center;padding:6px 4px;';
 
     var configBtn = buildButton('CONFIGURATION', {
-      fill: T.gold, color: T.bg, fontSize: '20px', fontFamily: T.fh,
+      fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh,
       width: 200, height: 42,
       onTap: function() { push('settings', { pin: emp.pin }); },
     });
@@ -310,10 +310,10 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
 
     var actions = [
       { label: 'OPEN',  fill: T.darkBtn, color: T.mint,   min: 1, max: 1 },
-      { label: 'MERGE', fill: T.cyan,    color: T.bgDark, min: 2 },
-      { label: 'SPLIT', fill: T.gold,    color: T.bgDark, min: 1, max: 1 },
+      { label: 'MERGE', fill: T.darkBtn, color: T.mint,   min: 2 },
+      { label: 'SPLIT', fill: T.darkBtn, color: T.mint,   min: 1, max: 1 },
       { label: 'PRINT', fill: T.darkBtn, color: T.mint,   min: 1 },
-      { label: 'VOID',  fill: T.red,     color: '#fff',   min: 1 },
+      { label: 'VOID',  fill: T.darkBtn, color: T.mint,   min: 1 },
     ];
 
     actions.forEach(function(act) {

@@ -107,11 +107,11 @@ export function buildNumpad(opts) {
   layout.forEach(function(key) {
     var fill, textColor, fontSize, fontFamily;
     if (key.type === 'clear') {
-      fill = T.red; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
+      fill = T.darkBtn; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
     } else if (key.type === 'submit') {
-      fill = T.goGreen; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
+      fill = T.darkBtn; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
     } else {
-      fill = T.darkBtn; textColor = T.gold; fontSize = '72px'; fontFamily = T.fh;
+      fill = T.darkBtn; textColor = T.mint; fontSize = '72px'; fontFamily = T.fh;
     }
 
     var pair = buildStyledButton(fill);

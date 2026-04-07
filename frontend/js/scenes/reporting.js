@@ -56,7 +56,7 @@ function fetchData(params) {
 
 function buildCardWrap(cardInner) {
   // Wrap card in a styled button shell (beveled edges, shadow, chamfer)
-  var btn = buildStyledButton(T.mint);
+  var btn = buildStyledButton(T.darkBtn);
   btn.inner.style.padding = '0';
   btn.inner.appendChild(cardInner);
   btn.wrap.style.flex = '1';
@@ -64,7 +64,7 @@ function buildCardWrap(cardInner) {
   btn.wrap.style.maxWidth = '46%';
   btn.wrap.style.height = '100%';
   // Increase shadow for more raised look
-  var shadow = shadowColor(T.mint);
+  var shadow = shadowColor(T.darkBtn);
   btn.wrap.style.filter = 'drop-shadow(6px 8px 2px ' + shadow + ')';
   btn.wrap._shadow = shadow;
   return btn.wrap;
@@ -168,11 +168,11 @@ function buildLeftCard(params, sales, labor) {
     });
     btnArea.appendChild(detailBtn.wrap);
 
-    var closeDayBtn = buildStyledButton(T.red);
+    var closeDayBtn = buildStyledButton(T.darkBtn);
     closeDayBtn.inner.textContent = 'Close Day';
     closeDayBtn.inner.style.fontFamily = T.fh;
     closeDayBtn.inner.style.fontSize = btnFs;
-    closeDayBtn.inner.style.color = '#fff';
+    closeDayBtn.inner.style.color = T.mint;
     closeDayBtn.inner.style.padding = btnPad;
     closeDayBtn.wrap.style.alignSelf = 'stretch';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
@@ -181,11 +181,11 @@ function buildLeftCard(params, sales, labor) {
     });
     btnArea.appendChild(closeDayBtn.wrap);
 
-    var tipAdjBtn = buildStyledButton(T.gold);
+    var tipAdjBtn = buildStyledButton(T.darkBtn);
     tipAdjBtn.inner.textContent = 'Tip Adjustment';
     tipAdjBtn.inner.style.fontFamily = T.fh;
     tipAdjBtn.inner.style.fontSize = btnFs;
-    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.color = T.mint;
     tipAdjBtn.inner.style.padding = btnPad;
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
@@ -225,11 +225,11 @@ function buildLeftCard(params, sales, labor) {
     var btnArea = document.createElement('div');
     btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:' + (compact ? '3' : '4') + 'px;';
 
-    var checkoutBtn = buildStyledButton('#33ff99');
+    var checkoutBtn = buildStyledButton(T.darkBtn);
     checkoutBtn.inner.textContent = 'Checkout';
     checkoutBtn.inner.style.fontFamily = T.fh;
     checkoutBtn.inner.style.fontSize = btnFs;
-    checkoutBtn.inner.style.color = T.bgDark;
+    checkoutBtn.inner.style.color = T.mint;
     checkoutBtn.inner.style.padding = btnPad;
     checkoutBtn.wrap.style.alignSelf = 'stretch';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
@@ -238,11 +238,11 @@ function buildLeftCard(params, sales, labor) {
     });
     btnArea.appendChild(checkoutBtn.wrap);
 
-    var tipAdjBtn = buildStyledButton(T.gold);
+    var tipAdjBtn = buildStyledButton(T.darkBtn);
     tipAdjBtn.inner.textContent = 'Tip Adjustment';
     tipAdjBtn.inner.style.fontFamily = T.fh;
     tipAdjBtn.inner.style.fontSize = btnFs;
-    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.color = T.mint;
     tipAdjBtn.inner.style.padding = btnPad;
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
@@ -286,11 +286,11 @@ function buildLeftCardButtons(params, sales) {
     });
     btnArea.appendChild(detailBtn.wrap);
 
-    var closeDayBtn = buildStyledButton(T.red);
+    var closeDayBtn = buildStyledButton(T.darkBtn);
     closeDayBtn.inner.textContent = 'Close Day';
     closeDayBtn.inner.style.fontFamily = T.fh;
     closeDayBtn.inner.style.fontSize = btnFs;
-    closeDayBtn.inner.style.color = '#fff';
+    closeDayBtn.inner.style.color = T.mint;
     closeDayBtn.inner.style.padding = btnPad;
     closeDayBtn.wrap.style.alignSelf = 'stretch';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
@@ -299,11 +299,11 @@ function buildLeftCardButtons(params, sales) {
     });
     btnArea.appendChild(closeDayBtn.wrap);
 
-    var tipAdjBtn = buildStyledButton(T.gold);
+    var tipAdjBtn = buildStyledButton(T.darkBtn);
     tipAdjBtn.inner.textContent = 'Tip Adjustment';
     tipAdjBtn.inner.style.fontFamily = T.fh;
     tipAdjBtn.inner.style.fontSize = btnFs;
-    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.color = T.mint;
     tipAdjBtn.inner.style.padding = btnPad;
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
@@ -318,11 +318,11 @@ function buildLeftCardButtons(params, sales) {
     activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
     btnArea.appendChild(activeChecks);
   } else {
-    var checkoutBtn = buildStyledButton('#33ff99');
+    var checkoutBtn = buildStyledButton(T.darkBtn);
     checkoutBtn.inner.textContent = 'Checkout';
     checkoutBtn.inner.style.fontFamily = T.fh;
     checkoutBtn.inner.style.fontSize = btnFs;
-    checkoutBtn.inner.style.color = T.bgDark;
+    checkoutBtn.inner.style.color = T.mint;
     checkoutBtn.inner.style.padding = btnPad;
     checkoutBtn.wrap.style.alignSelf = 'stretch';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
@@ -331,11 +331,11 @@ function buildLeftCardButtons(params, sales) {
     });
     btnArea.appendChild(checkoutBtn.wrap);
 
-    var tipAdjBtn = buildStyledButton(T.gold);
+    var tipAdjBtn = buildStyledButton(T.darkBtn);
     tipAdjBtn.inner.textContent = 'Tip Adjustment';
     tipAdjBtn.inner.style.fontFamily = T.fh;
     tipAdjBtn.inner.style.fontSize = btnFs;
-    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.color = T.mint;
     tipAdjBtn.inner.style.padding = btnPad;
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {

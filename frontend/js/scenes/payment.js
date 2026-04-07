@@ -222,7 +222,7 @@ function buildCashPanel(params) {
 
   [5, 10, 15, 20, 50, 100].forEach(function(val) {
     var btn = buildButton('$' + val, {
-      fill: T.darkBtn, color: T.gold, fontSize: '50px',
+      fill: T.darkBtn, color: T.mint, fontSize: '50px',
       onTap: function() {
         addTendered(val, params);
         // Flash mint highlight
@@ -232,7 +232,7 @@ function buildCashPanel(params) {
           inner.style.color = T.bgDark;
           setTimeout(function() {
             inner.style.background = '';
-            inner.style.color = T.gold;
+            inner.style.color = T.mint;
           }, 180);
         }
       },
@@ -243,7 +243,7 @@ function buildCashPanel(params) {
 
   // Exact button — taller with more presence
   var exact = buildButton('EXACT  $' + params.cashPrice.toFixed(2), {
-    fill: T.gold, color: T.bgDark, fontSize: '42px',
+    fill: T.darkBtn, color: T.mint, fontSize: '42px',
     height: 72,
     onTap: function() {
       tendered  = params.cashPrice;
@@ -383,7 +383,7 @@ function buildCardPanel(params) {
 
   // ── Charge button ──
   var chargeBtn = buildButton('CHARGE  $' + params.cardTotal.toFixed(2), {
-    fill: T.gold, color: T.bgDark, fontSize: T.fsSmall,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
     height: 56,
     onTap: function() { handleConfirm(params); },
   });
@@ -481,7 +481,7 @@ function activateResult(params, change) {
       btnRow.style.cssText = 'display:flex;gap:20px;';
 
       var confirmBtn = buildButton('NEW ORDER', {
-        fill: T.goGreen, color: T.bgDark, fontSize: '32px',
+        fill: T.darkBtn, color: T.mint, fontSize: '32px',
         width: 220, height: 64,
         onTap: function() {
           if (countdownTimer) clearInterval(countdownTimer);
@@ -491,7 +491,7 @@ function activateResult(params, change) {
       btnRow.appendChild(confirmBtn);
 
       var logoutBtn = buildButton('LOGOUT', {
-        fill: T.red, color: '#fff', fontSize: '32px',
+        fill: T.darkBtn, color: T.mint, fontSize: '32px',
         width: 220, height: 64,
         onTap: function() {
           if (countdownTimer) clearInterval(countdownTimer);

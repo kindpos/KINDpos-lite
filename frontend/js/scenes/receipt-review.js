@@ -188,8 +188,8 @@ function buildMethodPanel(params) {
     label: '◈  CARD',
     amount: '$' + (params.cardTotal || 0).toFixed(2),
     subtitle: null,
-    fill: T.gold,
-    textColor: T.bgDark,
+    fill: T.darkBtn,
+    textColor: T.mint,
     onTap: function() {
       push('payment', makePaymentParams(params, 'card'));
     },
@@ -200,8 +200,8 @@ function buildMethodPanel(params) {
     label: '$  CASH',
     amount: '$' + (params.cashPrice || 0).toFixed(2),
     subtitle: savings > 0.001 ? 'save $' + savings.toFixed(2) : null,
-    fill: T.mint,
-    textColor: T.bgDark,
+    fill: T.darkBtn,
+    textColor: T.mint,
     onTap: function() {
       push('payment', makePaymentParams(params, 'cash'));
     },
@@ -211,7 +211,7 @@ function buildMethodPanel(params) {
 
   // Back button
   var back = buildButton('\u2190 BACK', {
-    fill: T.bg, color: T.mint, fontSize: T.fsSmall,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
     height: 48,
     onTap: function() { pop(); },
   });

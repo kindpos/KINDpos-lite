@@ -42,12 +42,12 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
     nav.style.display = 'flex';
     nav.style.gap = '8px';
     nav.style.alignItems = 'center';
-    const backPair = buildStyledButton(T.red);
+    const backPair = buildStyledButton(T.darkBtn);
     backPair.wrap.style.height = '40px';
     backPair.wrap.style.width = '72px';
     backPair.inner.style.fontFamily = T.fb;
     backPair.inner.style.fontSize = T.fsBtnSm;
-    backPair.inner.style.color = '#fff';
+    backPair.inner.style.color = T.mint;
     backPair.inner.textContent = '<<<';
     backPair.wrap.addEventListener('pointerup', onBack || (() => pop()));
     nav.appendChild(backPair.wrap);
@@ -58,12 +58,12 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
   // X  logout / reset button
   if (x && logout) {
     logout.style.display = 'flex';
-    const logoutPair = buildStyledButton(T.red);
+    const logoutPair = buildStyledButton(T.darkBtn);
     logoutPair.wrap.style.height = '40px';
     logoutPair.wrap.style.width = '47px';
     logoutPair.inner.style.fontFamily = T.fb;
     logoutPair.inner.style.fontSize = T.fsBtnSm;
-    logoutPair.inner.style.color = '#fff';
+    logoutPair.inner.style.color = T.mint;
     logoutPair.inner.textContent = 'X';
     logoutPair.wrap.addEventListener('pointerup', onClose || (() => { clearSceneCache('order-entry'); replace('login'); }));
     logout.appendChild(logoutPair.wrap);

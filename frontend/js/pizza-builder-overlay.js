@@ -250,10 +250,10 @@ function _buildOverlay(el, sizeItem, builderData) {
   bottomBar.appendChild(undoPair.wrap);
 
   // ADD TO ORDER
-  var addPair = buildStyledButton(T.goGreen);
+  var addPair = buildStyledButton(T.darkBtn);
   addPair.wrap.style.cssText += 'flex:2;height:34px;';
   addPair.inner.textContent = 'ADD';
-  addPair.inner.style.color = '#1a2a1a';
+  addPair.inner.style.color = T.mint;
   addPair.inner.style.fontSize = T.fsSmall;
   addPair.inner.style.fontFamily = T.fh;
   addPair.wrap.addEventListener('pointerup', function() {

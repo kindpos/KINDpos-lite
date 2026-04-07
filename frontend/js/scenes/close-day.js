@@ -490,7 +490,7 @@ function doZeroAll(state) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('CONFIRM', {
-        fill: T.red, color: '#fff', fontSize: '27px',
+        fill: T.darkBtn, color: T.mint, fontSize: '27px',
         width: 140, height: 44,
         onTap: function() {
           resolveInterrupt(true);

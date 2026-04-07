@@ -431,7 +431,7 @@ function buildScene(el, params) {
 
   // ── Batch zero button ──
   batchBar = buildButton('Set all unadjusted tips to $0?', {
-    fill: T.darkBtn, color: T.cyan, fontSize: T.fsBtn,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
     height: 40,
     onTap: function() { doBatchZero(); },
   });
@@ -445,7 +445,7 @@ function buildScene(el, params) {
   bottomBar.style.cssText = 'display:flex;gap:12px;flex-shrink:0;';
 
   bottomBar.appendChild(buildButton('//Checkout//', {
-    fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
     width: 180, height: 48,
     onTap: function() { doCheckout(params); },
   }));
@@ -467,14 +467,14 @@ function buildScene(el, params) {
 
   // ALL button — narrower, touches top of area
   var btnAll = buildButton('ALL', {
-    fill: T.mint, color: T.bgDark, fontSize: T.fsSmall,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
     width: 200, height: 48,
     onTap: function() {
       filter = 'all';
-      btnAll.querySelector('div').style.background = T.mint;
-      btnAll.querySelector('div').style.color = T.bgDark;
-      btnUnadjWrap.querySelector('div').style.background = T.bgDark;
-      btnUnadjWrap.querySelector('div').style.color = T.cyan;
+      btnAll.querySelector('div').style.background = T.darkBtn;
+      btnAll.querySelector('div').style.color = T.mint;
+      btnUnadjWrap.querySelector('div').style.background = T.darkBtn;
+      btnUnadjWrap.querySelector('div').style.color = T.mint;
       renderTable();
     },
   });
@@ -484,13 +484,13 @@ function buildScene(el, params) {
 
   // Unadjusted button — narrower, overlaps slightly
   var btnUnadjWrap = buildButton('Unadjusted: ' + unadjCount(), {
-    fill: T.bgDark, color: T.cyan, fontSize: T.fsBtn,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
     width: 200, height: 48,
     onTap: function() {
       filter = 'unadjusted';
-      btnUnadjWrap.querySelector('div').style.background = T.cyan;
-      btnUnadjWrap.querySelector('div').style.color = T.bgDark;
-      btnAll.querySelector('div').style.background = T.bgDark;
+      btnUnadjWrap.querySelector('div').style.background = T.darkBtn;
+      btnUnadjWrap.querySelector('div').style.color = T.mint;
+      btnAll.querySelector('div').style.background = T.darkBtn;
       btnAll.querySelector('div').style.color = T.mint;
       renderTable();
     },
@@ -499,7 +499,7 @@ function buildScene(el, params) {
   btnUnadjWrap.style.position = 'relative';
   btnUnadjWrap.style.zIndex = '1';
   // Override border to cyan
-  btnUnadjWrap.querySelector('div').style.borderColor = T.cyan;
+  btnUnadjWrap.querySelector('div').style.borderColor = T.mint;
   btnUnadj = btnUnadjWrap.querySelector('div'); // ref for text updates
   rightDefault.appendChild(btnUnadjWrap);
 
@@ -509,7 +509,7 @@ function buildScene(el, params) {
   rightDefault.appendChild(statusSpacer);
 
   var btnOpenWrap = buildButton('Open', {
-    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
     width: 200, height: 44,
     onTap: function() {
       statusFilter = statusFilter === 'open' ? 'all' : 'open';
@@ -517,12 +517,12 @@ function buildScene(el, params) {
       renderTable();
     },
   });
-  btnOpenWrap.querySelector('div').style.borderColor = T.gold;
+  btnOpenWrap.querySelector('div').style.borderColor = T.mint;
   btnOpen = btnOpenWrap.querySelector('div');
   rightDefault.appendChild(btnOpenWrap);
 
   var btnClosedWrap = buildButton('Closed', {
-    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
     width: 200, height: 44,
     onTap: function() {
       statusFilter = statusFilter === 'closed' ? 'all' : 'closed';
@@ -531,12 +531,12 @@ function buildScene(el, params) {
     },
   });
   btnClosedWrap.style.marginTop = '8px';
-  btnClosedWrap.querySelector('div').style.borderColor = T.gold;
+  btnClosedWrap.querySelector('div').style.borderColor = T.mint;
   btnClosed = btnClosedWrap.querySelector('div');
   rightDefault.appendChild(btnClosedWrap);
 
   var btnVoidedWrap = buildButton('Voided', {
-    fill: T.bgDark, color: T.gold, fontSize: T.fsBtn,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
     width: 200, height: 44,
     onTap: function() {
       statusFilter = statusFilter === 'voided' ? 'all' : 'voided';
@@ -545,22 +545,22 @@ function buildScene(el, params) {
     },
   });
   btnVoidedWrap.style.marginTop = '8px';
-  btnVoidedWrap.querySelector('div').style.borderColor = T.gold;
+  btnVoidedWrap.querySelector('div').style.borderColor = T.mint;
   btnVoided = btnVoidedWrap.querySelector('div');
   rightDefault.appendChild(btnVoidedWrap);
 
   function updateStatusButtons() {
     if (btnOpen) {
-      btnOpen.style.background = statusFilter === 'open' ? T.gold : T.bgDark;
-      btnOpen.style.color = statusFilter === 'open' ? T.bgDark : T.gold;
+      btnOpen.style.background = T.darkBtn;
+      btnOpen.style.color = T.mint;
     }
     if (btnClosed) {
-      btnClosed.style.background = statusFilter === 'closed' ? T.gold : T.bgDark;
-      btnClosed.style.color = statusFilter === 'closed' ? T.bgDark : T.gold;
+      btnClosed.style.background = T.darkBtn;
+      btnClosed.style.color = T.mint;
     }
     if (btnVoided) {
-      btnVoided.style.background = statusFilter === 'voided' ? T.gold : T.bgDark;
-      btnVoided.style.color = statusFilter === 'voided' ? T.bgDark : T.gold;
+      btnVoided.style.background = T.darkBtn;
+      btnVoided.style.color = T.mint;
     }
   }
 
@@ -622,7 +622,7 @@ function buildScene(el, params) {
 
   // Cancel button
   var cancelBtn = buildButton('CANCEL', {
-    fill: T.red, color: '#fff', fontSize: T.fsBtn,
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
     height: 44,
     onTap: function() { deactivateEdit(); },
   });
@@ -666,7 +666,7 @@ function doBatchZero() {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Confirm', {
-        fill: T.red, color: '#fff', fontSize: T.fsBtn,
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() {
           checks.forEach(function(c) {
@@ -712,7 +712,7 @@ function doCheckout(params) {
         btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
         btns.appendChild(buildButton('Set to $0', {
-          fill: T.red, color: '#fff', fontSize: T.fsBtn,
+          fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
           width: 130, height: 44,
           onTap: function() {
             checks.forEach(function(c) {
@@ -763,7 +763,7 @@ function doReopen(c) {
       btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
 
       btns.appendChild(buildButton('Reopen', {
-        fill: T.gold, color: T.bgDark, fontSize: T.fsBtn,
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn,
         width: 120, height: 44,
         onTap: function() {
           fetch('/api/v1/orders/' + c.checkId + '/reopen', { method: 'POST' })
