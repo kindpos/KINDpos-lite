@@ -21,6 +21,8 @@ _SEED_PATH = os.path.join(
 async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
     existing = await ledger.get_events_by_type(EventType.EMPLOYEE_CREATED, limit=1)
     if existing:
+        # Employees exist — but check if menu needs seeding
+        await seed_menu_if_empty(ledger)
         return
 
     seed_path = os.path.normpath(_SEED_PATH)
@@ -64,4 +66,61 @@ async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
         await ledger.append(event)
         print(f"  seeded restaurant config: {restaurant.get('name', '?')}")
 
+    # Seed menu categories
+    for cat in seed_data.get("categories", []):
+        event = create_event(
+            event_type=EventType.MENU_CATEGORY_CREATED,
+            terminal_id="SEED",
+            payload=cat,
+        )
+        await ledger.append(event)
+        print(f"  seeded category: {cat['name']}")
+
+    # Seed menu items
+    for item in seed_data.get("items", []):
+        event = create_event(
+            event_type=EventType.MENU_ITEM_CREATED,
+            terminal_id="SEED",
+            payload=item,
+        )
+        await ledger.append(event)
+    print(f"  seeded {len(seed_data.get('items', []))} menu items")
+
     print(f"Demo seed complete — {len(seed_data.get('employees', []))} employees loaded")
+
+
+async def seed_menu_if_empty(ledger: EventLedger) -> None:
+    """Seed menu categories and items if none exist."""
+    existing_cats = await ledger.get_events_by_type(EventType.MENU_CATEGORY_CREATED, limit=1)
+    if existing_cats:
+        return
+
+    seed_path = os.path.normpath(_SEED_PATH)
+    if not os.path.exists(seed_path):
+        return
+
+    with open(seed_path, 'r') as f:
+        seed_data = json.load(f)
+
+    categories = seed_data.get("categories", [])
+    items = seed_data.get("items", [])
+    if not categories and not items:
+        return
+
+    for cat in categories:
+        event = create_event(
+            event_type=EventType.MENU_CATEGORY_CREATED,
+            terminal_id="SEED",
+            payload=cat,
+        )
+        await ledger.append(event)
+
+    for item in items:
+        event = create_event(
+            event_type=EventType.MENU_ITEM_CREATED,
+            terminal_id="SEED",
+            payload=item,
+        )
+        await ledger.append(event)
+
+    print(f"Menu seed complete — {len(categories)} categories, {len(items)} items")

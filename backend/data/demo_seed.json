@@ -35,5 +35,72 @@
     "name": "KIND Pizza",
     "tax_rate": 0.07,
     "timezone": "America/New_York"
-  }
+  },
+  "categories": [
+    {
+      "category_id": "pizza",
+      "name": "Pizza",
+      "label": "PIZZA",
+      "color": "#ff4757",
+      "display_order": 1
+    },
+    {
+      "category_id": "apps",
+      "name": "Apps",
+      "label": "APPS",
+      "color": "#fcbe40",
+      "display_order": 2
+    },
+    {
+      "category_id": "sides",
+      "name": "Sides",
+      "label": "SIDES",
+      "color": "#3742fa",
+      "display_order": 3
+    },
+    {
+      "category_id": "subs",
+      "name": "Subs",
+      "label": "SUBS",
+      "color": "#C6FFBB",
+      "display_order": 4
+    },
+    {
+      "category_id": "drinks",
+      "name": "Drinks",
+      "label": "DRINKS",
+      "color": "#ff9f43",
+      "display_order": 5
+    }
+  ],
+  "items": [
+    { "item_id": "cheese_slice", "name": "Cheese Slice", "price": 3.75, "category": "Pizza", "display_order": 1 },
+    { "item_id": "pepperoni_slice", "name": "Pepperoni Slice", "price": 4.25, "category": "Pizza", "display_order": 2 },
+    { "item_id": "margherita_slice", "name": "Margherita Slice", "price": 4.50, "category": "Pizza", "display_order": 3 },
+    { "item_id": "veggie_slice", "name": "Veggie Slice", "price": 4.25, "category": "Pizza", "display_order": 4 },
+    { "item_id": "buffalo_chicken_slice", "name": "Buffalo Chicken", "price": 4.75, "category": "Pizza", "display_order": 5 },
+    { "item_id": "white_slice", "name": "White Slice", "price": 4.50, "category": "Pizza", "display_order": 6 },
+
+    { "item_id": "garlic_knots", "name": "Garlic Knots", "price": 5.00, "category": "Apps", "display_order": 1 },
+    { "item_id": "mozzarella_sticks", "name": "Mozz Sticks", "price": 7.50, "category": "Apps", "display_order": 2 },
+    { "item_id": "chicken_fingers", "name": "Chicken Fingers", "price": 8.50, "category": "Apps", "display_order": 3 },
+    { "item_id": "fried_calamari", "name": "Fried Calamari", "price": 9.00, "category": "Apps", "display_order": 4 },
+    { "item_id": "bruschetta", "name": "Bruschetta", "price": 7.00, "category": "Apps", "display_order": 5 },
+
+    { "item_id": "fries", "name": "Fries", "price": 4.50, "category": "Sides", "display_order": 1 },
+    { "item_id": "onion_rings", "name": "Onion Rings", "price": 5.50, "category": "Sides", "display_order": 2 },
+    { "item_id": "side_salad", "name": "Side Salad", "price": 5.00, "category": "Sides", "display_order": 3 },
+    { "item_id": "coleslaw", "name": "Coleslaw", "price": 3.50, "category": "Sides", "display_order": 4 },
+
+    { "item_id": "italian_sub", "name": "Italian Sub", "price": 10.00, "category": "Subs", "display_order": 1 },
+    { "item_id": "meatball_sub", "name": "Meatball Sub", "price": 9.50, "category": "Subs", "display_order": 2 },
+    { "item_id": "chicken_parm_sub", "name": "Chicken Parm Sub", "price": 10.50, "category": "Subs", "display_order": 3 },
+    { "item_id": "eggplant_sub", "name": "Eggplant Sub", "price": 9.00, "category": "Subs", "display_order": 4 },
+
+    { "item_id": "fountain_soda", "name": "Fountain Soda", "price": 2.50, "category": "Drinks", "display_order": 1 },
+    { "item_id": "bottled_water", "name": "Bottled Water", "price": 2.00, "category": "Drinks", "display_order": 2 },
+    { "item_id": "iced_tea", "name": "Iced Tea", "price": 2.75, "category": "Drinks", "display_order": 3 },
+    { "item_id": "lemonade", "name": "Lemonade", "price": 3.00, "category": "Drinks", "display_order": 4 },
+    { "item_id": "espresso", "name": "Espresso", "price": 3.50, "category": "Drinks", "display_order": 5 }
+  ]
 }
