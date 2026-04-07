@@ -318,10 +318,12 @@ class KitchenTicketTemplate(BaseTemplate):
         right_w = self.chars_per_line - col_w - 1
         divider_line = '-' * col_w + '+' + '-' * right_w
 
-        cmds.append({'type': 'text', 'content': divider_line})
+        cmds.append({'type': 'text', 'content': divider_line, 'bold': True})
+        left_hdr = 'LEFT'.center(col_w)
+        right_hdr = 'RIGHT'.center(right_w)
         cmds.append({'type': 'text', 'content':
-            f"{'LEFT':<{col_w}}|{'RIGHT':<{right_w}}", 'bold': True})
-        cmds.append({'type': 'text', 'content': divider_line})
+            f"{left_hdr}|{right_hdr}", 'bold': True})
+        cmds.append({'type': 'text', 'content': divider_line, 'bold': True})
 
         # Pair up left and right rows
         max_rows = max(len(left_mods), len(right_mods))
@@ -340,9 +342,10 @@ class KitchenTicketTemplate(BaseTemplate):
                 right_text = ' ' + name
 
             line = f"{left_text:<{col_w}}|{right_text:<{right_w}}"
-            cmds.append({'type': 'text', 'content': line})
+            cmds.append({'type': 'text', 'content': line,
+                         'bold': True, 'double_height': True})
 
-        cmds.append({'type': 'text', 'content': divider_line})
+        cmds.append({'type': 'text', 'content': divider_line, 'bold': True})
         return cmds
 
     def _parse_modifier_string(self, mod: str) -> Tuple[str, str]:
