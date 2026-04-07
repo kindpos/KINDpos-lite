@@ -170,6 +170,7 @@ class Event(BaseModel):
     user_id: Optional[str] = None
     user_role: Optional[str] = None
     correlation_id: Optional[str] = None  # Links related events
+    idempotency_key: Optional[str] = None  # Prevents duplicate writes
 
     class Config:
         frozen = True  # Make immutable after creation
@@ -204,6 +205,8 @@ def create_event(
         user_id: Optional[str] = None,
         user_role: Optional[str] = None,
         correlation_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+        **kwargs,
 ) -> Event:
     """Create a new event with proper structure."""
     return Event(
@@ -213,6 +216,7 @@ def create_event(
         user_id=user_id,
         user_role=user_role,
         correlation_id=correlation_id,
+        idempotency_key=idempotency_key,
     )
 
 
@@ -261,7 +265,8 @@ def item_added(
         category: Optional[str] = None,
         notes: Optional[str] = None,
         seat_number: Optional[int] = None,
-        **kwargs
+        idempotency_key: Optional[str] = None,
+        **kwargs,
 ) -> Event:
     """Create an ITEM_ADDED event."""
     return create_event(
@@ -279,7 +284,8 @@ def item_added(
             "seat_number": seat_number,
         },
         correlation_id=order_id,
-        **kwargs
+        idempotency_key=idempotency_key,
+        **kwargs,
     )
 
 

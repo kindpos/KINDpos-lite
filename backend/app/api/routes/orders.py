@@ -17,10 +17,6 @@ _logger = logging.getLogger("kindpos.orders")
 
 _TWO_DP = Decimal("0.01")
 
-# ── Idempotency gate — prevents duplicate item POSTs on network retry ──
-_seen_idem_keys: set[str] = set()
-_MAX_IDEM_KEYS = 10_000  # rolling cap — evict oldest when full
-
 
 def _validate_2dp(value: float, field_name: str) -> None:
     """Raise 400 if a monetary value has more than 2 decimal places."""
@@ -626,19 +622,8 @@ async def add_item(
         ledger: EventLedger = Depends(get_ledger),
 ):
     """Add an item to an order."""
-    # ── Idempotency gate ──
+    # ── Idempotency key from header ──
     idem_key = http_request.headers.get("idempotency-key") if http_request else None
-    if idem_key:
-        if idem_key in _seen_idem_keys:
-            _logger.warning("BLOCKED duplicate item POST (idempotency-key=%s)", idem_key)
-            order = await get_order_or_404(ledger, order_id)
-            return OrderResponse.from_order(order)
-        _seen_idem_keys.add(idem_key)
-        if len(_seen_idem_keys) > _MAX_IDEM_KEYS:
-            # Evict ~20% oldest entries
-            to_remove = list(_seen_idem_keys)[:_MAX_IDEM_KEYS // 5]
-            for k in to_remove:
-                _seen_idem_keys.discard(k)
 
     _validate_2dp(request.price, "price")
     if request.modifiers:
@@ -666,8 +651,14 @@ async def add_item(
         category=request.category,
         notes=request.notes,
         seat_number=request.seat_number,
+        idempotency_key=idem_key,
     )
-    await ledger.append(event)
+    result = await ledger.append(event)
+    if result is None:
+        # Duplicate blocked by ledger — return current order state
+        _logger.warning("BLOCKED duplicate item POST (idempotency_key=%s)", idem_key)
+        order = await get_order_or_404(ledger, order_id)
+        return OrderResponse.from_order(order)
 
     # Emit MODIFIER_APPLIED events for inline modifiers from the frontend
     for mod in (request.modifiers or []):

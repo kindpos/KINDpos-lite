@@ -91,9 +91,21 @@ class EventLedger:
             )
         """)
 
+        # Add idempotency_key column (migration-safe for existing DBs)
+        try:
+            await self._db.execute(
+                "ALTER TABLE events ADD COLUMN idempotency_key TEXT"
+            )
+        except Exception:
+            pass  # Column already exists
+
         # Indexes for common queries
         await self._db.execute("""
-            CREATE INDEX IF NOT EXISTS idx_events_correlation 
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idempotency
+            ON events(idempotency_key) WHERE idempotency_key IS NOT NULL
+        """)
+        await self._db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_events_correlation
             ON events(correlation_id)
         """)
         await self._db.execute("""
@@ -146,6 +158,20 @@ class EventLedger:
                 )
 
         async with self._write_lock:
+            # ── Idempotency gate: reject if key already exists in ledger ──
+            if event.idempotency_key:
+                cursor = await self._db.execute(
+                    "SELECT event_id FROM events WHERE idempotency_key = ?",
+                    (event.idempotency_key,)
+                )
+                existing = await cursor.fetchone()
+                if existing:
+                    logger.warning(
+                        "BLOCKED duplicate event (idempotency_key=%s, existing=%s)",
+                        event.idempotency_key, existing[0],
+                    )
+                    return None  # Caller must handle None as "duplicate blocked"
+
             # Get previous checksum for hash chain
             cursor = await self._db.execute(
                 "SELECT checksum FROM events ORDER BY sequence_number DESC LIMIT 1"
@@ -161,8 +187,9 @@ class EventLedger:
                 """
                 INSERT INTO events (
                     event_id, timestamp, terminal_id, event_type, payload,
-                    user_id, user_role, correlation_id, previous_checksum, checksum
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    user_id, user_role, correlation_id, previous_checksum, checksum,
+                    idempotency_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     event.event_id,
@@ -175,6 +202,7 @@ class EventLedger:
                     event.correlation_id,
                     previous_checksum,
                     checksum,
+                    event.idempotency_key,
                 )
             )
 
@@ -198,6 +226,7 @@ class EventLedger:
                 user_id=event.user_id,
                 user_role=event.user_role,
                 correlation_id=event.correlation_id,
+                idempotency_key=event.idempotency_key,
                 sequence_number=sequence_number,
                 previous_checksum=previous_checksum,
                 checksum=checksum,
@@ -224,8 +253,9 @@ class EventLedger:
                     """
                     INSERT INTO events (
                         event_id, timestamp, terminal_id, event_type, payload,
-                        user_id, user_role, correlation_id, previous_checksum, checksum
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        user_id, user_role, correlation_id, previous_checksum, checksum,
+                        idempotency_key
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         event.event_id,
@@ -238,6 +268,7 @@ class EventLedger:
                         event.correlation_id,
                         previous_checksum,
                         checksum,
+                        event.idempotency_key,
                     )
                 )
 
@@ -283,6 +314,7 @@ class EventLedger:
             correlation_id=row[8],
             previous_checksum=row[9],
             checksum=row[10],
+            idempotency_key=row[11] if len(row) > 11 else None,
         )
 
     async def get_event(self, event_id: str) -> Optional[Event]:
@@ -290,7 +322,7 @@ class EventLedger:
         cursor = await self._db.execute(
             """
             SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                   payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                   payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
             FROM events WHERE event_id = ?
             """,
             (event_id,)
@@ -303,7 +335,7 @@ class EventLedger:
         cursor = await self._db.execute(
             """
             SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                   payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                   payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
             FROM events 
             WHERE correlation_id = ?
             ORDER BY sequence_number ASC
@@ -324,7 +356,7 @@ class EventLedger:
             cursor = await self._db.execute(
                 """
                 SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                       payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                       payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
                 FROM events 
                 WHERE event_type = ? AND timestamp > ?
                 ORDER BY sequence_number ASC
@@ -336,7 +368,7 @@ class EventLedger:
             cursor = await self._db.execute(
                 """
                 SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                       payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                       payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
                 FROM events 
                 WHERE event_type = ?
                 ORDER BY sequence_number ASC
@@ -356,7 +388,7 @@ class EventLedger:
         cursor = await self._db.execute(
             """
             SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                   payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                   payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
             FROM events 
             WHERE sequence_number > ?
             ORDER BY sequence_number ASC
@@ -398,7 +430,7 @@ class EventLedger:
         cursor = await self._db.execute(
             """
             SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                   payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                   payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
             FROM events
             WHERE timestamp >= ? AND timestamp < ?
             ORDER BY sequence_number ASC
@@ -431,7 +463,7 @@ class EventLedger:
         cursor = await self._db.execute(
             """
             SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                   payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                   payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
             FROM events 
             WHERE synced = 0
             ORDER BY sequence_number ASC
@@ -500,7 +532,7 @@ class EventLedger:
         """
         query = """
             SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                   payload, user_id, user_role, correlation_id, previous_checksum, checksum
+                   payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
             FROM events 
             WHERE sequence_number > ?
         """
