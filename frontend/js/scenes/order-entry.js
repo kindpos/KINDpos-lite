@@ -1305,13 +1305,90 @@ function renderTicket() {
   if (!list) return;
   list.innerHTML = '';
 
-  // ── Filter by active seat ────────────────────────
-  var visibleItems = activeSeat === 0 ? ticket : ticket.filter(function(i) { return i.seat === activeSeat; });
+  // ── Build seat groups ──────────────────────────────
+  var seatItems = {};
+  for (var s = 1; s <= seatCount; s++) seatItems[s] = [];
+  ticket.forEach(function(inst) {
+    var sn = inst.seat || 1;
+    if (!seatItems[sn]) seatItems[sn] = [];
+    seatItems[sn].push(inst);
+  });
 
+  var seatsToShow = activeSeat === 0
+    ? Object.keys(seatItems).sort(function(a, b) { return a - b; })
+    : [String(activeSeat)];
+
+  seatsToShow.forEach(function(seatKey) {
+    var seatNum = parseInt(seatKey, 10);
+    var items = seatItems[seatKey] || [];
+    var isSeatActive = activeSeat === seatNum;
+    var seatTotals = computeTotals(seatNum);
+
+    // ── Seat header ────────────────────────────────
+    var seatHdr = document.createElement('div');
+    var hdrBg = isSeatActive ? T.gold : T.bg;
+    var hdrColor = isSeatActive ? T.bgDark : T.mutedText;
+    seatHdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:' + hdrBg + ';cursor:pointer;flex-shrink:0;margin-top:' + (seatKey === seatsToShow[0] ? '0' : '6px') + ';';
+
+    var hdrLabel = document.createElement('span');
+    hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + hdrColor + ';letter-spacing:1px;';
+    hdrLabel.textContent = 'SEAT ' + seatNum;
+
+    var hdrTotal = document.createElement('span');
+    hdrTotal.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + hdrColor + ';';
+    hdrTotal.textContent = '$' + seatTotals.subtotal.toFixed(2) + '  (' + items.length + ')';
+
+    seatHdr.appendChild(hdrLabel);
+    seatHdr.appendChild(hdrTotal);
+    seatHdr.addEventListener('pointerup', function() {
+      // If items are selected and tapping a different seat, transfer them
+      if (modifierSession.selectedItems.length > 0 && seatNum !== activeSeat) {
+        modifierSession.selectedItems.forEach(function(itemId) {
+          var inst = ticket.find(function(t) { return t.id === itemId; });
+          if (inst) inst.seat = seatNum;
+        });
+        modifierSession.selectedItems = [];
+        ticket.forEach(function(t) { t.selected = false; });
+        renderTicket();
+        rebuildBottomBar();
+        return;
+      }
+      // Otherwise toggle seat view
+      activeSeat = (activeSeat === seatNum) ? 0 : seatNum;
+      refreshSeatBar();
+      renderTicket();
+    });
+    list.appendChild(seatHdr);
+
+    // ── Items for this seat ────────────────────────
+    renderSeatItems(list, items);
+
+    // ── Seat subtotal line ─────────────────────────
+    if (items.length > 0 && activeSeat === 0) {
+      var seatSub = document.createElement('div');
+      seatSub.style.cssText = 'display:flex;justify-content:flex-end;padding:2px 8px;font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';flex-shrink:0;';
+      seatSub.textContent = '$' + seatTotals.subtotal.toFixed(2);
+      list.appendChild(seatSub);
+    }
+  });
+
+  // ── Live totals (scoped to active seat or all) ────
+  var totals = computeTotals(activeSeat || undefined);
+  var subEl  = document.getElementById('ticket-subtotal');
+  var taxEl  = document.getElementById('ticket-tax');
+  var totEl  = document.getElementById('ticket-total');
+  var cashEl = document.getElementById('ticket-cash');
+  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
+  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
+  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
+  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
+}
+
+function renderSeatItems(list, items) {
   // ── Group instances by name ──────────────────────
   var groups = {};
   var groupOrder = [];
-  visibleItems.forEach(function(inst) {
+  items.forEach(function(inst) {
     if (!groups[inst.name]) {
       groups[inst.name] = [];
       groupOrder.push(inst.name);
@@ -1479,17 +1556,6 @@ function renderTicket() {
       });
     }
   });
-
-  // ── Live totals (scoped to active seat or all) ────
-  var totals = computeTotals(activeSeat || undefined);
-  var subEl  = document.getElementById('ticket-subtotal');
-  var taxEl  = document.getElementById('ticket-tax');
-  var totEl  = document.getElementById('ticket-total');
-  var cashEl = document.getElementById('ticket-cash');
-  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
-  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
-  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
-  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
 }
 
 // ── SEPARATOR + MOD ROW helpers ───────────────────
