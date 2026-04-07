@@ -270,6 +270,17 @@ class KitchenTicketTemplate(BaseTemplate):
                         'bold': True, 'reverse': True, 'red': supports_red, 'align': 'center',
                     })
 
+            # "Send with" line — show other items on this ticket
+            if len(items) > 1:
+                others = [
+                    it.get('kitchen_text') or it.get('name', '')
+                    for j, it in enumerate(items) if j != i
+                ]
+                cmds.append({
+                    'type': 'text',
+                    'content': f"  Send with: {', '.join(others)}",
+                })
+
             # Item separator
             if i < len(items) - 1:
                 cmds.append({'type': 'divider'})
