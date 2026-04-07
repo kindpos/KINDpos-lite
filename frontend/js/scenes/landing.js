@@ -146,7 +146,7 @@ function buildCardLanding(el, params, sales, labor) {
   var isManager = landingRole === 'manager';
 
   el.innerHTML = '';
-  el.style.cssText = 'width:100%;height:100%;display:grid;grid-template-columns:1fr 2fr 1fr;gap:14px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
+  el.style.cssText = 'width:100%;height:100%;display:grid;grid-template-columns:1fr 2fr 1fr;grid-template-rows:1fr auto;gap:14px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
 
   setSceneName(emp.name || 'Dashboard');
   setHeaderBack({
@@ -165,7 +165,7 @@ function buildCardLanding(el, params, sales, labor) {
   //  LEFT — SHIFT (server) or SALES (manager) Card
   // ══════════════════════════════════════════════
   var leftCol = document.createElement('div');
-  leftCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;';
+  leftCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;';
 
   if (sales !== undefined) {
     var leftCard = buildLeftCard(baseParams, sales, labor);
@@ -207,10 +207,12 @@ function buildCardLanding(el, params, sales, labor) {
 
   center.appendChild(tabGrid);
 
-  // Manager CONFIGURATION button at bottom center
+  el.appendChild(center);
+
+  // Manager CONFIGURATION button below center card
   if (isManager) {
     var configRow = document.createElement('div');
-    configRow.style.cssText = 'flex-shrink:0;display:flex;justify-content:center;padding:6px 4px;';
+    configRow.style.cssText = 'grid-column:2;display:flex;justify-content:center;padding:6px 4px;';
 
     var configBtn = buildButton('CONFIGURATION', {
       fill: T.gold, color: T.bg, fontSize: '20px', fontFamily: T.fh,
@@ -218,16 +220,14 @@ function buildCardLanding(el, params, sales, labor) {
       onTap: function() { push('settings', { pin: emp.pin }); },
     });
     configRow.appendChild(configBtn);
-    center.appendChild(configRow);
+    el.appendChild(configRow);
   }
-
-  el.appendChild(center);
 
   // ══════════════════════════════════════════════
   //  RIGHT — HOURS (server) or LABOR (manager) Card
   // ══════════════════════════════════════════════
   var rightCol = document.createElement('div');
-  rightCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;';
+  rightCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;';
 
   if (sales !== undefined) {
     var rightCard = buildRightCard(baseParams, sales, labor);
@@ -269,6 +269,20 @@ function fetchOpenTabs(tabGrid, emp, empRoles) {
         empty.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:28px;text-align:center;padding:40px 0;';
         empty.textContent = 'No open tabs';
         tabGrid.appendChild(empty);
+
+        // "+" button to start a new check
+        var newCheckEmpty = document.createElement('div');
+        newCheckEmpty.style.cssText = 'width:100%;height:100px;display:flex;align-items:center;justify-content:center;border:3px dashed ' + T.mint + ';box-sizing:border-box;cursor:pointer;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';user-select:none;';
+        newCheckEmpty.textContent = '+';
+        newCheckEmpty.addEventListener('pointerup', function() {
+          push('order-entry', {
+            mode: 'service',
+            pin: emp.pin,
+            employeeId: emp.id,
+            employeeName: emp.name,
+          });
+        });
+        tabGrid.appendChild(newCheckEmpty);
         return;
       }
 
@@ -298,6 +312,20 @@ function fetchOpenTabs(tabGrid, emp, empRoles) {
         card.style.width = '100%';
         tabGrid.appendChild(card);
       });
+
+      // "+" button to start a new check
+      var newCheckBtn = document.createElement('div');
+      newCheckBtn.style.cssText = 'width:100%;height:100px;display:flex;align-items:center;justify-content:center;border:3px dashed ' + T.mint + ';box-sizing:border-box;cursor:pointer;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';user-select:none;';
+      newCheckBtn.textContent = '+';
+      newCheckBtn.addEventListener('pointerup', function() {
+        push('order-entry', {
+          mode: 'service',
+          pin: emp.pin,
+          employeeId: emp.id,
+          employeeName: emp.name,
+        });
+      });
+      tabGrid.appendChild(newCheckBtn);
     })
     .catch(function() {
       tabGrid.innerHTML = '';
