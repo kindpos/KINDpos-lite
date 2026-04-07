@@ -89,18 +89,20 @@ var PLACEMENTS = [
 /**
  * Show the pizza builder overlay.
  *
- * @param {object} sizeItem  — the size item from MENU_DATA (label, price)
+ * @param {object}      sizeItem     — the size item from MENU_DATA (label, price)
+ * @param {Array|null}  builderData  — dynamic HexNav data from API, or null for fallback
  * @returns {Promise<{name, unitPrice, mods[], category}>}  the built pizza
  */
-export function showPizzaBuilderOverlay(sizeItem) {
+export function showPizzaBuilderOverlay(sizeItem, builderData) {
+  var data = (builderData && builderData.length > 0) ? builderData : PIZZA_BUILDER_DATA;
   return interrupt('pizza-builder', {
     onBuild: function(el) {
-      _buildOverlay(el, sizeItem);
+      _buildOverlay(el, sizeItem, data);
     },
   });
 }
 
-function _buildOverlay(el, sizeItem) {
+function _buildOverlay(el, sizeItem, builderData) {
   // ── State ──
   var activePrefix = 'add';
   var activePlacement = 'whole';
@@ -295,7 +297,7 @@ function _buildOverlay(el, sizeItem) {
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
       builderNav = new HexNav(hexArea, {
-        data: PIZZA_BUILDER_DATA,
+        data: builderData,
         scale: 0.85,
         onSelect: function(item) {
           handleModSelect(item);

@@ -42,7 +42,10 @@ function _idemKey() {
 }
 var currentCheckNumber = null;
 
-// ── Menu data ─────────────────────────────────────
+// ── Pizza builder data (populated by API or fallback) ──
+var PIZZA_BUILDER_DATA = null;
+
+// ── Menu data (fallback — overwritten by API fetch) ──
 var MENU_DATA = [
   {
     id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
@@ -133,6 +136,104 @@ var MOD_DATA = [
   },
 ];
 
+// ── Fetch menu from API and transform to HexNav format ──
+var _menuFetched = false;
+
+function fetchMenuFromAPI() {
+  return fetch(API + '/menu').then(function(r) { return r.json(); }).then(function(menu) {
+    if (!menu.categories || !menu.items) return;
+
+    // Build items_by_category keyed by category_id (lowercase)
+    var itemsByCatId = {};
+    menu.categories.forEach(function(cat) { itemsByCatId[cat.category_id] = []; });
+    menu.items.forEach(function(item) {
+      // Match item.category (name like "Pizza") to category
+      var cat = menu.categories.find(function(c) {
+        return c.name === item.category || c.category_id === item.category;
+      });
+      if (cat) {
+        if (!itemsByCatId[cat.category_id]) itemsByCatId[cat.category_id] = [];
+        itemsByCatId[cat.category_id].push(item);
+      }
+    });
+
+    // Transform categories + items into HexNav MENU_DATA
+    MENU_DATA = menu.categories.map(function(cat) {
+      var catItems = (itemsByCatId[cat.category_id] || [])
+        .sort(function(a, b) { return (a.display_order || 999) - (b.display_order || 999); })
+        .map(function(item) {
+          var hexItem = { label: item.name, price: item.price };
+          if (item.pizza_size) hexItem.pizzaSize = true;
+          if (item.mods) hexItem.requiredMods = item.mods;
+          return hexItem;
+        });
+      var textColor = _textColorForHex(cat.color || '#888888');
+      return {
+        id: cat.category_id,
+        label: cat.label || cat.name.toUpperCase(),
+        color: T.catColor(cat.label || cat.name.toUpperCase()) || cat.color,
+        textColor: textColor,
+        pizzaBuilder: cat.pizza_builder || false,
+        subcats: [{ id: cat.category_id + '-items', label: cat.name, items: catItems }],
+      };
+    });
+
+    // Extract pizza builder modifier groups
+    if (menu.modifier_groups) {
+      var builderGroups = menu.modifier_groups
+        .filter(function(g) { return g.builder; })
+        .sort(function(a, b) { return (a.display_order || 999) - (b.display_order || 999); });
+
+      if (builderGroups.length > 0) {
+        PIZZA_BUILDER_DATA = builderGroups.map(function(g) {
+          var subcats;
+          if (g.subcats && g.subcats.length > 0) {
+            // Group has explicit subcategories (e.g. Prep → Crust, Temp, Sauce, Cut)
+            subcats = g.subcats.map(function(sc) {
+              return {
+                id: sc.id,
+                label: sc.name,
+                items: (sc.modifiers || []).map(function(m) {
+                  return { label: m.name, id: m.modifier_id, price: m.price || 0 };
+                }),
+              };
+            });
+          } else {
+            // Flat modifiers → single subcat
+            subcats = [{ id: g.group_id + '-items', label: g.name, items:
+              (g.modifiers || []).map(function(m) {
+                return { label: m.name, id: m.modifier_id, price: m.price || 0 };
+              }),
+            }];
+          }
+          return {
+            id: g.group_id,
+            label: g.name.toUpperCase(),
+            color: g.color || T.mint,
+            textColor: g.text_color || '#1a1a1a',
+            subcats: subcats,
+          };
+        });
+      }
+    }
+
+    _menuFetched = true;
+    // Refresh HexNav if it's already mounted
+    if (hexNav) hexNav.setData(MENU_DATA);
+  }).catch(function(err) {
+    console.warn('[KINDpos] Menu fetch failed, using fallback:', err);
+  });
+}
+
+function _textColorForHex(hex) {
+  // Simple luminance check to pick dark or light text
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.5 ? '#1a1a1a' : '#ffffff';
+}
+
 // ── Combo flow state ─────────────────────────────
 var comboFlow    = null;  // { step: 'side'|'drink', ticketItem: ref }
 
@@ -211,6 +312,9 @@ registerScene('order-entry', {
     var mainArea    = buildMain(el, params);
     el.appendChild(ticketPanel);
     el.appendChild(mainArea);
+
+    // Fetch dynamic menu from API (updates MENU_DATA + PIZZA_BUILDER_DATA)
+    if (!_menuFetched) fetchMenuFromAPI();
 
     if (params && params.autoRecall) {
       setTimeout(function() { handleRecall(); }, 100);
@@ -1036,7 +1140,7 @@ function handleItemSelect(item) {
 
   // ── Pizza builder: size tap opens the overlay ──
   if (item.pizzaSize) {
-    showPizzaBuilderOverlay(item).then(function(result) {
+    showPizzaBuilderOverlay(item, PIZZA_BUILDER_DATA).then(function(result) {
       ticket.push({
         id:        ++ticketSeq,
         idemKey:   _idemKey(),

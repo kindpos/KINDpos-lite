@@ -30,7 +30,7 @@ TAX_RULES = [
 ]
 
 CATEGORIES = [
-    {"category_id": "pizza",  "name": "Pizza",       "label": "PIZZA",  "color": "#c0392b", "display_order": 1, "tax_rule_id": "food_tax"},
+    {"category_id": "pizza",  "name": "Pizza",       "label": "PIZZA",  "color": "#c0392b", "display_order": 1, "tax_rule_id": "food_tax", "pizza_builder": True},
     {"category_id": "apps",   "name": "Appetizers",  "label": "APPS",   "color": "#d4a017", "display_order": 2, "tax_rule_id": "food_tax_2"},
     {"category_id": "subs",   "name": "Subs",        "label": "SUBS",   "color": "#7ac943", "display_order": 3, "tax_rule_id": "food_tax_3"},
     {"category_id": "sides",  "name": "Sides",       "label": "SIDES",  "color": "#00bcd4", "display_order": 4, "tax_rule_id": "food_tax_4"},
@@ -40,13 +40,13 @@ CATEGORIES = [
 # ── Menu Items ────────────────────────────────────────────────────────────────
 
 MENU_ITEMS = [
-    # Pizza
-    {"item_id": "lg_cheese",    "name": "Large Cheese",    "price": 14.00, "category": "Pizza",       "display_order": 1},
-    {"item_id": "lg_pepperoni", "name": "Large Pepperoni", "price": 16.00, "category": "Pizza",       "display_order": 2},
-    {"item_id": "lg_supreme",   "name": "Large Supreme",   "price": 18.00, "category": "Pizza",       "display_order": 3},
-    {"item_id": "sl_cheese",    "name": "Slice Cheese",    "price":  3.50, "category": "Pizza",       "display_order": 4},
-    {"item_id": "sl_pepperoni", "name": "Slice Pepperoni", "price":  4.00, "category": "Pizza",       "display_order": 5},
-    {"item_id": "calzone",      "name": "Calzone",         "price": 12.00, "category": "Pizza",       "display_order": 6},
+    # Pizza sizes (pizza_builder category — these become size hexes)
+    {"item_id": "pz_slice",     "name": "Slice",           "price":  3.50, "category": "Pizza",       "display_order": 1, "pizza_size": True},
+    {"item_id": "pz_small",     "name": "Small 10\"",      "price": 10.00, "category": "Pizza",       "display_order": 2, "pizza_size": True},
+    {"item_id": "pz_medium",    "name": "Medium 14\"",     "price": 12.00, "category": "Pizza",       "display_order": 3, "pizza_size": True},
+    {"item_id": "pz_large",     "name": "Large 18\"",      "price": 14.00, "category": "Pizza",       "display_order": 4, "pizza_size": True},
+    {"item_id": "pz_xl",        "name": "XL 20\"",         "price": 18.00, "category": "Pizza",       "display_order": 5, "pizza_size": True},
+    {"item_id": "pz_calzone",   "name": "Calzone",         "price": 12.00, "category": "Pizza",       "display_order": 6, "pizza_size": True},
     # Appetizers
     {"item_id": "garlic_knots", "name": "Garlic Knots",    "price":  6.00, "category": "Appetizers",  "display_order": 1},
     {"item_id": "mozz_sticks",  "name": "Mozz Sticks",     "price":  8.00, "category": "Appetizers",  "display_order": 2},
@@ -69,6 +69,83 @@ MENU_ITEMS = [
 # ── Modifier Groups ──────────────────────────────────────────────────────────
 
 MODIFIER_GROUPS = [
+    # ── Pizza builder groups ─────────────────────────────────────────────
+    {
+        "group_id": "pizza-specials",
+        "name": "Specials",
+        "category_id": "pizza",
+        "builder": True,
+        "color": "#fcbe40",
+        "text_color": "#1a1000",
+        "display_order": 1,
+        "modifiers": [
+            {"modifier_id": "meat-lovers",   "name": "Meat Lovers",   "price": 0},
+            {"modifier_id": "veggie-lovers", "name": "Veggie Lovers", "price": 0},
+            {"modifier_id": "supreme",       "name": "Supreme",       "price": 0},
+            {"modifier_id": "hawaiian",      "name": "Hawaiian",      "price": 0},
+            {"modifier_id": "bbq-chicken",   "name": "BBQ Chicken",   "price": 0},
+            {"modifier_id": "buffalo",       "name": "Buffalo",       "price": 0},
+            {"modifier_id": "white-pizza",   "name": "White Pizza",   "price": 0},
+            {"modifier_id": "margherita",    "name": "Margherita",    "price": 0},
+        ],
+    },
+    {
+        "group_id": "pizza-prep",
+        "name": "Prep",
+        "category_id": "pizza",
+        "builder": True,
+        "color": "#b48efa",
+        "text_color": "#1a0030",
+        "display_order": 2,
+        "modifiers": [],
+        "subcats": [
+            {"id": "prep-crust", "name": "Crust", "modifiers": [
+                {"modifier_id": "gf-crust",      "name": "Sub GF Crust",  "price": 0},
+                {"modifier_id": "thin-crust",    "name": "Thin Crust",    "price": 0},
+                {"modifier_id": "thick-crust",   "name": "Thick Crust",   "price": 0},
+                {"modifier_id": "stuffed-crust", "name": "Stuffed Crust", "price": 0},
+            ]},
+            {"id": "prep-temp", "name": "Temp", "modifiers": [
+                {"modifier_id": "well-done",  "name": "Well Done",  "price": 0},
+                {"modifier_id": "light-bake", "name": "Light Bake", "price": 0},
+            ]},
+            {"id": "prep-sauce", "name": "Sauce", "modifiers": [
+                {"modifier_id": "light-sauce", "name": "Light Sauce", "price": 0},
+                {"modifier_id": "extra-sauce", "name": "Extra Sauce", "price": 0},
+                {"modifier_id": "no-sauce",    "name": "No Sauce",    "price": 0},
+                {"modifier_id": "white-sauce", "name": "White Sauce", "price": 0},
+                {"modifier_id": "bbq-sauce",   "name": "BBQ Sauce",   "price": 0},
+            ]},
+            {"id": "prep-cut", "name": "Cut", "modifiers": [
+                {"modifier_id": "cut-square", "name": "Cut Square", "price": 0},
+                {"modifier_id": "no-cut",     "name": "No Cut",     "price": 0},
+            ]},
+        ],
+    },
+    {
+        "group_id": "pizza-toppings",
+        "name": "Toppings",
+        "category_id": "pizza",
+        "builder": True,
+        "color": "#ff4757",
+        "text_color": "#1a0a0a",
+        "display_order": 3,
+        "modifiers": [
+            {"modifier_id": "pepperoni",    "name": "Pepperoni",    "price": 1.50},
+            {"modifier_id": "sausage",      "name": "Sausage",      "price": 1.50},
+            {"modifier_id": "mushrooms",    "name": "Mushrooms",    "price": 1.00},
+            {"modifier_id": "onions",       "name": "Onions",       "price": 1.00},
+            {"modifier_id": "peppers",      "name": "Peppers",      "price": 1.00},
+            {"modifier_id": "extra_cheese", "name": "Xtra Cheese",  "price": 2.00},
+            {"modifier_id": "olives",       "name": "Olives",       "price": 1.00},
+            {"modifier_id": "bacon",        "name": "Bacon",        "price": 1.50},
+            {"modifier_id": "anchovies",    "name": "Anchovies",    "price": 1.00},
+            {"modifier_id": "pineapple",    "name": "Pineapple",    "price": 1.00},
+            {"modifier_id": "jalapenos",    "name": "Jalapeños",    "price": 1.00},
+            {"modifier_id": "spinach",      "name": "Spinach",      "price": 1.00},
+        ],
+    },
+    # ── Standard modifier groups ─────────────────────────────────────────
     {
         "group_id": "toppings",
         "name": "Toppings",
