@@ -1,24 +1,64 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Callable, TypeVar
 from app.core.event_ledger import EventLedger
 from app.core.events import EventType, Event
 from app.models.config_events import (
-    Role, Employee, TipoutRule, 
+    Role, Employee, TipoutRule,
     MenuItem, MenuCategory,
     Section, FloorPlanLayout,
     Terminal, Printer, RoutingMatrix,
     DashboardConfig, CustomReport, AccountsMapping
 )
 
+T = TypeVar("T")
+
+
+class _ProjectionCache:
+    """Simple cache that tracks the max sequence number seen for a projection."""
+    __slots__ = ("_seq", "_data")
+
+    def __init__(self):
+        self._seq: int = -1
+        self._data: Any = None
+
+    def get(self, current_seq: int):
+        if self._seq == current_seq:
+            return self._data
+        return None
+
+    def set(self, seq: int, data: Any):
+        self._seq = seq
+        self._data = data
+
+
 class OverseerConfigService:
     def __init__(self, ledger: EventLedger):
         self.ledger = ledger
+        self._cache: Dict[str, _ProjectionCache] = {}
+
+    def _get_cache(self, key: str) -> _ProjectionCache:
+        if key not in self._cache:
+            self._cache[key] = _ProjectionCache()
+        return self._cache[key]
+
+    async def _max_seq(self) -> int:
+        cursor = await self.ledger._db.execute(
+            "SELECT MAX(sequence_number) FROM events"
+        )
+        row = await cursor.fetchone()
+        return row[0] if row and row[0] else 0
 
     async def get_roles(self) -> List[Role]:
+        cache = self._get_cache("roles")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.EMPLOYEE_ROLE_CREATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.EMPLOYEE_ROLE_UPDATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.EMPLOYEE_ROLE_DELETED, limit=1000)
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         roles = {}
         for e in events:
             payload = e.payload
@@ -27,14 +67,22 @@ class OverseerConfigService:
                 roles.pop(rid, None)
             else:
                 roles[rid] = Role(**payload)
-        return list(roles.values())
+        result = list(roles.values())
+        cache.set(seq, result)
+        return result
 
     async def get_employees(self) -> List[Employee]:
+        cache = self._get_cache("employees")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.EMPLOYEE_CREATED, limit=5000)
         events += await self.ledger.get_events_by_type(EventType.EMPLOYEE_UPDATED, limit=5000)
         events += await self.ledger.get_events_by_type(EventType.EMPLOYEE_DELETED, limit=5000)
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         emps = {}
         for e in events:
             payload = e.payload
@@ -43,14 +91,22 @@ class OverseerConfigService:
                 emps.pop(eid, None)
             else:
                 emps[eid] = Employee(**payload)
-        return list(emps.values())
+        result = list(emps.values())
+        cache.set(seq, result)
+        return result
 
     async def get_tipout_rules(self) -> List[TipoutRule]:
+        cache = self._get_cache("tipout_rules")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.TIPOUT_RULE_CREATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.TIPOUT_RULE_UPDATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.TIPOUT_RULE_DELETED, limit=1000)
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         rules = {}
         for e in events:
             payload = e.payload
@@ -59,26 +115,42 @@ class OverseerConfigService:
                 rules.pop(rid, None)
             else:
                 rules[rid] = TipoutRule(**payload)
-        return list(rules.values())
+        result = list(rules.values())
+        cache.set(seq, result)
+        return result
 
     async def get_menu_categories(self) -> List[MenuCategory]:
+        cache = self._get_cache("menu_categories")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.MENU_CATEGORY_CREATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.MENU_CATEGORY_UPDATED, limit=1000)
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         cats = {}
         for e in events:
             payload = e.payload
             cid = payload["category_id"]
             cats[cid] = MenuCategory(**payload)
-        return list(cats.values())
+        result = list(cats.values())
+        cache.set(seq, result)
+        return result
 
     async def get_menu_items(self) -> List[MenuItem]:
+        cache = self._get_cache("menu_items")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.MENU_ITEM_CREATED, limit=5000)
         events += await self.ledger.get_events_by_type(EventType.MENU_ITEM_UPDATED, limit=5000)
         events += await self.ledger.get_events_by_type(EventType.MENU_ITEM_DELETED, limit=5000)
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         items = {}
         for e in events:
             payload = e.payload
@@ -87,14 +159,22 @@ class OverseerConfigService:
                 items.pop(iid, None)
             else:
                 items[iid] = MenuItem(**payload)
-        return list(items.values())
+        result = list(items.values())
+        cache.set(seq, result)
+        return result
 
     async def get_floorplan_sections(self) -> List[Section]:
+        cache = self._get_cache("floorplan_sections")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.FLOORPLAN_SECTION_CREATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.FLOORPLAN_SECTION_UPDATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.FLOORPLAN_SECTION_DELETED, limit=1000)
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         sections = {}
         for e in events:
             payload = e.payload
@@ -103,22 +183,38 @@ class OverseerConfigService:
                 sections.pop(sid, None)
             else:
                 sections[sid] = Section(**payload)
-        return list(sections.values())
+        result = list(sections.values())
+        cache.set(seq, result)
+        return result
 
     async def get_floorplan_layout(self) -> FloorPlanLayout:
+        cache = self._get_cache("floorplan_layout")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.FLOORPLAN_LAYOUT_UPDATED, limit=1000)
         if not events:
-            return FloorPlanLayout(canvas={"width": 1200, "height": 800}, tables=[], structures=[], fixtures=[])
-        
-        events.sort(key=lambda x: x.sequence_number or 0)
-        latest = events[-1]
-        return FloorPlanLayout(**latest.payload)
+            result = FloorPlanLayout(canvas={"width": 1200, "height": 800}, tables=[], structures=[], fixtures=[])
+        else:
+            events.sort(key=lambda x: x.sequence_number or 0)
+            latest = events[-1]
+            result = FloorPlanLayout(**latest.payload)
+        cache.set(seq, result)
+        return result
 
     async def get_terminals(self) -> List[Terminal]:
+        cache = self._get_cache("terminals")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.TERMINAL_REGISTERED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.TERMINAL_UPDATED, limit=1000)
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         terms = {}
         for e in events:
             payload = e.payload
@@ -130,24 +226,41 @@ class OverseerConfigService:
                 terms[tid] = Terminal(**updated_payload)
             else:
                 terms[tid] = Terminal(**payload)
-        return list(terms.values())
+        result = list(terms.values())
+        cache.set(seq, result)
+        return result
 
     async def get_printers(self) -> List[Printer]:
+        cache = self._get_cache("printers")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.PRINTER_REGISTERED, limit=1000)
-        # We need PRINTER_UPDATED too if exists
         events.sort(key=lambda x: x.sequence_number or 0)
-        
+
         printers = {}
         for e in events:
             payload = e.payload
             pid = payload["printer_id"]
             printers[pid] = Printer(**payload)
-        return list(printers.values())
+        result = list(printers.values())
+        cache.set(seq, result)
+        return result
 
     async def get_routing_matrix(self) -> RoutingMatrix:
+        cache = self._get_cache("routing_matrix")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
         events = await self.ledger.get_events_by_type(EventType.ROUTING_MATRIX_UPDATED, limit=1000)
         if not events:
-            return RoutingMatrix(matrix={})
-        
-        events.sort(key=lambda x: x.sequence_number or 0)
-        return RoutingMatrix(**events[-1].payload)
+            result = RoutingMatrix(matrix={})
+        else:
+            events.sort(key=lambda x: x.sequence_number or 0)
+            result = RoutingMatrix(**events[-1].payload)
+        cache.set(seq, result)
+        return result

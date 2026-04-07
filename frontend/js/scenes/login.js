@@ -94,6 +94,10 @@ registerScene('login', {
     });
     el.appendChild(version);
   },
+  onExit: function() {
+    _numpadRef = null;
+    _pinPromptEl = null;
+  },
   timeoutMs: 0,
 });
 

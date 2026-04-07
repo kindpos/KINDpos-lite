@@ -32,6 +32,12 @@ FALLBACK_IPS: Dict[str, str] = {
     "DEFAULT_KITCHEN": "10.0.0.19",
 }
 
+# Type-based fallback when a MAC-registered printer's IP can't be resolved
+_TYPE_FALLBACK_IPS: Dict[str, str] = {
+    "kitchen": "10.0.0.19",
+    "receipt": "10.0.0.186",
+}
+
 PRINTER_PORT = 9100
 RETRY_DELAYS = [0, 5, 15, 30]
 MAX_ATTEMPTS = len(RETRY_DELAYS)
@@ -158,7 +164,8 @@ class PrintDispatcher:
     async def _resolve_ip(self, printer_mac: str) -> str:
         """
         Resolve a printer MAC address to its current IP via hardware_config.db.
-        Falls back to FALLBACK_IPS for legacy DEFAULT_KITCHEN / DEFAULT_RECEIPT keys.
+        Falls back to FALLBACK_IPS for legacy DEFAULT_KITCHEN / DEFAULT_RECEIPT keys,
+        then to type-based defaults if the DB lookup fails.
         """
         # Legacy fallback keys (used before MAC-as-identity was wired)
         if printer_mac in FALLBACK_IPS:
@@ -167,14 +174,24 @@ class PrintDispatcher:
         try:
             async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
                 async with db.execute(
-                    "SELECT ip FROM devices WHERE mac = ? LIMIT 1",
+                    "SELECT ip, type FROM devices WHERE mac = ? LIMIT 1",
                     (printer_mac,)
                 ) as cursor:
                     row = await cursor.fetchone()
                     if row and row[0]:
                         return row[0]
+                    # IP missing but device exists — try type-based fallback
+                    if row and row[1] and row[1] in _TYPE_FALLBACK_IPS:
+                        logger.warning(f"No IP for {printer_mac}, using {row[1]} type fallback")
+                        return _TYPE_FALLBACK_IPS[row[1]]
         except Exception as e:
             logger.warning(f"hardware_config.db lookup failed for {printer_mac}: {e}")
+
+        # Last resort: infer type from template association
+        for ttype, ip in _TYPE_FALLBACK_IPS.items():
+            if ttype in printer_mac.lower():
+                logger.warning(f"Using type-name fallback for {printer_mac} → {ip}")
+                return ip
 
         raise ValueError(f"No IP found for printer MAC: {printer_mac}")
 

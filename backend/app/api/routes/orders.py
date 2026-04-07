@@ -28,6 +28,7 @@ def _validate_2dp(value: float, field_name: str) -> None:
         )
 
 from app.config import settings
+from app.api.dependencies import get_diagnostic_collector
 from app.api.dependencies import get_ledger
 from app.core.event_ledger import EventLedger
 from app.core.events import (
@@ -301,6 +302,14 @@ async def create_order(
     event = event.model_copy(update={"correlation_id": order_id})
 
     await ledger.append(event)
+
+    # Notify diagnostic collector of order activity
+    dc = get_diagnostic_collector()
+    if dc:
+        try:
+            await dc.notify_order_created()
+        except Exception:
+            _logger.debug("DiagnosticCollector notification failed", exc_info=True)
 
     # Return the projected order
     events = await ledger.get_events_by_correlation(order_id)

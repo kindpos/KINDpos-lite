@@ -347,5 +347,13 @@ registerScene('landing', {
       renderLanding();
     });
   },
+  onExit: function() {
+    expandedCard = null;
+    expandedPanel = null;
+    landingEl = null;
+    landingParams = null;
+    landingSales = null;
+    landingLabor = null;
+  },
   timeoutMs: 0,
 });

@@ -50,26 +50,7 @@ class TestLedgerPrecisionWarnings:
     def tmp_db(self, tmp_path):
         return str(tmp_path / "test_precision.db")
 
-    async def test_ledger_warns_on_bad_precision(self, tmp_db, caplog):
-        event = create_event(
-            event_type=EventType.PAYMENT_INITIATED,
-            terminal_id="T1",
-            payload={
-                "order_id": "order-1",
-                "payment_id": "p1",
-                "amount": 10.333,
-                "method": "card",
-            },
-            correlation_id="order-1",
-        )
-
-        with caplog.at_level(logging.WARNING, logger="kindpos.ledger"):
-            async with EventLedger(tmp_db) as ledger:
-                await ledger.append(event)
-
-        assert any("Precision gate" in record.message for record in caplog.records)
-
-    async def test_ledger_still_appends_on_bad_precision(self, tmp_db):
+    async def test_ledger_rejects_bad_precision(self, tmp_db):
         event = create_event(
             event_type=EventType.PAYMENT_INITIATED,
             terminal_id="T1",
@@ -83,10 +64,30 @@ class TestLedgerPrecisionWarnings:
         )
 
         async with EventLedger(tmp_db) as ledger:
+            with pytest.raises(ValueError, match="non-2dp monetary values"):
+                await ledger.append(event)
+
+            # Verify nothing was stored
+            count = await ledger.count_events()
+            assert count == 0
+
+    async def test_ledger_accepts_valid_precision(self, tmp_db):
+        event = create_event(
+            event_type=EventType.PAYMENT_INITIATED,
+            terminal_id="T1",
+            payload={
+                "order_id": "order-1",
+                "payment_id": "p1",
+                "amount": 10.33,
+                "method": "card",
+            },
+            correlation_id="order-1",
+        )
+
+        async with EventLedger(tmp_db) as ledger:
             result = await ledger.append(event)
             assert result.sequence_number is not None
             assert result.sequence_number >= 1
 
-            # Verify it's actually stored
             count = await ledger.count_events()
             assert count == 1
