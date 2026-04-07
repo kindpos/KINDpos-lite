@@ -269,12 +269,8 @@ export function HexNav(container, opts) {
   }
 
   function adaptiveR(baseR, count, areaW, areaH) {
-    var area = areaW * areaH;
-    var needed = count * Math.pow(baseR * 2.3, 2);
-    if (needed > area * 0.95) {
-      var s = Math.sqrt((area * 0.95) / needed);
-      return Math.max(Math.round(baseR * s), Math.round(28 * scale));
-    }
+    // Let all hexes render at full size — the SVG viewBox
+    // expands dynamically to accommodate overflow
     return baseR;
   }
 
