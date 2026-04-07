@@ -127,34 +127,6 @@ function _buildOverlay(el, sizeItem, builderData) {
     'overflow:hidden;',
   ].join('');
 
-  // ═══ HEADER ═══
-  var header = document.createElement('div');
-  header.style.cssText = [
-    'display:flex;align-items:center;justify-content:space-between;',
-    'padding:3px 8px;',
-    'background:' + T.bgDark + ';',
-    'border-bottom:2px solid ' + T.catColor('PIZZA') + ';',
-    'flex-shrink:0;',
-  ].join('');
-
-  var titleSpan = document.createElement('span');
-  titleSpan.style.cssText = 'color:' + T.catColor('PIZZA') + ';font-size:30px;font-family:' + T.fh + ';';
-  titleSpan.textContent = sizeItem.label + '  —  $' + sizeItem.price.toFixed(2);
-  header.appendChild(titleSpan);
-
-  var cancelPair = buildStyledButton(T.darkBtn);
-  cancelPair.wrap.style.cssText += 'width:100px;height:36px;';
-  cancelPair.inner.textContent = 'CANCEL';
-  cancelPair.inner.style.color = T.mint;
-  cancelPair.inner.style.fontSize = T.fsSmall;
-  cancelPair.inner.style.fontFamily = T.fb;
-  cancelPair.wrap.addEventListener('pointerup', function() {
-    if (builderNav) builderNav.destroy();
-    cancelInterrupt();
-  });
-  header.appendChild(cancelPair.wrap);
-  panel.appendChild(header);
-
   // ═══ PREFIX ROW ═══
   var prefixRow = document.createElement('div');
   prefixRow.style.cssText = 'display:flex;gap:4px;padding:2px 4px;flex-shrink:0;';
@@ -283,6 +255,19 @@ function _buildOverlay(el, sizeItem, builderData) {
     'background:' + T.bgDark + ';',
     'border-top:2px solid ' + T.catColor('PIZZA') + ';',
   ].join('');
+
+  // CANCEL
+  var cancelPair = buildStyledButton(T.darkBtn);
+  cancelPair.wrap.style.cssText += 'flex:1;height:40px;';
+  cancelPair.inner.textContent = 'CANCEL';
+  cancelPair.inner.style.color = T.mint;
+  cancelPair.inner.style.fontSize = T.fsSmall;
+  cancelPair.inner.style.fontFamily = T.fb;
+  cancelPair.wrap.addEventListener('pointerup', function() {
+    if (builderNav) builderNav.destroy();
+    cancelInterrupt();
+  });
+  bottomBar.appendChild(cancelPair.wrap);
 
   // UNDO
   var undoPair = buildStyledButton(T.darkBtn);
