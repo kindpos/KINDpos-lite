@@ -173,7 +173,7 @@ function _buildOverlay(el, sizeItem, builderData) {
   hexArea.style.cssText = 'flex:1;position:relative;overflow:hidden;';
   body.appendChild(hexArea);
 
-  // ═══ RIGHT PANEL: Mods log + Placement bar ═══
+  // ═══ RIGHT PANEL: Mods log only ═══
   var rightPanel = document.createElement('div');
   rightPanel.style.cssText = [
     'width:200px;flex-shrink:0;display:flex;flex-direction:column;',
@@ -191,52 +191,13 @@ function _buildOverlay(el, sizeItem, builderData) {
   renderLog();
   rightPanel.appendChild(logWrap);
 
-  // Placement bar (bottom of right panel)
-  var placeBar = document.createElement('div');
-  placeBar.style.cssText = [
-    'display:flex;align-items:center;flex-shrink:0;',
-    'padding:2px 4px;gap:0;',
-  ].join('');
-  var placeBtns = {};
   var pizzaColor = T.catColor('PIZZA');
-
+  var placeBtns = {};
   var placeSegments = [
     { id: '1st-half', label: '1st' },
     { id: 'whole',    label: 'Whole' },
     { id: '2nd-half', label: '2nd' },
   ];
-
-  placeSegments.forEach(function(seg, i) {
-    if (i > 0) {
-      var divider = document.createElement('div');
-      divider.style.cssText = 'width:2px;height:28px;background:' + pizzaColor + ';flex-shrink:0;';
-      placeBar.appendChild(divider);
-    }
-    var isActive = activePlacement === seg.id;
-    var btn = document.createElement('div');
-    btn.style.cssText = [
-      'flex:1;height:32px;display:flex;align-items:center;justify-content:center;',
-      'font-family:' + T.fh + ';font-size:20px;cursor:pointer;',
-      'background:' + (isActive ? pizzaColor : T.darkBtn) + ';',
-      'color:' + (isActive ? '#1a0a0a' : pizzaColor) + ';',
-      'border-top:2px solid ' + pizzaColor + ';',
-      'border-bottom:2px solid ' + pizzaColor + ';',
-      'transition:background 80ms,color 80ms;',
-    ].join('');
-    if (i === 0) btn.style.borderLeft = '2px solid ' + pizzaColor;
-    if (i === placeSegments.length - 1) btn.style.borderRight = '2px solid ' + pizzaColor;
-    btn.textContent = seg.label;
-
-    btn.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
-      activePlacement = seg.id;
-      refreshPlacement();
-    });
-
-    placeBtns[seg.id] = btn;
-    placeBar.appendChild(btn);
-  });
-  rightPanel.appendChild(placeBar);
 
   function refreshPlacement() {
     placeSegments.forEach(function(seg) {
@@ -315,6 +276,40 @@ function _buildOverlay(el, sizeItem, builderData) {
     });
   });
   bottomBar.appendChild(addPair.wrap);
+
+  // Placement bar (bottom-right)
+  var placeBar = document.createElement('div');
+  placeBar.style.cssText = 'display:flex;align-items:center;gap:0;flex:2;';
+
+  placeSegments.forEach(function(seg, i) {
+    if (i > 0) {
+      var divider = document.createElement('div');
+      divider.style.cssText = 'width:2px;height:28px;background:' + pizzaColor + ';flex-shrink:0;';
+      placeBar.appendChild(divider);
+    }
+    var isActive = activePlacement === seg.id;
+    var btn = document.createElement('div');
+    btn.style.cssText = [
+      'flex:1;height:40px;display:flex;align-items:center;justify-content:center;',
+      'font-family:' + T.fh + ';font-size:20px;cursor:pointer;',
+      'background:' + (isActive ? pizzaColor : T.darkBtn) + ';',
+      'color:' + (isActive ? '#1a0a0a' : pizzaColor) + ';',
+      'border-top:2px solid ' + pizzaColor + ';',
+      'border-bottom:2px solid ' + pizzaColor + ';',
+      'transition:background 80ms,color 80ms;',
+    ].join('');
+    if (i === 0) btn.style.borderLeft = '2px solid ' + pizzaColor;
+    if (i === placeSegments.length - 1) btn.style.borderRight = '2px solid ' + pizzaColor;
+    btn.textContent = seg.label;
+    btn.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      activePlacement = seg.id;
+      refreshPlacement();
+    });
+    placeBtns[seg.id] = btn;
+    placeBar.appendChild(btn);
+  });
+  bottomBar.appendChild(placeBar);
 
   panel.appendChild(bottomBar);
   el.appendChild(panel);
