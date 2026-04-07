@@ -86,6 +86,18 @@ async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
         await ledger.append(event)
     print(f"  seeded {len(seed_data.get('items', []))} menu items")
 
+    # Seed modifier groups
+    for group in seed_data.get("modifier_groups", []):
+        event = create_event(
+            event_type=EventType.MODIFIER_GROUP_CREATED,
+            terminal_id="SEED",
+            payload=group,
+        )
+        await ledger.append(event)
+    mod_count = len(seed_data.get("modifier_groups", []))
+    if mod_count:
+        print(f"  seeded {mod_count} modifier groups")
+
     print(f"Demo seed complete — {len(seed_data.get('employees', []))} employees loaded")
 
 
@@ -123,4 +135,13 @@ async def seed_menu_if_empty(ledger: EventLedger) -> None:
         )
         await ledger.append(event)
 
-    print(f"Menu seed complete — {len(categories)} categories, {len(items)} items")
+    mod_groups = seed_data.get("modifier_groups", [])
+    for group in mod_groups:
+        event = create_event(
+            event_type=EventType.MODIFIER_GROUP_CREATED,
+            terminal_id="SEED",
+            payload=group,
+        )
+        await ledger.append(event)
+
+    print(f"Menu seed complete — {len(categories)} categories, {len(items)} items, {len(mod_groups)} modifier groups")

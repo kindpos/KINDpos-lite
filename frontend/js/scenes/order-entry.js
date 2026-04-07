@@ -51,10 +51,10 @@ var MENU_DATA = [
     id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
     subcats: [
       { id: 'pizza-sizes', label: 'Size', items: [
-        { label: 'Slice', price: 3.50, pizzaSize: true },
-        { label: 'Small 10"', price: 10.00, pizzaSize: true },
-        { label: 'Medium 14"', price: 12.00, pizzaSize: true },
-        { label: 'Large 18"', price: 14.00, pizzaSize: true },
+        { label: 'Slice', price: 3.75, pizzaSize: true },
+        { label: 'S 10"', price: 10.00, pizzaSize: true },
+        { label: 'MED 14"', price: 12.00, pizzaSize: true },
+        { label: 'LG 18"', price: 14.00, pizzaSize: true },
         { label: 'XL 20"', price: 18.00, pizzaSize: true },
         { label: 'Calzone', price: 12.00, pizzaSize: true },
       ] },
