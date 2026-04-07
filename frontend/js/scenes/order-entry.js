@@ -483,7 +483,21 @@ function hideSummaryRightPanel() {
   // Remove seat grid, restore hex canvas
   var oldGrid = document.getElementById('seat-grid-panel');
   if (oldGrid && oldGrid.parentNode) oldGrid.parentNode.removeChild(oldGrid);
-  if (_tabCanvas) _tabCanvas.style.display = '';
+  if (_tabCanvas) {
+    _tabCanvas.style.display = '';
+    // Destroy and re-init HexNav so it measures the visible canvas
+    if (hexNav) { hexNav.destroy(); hexNav = null; }
+    requestAnimationFrame(function() { initHexNav(); });
+  }
+}
+
+function initHexNav() {
+  if (hexNav || !_tabCanvas) return;
+  hexNav = new HexNav(_tabCanvas, {
+    data: MENU_DATA,
+    onSelect: function(item) { handleItemSelect(item); },
+    onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
+  });
 }
 
 function buildSeatCardGrid(container) {
@@ -854,13 +868,11 @@ function buildMain(parentEl, params) {
 
   rebuildActionBar();
 
-  requestAnimationFrame(function() {
-    hexNav = new HexNav(canvas, {
-      data: MENU_DATA,
-      onSelect: function(item) { handleItemSelect(item); },
-      onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
-    });
-  });
+  // HexNav init deferred — created when canvas is first shown (adding mode)
+  // If starting in adding mode, init immediately
+  if (ticketMode === 'adding') {
+    requestAnimationFrame(function() { initHexNav(); });
+  }
 
   return main;
 }
