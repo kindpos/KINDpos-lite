@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 import logging
 from decimal import Decimal
 
-from .events import Event, EventType
+from .events import Event, EventType, parse_event_type
 
 logger = logging.getLogger("kindpos.ledger")
 
@@ -148,13 +148,13 @@ class EventLedger:
         - Computes checksum with hash chain
         - Returns the complete event
         """
-        # 2dp precision gate — warn on non-2dp monetary values
+        # 2dp precision gate — reject non-2dp monetary values
         if event.payload:
             bad = _check_monetary_precision(event.payload)
             if bad:
-                logger.warning(
-                    "Precision gate: event %s (%s) has non-2dp values: %s",
-                    event.event_id, event.event_type.value, ", ".join(bad),
+                raise ValueError(
+                    f"Precision gate: event {event.event_id} ({event.event_type.value}) "
+                    f"has non-2dp monetary values: {', '.join(bad)}"
                 )
 
         async with self._write_lock:
@@ -234,6 +234,16 @@ class EventLedger:
 
     async def append_batch(self, events: list[Event]) -> list[Event]:
         """Append multiple events atomically."""
+        # 2dp precision gate — reject non-2dp monetary values
+        for event in events:
+            if event.payload:
+                bad = _check_monetary_precision(event.payload)
+                if bad:
+                    raise ValueError(
+                        f"Precision gate: event {event.event_id} ({event.event_type.value}) "
+                        f"has non-2dp monetary values: {', '.join(bad)}"
+                    )
+
         results = []
         async with self._write_lock:
             for event in events:
@@ -307,7 +317,7 @@ class EventLedger:
             event_id=row[1],
             timestamp=datetime.fromisoformat(row[2]),
             terminal_id=row[3],
-            event_type=EventType(row[4]),
+            event_type=parse_event_type(row[4]),
             payload=json.loads(row[5]),
             user_id=row[6],
             user_role=row[7],

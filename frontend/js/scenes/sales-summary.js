@@ -119,6 +119,7 @@ registerScene('sales-summary', {
         grid.appendChild(errMsg);
       });
   },
+  onExit: function() {},
   cache: false,
   timeoutMs: 0,
 });

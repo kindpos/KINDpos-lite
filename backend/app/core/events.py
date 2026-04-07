@@ -29,49 +29,49 @@ class OrderType(str, Enum):
 class EventType(str, Enum):
     """All event types in the system.
 
-    Naming convention: new types should use dot.notation values
-    (e.g. "order.created"). Legacy UPPERCASE values are kept for
-    backward-compatibility with existing ledger data.
+    Naming convention: dot.notation lowercase (e.g. "order.created").
+    New events written with dot-notation values; legacy UPPERCASE values
+    accepted on read via _LEGACY_ALIASES lookup below.
     """
 
     # ── Order lifecycle (LEDGER_CORE) ────────────────────────────────
-    ORDER_CREATED = "ORDER_CREATED"
-    ORDER_CLOSED = "ORDER_CLOSED"
-    ORDER_REOPENED = "ORDER_REOPENED"
-    ORDER_VOIDED = "ORDER_VOIDED"
+    ORDER_CREATED = "order.created"
+    ORDER_CLOSED = "order.closed"
+    ORDER_REOPENED = "order.reopened"
+    ORDER_VOIDED = "order.voided"
 
     # ── Item management (LEDGER_CORE) ────────────────────────────────
-    ITEM_ADDED = "ITEM_ADDED"
-    ITEM_REMOVED = "ITEM_REMOVED"
-    ITEM_MODIFIED = "ITEM_MODIFIED"
-    ITEM_SENT = "ITEM_SENT"
-    MODIFIER_APPLIED = "MODIFIER_APPLIED"
+    ITEM_ADDED = "item.added"
+    ITEM_REMOVED = "item.removed"
+    ITEM_MODIFIED = "item.modified"
+    ITEM_SENT = "item.sent"
+    MODIFIER_APPLIED = "modifier.applied"
 
     # ── Discounts (LEDGER_CORE) ──────────────────────────────────────
-    DISCOUNT_APPROVED = "DISCOUNT_APPROVED"
+    DISCOUNT_APPROVED = "discount.approved"
 
     # ── Printing (LEDGER_OPERATIONAL / EPHEMERAL) ────────────────────
-    TICKET_PRINTED = "TICKET_PRINTED"           # LEDGER_OPERATIONAL
-    TICKET_PRINT_FAILED = "TICKET_PRINT_FAILED" # EPHEMERAL
-    TICKET_REPRINTED = "TICKET_REPRINTED"        # LEDGER_OPERATIONAL
-    PRINT_RETRYING = "PRINT_RETRYING"            # EPHEMERAL
-    PRINT_REROUTED = "PRINT_REROUTED"            # EPHEMERAL
+    TICKET_PRINTED = "ticket.printed"               # LEDGER_OPERATIONAL
+    TICKET_PRINT_FAILED = "ticket.print_failed"     # EPHEMERAL
+    TICKET_REPRINTED = "ticket.reprinted"            # LEDGER_OPERATIONAL
+    PRINT_RETRYING = "print.retrying"                # EPHEMERAL
+    PRINT_REROUTED = "print.rerouted"                # EPHEMERAL
 
     # ── Printer lifecycle (LEDGER_OPERATIONAL / EPHEMERAL) ───────────
-    PRINTER_REGISTERED = "PRINTER_REGISTERED"           # LEDGER_OPERATIONAL
-    PRINTER_STATUS_CHANGED = "PRINTER_STATUS_CHANGED"   # EPHEMERAL
-    PRINTER_ERROR = "PRINTER_ERROR"                     # EPHEMERAL
-    PRINTER_ROLE_CREATED = "PRINTER_ROLE_CREATED"       # EPHEMERAL
-    PRINTER_FALLBACK_ASSIGNED = "PRINTER_FALLBACK_ASSIGNED"  # EPHEMERAL
+    PRINTER_REGISTERED = "printer.registered"              # LEDGER_OPERATIONAL
+    PRINTER_STATUS_CHANGED = "printer.status_changed"      # EPHEMERAL
+    PRINTER_ERROR = "printer.error"                        # EPHEMERAL
+    PRINTER_ROLE_CREATED = "printer.role_created"          # EPHEMERAL
+    PRINTER_FALLBACK_ASSIGNED = "printer.fallback_assigned"  # EPHEMERAL
 
     # ── Printer maintenance (EPHEMERAL) ──────────────────────────────
-    PRINTER_REBOOT_STARTED = "PRINTER_REBOOT_STARTED"
-    PRINTER_REBOOT_COMPLETED = "PRINTER_REBOOT_COMPLETED"
-    PRINTER_HEALTH_WARNING = "PRINTER_HEALTH_WARNING"
+    PRINTER_REBOOT_STARTED = "printer.reboot_started"
+    PRINTER_REBOOT_COMPLETED = "printer.reboot_completed"
+    PRINTER_HEALTH_WARNING = "printer.health_warning"
 
     # ── Cash drawer (EPHEMERAL) ──────────────────────────────────────
-    DRAWER_OPENED = "DRAWER_OPENED"
-    DRAWER_OPEN_FAILED = "DRAWER_OPEN_FAILED"
+    DRAWER_OPENED = "drawer.opened"
+    DRAWER_OPEN_FAILED = "drawer.open_failed"
 
     # ── Payment processing (LEDGER_CORE) ─────────────────────────────
     PAYMENT_INITIATED = "payment.initiated"
@@ -79,10 +79,10 @@ class EventType(str, Enum):
     PAYMENT_DECLINED = "payment.failed"
     PAYMENT_CANCELLED = "payment.cancelled"
     PAYMENT_TIMED_OUT = "payment.timeout"
-    PAYMENT_ERROR = "PAYMENT_ERROR"
+    PAYMENT_ERROR = "payment.error"
 
     # ── Post-authorization (LEDGER_CORE) ─────────────────────────────
-    PAYMENT_REFUNDED = "PAYMENT_REFUNDED"
+    PAYMENT_REFUNDED = "payment.refunded"
     TIP_ADJUSTED = "payment.tip_adjusted"
     CASH_TIPS_DECLARED = "payment.cash_tips_declared"
 
@@ -115,17 +115,17 @@ class EventType(str, Enum):
     TIPOUT_RULE_DELETED = "tipout.rule_deleted"
 
     # ── Menu management (LEDGER_OPERATIONAL) ─────────────────────────
-    MENU_ITEM_CREATED = "MENU_ITEM_CREATED"
-    MENU_ITEM_UPDATED = "MENU_ITEM_UPDATED"
-    MENU_ITEM_DELETED = "MENU_ITEM_DELETED"
-    MENU_CATEGORY_CREATED = "MENU_CATEGORY_CREATED"
-    MENU_CATEGORY_UPDATED = "MENU_CATEGORY_UPDATED"
-    MENU_CATEGORY_DELETED = "MENU_CATEGORY_DELETED"
+    MENU_ITEM_CREATED = "menu.item_created"
+    MENU_ITEM_UPDATED = "menu.item_updated"
+    MENU_ITEM_DELETED = "menu.item_deleted"
+    MENU_CATEGORY_CREATED = "menu.category_created"
+    MENU_CATEGORY_UPDATED = "menu.category_updated"
+    MENU_CATEGORY_DELETED = "menu.category_deleted"
     MENU_ITEM_86D = "menu.item_86d"
     MENU_ITEM_RESTORED = "menu.item_restored"
-    MODIFIER_GROUP_CREATED = "MODIFIER_GROUP_CREATED"
-    MODIFIER_GROUP_UPDATED = "MODIFIER_GROUP_UPDATED"
-    MODIFIER_GROUP_DELETED = "MODIFIER_GROUP_DELETED"
+    MODIFIER_GROUP_CREATED = "modifier.group_created"
+    MODIFIER_GROUP_UPDATED = "modifier.group_updated"
+    MODIFIER_GROUP_DELETED = "modifier.group_deleted"
 
     # ── Batch setup (LEDGER_OPERATIONAL) ─────────────────────────────
     RESTAURANT_CONFIGURED = "restaurant.configured"
@@ -140,13 +140,67 @@ class EventType(str, Enum):
     FLOORPLAN_LAYOUT_UPDATED = "floorplan.layout_updated"
 
     # ── Hardware (LEDGER_OPERATIONAL) ────────────────────────────────
-    TERMINAL_REGISTERED = "TERMINAL_REGISTERED"
+    TERMINAL_REGISTERED = "terminal.registered"
     TERMINAL_UPDATED = "terminal.updated"
     ROUTING_MATRIX_UPDATED = "routing.matrix_updated"
 
     # ── System (LEDGER_OPERATIONAL) ──────────────────────────────────
-    USER_LOGGED_IN = "USER_LOGGED_IN"
-    USER_LOGGED_OUT = "USER_LOGGED_OUT"
+    USER_LOGGED_IN = "user.logged_in"
+    USER_LOGGED_OUT = "user.logged_out"
+
+
+# Legacy UPPERCASE values from existing ledger data → canonical EventType
+_LEGACY_ALIASES: dict[str, EventType] = {
+    "ORDER_CREATED": EventType.ORDER_CREATED,
+    "ORDER_CLOSED": EventType.ORDER_CLOSED,
+    "ORDER_REOPENED": EventType.ORDER_REOPENED,
+    "ORDER_VOIDED": EventType.ORDER_VOIDED,
+    "ITEM_ADDED": EventType.ITEM_ADDED,
+    "ITEM_REMOVED": EventType.ITEM_REMOVED,
+    "ITEM_MODIFIED": EventType.ITEM_MODIFIED,
+    "ITEM_SENT": EventType.ITEM_SENT,
+    "MODIFIER_APPLIED": EventType.MODIFIER_APPLIED,
+    "DISCOUNT_APPROVED": EventType.DISCOUNT_APPROVED,
+    "TICKET_PRINTED": EventType.TICKET_PRINTED,
+    "TICKET_PRINT_FAILED": EventType.TICKET_PRINT_FAILED,
+    "TICKET_REPRINTED": EventType.TICKET_REPRINTED,
+    "PRINT_RETRYING": EventType.PRINT_RETRYING,
+    "PRINT_REROUTED": EventType.PRINT_REROUTED,
+    "PRINTER_REGISTERED": EventType.PRINTER_REGISTERED,
+    "PRINTER_STATUS_CHANGED": EventType.PRINTER_STATUS_CHANGED,
+    "PRINTER_ERROR": EventType.PRINTER_ERROR,
+    "PRINTER_ROLE_CREATED": EventType.PRINTER_ROLE_CREATED,
+    "PRINTER_FALLBACK_ASSIGNED": EventType.PRINTER_FALLBACK_ASSIGNED,
+    "PRINTER_REBOOT_STARTED": EventType.PRINTER_REBOOT_STARTED,
+    "PRINTER_REBOOT_COMPLETED": EventType.PRINTER_REBOOT_COMPLETED,
+    "PRINTER_HEALTH_WARNING": EventType.PRINTER_HEALTH_WARNING,
+    "DRAWER_OPENED": EventType.DRAWER_OPENED,
+    "DRAWER_OPEN_FAILED": EventType.DRAWER_OPEN_FAILED,
+    "PAYMENT_ERROR": EventType.PAYMENT_ERROR,
+    "PAYMENT_REFUNDED": EventType.PAYMENT_REFUNDED,
+    "MENU_ITEM_CREATED": EventType.MENU_ITEM_CREATED,
+    "MENU_ITEM_UPDATED": EventType.MENU_ITEM_UPDATED,
+    "MENU_ITEM_DELETED": EventType.MENU_ITEM_DELETED,
+    "MENU_CATEGORY_CREATED": EventType.MENU_CATEGORY_CREATED,
+    "MENU_CATEGORY_UPDATED": EventType.MENU_CATEGORY_UPDATED,
+    "MENU_CATEGORY_DELETED": EventType.MENU_CATEGORY_DELETED,
+    "MODIFIER_GROUP_CREATED": EventType.MODIFIER_GROUP_CREATED,
+    "MODIFIER_GROUP_UPDATED": EventType.MODIFIER_GROUP_UPDATED,
+    "MODIFIER_GROUP_DELETED": EventType.MODIFIER_GROUP_DELETED,
+    "TERMINAL_REGISTERED": EventType.TERMINAL_REGISTERED,
+    "USER_LOGGED_IN": EventType.USER_LOGGED_IN,
+    "USER_LOGGED_OUT": EventType.USER_LOGGED_OUT,
+}
+
+
+def parse_event_type(raw: str) -> EventType:
+    """Parse an event type string, accepting both dot-notation and legacy UPPERCASE."""
+    try:
+        return EventType(raw)
+    except ValueError:
+        if raw in _LEGACY_ALIASES:
+            return _LEGACY_ALIASES[raw]
+        raise
 
 
 class Event(BaseModel):

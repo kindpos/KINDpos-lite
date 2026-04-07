@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import List, Dict, Any
 from app.api.dependencies import get_ledger
 from app.core.event_ledger import EventLedger
-from app.core.events import EventType, Event, create_event
+from app.core.events import EventType, Event, create_event, parse_event_type
 from app.models.config_events import (
     StoreConfigBundle, StoreInfo, CCProcessingRate, PendingChange,
     Role, Employee, TipoutRule, MenuItem, MenuCategory, Section, FloorPlanLayout,
@@ -106,7 +106,7 @@ async def push_changes(changes: List[PendingChange], background_tasks: Backgroun
     sections = set()
     for change in changes:
         event = create_event(
-            event_type=EventType(change.event_type),
+            event_type=parse_event_type(change.event_type),
             terminal_id="OVERSEER",
             payload=change.payload
         )

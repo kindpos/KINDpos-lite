@@ -577,6 +577,7 @@ function rebuildBottomBar(params) {
     onTap: function() {
       if (!currentOrderId) return;
       fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
         .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
     },
   });
@@ -1597,8 +1598,11 @@ function showDiscountOptions(targets, approvedBy) {
                   approved_by: approvedBy,
                   item_ids: itemIds,
                 }),
+              }).then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
               }).catch(function(err) {
                 console.warn('[KINDpos] Discount event failed:', err);
+                showToast('Discount failed — check connection');
               });
             }
 
@@ -1723,6 +1727,7 @@ async function handleSend() {
       });
       if (!createRes.ok) throw new Error('Order create failed: ' + createRes.status);
       var created = await createRes.json();
+      if (!created || !created.order_id) throw new Error('Invalid order response — missing order_id');
       currentOrderId = created.order_id;   // use the backend-generated ID
       currentCheckNumber = created.check_number;
       setSceneName(currentCheckNumber);

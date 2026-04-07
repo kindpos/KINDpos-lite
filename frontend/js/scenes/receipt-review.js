@@ -27,6 +27,7 @@ registerScene('receipt-review', {
     el.appendChild(buildReceiptPanel(params));
     el.appendChild(buildMethodPanel(params));
   },
+  onExit: function() {},
 });
 
 

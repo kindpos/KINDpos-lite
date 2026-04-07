@@ -5,16 +5,18 @@ Shared dependencies for API routes.
 The Event Ledger is managed here as a singleton.
 """
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from app.core.event_ledger import EventLedger
 from app.core.ephemeral_log import EphemeralLog
 from app.core.adapters.printer_manager import PrinterManager
+from app.services.diagnostic_collector import DiagnosticCollector
 from app.config import settings
 
 # Global ledger instance (initialized on startup)
 _ledger: EventLedger | None = None
 _ephemeral_log: EphemeralLog | None = None
 _printer_manager: PrinterManager | None = None
+_diagnostic_collector: DiagnosticCollector | None = None
 
 
 async def get_ledger() -> EventLedger:
@@ -63,3 +65,14 @@ def set_printer_manager(manager: PrinterManager) -> None:
     """Register a PrinterManager instance (called during startup)."""
     global _printer_manager
     _printer_manager = manager
+
+
+def get_diagnostic_collector() -> Optional[DiagnosticCollector]:
+    """Optional dependency — returns None if DiagnosticCollector not initialized."""
+    return _diagnostic_collector
+
+
+def set_diagnostic_collector(collector: DiagnosticCollector) -> None:
+    """Register a DiagnosticCollector instance (called during startup)."""
+    global _diagnostic_collector
+    _diagnostic_collector = collector

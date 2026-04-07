@@ -804,6 +804,7 @@ function doReopen(c) {
 function doPrint() {
   checks.forEach(function(c) {
     fetch('/api/v1/print/receipt/' + c.checkId + '?copy_type=merchant', { method: 'POST' })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
       .catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
   });
 }

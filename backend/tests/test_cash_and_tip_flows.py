@@ -228,29 +228,28 @@ async def test_tip_adjustment_failures(ledger):
 
 @pytest.mark.asyncio
 async def test_precision_gate_2dp(ledger):
-    """Maintain 2dp precision assertions on all financial values."""
+    """Precision gate rejects non-2dp monetary values at the ledger level."""
     terminal_id = "T-01"
     order_id = "order-precision-01"
-    
-    # Use many decimal places to see if it rounds
+
+    # Non-2dp price must be rejected by the precision gate
     amount = 10.3333333
-    tip = 2.6666666
-    
-    await create_simple_order(ledger, terminal_id, order_id, amount)
-    
-    request = CashPaymentRequest(order_id=order_id, amount=amount, tip=tip)
+    import pytest as _pt
+
+    with _pt.raises(ValueError, match="non-2dp monetary values"):
+        await create_simple_order(ledger, terminal_id, order_id, amount)
+
+    # Properly rounded values should succeed
+    order_id2 = "order-precision-02"
+    await create_simple_order(ledger, terminal_id, order_id2, 10.33)
+
+    request = CashPaymentRequest(order_id=order_id2, amount=10.33, tip=2.67)
     response = await process_cash_payment(request, ledger)
-    
-    # Check response values — sale amount only (tip tracked separately)
-    # money_round(10.3333333) = 10.33
     assert response["amount"] == 10.33
 
-    # Check tip_adjusted event
-    # Factory tip_adjusted(tip_amount=2.6666666) -> rounds to 2.67
-    events = await ledger.get_events_by_correlation(order_id)
+    events = await ledger.get_events_by_correlation(order_id2)
     tip_evts = [e for e in events if e.event_type == EventType.TIP_ADJUSTED]
     assert tip_evts[0].payload["tip_amount"] == 2.67
 
-    # Check initiate event amount — sale only, not sale+tip
     init_evts = [e for e in events if e.event_type == EventType.PAYMENT_INITIATED]
     assert init_evts[0].payload["amount"] == 10.33
