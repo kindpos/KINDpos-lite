@@ -579,7 +579,9 @@ function rebuildBottomBar(params) {
   var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handlePay(_payParams); },
   });
-  var send = buildButton('SEND', { fill: T.goGreen, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
+  var sendLabel = allSent ? 'RESEND' : 'SEND';
+  var send = buildButton(sendLabel, { fill: T.goGreen, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     onTap: function() { handleSend(); },
   });
 
@@ -1665,8 +1667,31 @@ function buildPinOverlay(el, cb) {
 async function handleSend() {
   if (ticket.length === 0) return;
   if (isSending) return;
-  isSending = true;
 
+  var unsentInstances = ticket.filter(function(inst) { return !inst.sent; });
+
+  // All items already sent — resend to kitchen only
+  if (unsentInstances.length === 0 && currentOrderId) {
+    isSending = true;
+    try {
+      await fetch(API + '/orders/' + currentOrderId + '/send', { method: 'POST' });
+      fetch(API + '/print/ticket/' + currentOrderId, { method: 'POST' })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+        .catch(function(err) {
+          console.warn('[KINDpos] Kitchen print failed:', err);
+          showToast('Kitchen ticket print failed — check printer');
+        });
+      showToast('Resent to kitchen', { bg: T.goGreen, duration: 2000 });
+    } catch (err) {
+      console.warn('[KINDpos] Resend failed:', err);
+      showToast('Resend failed', { bg: T.red, duration: 2000 });
+    } finally {
+      isSending = false;
+    }
+    return;
+  }
+
+  isSending = true;
   var totals = computeTotals();
 
   try {
@@ -1689,7 +1714,6 @@ async function handleSend() {
     }
 
     // Step 2 — post only unsent instances, each with their own modifiers
-    var unsentInstances = ticket.filter(function(inst) { return !inst.sent; });
     var itemPromises = unsentInstances.map(function(inst) {
       return fetch(API + '/orders/' + currentOrderId + '/items', {
         method: 'POST',
@@ -1742,6 +1766,10 @@ async function handleSend() {
   } finally {
     isSending = false;
   }
+
+  // Update UI — SEND becomes RESEND, ticket shows sent state
+  renderTicket();
+  rebuildBottomBar();
 
   // Reset hex nav — ticket stays visible for PAY
   if (hexNav) hexNav.reset();
