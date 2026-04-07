@@ -12,6 +12,7 @@ import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
 import { showKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
+import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
 import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
 
 var PAD      = 16;
@@ -46,19 +47,13 @@ var MENU_DATA = [
   {
     id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
     subcats: [
-      { id: 'pizza-items', label: 'Pizza', items: [
-        { label: 'Large Cheese', price: 14.00, requiredMods: [
-          { id: 'toppings', label: 'TOPPINGS', color: T.red, textColor: '#fff', choices: [
-            { label: 'Pepperoni', price: 1.50 }, { label: 'Sausage', price: 1.50 },
-            { label: 'Mushrooms', price: 1.00 }, { label: 'Onions', price: 1.00 },
-            { label: 'Peppers', price: 1.00 }, { label: 'Extra Cheese', price: 2.00 },
-          ] }
-        ] },
-        { label: 'Large Pepperoni', price: 16.00 },
-        { label: 'Large Supreme', price: 18.00 },
-        { label: 'Slice Cheese', price: 3.50 },
-        { label: 'Slice Pepperoni', price: 4.00 },
-        { label: 'Calzone', price: 12.00 },
+      { id: 'pizza-sizes', label: 'Size', items: [
+        { label: 'Slice', price: 3.50, pizzaSize: true },
+        { label: 'Small 10"', price: 10.00, pizzaSize: true },
+        { label: 'Medium 14"', price: 12.00, pizzaSize: true },
+        { label: 'Large 18"', price: 14.00, pizzaSize: true },
+        { label: 'XL 20"', price: 18.00, pizzaSize: true },
+        { label: 'Calzone', price: 12.00, pizzaSize: true },
       ] },
     ]
   },
@@ -1036,6 +1031,25 @@ function handleItemSelect(item) {
     hexNav.showPickList('SIDES', sidesCat.color, sidesCat.textColor, sidesCat.subcats[0].items);
     renderTicket();
     rebuildBottomBar();
+    return;
+  }
+
+  // ── Pizza builder: size tap opens the overlay ──
+  if (item.pizzaSize) {
+    showPizzaBuilderOverlay(item).then(function(result) {
+      ticket.push({
+        id:        ++ticketSeq,
+        idemKey:   _idemKey(),
+        name:      result.name,
+        unitPrice: result.unitPrice,
+        mods:      result.mods || [],
+        selected:  false,
+        sent:      false,
+        category:  'pizza',
+      });
+      renderTicket();
+      rebuildBottomBar();
+    }).catch(function() { /* cancelled */ });
     return;
   }
 
