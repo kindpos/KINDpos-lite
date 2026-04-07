@@ -5,6 +5,7 @@
 
 import { init, push, pop, replace, onBeforeTransition, clearSceneCache } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
+import { showToast } from './components.js';
 import { hideKeyboard } from './keyboard.js';
 
 // Import scenes (self-registering)
@@ -86,7 +87,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
   updateClock();
   setInterval(updateClock, 30000);
+
+  // ── Print failure monitor ─────────────────────────
+  startPrintFailureMonitor();
 });
+
+// ── Print failure monitor ─────────────────────
+let _printFailBanner = null;
+let _knownFailedIds = new Set();
+
+function startPrintFailureMonitor() {
+  setInterval(pollPrintFailures, 10000);
+}
+
+function pollPrintFailures() {
+  fetch('/api/v1/print/queue')
+    .then(r => r.json())
+    .then(data => {
+      const failed = data.failed || [];
+      if (failed.length > 0) {
+        // Check for newly failed jobs to show toast
+        for (const job of failed) {
+          if (!_knownFailedIds.has(job.job_id)) {
+            _knownFailedIds.add(job.job_id);
+            const tpl = job.template_id || '';
+            const label = tpl.includes('kitchen') ? 'Kitchen ticket' : 'Receipt';
+            showToast(label + ' print FAILED — check printer', { bg: '#da331c', duration: 6000 });
+          }
+        }
+        showPrintFailBanner(failed.length);
+      } else {
+        _knownFailedIds.clear();
+        hidePrintFailBanner();
+      }
+    })
+    .catch(() => {}); // silent on network errors
+}
+
+function showPrintFailBanner(count) {
+  if (!_printFailBanner) {
+    _printFailBanner = document.createElement('div');
+    _printFailBanner.style.cssText = [
+      'position:fixed;top:0;left:0;right:0;height:32px;',
+      'display:flex;align-items:center;justify-content:center;gap:12px;',
+      'background:#da331c;color:#fff;z-index:10000;cursor:pointer;',
+      'font-family:Sevastopol Interface, monospace;font-size:20px;',
+    ].join('');
+    _printFailBanner.addEventListener('pointerup', () => {
+      // Retry all failed jobs
+      fetch('/api/v1/print/queue').then(r => r.json()).then(data => {
+        (data.failed || []).forEach(job => {
+          fetch('/api/v1/print/queue/' + job.job_id + '/retry', { method: 'POST' });
+        });
+        _knownFailedIds.clear();
+        hidePrintFailBanner();
+        showToast('Retrying failed prints...', { bg: '#7ac943', duration: 3000 });
+      });
+    });
+    document.body.appendChild(_printFailBanner);
+  }
+  _printFailBanner.textContent = '\u26A0 ' + count + ' print job' + (count > 1 ? 's' : '') + ' FAILED — tap to retry';
+  _printFailBanner.style.display = 'flex';
+}
+
+function hidePrintFailBanner() {
+  if (_printFailBanner) {
+    _printFailBanner.style.display = 'none';
+  }
+}
 
 // ── Clock ─────────────────────────────────────────
 function updateClock() {

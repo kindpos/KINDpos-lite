@@ -32,6 +32,7 @@ var _accordionCooldown = false;
 var _receiptScroll = null;
 var _rightCol      = null;
 var _pinUnlocked   = false;
+var _refreshTimer  = null;
 
 // ─────────────────────────────────────────────────
 //  HELPERS
@@ -1103,7 +1104,52 @@ function buildScene(el, params) {
     _rightCol.appendChild(buildActionBar(_state));
 
     el.appendChild(_rightCol);
+
+    // Start auto-refresh so Cash Expected stays current after tip adjustments
+    startAutoRefresh();
   });
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  _refreshTimer = setInterval(function() {
+    if (!_state || !_rightCol) return;
+    fetchServerState({ employeeId: _state.employeeId, employeeName: _state.employeeName }).then(function(newState) {
+      if (!_state || !_rightCol) return;
+      // Only update if financial values actually changed
+      if (newState.cashExpected === _state.cashExpected &&
+          newState.cardTips === _state.cardTips &&
+          newState.cashTips === _state.cashTips &&
+          newState.openChecks === _state.openChecks &&
+          newState.unadjustedTips === _state.unadjustedTips) return;
+      newState.restaurantName = _state.restaurantName;
+      newState.terminalId = _state.terminalId;
+      // Preserve tip-out config adjustments made in-session
+      if (_state.tipOutRoles) newState.tipOutRoles = _state.tipOutRoles;
+      if (_state.oneTimeRole) newState.oneTimeRole = _state.oneTimeRole;
+      _state = newState;
+      recalcTipOut(_state);
+      _expandedIdx = null;
+      if (_receiptScroll) {
+        _receiptScroll.innerHTML = '';
+        _receiptScroll.appendChild(buildReceiptContent(_state));
+      }
+      _rightCol.innerHTML = '';
+      _gridContainer = document.createElement('div');
+      _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+      _gridContainer.appendChild(buildGridView(_state));
+      _rightCol.appendChild(_gridContainer);
+      _rightCol.appendChild(buildBlockerBanner(_state));
+      _rightCol.appendChild(buildActionBar(_state));
+    }).catch(function() {});
+  }, 30000);
+}
+
+function stopAutoRefresh() {
+  if (_refreshTimer) {
+    clearInterval(_refreshTimer);
+    _refreshTimer = null;
+  }
 }
 
 // ─────────────────────────────────────────────────
@@ -1117,6 +1163,7 @@ registerScene('server-checkout', {
     buildScene(el, params);
   },
   onExit: function() {
+    stopAutoRefresh();
     _state         = null;
     _expandedIdx   = null;
     _gridContainer = null;

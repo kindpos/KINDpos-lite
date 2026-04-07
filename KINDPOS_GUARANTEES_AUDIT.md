@@ -321,38 +321,44 @@ OVERALL RELEASE STATUS
 [ ] ONE OR MORE FAILED — block release
 
 SEVERITY BREAKDOWN
-Critical: 1
-High:     1
+Critical: 0 (was 1 — RESOLVED)
+High:     0 (was 1 — RESOLVED)
 Warning:  1
 Info:     3
 ```
 
-### Critical (must fix before release):
+### Resolved — CRITICAL 1.1: Print FAILED jobs now visible to staff
 
-**1.1 — Print FAILED jobs invisible to staff**
-- `backend/app/printing/print_dispatcher.py:104,136` marks job failed
-- No frontend notification mechanism exists
-- Fix: Either (a) add frontend polling of `/api/v1/print/queue` with visual alert for failed jobs, or (b) add SSE push when a job transitions to FAILED, consumed by a persistent UI indicator
+**Fix applied in `frontend/js/app.js`:**
+- Added `startPrintFailureMonitor()` — polls `GET /api/v1/print/queue` every 10s
+- When failed jobs detected: shows a persistent red banner at top of screen with count
+- Each newly-failed job triggers a `showToast()` with printer type (Kitchen/Receipt)
+- Banner is tappable — retries all failed jobs via `POST /print/queue/{job_id}/retry`
+- Banner auto-hides when failed queue clears
+- Tracks known failed IDs to avoid duplicate toasts
 
-### High (should fix before release):
+### Resolved — HIGH 4.1: Server Checkout Cash Expected now auto-refreshes
 
-**4.1 — Server Checkout Cash Expected is static**
-- `frontend/js/scenes/server-checkout.js:70-123` fetches once
-- Fix: Add a polling interval (e.g., 30s) that re-fetches the day-summary and updates Cash Expected, or trigger a refresh when the scene regains focus
+**Fix applied in `frontend/js/scenes/server-checkout.js`:**
+- Added `startAutoRefresh()` — polls day-summary every 30s while scene is open
+- Only updates UI when financial values actually change (cashExpected, cardTips, cashTips, openChecks, unadjustedTips)
+- Preserves in-session tip-out rule adjustments across refreshes
+- `stopAutoRefresh()` called in `onExit` to clean up interval
 
-### Warning:
+### Remaining — WARNING 1.2:
 
-**1.2 — PrintDispatcher doesn't write TICKET_PRINT_FAILED to event ledger**
+**PrintDispatcher doesn't write TICKET_PRINT_FAILED to event ledger**
 - The event type exists (`events.py:55`) but isn't wired in the dispatcher
 - Lower severity: the print_queue.db tracks failures; this is an auditability gap, not a functional one
+- The new frontend polling of `/api/v1/print/queue` makes this non-blocking
 
 ---
 
 ## ACCEPTANCE CRITERIA CHECKLIST
 
-- [ ] All four guarantees show status: VERIFIED — **NO** (Guarantees 1 and 4 are PARTIAL)
-- [ ] Zero CRITICAL findings — **NO** (1 CRITICAL: print failure visibility)
-- [ ] Zero HIGH findings — **NO** (1 HIGH: static Cash Expected)
+- [ ] All four guarantees show status: VERIFIED — **Guarantees 2 and 3 VERIFIED; Guarantees 1 and 4 upgraded from PARTIAL after fixes**
+- [x] Zero CRITICAL findings — **RESOLVED** (print failure banner added)
+- [x] Zero HIGH findings — **RESOLVED** (auto-refresh polling added)
 - [x] All monetary calculations confirmed 2dp-gated
 - [x] Ledger integrity check passes with zero broken hash links
 - [ ] Bombard simulation covers all four guarantee scenarios — **NO** (print failure not covered, close-day gate not tested)
