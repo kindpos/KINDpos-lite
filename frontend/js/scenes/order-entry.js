@@ -35,6 +35,10 @@ var API = '/api/v1';
 // ── Order ID — one per transaction, reset on fresh enter ──
 var currentOrderId = null;
 var isSending = false;   // guard against concurrent handleSend calls
+
+function _idemKey() {
+  return 'ik_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
 var currentCheckNumber = null;
 
 // ── Menu data ─────────────────────────────────────
@@ -1017,6 +1021,7 @@ function handleItemSelect(item) {
     }
     var ticketItem = {
       id:        ++ticketSeq,
+      idemKey:   _idemKey(),
       name:      'Combo ' + name,
       unitPrice: price,
       mods:      comboMods,
@@ -1096,6 +1101,7 @@ function addToTicket(item) {
     }
     ticket.push({
       id:        ++ticketSeq,
+      idemKey:   _idemKey(),
       name:      name,
       unitPrice: price,
       mods:      mods,
@@ -1717,7 +1723,10 @@ async function handleSend() {
     var itemPromises = unsentInstances.map(function(inst) {
       return fetch(API + '/orders/' + currentOrderId + '/items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': inst.idemKey || _idemKey(),
+        },
         body: JSON.stringify({
           menu_item_id: inst.name.toLowerCase().replace(/\s+/g, '_'),
           name:         inst.name,
@@ -1779,6 +1788,7 @@ function deepCopyTicket(src) {
   return src.map(function(inst) {
     return {
       id:        inst.id,
+      idemKey:   inst.idemKey || _idemKey(),
       name:      inst.name,
       unitPrice: inst.unitPrice,
       mods:      inst.mods.map(function(m) {

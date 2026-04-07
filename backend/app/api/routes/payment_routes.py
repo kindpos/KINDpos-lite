@@ -225,6 +225,8 @@ async def process_sale(
     # 3. Process — capture tax at payment time
     order_events = await ledger.get_events_by_correlation(request.order_id)
     order_proj = project_order(order_events)
+    if order_proj and order_proj.is_fully_paid:
+        raise HTTPException(status_code=400, detail="Order is already fully paid")
     order_tax = order_proj.tax if order_proj else 0.0
     result = await manager.initiate_sale(request, tax=order_tax)
 
@@ -282,6 +284,10 @@ async def process_cash_payment(
 
     if order.status in ("closed", "voided"):
         raise HTTPException(status_code=400, detail=f"Cannot pay on {order.status} order")
+
+    # Guard: reject if order is already fully paid (prevents double-charge on rapid taps)
+    if order.is_fully_paid:
+        raise HTTPException(status_code=400, detail="Order is already fully paid")
 
     # Apply cash dual-pricing discount if paying less than order total
     cash_discount = money_round(order.total - request.amount)

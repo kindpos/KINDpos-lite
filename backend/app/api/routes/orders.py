@@ -6,7 +6,7 @@ All mutations go through the Event Ledger.
 """
 
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
@@ -16,6 +16,10 @@ import uuid
 _logger = logging.getLogger("kindpos.orders")
 
 _TWO_DP = Decimal("0.01")
+
+# ── Idempotency gate — prevents duplicate item POSTs on network retry ──
+_seen_idem_keys: set[str] = set()
+_MAX_IDEM_KEYS = 10_000  # rolling cap — evict oldest when full
 
 
 def _validate_2dp(value: float, field_name: str) -> None:
@@ -618,9 +622,24 @@ async def get_order(
 async def add_item(
         order_id: str,
         request: AddItemRequest,
+        http_request: Request = None,
         ledger: EventLedger = Depends(get_ledger),
 ):
     """Add an item to an order."""
+    # ── Idempotency gate ──
+    idem_key = http_request.headers.get("idempotency-key") if http_request else None
+    if idem_key:
+        if idem_key in _seen_idem_keys:
+            _logger.warning("BLOCKED duplicate item POST (idempotency-key=%s)", idem_key)
+            order = await get_order_or_404(ledger, order_id)
+            return OrderResponse.from_order(order)
+        _seen_idem_keys.add(idem_key)
+        if len(_seen_idem_keys) > _MAX_IDEM_KEYS:
+            # Evict ~20% oldest entries
+            to_remove = list(_seen_idem_keys)[:_MAX_IDEM_KEYS // 5]
+            for k in to_remove:
+                _seen_idem_keys.discard(k)
+
     _validate_2dp(request.price, "price")
     if request.modifiers:
         for mod in request.modifiers:
