@@ -378,6 +378,7 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
         newCheckEmpty.style.cssText = 'width:100%;height:100px;display:flex;align-items:center;justify-content:center;border:3px dashed ' + T.mint + ';box-sizing:border-box;cursor:pointer;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';user-select:none;';
         newCheckEmpty.textContent = '+';
         newCheckEmpty.addEventListener('pointerup', function() {
+          clearSceneCache('order-entry');
           push('order-entry', {
             mode: 'service',
             pin: emp.pin,
@@ -431,6 +432,7 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
       newCheckBtn.style.cssText = 'width:100%;height:100px;display:flex;align-items:center;justify-content:center;border:3px dashed ' + T.mint + ';box-sizing:border-box;cursor:pointer;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';user-select:none;';
       newCheckBtn.textContent = '+';
       newCheckBtn.addEventListener('pointerup', function() {
+        clearSceneCache('order-entry');
         push('order-entry', {
           mode: 'service',
           pin: emp.pin,

@@ -328,6 +328,11 @@ registerScene('order-entry', {
   onResume: function() {
     var el = document.querySelector('[data-scene="order-entry"]');
     if (el) el.style.display = 'flex';
+    // Restore correct right panel state
+    if (ticketMode === 'adding') {
+      hideSummaryRightPanel();
+    }
+    rebuildActionBar();
   },
   onExit: function() {
     if (hexNav) { hexNav.destroy(); hexNav = null; }
