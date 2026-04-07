@@ -159,7 +159,7 @@ function buildCardLanding(el, params, sales, labor) {
     },
   });
 
-  var baseParams = { pin: emp.pin, employeeId: emp.id, employeeName: emp.name, role: landingRole, roles: empRoles };
+  var baseParams = { pin: emp.pin, employeeId: emp.id, employeeName: emp.name, role: landingRole, roles: empRoles, compact: true };
 
   // ══════════════════════════════════════════════
   //  LEFT — SHIFT (server) or SALES (manager) Card
@@ -187,42 +187,18 @@ function buildCardLanding(el, params, sales, labor) {
   el.appendChild(leftCol);
 
   // ══════════════════════════════════════════════
-  //  CENTER — Open Tabs (+ Configuration for managers)
+  //  CENTER — Open Tabs (bordered card)
   // ══════════════════════════════════════════════
   var center = document.createElement('div');
-  center.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
+  center.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;border:3px solid ' + T.mint + ';background:' + T.bgDark + ';box-sizing:border-box;';
 
   var tabHeader = document.createElement('div');
-  tabHeader.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.cyan + ';letter-spacing:2px;padding:6px 4px;flex-shrink:0;text-align:center;';
-
-  if (isManager) {
-    // Manager header row: CONFIGURATION button + OPEN TABS + spacer
-    tabHeader.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 4px;flex-shrink:0;';
-
-    var configBtn = buildButton('CONFIGURATION', {
-      fill: T.gold, color: T.bg, fontSize: '20px', fontFamily: T.fh,
-      width: 180, height: 44,
-      onTap: function() { push('settings', { pin: emp.pin }); },
-    });
-    tabHeader.appendChild(configBtn);
-
-    var tabTitle = document.createElement('span');
-    tabTitle.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.cyan + ';letter-spacing:2px;flex:1;text-align:center;';
-    tabTitle.textContent = '// OPEN TABS //';
-    tabHeader.appendChild(tabTitle);
-
-    // Spacer to balance the config button
-    var spacer = document.createElement('div');
-    spacer.style.cssText = 'width:180px;flex-shrink:0;';
-    tabHeader.appendChild(spacer);
-  } else {
-    tabHeader.textContent = '// OPEN TABS //';
-  }
-
+  tabHeader.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.cyan + ';letter-spacing:2px;padding:8px 4px;flex-shrink:0;text-align:center;';
+  tabHeader.textContent = '// OPEN TABS //';
   center.appendChild(tabHeader);
 
   var tabGrid = document.createElement('div');
-  tabGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:4px;overflow-y:auto;flex:1;align-content:start;';
+  tabGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:4px 8px;overflow-y:auto;flex:1;align-content:start;';
 
   var loadingEl = document.createElement('div');
   loadingEl.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:28px;text-align:center;padding:40px 0;';
@@ -230,6 +206,21 @@ function buildCardLanding(el, params, sales, labor) {
   tabGrid.appendChild(loadingEl);
 
   center.appendChild(tabGrid);
+
+  // Manager CONFIGURATION button at bottom center
+  if (isManager) {
+    var configRow = document.createElement('div');
+    configRow.style.cssText = 'flex-shrink:0;display:flex;justify-content:center;padding:6px 4px;';
+
+    var configBtn = buildButton('CONFIGURATION', {
+      fill: T.gold, color: T.bg, fontSize: '20px', fontFamily: T.fh,
+      width: 200, height: 42,
+      onTap: function() { push('settings', { pin: emp.pin }); },
+    });
+    configRow.appendChild(configBtn);
+    center.appendChild(configRow);
+  }
+
   el.appendChild(center);
 
   // ══════════════════════════════════════════════

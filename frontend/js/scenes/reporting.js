@@ -97,21 +97,29 @@ function buildCollapsedView(el, params, sales, labor) {
 // ── LEFT CARD: SALES (manager) or SHIFT (server) ──
 
 function buildLeftCard(params, sales, labor) {
+  var compact = params.compact;
+  var titleFs = compact ? '44px' : '75px';
+  var kpiFs = compact ? '24px' : '40px';
+  var subFs = compact ? '18px' : T.fsBtn;
+  var btnFs = compact ? '18px' : T.fsSmall;
+  var pad = compact ? '10px 12px' : '16px 20px';
+  var btnPad = compact ? '3px 8px' : '4px 10px';
+
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;box-sizing:border-box;overflow:hidden;';
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:' + pad + ';box-sizing:border-box;overflow:hidden;';
 
   var s = sales;
 
   if (params.role === 'manager') {
     // SALES card — title + numbers both gold (title color)
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:75px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + titleFs + ';font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:4px;';
     title.textContent = 'SALES';
     card.appendChild(title);
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Net: <span style="color:' + g + '">' + (s ? fmt(s.net_sales) : '--') + '</span></div>' +
       '<div>Checks: <span style="color:' + g + '">' + (s ? s.total_checks : '--') + '</span></div>' +
@@ -124,34 +132,34 @@ function buildLeftCard(params, sales, labor) {
       var cashPct = total > 0 ? (s.cash_total / total * 100).toFixed(0) : 0;
       var cardPct = total > 0 ? (s.card_total / total * 100).toFixed(0) : 0;
       var breakdown = document.createElement('div');
-      breakdown.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';';
+      breakdown.style.cssText = 'margin-top:4px;font-family:' + T.fb + ';font-size:' + subFs + ';color:' + T.mint + ';';
       breakdown.innerHTML =
         '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">' +
           '<span>Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></span>' +
           '<span>Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></span>' +
         '</div>' +
-        '<div style="display:flex;height:16px;background:' + T.bg + ';">' +
+        '<div style="display:flex;height:' + (compact ? '10' : '16') + 'px;background:' + T.bg + ';">' +
           '<div style="width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.8;"></div>' +
           '<div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.8;"></div>' +
         '</div>';
       card.appendChild(breakdown);
     } else {
       var fallback = document.createElement('div');
-      fallback.style.cssText = 'margin-top:6px;font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';';
+      fallback.style.cssText = 'margin-top:4px;font-family:' + T.fb + ';font-size:' + subFs + ';color:' + T.mint + ';';
       fallback.textContent = 'Cash: --   Card: --';
       card.appendChild(fallback);
     }
 
     // Close Day + Tip Adjustment buttons + active checks
     var btnArea = document.createElement('div');
-    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
+    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:' + (compact ? '3' : '4') + 'px;';
 
     var detailBtn = buildStyledButton(T.darkBtn);
     detailBtn.inner.textContent = 'Sales Detail';
     detailBtn.inner.style.fontFamily = T.fh;
-    detailBtn.inner.style.fontSize = T.fsSmall;
+    detailBtn.inner.style.fontSize = btnFs;
     detailBtn.inner.style.color = T.mint;
-    detailBtn.inner.style.padding = '4px 10px';
+    detailBtn.inner.style.padding = btnPad;
     detailBtn.wrap.style.alignSelf = 'stretch';
     detailBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
@@ -162,9 +170,9 @@ function buildLeftCard(params, sales, labor) {
     var closeDayBtn = buildStyledButton(T.red);
     closeDayBtn.inner.textContent = 'Close Day';
     closeDayBtn.inner.style.fontFamily = T.fh;
-    closeDayBtn.inner.style.fontSize = T.fsSmall;
+    closeDayBtn.inner.style.fontSize = btnFs;
     closeDayBtn.inner.style.color = '#fff';
-    closeDayBtn.inner.style.padding = '4px 10px';
+    closeDayBtn.inner.style.padding = btnPad;
     closeDayBtn.wrap.style.alignSelf = 'stretch';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
@@ -175,9 +183,9 @@ function buildLeftCard(params, sales, labor) {
     var tipAdjBtn = buildStyledButton(T.gold);
     tipAdjBtn.inner.textContent = 'Tip Adjustment';
     tipAdjBtn.inner.style.fontFamily = T.fh;
-    tipAdjBtn.inner.style.fontSize = T.fsSmall;
+    tipAdjBtn.inner.style.fontSize = btnFs;
     tipAdjBtn.inner.style.color = T.bgDark;
-    tipAdjBtn.inner.style.padding = '4px 10px';
+    tipAdjBtn.inner.style.padding = btnPad;
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
@@ -186,7 +194,7 @@ function buildLeftCard(params, sales, labor) {
     btnArea.appendChild(tipAdjBtn.wrap);
 
     var activeChecks = document.createElement('div');
-    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + btnFs + ';color:' + T.mint + ';text-align:center;';
     var checkCount = s ? s.total_checks : 0;
     activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
     btnArea.appendChild(activeChecks);
@@ -195,30 +203,31 @@ function buildLeftCard(params, sales, labor) {
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:75px;font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:6px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + titleFs + ';font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:4px;';
     title.textContent = 'SHIFT';
     card.appendChild(title);
 
     var g = T.gold;
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';';
     kpis.innerHTML =
       '<div>Guests: <span style="color:' + g + '">' + (s ? (s.total_guests || '--') : '--') + '</span></div>' +
       '<div>Tables: <span style="color:' + g + '">' + (s ? (s.total_tables || '--') : '--') + '</span></div>' +
       '<div>Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>' +
-      '<div style="margin-top:4px;font-size:40px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span> / Out: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
+      '<div style="margin-top:2px;font-size:' + kpiFs + '">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span></div>' +
+      '<div style="font-size:' + kpiFs + '">Out: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
     card.appendChild(kpis);
 
     // Checkout + Tip Adjustment buttons + active checks
     var btnArea = document.createElement('div');
-    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
+    btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:' + (compact ? '3' : '4') + 'px;';
 
     var checkoutBtn = buildStyledButton('#33ff99');
     checkoutBtn.inner.textContent = 'Checkout';
     checkoutBtn.inner.style.fontFamily = T.fh;
-    checkoutBtn.inner.style.fontSize = T.fsSmall;
+    checkoutBtn.inner.style.fontSize = btnFs;
     checkoutBtn.inner.style.color = T.bgDark;
-    checkoutBtn.inner.style.padding = '4px 10px';
+    checkoutBtn.inner.style.padding = btnPad;
     checkoutBtn.wrap.style.alignSelf = 'stretch';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
@@ -229,9 +238,9 @@ function buildLeftCard(params, sales, labor) {
     var tipAdjBtn = buildStyledButton(T.gold);
     tipAdjBtn.inner.textContent = 'Tip Adjustment';
     tipAdjBtn.inner.style.fontFamily = T.fh;
-    tipAdjBtn.inner.style.fontSize = T.fsSmall;
+    tipAdjBtn.inner.style.fontSize = btnFs;
     tipAdjBtn.inner.style.color = T.bgDark;
-    tipAdjBtn.inner.style.padding = '4px 10px';
+    tipAdjBtn.inner.style.padding = btnPad;
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
@@ -240,7 +249,7 @@ function buildLeftCard(params, sales, labor) {
     btnArea.appendChild(tipAdjBtn.wrap);
 
     var activeChecks = document.createElement('div');
-    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + btnFs + ';color:' + T.mint + ';text-align:center;';
     var checkCount = s ? s.total_checks : 0;
     activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
     btnArea.appendChild(activeChecks);
@@ -253,9 +262,10 @@ function buildLeftCard(params, sales, labor) {
 
 // ── RIGHT CARD: LABOR (manager) or HOURS (server) ──
 
-function buildVerticalRail(text, color) {
+function buildVerticalRail(text, color, compact) {
+  var fs = compact ? '44px' : '75px';
   var rail = document.createElement('div');
-  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:75px;font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:10px;';
+  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:' + fs + ';font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:' + (compact ? '6' : '10') + 'px;';
   for (var i = 0; i < text.length; i++) {
     var ch = document.createElement('div');
     ch.style.cssText = 'line-height:1;';
@@ -266,18 +276,23 @@ function buildVerticalRail(text, color) {
 }
 
 function buildRightCard(params, sales, labor) {
+  var compact = params.compact;
+  var kpiFs = compact ? '24px' : '40px';
+  var subFs = compact ? '18px' : T.fsBtn;
+  var pad = compact ? '10px 12px' : '16px 20px';
+
   var card = document.createElement('div');
-  card.style.cssText = 'display:flex;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:16px 20px;gap:10px;box-sizing:border-box;overflow:hidden;';
+  card.style.cssText = 'display:flex;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:' + pad + ';gap:' + (compact ? '6' : '10') + 'px;box-sizing:border-box;overflow:hidden;';
 
   var l = labor;
 
   if (params.role === 'manager') {
     // LABOR card — numbers in #33ff99 (title color), money in gold
     var lc = '#33ff99';
-    card.appendChild(buildVerticalRail('LABOR', lc));
+    card.appendChild(buildVerticalRail('LABOR', lc, compact));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l && l.ot_alerts && l.ot_alerts.length > 0) {
@@ -290,15 +305,15 @@ function buildRightCard(params, sales, labor) {
       '<div>Hrs: <span style="color:' + lc + '">' + (l ? l.total_hours : '--') + '</span></div>' +
       '<div>Tips: <span style="color:' + T.gold + '">' + (l ? fmt(l.tip_pool) : '--') + '</span></div>' +
       '<div>COB: <span style="color:' + lc + '">' + (l ? l.cob_percent + '%' : '--') + '</span></div>' +
-      '<div style="margin-top:4px;font-size:' + T.fsBtn + '">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:2px;font-size:' + subFs + '">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   } else {
     // HOURS card — numbers in #33ff99 (same as LABOR), money in gold
     var hc = '#33ff99';
-    card.appendChild(buildVerticalRail('HOURS', hc));
+    card.appendChild(buildVerticalRail('HOURS', hc, compact));
 
     var kpis = document.createElement('div');
-    kpis.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';justify-content:center;';
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';justify-content:center;';
 
     var otAlert = '--';
     if (l) {
@@ -312,7 +327,7 @@ function buildRightCard(params, sales, labor) {
       '<div>Out: <span style="color:' + hc + '">' + (l ? (l.clock_out || 'active') : '--') + '</span></div>'  +
       '<div>Today: <span style="color:' + hc + '">' + (l ? l.today_hours + 'h' : '--') + '</span></div>' +
       '<div>Week: <span style="color:' + hc + '">' + (l ? l.weekly_hours + 'h' : '--') + '</span></div>' +
-      '<div style="margin-top:4px;font-size:' + T.fsBtn + '">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+      '<div style="margin-top:2px;font-size:' + subFs + '">OT Alert: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
     card.appendChild(kpis);
   }
 
