@@ -312,8 +312,8 @@ registerScene('order-entry', {
       'box-sizing:border-box;',
     ].join('');
 
-    var ticketPanel = buildTicket(el);
     var mainArea    = buildMain(el, params);
+    var ticketPanel = buildTicket(el);
     el.appendChild(ticketPanel);
     el.appendChild(mainArea);
 
