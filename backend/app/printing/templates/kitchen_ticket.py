@@ -92,7 +92,7 @@ class KitchenTicketTemplate(BaseTemplate):
             if table:
                 cmds.append({
                     'type': 'text', 'content': f"TABLE {table}",
-                    'bold': True, 'double_width': True, 'double_height': True, 'align': 'center',
+                    'bold': True, 'double_width': True, 'align': 'center',
                 })
             cmds.append({
                 'type': 'text', 'content': 'DINE IN',
@@ -101,7 +101,7 @@ class KitchenTicketTemplate(BaseTemplate):
         elif order_type in ('to_go', 'togo', 'takeout'):
             cmds.append({
                 'type': 'text', 'content': 'TOGO',
-                'bold': True, 'double_width': True, 'double_height': True, 'align': 'center',
+                'bold': True, 'double_width': True, 'align': 'center',
             })
             if customer_name:
                 cmds.append({
@@ -111,7 +111,7 @@ class KitchenTicketTemplate(BaseTemplate):
         elif order_type == 'delivery':
             cmds.append({
                 'type': 'text', 'content': 'DELIVERY',
-                'bold': True, 'double_width': True, 'double_height': True, 'align': 'center',
+                'bold': True, 'double_width': True, 'align': 'center',
             })
             if customer_name:
                 cmds.append({
@@ -121,7 +121,7 @@ class KitchenTicketTemplate(BaseTemplate):
         elif order_type == 'bar_tab':
             cmds.append({
                 'type': 'text', 'content': 'BAR TAB',
-                'bold': True, 'double_width': True, 'double_height': True, 'align': 'center',
+                'bold': True, 'double_width': True, 'align': 'center',
             })
             if customer_name:
                 cmds.append({
@@ -132,7 +132,7 @@ class KitchenTicketTemplate(BaseTemplate):
             display = ctx.get('order_type_display', order_type).upper()
             cmds.append({
                 'type': 'text', 'content': display,
-                'bold': True, 'double_width': True, 'double_height': True, 'align': 'center',
+                'bold': True, 'double_width': True, 'align': 'center',
             })
             if customer_name:
                 cmds.append({
@@ -232,7 +232,7 @@ class KitchenTicketTemplate(BaseTemplate):
             # so the item clearly stands out above its LEFT/RIGHT table.
             has_halves = has_half_modifiers(modifiers)
             cmds.append({'type': 'text', 'content': item_line, 'bold': True,
-                         'double_height': has_halves, 'double_width': has_halves})
+                         'double_width': has_halves})
 
             # Modifiers — half-placement split or flat
             if has_halves:
