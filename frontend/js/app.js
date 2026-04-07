@@ -19,6 +19,7 @@ import './scenes/reporting.js';
 import './scenes/server-checkout.js';
 import './scenes/close-day.js';
 import './scenes/sales-summary.js';
+import './scenes/landing.js';
 
 window._push = push;
 // ── Header state ──────────────────────────────────

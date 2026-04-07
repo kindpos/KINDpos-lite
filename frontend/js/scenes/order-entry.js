@@ -6,7 +6,7 @@
 
 import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
+import { registerScene, push, pop, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
@@ -1467,7 +1467,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
                 currentOrderId = null;
                 currentCheckNumber = null;
                 clearSceneCache('order-entry');
-                replace('login');
+                pop();
               }).catch(function(err) {
                 console.error('[KINDpos] Void API error:', err);
                 showToast('Void failed — check connection');
@@ -1481,7 +1481,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
               currentOrderId = null;
               currentCheckNumber = null;
               clearSceneCache('order-entry');
-              replace('login');
+              pop();
             } else {
               // Individual item void — send void ticket to kitchen if any were already sent
               var hadSent = targets.some(function(t) { return t.sent; });
@@ -1827,7 +1827,7 @@ function handleClose() {
     showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
   }
   clearSceneCache('order-entry');
-  replace('login');
+  pop();
 }
 
 // ── SAVE ─────────────────────────────────────────
