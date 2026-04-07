@@ -541,8 +541,8 @@ function buildMain(parentEl, params) {
   bottom.style.cssText = [
     'display:grid;',
     'grid-template-columns:1fr 1fr 1fr 1fr 1fr;',
-    'grid-template-rows:auto auto;',
-    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;row-gap:16px;',
+    'grid-template-rows:auto;',
+    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;',
     'position:relative;z-index:2;',
     'margin-top:-' + OVERLAP + 'px;',
   ].join('');
@@ -631,8 +631,18 @@ function rebuildBottomBar(params) {
     return;
   }
 
-  // ── Row 1: ADD ITEMS tab + optional MODIFY button ──
+  // ── SEND button (shared across idle and selection states) ──
+  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
+  var sendLabel = allSent ? 'RESEND' : 'SEND';
+  var send = buildButton(sendLabel, { fill: T.goGreen, color: T.bg, fontSize: '26px', fontFamily: T.fh,
+    onTap: function() { handleSend(); },
+  });
+  send.style.gridColumn = '5';
+  send.style.gridRow = '1';
+  send.style.height = '100%';
+
   if (hasSelection && !modifierSession.active) {
+    // State B: Items Selected — ADD ITEMS + MODIFY + SEND
     var addBtn = buildButton('ADD ITEMS', {
       fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
       onTap: function() { clearModifierSelection(); },
@@ -641,18 +651,17 @@ function rebuildBottomBar(params) {
     addBtn.style.gridRow = '1';
     addBtn.style.height = '100%';
 
-    // State B: Items Selected — show MODIFY
     var modifyBtn = buildButton('MODIFY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
       onTap: function() { openModifierSession(); },
     });
-    modifyBtn.style.gridColumn = '3 / 6';
+    modifyBtn.style.gridColumn = '3 / 5';
     modifyBtn.style.gridRow = '1';
     modifyBtn.style.height = '100%';
 
     _bottomBar.appendChild(addBtn);
     _bottomBar.appendChild(modifyBtn);
   } else {
-    // State A: Idle — ADD ITEMS only (no MODIFY ITEMS tab)
+    // State A: Idle — ADD ITEMS + SEND
     var tabItems = buildButton('ADD ITEMS', {
       fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
     });
@@ -664,44 +673,7 @@ function rebuildBottomBar(params) {
     _bottomBar.appendChild(tabItems);
   }
 
-  // ── Row 2: Action buttons (always present when not in session) ──
-  var disc  = buildButton('DISC', { fill: T.mint, color: T.bgDark, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleDiscount(); },
-  });
-  var voidB = buildButton('VOID', { fill: T.red, color: '#fff', fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleVoid(); },
-  });
-  voidB.id = 'void-btn';
-  var print = buildButton('PRINT', { fill: T.cyan, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() {
-      if (!currentOrderId) return;
-      fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
-        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
-        .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
-    },
-  });
-  var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handlePay(_payParams); },
-  });
-  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
-  var sendLabel = allSent ? 'RESEND' : 'SEND';
-  var send = buildButton(sendLabel, { fill: T.goGreen, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleSend(); },
-  });
-
-  disc.style.gridColumn  = '1'; disc.style.gridRow  = '2'; disc.style.height = '100%';
-  voidB.style.gridColumn = '2'; voidB.style.gridRow = '2'; voidB.style.height = '100%';
-  print.style.gridColumn = '3'; print.style.gridRow = '2'; print.style.height = '100%';
-  pay.style.gridColumn   = '4'; pay.style.gridRow   = '2'; pay.style.height = '100%';
-  send.style.gridColumn  = '5'; send.style.gridRow  = '2'; send.style.height = '100%';
-
-  [disc, voidB, print, pay, send].forEach(function(b) { _bottomBar.appendChild(b); });
-
-  // Update void/delete label
-  var selected = ticket.filter(function(i) { return i.selected; });
-  var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
-  var vInner = voidB.firstElementChild;
-  if (vInner) vInner.textContent = unsentSelected ? 'DELETE' : 'VOID';
+  _bottomBar.appendChild(send);
 }
 
 function clearModifierSelection() {
