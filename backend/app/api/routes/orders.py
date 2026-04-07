@@ -88,6 +88,7 @@ class InlineModifier(BaseModel):
     """Modifier sent inline with an item from the frontend."""
     name: str
     price: float = 0.0
+    modifier_price: float = 0.0
     charged: Optional[bool] = True
 
 

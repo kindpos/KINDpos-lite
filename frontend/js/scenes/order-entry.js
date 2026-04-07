@@ -1712,7 +1712,7 @@ async function handleSend() {
           quantity:     1,
           category:     inst.category || 'general',
           modifiers:    inst.mods.map(function(m) {
-            return { name: m.name, price: m.price, charged: m.charged, prefix: m.prefix || null, half_price: m.half_price != null ? m.half_price : null };
+            return { name: m.name, price: m.price, modifier_price: m.price, charged: m.charged, prefix: m.prefix || null, half_price: m.half_price != null ? m.half_price : null };
           }),
         }),
       });
