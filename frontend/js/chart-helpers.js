@@ -831,8 +831,7 @@ export function drawParetoHBar(svg, data, options) {
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barW, height: barH, fill: fill, stroke: strokeColor, 'stroke-width': '1.5' }));
 
     // Dollar label with glow
-    var glowKey = strokeColor === DATA.pink ? 'pink' : strokeColor === DATA.orange ? 'orange' : 'coral';
-    svg.appendChild(svgEl('text', { x: padLeft + barW + 4, y: y + rowH / 2 + 4, fill: strokeColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'start', filter: GLOW[glowKey] || GLOW.coral })).textContent = '$' + sorted[i].value;
+    svg.appendChild(svgEl('text', { x: padLeft + barW + 4, y: y + rowH / 2 + 4, fill: strokeColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'start', filter: GLOW.coral })).textContent = '$' + sorted[i].value;
 
     // Cumulative %
     cumul += sorted[i].value;
