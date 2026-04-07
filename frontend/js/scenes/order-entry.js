@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, applySunkenStyle, chamfer } from '../tokens.js';
+import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { registerScene, push, pop, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -303,7 +303,6 @@ registerScene('order-entry', {
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _mainArea      = null;
     _ticketPanel   = null;
-    _actionBar     = null;
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -312,8 +311,8 @@ registerScene('order-entry', {
       'box-sizing:border-box;',
     ].join('');
 
-    var mainArea    = buildMain(el, params);
     var ticketPanel = buildTicket(el);
+    var mainArea    = buildMain(el, params);
     el.appendChild(ticketPanel);
     el.appendChild(mainArea);
 
@@ -388,41 +387,17 @@ function buildTicketSummary(panel) {
   checkHdr.textContent = currentCheckNumber || 'NEW ORDER';
   panel.appendChild(checkHdr);
 
-  // Item list — all items grouped by seat (receipt view)
+  // Seat selector
+  var seatBar = document.createElement('div');
+  seatBar.id = 'seat-bar';
+  seatBar.style.cssText = 'display:flex;gap:4px;flex-shrink:0;align-items:center;padding:2px 0;';
+  buildSeatBar(seatBar);
+  panel.appendChild(seatBar);
+
+  // Item list (receipt view)
   var itemList = document.createElement('div');
   itemList.id = 'ticket-list';
   itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
-
-  // Show all items grouped by seat
-  var seatItems = {};
-  for (var s = 1; s <= seatCount; s++) seatItems[s] = [];
-  ticket.forEach(function(inst) {
-    var sn = inst.seat || 1;
-    if (!seatItems[sn]) seatItems[sn] = [];
-    seatItems[sn].push(inst);
-  });
-
-  var seatKeys = Object.keys(seatItems).sort(function(a, b) { return a - b; });
-  // Only show seat headers if multiple seats
-  if (seatCount > 1) {
-    seatKeys.forEach(function(seatKey) {
-      var seatNum = parseInt(seatKey, 10);
-      var items = seatItems[seatKey] || [];
-      if (items.length === 0) return;
-      var seatTotals = computeTotals(seatNum);
-
-      var seatHdr = document.createElement('div');
-      seatHdr.style.cssText = 'display:flex;justify-content:space-between;padding:2px 8px;font-family:' + T.fh + ';font-size:16px;color:' + T.gold + ';flex-shrink:0;margin-top:4px;';
-      seatHdr.innerHTML = '<span>SEAT ' + seatNum + '</span><span>$' + seatTotals.subtotal.toFixed(2) + '</span>';
-      itemList.appendChild(seatHdr);
-
-      renderSeatItems(itemList, items);
-    });
-  } else {
-    var allItems = ticket;
-    renderSeatItems(itemList, allItems);
-  }
-
   panel.appendChild(itemList);
 
   // Summary + Totals
@@ -438,175 +413,149 @@ function buildTicketSummary(panel) {
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
 
-  // Show seat cards + action buttons on the right panel
-  showSummaryRightPanel();
+  // Action buttons grid
+  var actions = document.createElement('div');
+  actions.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;padding:4px 0;';
 
-  // Update totals
-  var totals = computeTotals();
-  var subEl  = document.getElementById('ticket-subtotal');
-  var taxEl  = document.getElementById('ticket-tax');
-  var totEl  = document.getElementById('ticket-total');
-  var cashEl = document.getElementById('ticket-cash');
-  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
-  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
-  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
-  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
-}
+  var hasSelection = modifierSession.selectedItems.length > 0;
 
-function showSummaryRightPanel() {
-  if (_tabCanvas) _tabCanvas.style.display = 'none';
-  var gridPanel = document.getElementById('seat-grid-panel');
-  if (gridPanel) {
-    gridPanel.innerHTML = '';
-    gridPanel.style.display = '';
-    buildSeatCardGrid(gridPanel);
-  }
-  rebuildActionBar();
-}
+  if (modifierSession.active) {
+    // Modifier session active — UNDO + FINALIZE
+    var undoBtn = buildButton('UNDO', {
+      fill: T.darkBtn, color: T.red, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { undoLastMod(); renderTicket(); },
+    });
+    actions.appendChild(undoBtn);
 
-function hideSummaryRightPanel() {
-  var gridPanel = document.getElementById('seat-grid-panel');
-  if (gridPanel) gridPanel.style.display = 'none';
-  if (_tabCanvas) _tabCanvas.style.display = '';
-  rebuildActionBar();
-}
+    var finalizeBtn = buildButton('FINALIZE', {
+      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { finalizeSession(); },
+    });
+    actions.appendChild(finalizeBtn);
 
-function buildSeatCardGrid(container) {
-  var BEVEL = 4;
-  var CHAM = 8;
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.red, color: '#fff', fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { cancelSession(); },
+    });
+    cancelBtn.style.gridColumn = '1 / -1';
+    actions.appendChild(cancelBtn);
+  } else if (hasSelection) {
+    // Items selected — MODIFY + DESELECT
+    var modifyBtn = buildButton('MODIFY', {
+      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { openModifierSession(); },
+    });
+    actions.appendChild(modifyBtn);
 
-  for (var s = 1; s <= seatCount; s++) {
-    (function(seatNum) {
-      var items = ticket.filter(function(i) { return i.seat === seatNum; });
-      var seatTotals = computeTotals(seatNum);
-      var hasUnsent = items.some(function(i) { return !i.sent; });
-      var allSent = items.length > 0 && items.every(function(i) { return i.sent; });
+    var deselectBtn = buildButton('DESELECT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { clearModifierSelection(); },
+    });
+    actions.appendChild(deselectBtn);
 
-      var pair = buildStyledButton(T.darkBtn);
-      var wrap = pair.wrap;
-      var inner = pair.inner;
-
-      inner.style.borderWidth = BEVEL + 'px';
-      inner.style.clipPath = chamfer(CHAM);
-      inner.style.flexDirection = 'column';
-      inner.style.alignItems = 'stretch';
-      inner.style.justifyContent = 'flex-start';
-      inner.style.padding = '6px 8px';
-      inner.style.position = 'relative';
-      inner.style.gap = '1px';
-      wrap.style.flexShrink = '0';
-
-      // Title
-      var title = document.createElement('div');
-      title.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';font-weight:bold;text-align:center;';
-      title.textContent = 'SEAT ' + seatNum;
-      inner.appendChild(title);
-
-      // Divider
-      var hr = document.createElement('div');
-      hr.style.cssText = 'height:1px;background:' + T.border + ';margin:3px 0;';
-      inner.appendChild(hr);
-
-      // Hero — subtotal
-      var hero = document.createElement('div');
-      hero.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.gold + ';font-weight:bold;text-align:center;padding:2px 0;';
-      hero.textContent = '$' + seatTotals.subtotal.toFixed(2);
-      inner.appendChild(hero);
-
-      // Subtitle — item count
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';text-align:center;';
-      sub.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
-      inner.appendChild(sub);
-
-      // Hint
-      var hint = document.createElement('div');
-      hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';text-align:center;margin-top:1px;';
-      hint.textContent = '\u25b8';
-      inner.appendChild(hint);
-
-      // Status dot
-      var dotColor = hasUnsent ? T.gold : (allSent ? T.goGreen : T.cyan);
-      var dot = document.createElement('div');
-      dot.style.cssText = 'position:absolute;bottom:6px;right:6px;width:8px;height:8px;clip-path:circle(50%);background:' + dotColor + ';opacity:' + (items.length > 0 ? '1' : '0.4') + ';';
-      inner.appendChild(dot);
-
-      wrap.addEventListener('pointerup', function() {
-        // If items are selected, transfer them to this seat
-        if (modifierSession.selectedItems.length > 0) {
-          modifierSession.selectedItems.forEach(function(itemId) {
-            var inst = ticket.find(function(t) { return t.id === itemId; });
-            if (inst) inst.seat = seatNum;
-          });
-          modifierSession.selectedItems = [];
-          ticket.forEach(function(t) { t.selected = false; });
-          rebuildTicketPanel();
-          return;
-        }
-        // Otherwise drill into this seat
-        activeSeat = seatNum;
+    var addItemBtn = buildButton('ADD ITEM', {
+      fill: T.mint, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() {
+        ticketMode = 'adding';
         rebuildTicketPanel();
-      });
+        renderTicket();
+      },
+    });
+    addItemBtn.style.gridColumn = '1 / -1';
+    actions.appendChild(addItemBtn);
+  } else {
+    // Idle — full action set
+    var addItemBtn = buildButton('ADD ITEM', {
+      fill: T.mint, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() {
+        ticketMode = 'adding';
+        rebuildTicketPanel();
+        renderTicket();
+      },
+    });
+    addItemBtn.style.gridColumn = '1 / -1';
+    actions.appendChild(addItemBtn);
 
-      container.appendChild(wrap);
-    })(s);
+    var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
+    var sendLabel = allSent ? 'RESEND' : 'SEND';
+    var hasUnsent = ticket.some(function(i) { return !i.sent; });
+
+    if (hasUnsent) {
+      var sendBtn = buildButton(sendLabel, {
+        fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+        onTap: function() { handleSend(); },
+      });
+      sendBtn.style.gridColumn = '1 / -1';
+      actions.appendChild(sendBtn);
+    }
+
+    var payBtn = buildButton('PAY', {
+      fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { handlePay(_payParams); },
+    });
+    actions.appendChild(payBtn);
+
+    var printBtn = buildButton('PRINT', {
+      fill: T.cyan, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() {
+        if (!currentOrderId) return;
+        fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
+          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+          .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
+      },
+    });
+    actions.appendChild(printBtn);
+
+    var discBtn = buildButton('DISC', {
+      fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { handleDiscount(); },
+    });
+    actions.appendChild(discBtn);
+
+    var voidBtn = buildButton('VOID', {
+      fill: T.red, color: '#fff', fontSize: '20px', fontFamily: T.fh, height: 38,
+      onTap: function() { handleVoid(); },
+    });
+    actions.appendChild(voidBtn);
+
+    // SAVE / RECALL
+    saveBtn = buildButton('SAVE', {
+      fill: T.darkBtn, color: T.mint, fontSize: '20px', height: 38, fontFamily: T.fh,
+      onTap: function() { handleSave(); },
+    });
+    actions.appendChild(saveBtn);
+
+    var recallBtnEl = buildButton('RECALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '20px', height: 38, fontFamily: T.fh,
+      onTap: function() { handleRecall(); },
+    });
+    actions.appendChild(recallBtnEl);
   }
 
-  // "+" add seat card
-  var addPair = buildStyledButton(T.bg);
-  addPair.inner.style.borderWidth = '4px';
-  addPair.inner.style.clipPath = chamfer(8);
-  addPair.inner.style.flexDirection = 'column';
-  addPair.inner.style.alignItems = 'center';
-  addPair.inner.style.justifyContent = 'center';
-  addPair.inner.style.padding = '8px';
-  addPair.inner.style.borderStyle = 'dashed';
-  addPair.wrap.style.flexShrink = '0';
+  panel.appendChild(actions);
 
-  var addLabel = document.createElement('div');
-  addLabel.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';';
-  addLabel.textContent = '+';
-  addPair.inner.appendChild(addLabel);
-
-  var addSub = document.createElement('div');
-  addSub.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
-  addSub.textContent = 'Add Seat';
-  addPair.inner.appendChild(addSub);
-
-  addPair.wrap.addEventListener('pointerup', function() {
-    seatCount++;
-    activeSeat = seatCount;
-    rebuildTicketPanel();
-  });
-  container.appendChild(addPair.wrap);
+  // Render items
+  renderTicket();
 }
-
 
 function buildTicketAdding(panel) {
-  // Restore hex canvas (hide seat grid)
-  hideSummaryRightPanel();
-
-  var isFreshOrder = !currentOrderId && !ticket.some(function(i) { return i.sent; });
-  var hasCheckToReturn = currentOrderId || ticket.some(function(i) { return i.sent; });
-
-  // Header
+  // Header with back arrow
   var hdr = document.createElement('div');
   hdr.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;padding:4px 0;';
 
-  if (hasCheckToReturn) {
-    var backBtn = document.createElement('div');
-    backBtn.style.cssText = 'cursor:pointer;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';padding:0 4px;';
-    backBtn.textContent = '\u25c0';
-    backBtn.addEventListener('pointerup', function() {
-      ticketMode = 'summary';
-      rebuildTicketPanel();
-    });
-    hdr.appendChild(backBtn);
-  }
+  var backBtn = document.createElement('div');
+  backBtn.style.cssText = 'cursor:pointer;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';padding:0 4px;';
+  backBtn.textContent = '\u25c0';
+  backBtn.addEventListener('pointerup', function() {
+    ticketMode = 'summary';
+    rebuildTicketPanel();
+    renderTicket();
+  });
+  hdr.appendChild(backBtn);
 
   var hdrLabel = document.createElement('div');
   hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + T.cyan + ';letter-spacing:2px;';
-  hdrLabel.textContent = isFreshOrder ? 'NEW ORDER' : 'ADD ITEMS — SEAT ' + (activeSeat || 1);
+  hdrLabel.textContent = 'ADD ITEMS — SEAT ' + (activeSeat || 1);
   hdr.appendChild(hdrLabel);
   panel.appendChild(hdr);
 
@@ -629,9 +578,39 @@ function buildTicketAdding(panel) {
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
 
+  // SEND + DONE buttons
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;padding:4px 0;';
+
+  var doneBtn = buildButton('\u25c0 BACK', {
+    fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh, height: 38,
+    onTap: function() {
+      ticketMode = 'summary';
+      rebuildTicketPanel();
+      renderTicket();
+    },
+  });
+  btnRow.appendChild(doneBtn);
+
+  var sendBtn = buildButton('SEND', {
+    fill: T.goGreen, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
+    onTap: function() {
+      handleSend().then(function() {
+        ticketMode = 'summary';
+        rebuildTicketPanel();
+        renderTicket();
+      }).catch(function() {
+        // stay in adding mode on failure
+        renderTicket();
+      });
+    },
+  });
+  btnRow.appendChild(sendBtn);
+
+  panel.appendChild(btnRow);
+
   // Render unsent items only
   renderTicket();
-  rebuildActionBar();
 }
 
 function buildSummaryRow(label, value, id) {
@@ -810,14 +789,11 @@ function buildPrefixCard() {
 }
 
 // ── MAIN AREA ─────────────────────────────────────
-var _actionBar = null;
-
 function buildMain(parentEl, params) {
   var main = document.createElement('div');
-  main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;';
+  main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
   _mainArea = main;
 
-  // Hex canvas — always created, always inits
   var canvas = document.createElement('div');
   canvas.id = 'hex-canvas';
   canvas.style.cssText = [
@@ -825,192 +801,21 @@ function buildMain(parentEl, params) {
     'border:7px solid ' + T.mint + ';',
     'position:relative;overflow:hidden;',
   ].join('');
-  // Hide initially if starting in summary mode
-  if (ticketMode === 'summary') canvas.style.display = 'none';
   main.appendChild(canvas);
-
-  // Seat grid panel — shown in summary mode, hidden in adding mode
-  var seatGrid = document.createElement('div');
-  seatGrid.id = 'seat-grid-panel';
-  seatGrid.style.cssText = 'flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;padding:8px;align-content:start;overflow-y:auto;background:' + T.bg5 + ';border:7px solid ' + T.mint + ';box-sizing:border-box;';
-  if (ticketMode !== 'summary') seatGrid.style.display = 'none';
-  main.appendChild(seatGrid);
-
-  // Action bar below
-  var actionBar = document.createElement('div');
-  actionBar.id = 'action-bar';
-  actionBar.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 0;flex-shrink:0;';
-  _actionBar = actionBar;
-  main.appendChild(actionBar);
 
   // Store refs
   _tabCanvas   = canvas;
   _payParams   = params;
 
-  rebuildActionBar();
-
-  // Always init HexNav — it renders when canvas is shown
   requestAnimationFrame(function() {
-    // Temporarily show canvas so HexNav can measure
-    var wasHidden = canvas.style.display === 'none';
-    if (wasHidden) canvas.style.display = '';
     hexNav = new HexNav(canvas, {
       data: MENU_DATA,
       onSelect: function(item) { handleItemSelect(item); },
       onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
     });
-    if (wasHidden) canvas.style.display = 'none';
   });
 
   return main;
-}
-
-function rebuildActionBar() {
-  if (!_actionBar) return;
-  _actionBar.innerHTML = '';
-  _actionBar.style.gridTemplateColumns = '1fr 1fr';
-
-  var hasSelection = modifierSession.selectedItems.length > 0;
-  var isFreshOrder = !currentOrderId && !ticket.some(function(i) { return i.sent; });
-  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
-  var hasUnsent = ticket.some(function(i) { return !i.sent; });
-
-  if (modifierSession.active) {
-    // Modifier session — UNDO + DONE
-    var undoBtn = buildButton('UNDO', {
-      fill: T.darkBtn, color: T.red, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { undoLastMod(); renderTicket(); },
-    });
-    _actionBar.appendChild(undoBtn);
-
-    var doneBtn = buildButton('DONE', {
-      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { finalizeSession(); },
-    });
-    _actionBar.appendChild(doneBtn);
-  } else if (ticketMode === 'adding') {
-    // Adding mode — MODIFY (if selected) + SEND + PAY (fresh only)
-    var cols = isFreshOrder ? 2 : 1;
-    if (hasSelection) cols++;
-    _actionBar.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-
-    if (hasSelection) {
-      var modifyBtn = buildButton('MODIFY', {
-        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-        onTap: function() { openModifierSession(); },
-      });
-      _actionBar.appendChild(modifyBtn);
-    }
-
-    var sendBtn = buildButton('SEND', {
-      fill: T.goGreen, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() {
-        handleSend().then(function() {
-          ticketMode = 'summary';
-          rebuildTicketPanel();
-          rebuildActionBar();
-        }).catch(function() {
-          renderTicket();
-        });
-      },
-    });
-    _actionBar.appendChild(sendBtn);
-
-    if (isFreshOrder) {
-      var payBtn = buildButton('PAY', {
-        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-        onTap: function() { handlePay(_payParams); },
-      });
-      _actionBar.appendChild(payBtn);
-    }
-  } else if (hasSelection) {
-    // Summary mode with selection — MODIFY + DESELECT
-    var modifyBtn = buildButton('MODIFY', {
-      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { openModifierSession(); },
-    });
-    _actionBar.appendChild(modifyBtn);
-
-    var deselectBtn = buildButton('DESELECT', {
-      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { clearModifierSelection(); },
-    });
-    _actionBar.appendChild(deselectBtn);
-  } else {
-    // Summary mode — multi-row action bar matching mockup
-    _actionBar.style.gridTemplateColumns = '2fr 1fr 1fr';
-    _actionBar.style.gridTemplateRows = 'auto auto';
-
-    // Row 1: SEND (tall) | HOLD/FIRE stack | ADD ITEM
-    var sendBtn = buildButton(hasUnsent ? 'SEND' : 'RESEND', {
-      fill: T.goGreen, color: T.bgDark, fontSize: '26px', fontFamily: T.fh, height: 80,
-      onTap: function() {
-        handleSend().then(function() { rebuildTicketPanel(); });
-      },
-    });
-    sendBtn.style.gridRow = '1';
-    _actionBar.appendChild(sendBtn);
-
-    // HOLD / FIRE stacked
-    var holdFireWrap = document.createElement('div');
-    holdFireWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;grid-row:1;';
-    var holdBtn = buildButton('HOLD', {
-      fill: T.cyan, color: T.bgDark, fontSize: '18px', fontFamily: T.fh, height: 38,
-    });
-    var fireBtn = buildButton('FIRE', {
-      fill: T.red, color: '#fff', fontSize: '18px', fontFamily: T.fh, height: 38,
-    });
-    holdFireWrap.appendChild(holdBtn);
-    holdFireWrap.appendChild(fireBtn);
-    _actionBar.appendChild(holdFireWrap);
-
-    var addItemBtn = buildButton('ADD ITEM', {
-      fill: T.mint, color: T.bgDark, fontSize: '18px', fontFamily: T.fh, height: 80,
-      onTap: function() {
-        ticketMode = 'adding';
-        rebuildTicketPanel();
-      },
-    });
-    addItemBtn.style.gridRow = '1';
-    _actionBar.appendChild(addItemBtn);
-
-    // Row 2: PAY | PRINT | VOID | DISC
-    _actionBar.style.gridTemplateColumns = '2fr 1fr 1fr';
-
-    var row2 = document.createElement('div');
-    row2.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;';
-
-    var payBtn = buildButton('PAY', {
-      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { handlePay(_payParams); },
-    });
-    row2.appendChild(payBtn);
-
-    var printBtn = buildButton('PRINT', {
-      fill: T.cyan, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() {
-        if (!currentOrderId) return;
-        fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
-          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
-          .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
-      },
-    });
-    row2.appendChild(printBtn);
-
-    var voidBtn = buildButton('VOID', {
-      fill: T.red, color: '#fff', fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { handleVoid(); },
-    });
-    row2.appendChild(voidBtn);
-
-    var discBtn = buildButton('DISC', {
-      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { handleDiscount(); },
-    });
-    row2.appendChild(discBtn);
-
-    _actionBar.appendChild(row2);
-  }
 }
 
 // ── BOTTOM BAR (legacy — now handled by ticket panel) ──
@@ -1548,27 +1353,26 @@ function addToTicket(item) {
       name:      name,
       unitPrice: price,
       mods:      mods,
-      selected:  true,
+      selected:  false,
       sent:      false,
       category:  hexNav ? hexNav.getCatId() : null,
       seat:      activeSeat || 1,
     });
-    // Auto-select the new item for immediate modifier access
-    var newId = ticketSeq;
-    modifierSession.selectedItems = [newId];
   }
-  rebuildTicketPanel();
+  renderTicket();
+  rebuildBottomBar();
 }
 
 function renderTicket() {
   var list = document.getElementById('ticket-list');
   if (!list) return;
+  list.innerHTML = '';
 
-  // In adding mode, render unsent items and update staging totals
+  // ── Adding mode: only unsent items for active seat ──
   if (ticketMode === 'adding') {
-    list.innerHTML = '';
     var unsent = ticket.filter(function(i) { return !i.sent && i.seat === (activeSeat || 1); });
     renderSeatItems(list, unsent);
+    // Update totals for unsent staging items
     var stageTotals = { subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 };
     unsent.forEach(function(i) {
       stageTotals.subtotal += i.unitPrice + i.mods.reduce(function(s, m) { return s + m.price; }, 0);
@@ -1587,7 +1391,83 @@ function renderTicket() {
     return;
   }
 
-  // Summary mode rendering is handled by buildTicketSummary directly
+  // ── Summary mode: receipt-style seat groups ────────
+  var seatItems = {};
+  for (var s = 1; s <= seatCount; s++) seatItems[s] = [];
+  ticket.forEach(function(inst) {
+    var sn = inst.seat || 1;
+    if (!seatItems[sn]) seatItems[sn] = [];
+    seatItems[sn].push(inst);
+  });
+
+  var seatsToShow = activeSeat === 0
+    ? Object.keys(seatItems).sort(function(a, b) { return a - b; })
+    : [String(activeSeat)];
+
+  seatsToShow.forEach(function(seatKey) {
+    var seatNum = parseInt(seatKey, 10);
+    var items = seatItems[seatKey] || [];
+    var isSeatActive = activeSeat === seatNum;
+    var seatTotals = computeTotals(seatNum);
+
+    // ── Seat header ────────────────────────────────
+    var seatHdr = document.createElement('div');
+    var hdrBg = isSeatActive ? T.gold : T.bg;
+    var hdrColor = isSeatActive ? T.bgDark : T.mutedText;
+    seatHdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:' + hdrBg + ';cursor:pointer;flex-shrink:0;margin-top:' + (seatKey === seatsToShow[0] ? '0' : '6px') + ';';
+
+    var hdrLabel = document.createElement('span');
+    hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + hdrColor + ';letter-spacing:1px;';
+    hdrLabel.textContent = 'SEAT ' + seatNum;
+
+    var hdrTotal = document.createElement('span');
+    hdrTotal.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + hdrColor + ';';
+    hdrTotal.textContent = '$' + seatTotals.subtotal.toFixed(2) + '  (' + items.length + ')';
+
+    seatHdr.appendChild(hdrLabel);
+    seatHdr.appendChild(hdrTotal);
+    seatHdr.addEventListener('pointerup', function() {
+      // If items are selected and tapping a different seat, transfer them
+      if (modifierSession.selectedItems.length > 0 && seatNum !== activeSeat) {
+        modifierSession.selectedItems.forEach(function(itemId) {
+          var inst = ticket.find(function(t) { return t.id === itemId; });
+          if (inst) inst.seat = seatNum;
+        });
+        modifierSession.selectedItems = [];
+        ticket.forEach(function(t) { t.selected = false; });
+        renderTicket();
+        rebuildBottomBar();
+        return;
+      }
+      // Otherwise toggle seat view
+      activeSeat = (activeSeat === seatNum) ? 0 : seatNum;
+      refreshSeatBar();
+      renderTicket();
+    });
+    list.appendChild(seatHdr);
+
+    // ── Items for this seat ────────────────────────
+    renderSeatItems(list, items);
+
+    // ── Seat subtotal line ─────────────────────────
+    if (items.length > 0 && activeSeat === 0) {
+      var seatSub = document.createElement('div');
+      seatSub.style.cssText = 'display:flex;justify-content:flex-end;padding:2px 8px;font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';flex-shrink:0;';
+      seatSub.textContent = '$' + seatTotals.subtotal.toFixed(2);
+      list.appendChild(seatSub);
+    }
+  });
+
+  // ── Live totals (scoped to active seat or all) ────
+  var totals = computeTotals(activeSeat || undefined);
+  var subEl  = document.getElementById('ticket-subtotal');
+  var taxEl  = document.getElementById('ticket-tax');
+  var totEl  = document.getElementById('ticket-total');
+  var cashEl = document.getElementById('ticket-cash');
+  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
+  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
+  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
+  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
 }
 
 function renderSeatItems(list, items) {
