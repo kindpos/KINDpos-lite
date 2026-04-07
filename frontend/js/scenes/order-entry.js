@@ -6,7 +6,7 @@
 
 import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, push, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
+import { registerScene, push, pop, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
@@ -1426,7 +1426,7 @@ function showVoidReasons(targets, isFullVoid) {
                 currentOrderId = null;
                 currentCheckNumber = null;
                 clearSceneCache('order-entry');
-                replace('login');
+                pop();
               }).catch(function(err) {
                 console.error('[KINDpos] Void API error:', err);
                 showToast('Void failed — check connection');
@@ -1440,7 +1440,7 @@ function showVoidReasons(targets, isFullVoid) {
               currentOrderId = null;
               currentCheckNumber = null;
               clearSceneCache('order-entry');
-              replace('login');
+              pop();
             } else {
               renderTicket();
               rebuildBottomBar();
@@ -1729,6 +1729,26 @@ function deepCopyTicket(src) {
       category:  inst.category || null,
     };
   });
+}
+
+// ── CLOSE (X button) ────────────────────────────
+function handleClose() {
+  var hasSent = ticket.some(function(i) { return i.sent; });
+  if (hasSent && ticket.length > 0) {
+    // Auto-save sent orders to recall so they don't vanish
+    var seq = ++saveSeq;
+    var label = currentCheckNumber || ('CHECK-' + String(seq).padStart(3, '0'));
+    savedTabs.push({
+      id:       seq,
+      checkNum: label,
+      label:    customerName || '',
+      ticket:   deepCopyTicket(ticket),
+      orderId:  currentOrderId,
+    });
+    showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
+  }
+  clearSceneCache('order-entry');
+  pop();
 }
 
 // ── SAVE ─────────────────────────────────────────
