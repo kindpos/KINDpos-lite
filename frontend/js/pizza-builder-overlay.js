@@ -131,7 +131,7 @@ function _buildOverlay(el, sizeItem, builderData) {
   var header = document.createElement('div');
   header.style.cssText = [
     'display:flex;align-items:center;justify-content:space-between;',
-    'padding:6px 12px;',
+    'padding:3px 8px;',
     'background:' + T.bgDark + ';',
     'border-bottom:2px solid ' + T.catColor('PIZZA') + ';',
     'flex-shrink:0;',
@@ -157,7 +157,7 @@ function _buildOverlay(el, sizeItem, builderData) {
 
   // ═══ PREFIX ROW ═══
   var prefixRow = document.createElement('div');
-  prefixRow.style.cssText = 'display:flex;gap:4px;padding:4px 8px;flex-shrink:0;';
+  prefixRow.style.cssText = 'display:flex;gap:4px;padding:2px 4px;flex-shrink:0;';
   var prefixBtns = {};
 
   PREFIXES.forEach(function(p) {
@@ -197,7 +197,7 @@ function _buildOverlay(el, sizeItem, builderData) {
   var placeBar = document.createElement('div');
   placeBar.style.cssText = [
     'display:flex;align-items:center;flex-shrink:0;',
-    'padding:2px 8px;gap:0;',
+    'padding:1px 4px;gap:0;',
   ].join('');
   var placeBtns = {};
   var pizzaColor = T.catColor('PIZZA');
@@ -279,7 +279,7 @@ function _buildOverlay(el, sizeItem, builderData) {
   // ═══ BOTTOM BAR ═══
   var bottomBar = document.createElement('div');
   bottomBar.style.cssText = [
-    'display:flex;gap:6px;padding:6px 8px;flex-shrink:0;',
+    'display:flex;gap:4px;padding:3px 4px;flex-shrink:0;',
     'background:' + T.bgDark + ';',
     'border-top:2px solid ' + T.catColor('PIZZA') + ';',
   ].join('');
@@ -337,7 +337,7 @@ function _buildOverlay(el, sizeItem, builderData) {
     requestAnimationFrame(function() {
       builderNav = new HexNav(hexArea, {
         data: builderData,
-        scale: 0.85,
+        scale: 1.0,
         onSelect: function(item) {
           handleModSelect(item);
         },
