@@ -79,12 +79,6 @@ var PREFIXES = [
   { id: 'sub',     label: 'Sub',     color: T.lavender, textColor: '#1a0030' },
 ];
 
-// ── Placement IDs ────────────────────────────────
-var PLACEMENTS = [
-  { id: '1st-half', label: '1st\n1/2' },
-  { id: 'whole',    label: 'Whole' },
-  { id: '2nd-half', label: '2nd\n1/2' },
-];
 
 /**
  * Show the pizza builder overlay.
@@ -185,46 +179,71 @@ function _buildOverlay(el, sizeItem, builderData) {
     });
   }
 
-  // ═══ MAIN BODY: HexNav (left) + Split Hex (right) ═══
-  var body = document.createElement('div');
-  body.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
-
-  // ── HexNav area ──
-  var hexArea = document.createElement('div');
-  hexArea.style.cssText = [
-    'flex:1;position:relative;overflow:hidden;',
-    'border-right:2px solid ' + T.border + ';',
+  // ═══ PLACEMENT BAR — horizontal selector: < 1st // Whole // 2nd > ═══
+  var placeBar = document.createElement('div');
+  placeBar.style.cssText = [
+    'display:flex;align-items:center;flex-shrink:0;',
+    'padding:2px 8px;gap:0;',
   ].join('');
-  body.appendChild(hexArea);
+  var placeBtns = {};
+  var pizzaColor = T.catColor('PIZZA');
 
-  // ── Placement hex area ──
-  var placeArea = document.createElement('div');
-  placeArea.style.cssText = [
-    'width:260px;flex-shrink:0;display:flex;align-items:center;justify-content:center;',
-    'background:' + T.bg5 + ';',
-  ].join('');
+  var placeSegments = [
+    { id: '1st-half', label: '1st' },
+    { id: 'whole',    label: 'Whole' },
+    { id: '2nd-half', label: '2nd' },
+  ];
 
-  var placeSvg = _buildSplitHex(activePlacement, function(id) {
-    activePlacement = id;
-    // Rebuild the SVG to show new active state
-    placeArea.innerHTML = '';
-    placeSvg = _buildSplitHex(activePlacement, arguments.callee);
-    placeArea.appendChild(placeSvg);
+  placeSegments.forEach(function(seg, i) {
+    if (i > 0) {
+      var divider = document.createElement('div');
+      divider.style.cssText = [
+        'width:2px;height:28px;',
+        'background:' + pizzaColor + ';',
+        'flex-shrink:0;',
+      ].join('');
+      placeBar.appendChild(divider);
+    }
+    var isActive = activePlacement === seg.id;
+    var btn = document.createElement('div');
+    btn.style.cssText = [
+      'flex:1;height:32px;display:flex;align-items:center;justify-content:center;',
+      'font-family:' + T.fh + ';font-size:22px;cursor:pointer;',
+      'background:' + (isActive ? pizzaColor : T.darkBtn) + ';',
+      'color:' + (isActive ? '#1a0a0a' : pizzaColor) + ';',
+      'border-top:2px solid ' + pizzaColor + ';',
+      'border-bottom:2px solid ' + pizzaColor + ';',
+      'transition:background 80ms,color 80ms;',
+    ].join('');
+    // Add left/right border on edges
+    if (i === 0) btn.style.borderLeft = '2px solid ' + pizzaColor;
+    if (i === placeSegments.length - 1) btn.style.borderRight = '2px solid ' + pizzaColor;
+    btn.textContent = seg.label;
+
+    btn.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      activePlacement = seg.id;
+      refreshPlacement();
+    });
+
+    placeBtns[seg.id] = btn;
+    placeBar.appendChild(btn);
   });
+  panel.appendChild(placeBar);
 
-  // We need a stable callback reference for rebuilds
-  var onPlaceTap = function(id) {
-    activePlacement = id;
-    placeArea.innerHTML = '';
-    var newSvg = _buildSplitHex(activePlacement, onPlaceTap);
-    placeArea.appendChild(newSvg);
-  };
-  placeArea.innerHTML = '';
-  placeSvg = _buildSplitHex(activePlacement, onPlaceTap);
-  placeArea.appendChild(placeSvg);
+  function refreshPlacement() {
+    placeSegments.forEach(function(seg) {
+      var btn = placeBtns[seg.id];
+      var isActive = activePlacement === seg.id;
+      btn.style.background = isActive ? pizzaColor : T.darkBtn;
+      btn.style.color = isActive ? '#1a0a0a' : pizzaColor;
+    });
+  }
 
-  body.appendChild(placeArea);
-  panel.appendChild(body);
+  // ═══ MAIN BODY: HexNav ═══
+  var hexArea = document.createElement('div');
+  hexArea.style.cssText = 'flex:1;position:relative;overflow:hidden;';
+  panel.appendChild(hexArea);
 
   // ═══ APPLIED MODS LOG ═══
   var logWrap = document.createElement('div');
@@ -356,108 +375,4 @@ function _buildOverlay(el, sizeItem, builderData) {
     });
     logWrap.scrollTop = logWrap.scrollHeight;
   }
-}
-
-// ═══════════════════════════════════════════════════
-//  Split Hexagon — 3-zone placement selector
-//  Large flat-top hex divided into: 1st 1/2 | Whole | 2nd 1/2
-// ═══════════════════════════════════════════════════
-
-function _buildSplitHex(activePlacement, onTap) {
-  var svgNS = 'http://www.w3.org/2000/svg';
-  var r = 110;
-  var cx = 130;
-  var cy = 120;
-  var sin60 = Math.sqrt(3) / 2;
-  var w = 260;
-  var h = 240;
-
-  var svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-  svg.style.cssText = 'width:240px;height:220px;display:block;touch-action:none;';
-
-  // Hex vertices (flat-top)
-  var v0 = { x: cx + r,     y: cy };                   // right
-  var v1 = { x: cx + r / 2, y: cy + r * sin60 };       // bottom-right
-  var v2 = { x: cx - r / 2, y: cy + r * sin60 };       // bottom-left
-  var v3 = { x: cx - r,     y: cy };                   // left
-  var v4 = { x: cx - r / 2, y: cy - r * sin60 };       // top-left
-  var v5 = { x: cx + r / 2, y: cy - r * sin60 };       // top-right
-
-  // Divider x positions (thirds)
-  var divL = cx - r / 3;
-  var divR = cx + r / 3;
-
-  // Intersection points on top/bottom horizontal edges
-  var topL  = { x: divL, y: cy - r * sin60 };
-  var topR  = { x: divR, y: cy - r * sin60 };
-  var botL  = { x: divL, y: cy + r * sin60 };
-  var botR  = { x: divR, y: cy + r * sin60 };
-
-  // Three zone polygons
-  var leftPoly  = [v3, v4, topL, botL, v2];
-  var centerPoly = [topL, topR, botR, botL];
-  var rightPoly  = [topR, v5, v0, v1, botR];
-
-  var zones = [
-    { id: '1st-half', label: '1/2',   poly: leftPoly },
-    { id: 'whole',    label: 'Whole',  poly: centerPoly },
-    { id: '2nd-half', label: '1/2',   poly: rightPoly },
-  ];
-
-  var pizzaColor = T.catColor('PIZZA');
-  var activeColor = pizzaColor;
-  var inactiveColor = T.bg5;
-  var strokeColor = pizzaColor;
-
-  zones.forEach(function(zone) {
-    var isActive = activePlacement === zone.id;
-    var points = zone.poly.map(function(p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
-
-    var g = document.createElementNS(svgNS, 'g');
-    g.style.cursor = 'pointer';
-
-    var poly = document.createElementNS(svgNS, 'polygon');
-    poly.setAttribute('points', points);
-    poly.setAttribute('fill', isActive ? activeColor : inactiveColor);
-    poly.setAttribute('stroke', strokeColor);
-    poly.setAttribute('stroke-width', '3');
-    g.appendChild(poly);
-
-    // Centroid for label placement
-    var centX = zone.poly.reduce(function(s, p) { return s + p.x; }, 0) / zone.poly.length;
-    var centY = zone.poly.reduce(function(s, p) { return s + p.y; }, 0) / zone.poly.length;
-
-    var text1 = document.createElementNS(svgNS, 'text');
-    text1.setAttribute('x', centX);
-    text1.setAttribute('y', centY);
-    text1.setAttribute('text-anchor', 'middle');
-    text1.setAttribute('dominant-baseline', 'central');
-    text1.setAttribute('font-family', T.fh);
-    text1.setAttribute('font-size', '24');
-    text1.setAttribute('font-weight', 'bold');
-    text1.setAttribute('fill', isActive ? '#1a0a0a' : pizzaColor);
-    text1.setAttribute('pointer-events', 'none');
-    text1.textContent = zone.label;
-    g.appendChild(text1);
-
-    // Tap handler
-    g.addEventListener('pointerup', function() {
-      onTap(zone.id);
-    });
-
-    svg.appendChild(g);
-  });
-
-  // Outer hex outline for clean look
-  var outline = document.createElementNS(svgNS, 'polygon');
-  var allVerts = [v0, v1, v2, v3, v4, v5];
-  outline.setAttribute('points', allVerts.map(function(p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' '));
-  outline.setAttribute('fill', 'none');
-  outline.setAttribute('stroke', strokeColor);
-  outline.setAttribute('stroke-width', '4');
-  outline.setAttribute('pointer-events', 'none');
-  svg.appendChild(outline);
-
-  return svg;
 }
