@@ -388,38 +388,42 @@ function buildTicketSummary(panel) {
   checkHdr.textContent = currentCheckNumber || 'NEW ORDER';
   panel.appendChild(checkHdr);
 
-  // Scrollable content area — seat cards or drilled-down items
-  var content = document.createElement('div');
-  content.id = 'ticket-list';
-  content.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:6px;scrollbar-width:none;-ms-overflow-style:none;';
+  // Item list — all items grouped by seat (receipt view)
+  var itemList = document.createElement('div');
+  itemList.id = 'ticket-list';
+  itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
 
-  if (activeSeat === 0 || seatCount <= 1) {
-    // ── Card grid: one box per seat ──────────────────
-    buildSeatCardGrid(content);
-  } else {
-    // ── Drilled into a seat: show items ──────────────
-    var backRow = document.createElement('div');
-    backRow.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;padding:2px 0;';
-    var backArrow = document.createElement('span');
-    backArrow.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
-    backArrow.textContent = '\u25c0';
-    var backLabel = document.createElement('span');
-    backLabel.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';letter-spacing:1px;';
-    backLabel.textContent = 'SEAT ' + activeSeat;
-    backRow.appendChild(backArrow);
-    backRow.appendChild(backLabel);
-    backRow.addEventListener('pointerup', function() {
-      activeSeat = 0;
-      rebuildTicketPanel();
+  // Show all items grouped by seat
+  var seatItems = {};
+  for (var s = 1; s <= seatCount; s++) seatItems[s] = [];
+  ticket.forEach(function(inst) {
+    var sn = inst.seat || 1;
+    if (!seatItems[sn]) seatItems[sn] = [];
+    seatItems[sn].push(inst);
+  });
+
+  var seatKeys = Object.keys(seatItems).sort(function(a, b) { return a - b; });
+  // Only show seat headers if multiple seats
+  if (seatCount > 1) {
+    seatKeys.forEach(function(seatKey) {
+      var seatNum = parseInt(seatKey, 10);
+      var items = seatItems[seatKey] || [];
+      if (items.length === 0) return;
+      var seatTotals = computeTotals(seatNum);
+
+      var seatHdr = document.createElement('div');
+      seatHdr.style.cssText = 'display:flex;justify-content:space-between;padding:2px 8px;font-family:' + T.fh + ';font-size:16px;color:' + T.gold + ';flex-shrink:0;margin-top:4px;';
+      seatHdr.innerHTML = '<span>SEAT ' + seatNum + '</span><span>$' + seatTotals.subtotal.toFixed(2) + '</span>';
+      itemList.appendChild(seatHdr);
+
+      renderSeatItems(itemList, items);
     });
-    content.appendChild(backRow);
-
-    // Render items for this seat
-    var seatItems = ticket.filter(function(i) { return i.seat === activeSeat; });
-    renderSeatItems(content, seatItems);
+  } else {
+    var allItems = ticket;
+    renderSeatItems(itemList, allItems);
   }
 
-  panel.appendChild(content);
+  panel.appendChild(itemList);
 
   // Summary + Totals
   var summaryTotals = document.createElement('div');
@@ -434,11 +438,11 @@ function buildTicketSummary(panel) {
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
 
-  // Update action bar on the right
-  rebuildActionBar();
+  // Show seat cards + action buttons on the right panel
+  showSummaryRightPanel();
 
   // Update totals
-  var totals = computeTotals(activeSeat || undefined);
+  var totals = computeTotals();
   var subEl  = document.getElementById('ticket-subtotal');
   var taxEl  = document.getElementById('ticket-tax');
   var totEl  = document.getElementById('ticket-total');
@@ -447,6 +451,34 @@ function buildTicketSummary(panel) {
   if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
   if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
   if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
+}
+
+function showSummaryRightPanel() {
+  // Hide hex canvas, show seat card grid in its place
+  if (_tabCanvas) _tabCanvas.style.display = 'none';
+
+  // Remove old seat grid if exists
+  var oldGrid = document.getElementById('seat-grid-panel');
+  if (oldGrid && oldGrid.parentNode) oldGrid.parentNode.removeChild(oldGrid);
+
+  var gridPanel = document.createElement('div');
+  gridPanel.id = 'seat-grid-panel';
+  gridPanel.style.cssText = 'flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;padding:8px;align-content:start;overflow-y:auto;background:' + T.bg5 + ';border:7px solid ' + T.mint + ';box-sizing:border-box;';
+
+  buildSeatCardGrid(gridPanel);
+
+  if (_mainArea && _actionBar) {
+    _mainArea.insertBefore(gridPanel, _actionBar);
+  }
+
+  rebuildActionBar();
+}
+
+function hideSummaryRightPanel() {
+  // Remove seat grid, restore hex canvas
+  var oldGrid = document.getElementById('seat-grid-panel');
+  if (oldGrid && oldGrid.parentNode) oldGrid.parentNode.removeChild(oldGrid);
+  if (_tabCanvas) _tabCanvas.style.display = '';
 }
 
 function buildSeatCardGrid(container) {
@@ -561,6 +593,9 @@ function buildSeatCardGrid(container) {
 
 
 function buildTicketAdding(panel) {
+  // Restore hex canvas (hide seat grid)
+  hideSummaryRightPanel();
+
   var isFreshOrder = !currentOrderId && !ticket.some(function(i) { return i.sent; });
   var hasCheckToReturn = currentOrderId || ticket.some(function(i) { return i.sent; });
 
@@ -897,38 +932,55 @@ function rebuildActionBar() {
     });
     _actionBar.appendChild(deselectBtn);
   } else {
-    // Summary mode — PAY (primary when all sent) + action buttons
-    if (allSent) {
-      var payBtn = buildButton('PAY', {
-        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-        onTap: function() { handlePay(_payParams); },
-      });
-      payBtn.style.gridColumn = '1 / -1';
-      _actionBar.appendChild(payBtn);
-    } else if (hasUnsent) {
-      var sendBtn = buildButton('SEND', {
-        fill: T.goGreen, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-        onTap: function() {
-          handleSend().then(function() { rebuildTicketPanel(); rebuildActionBar(); });
-        },
-      });
-      _actionBar.appendChild(sendBtn);
+    // Summary mode — multi-row action bar matching mockup
+    _actionBar.style.gridTemplateColumns = '2fr 1fr 1fr';
+    _actionBar.style.gridTemplateRows = 'auto auto';
 
-      var payBtn = buildButton('PAY', {
-        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-        onTap: function() { handlePay(_payParams); },
-      });
-      _actionBar.appendChild(payBtn);
-    }
+    // Row 1: SEND (tall) | HOLD/FIRE stack | ADD ITEM
+    var sendBtn = buildButton(hasUnsent ? 'SEND' : 'RESEND', {
+      fill: T.goGreen, color: T.bgDark, fontSize: '26px', fontFamily: T.fh, height: 80,
+      onTap: function() {
+        handleSend().then(function() { rebuildTicketPanel(); });
+      },
+    });
+    sendBtn.style.gridRow = '1';
+    _actionBar.appendChild(sendBtn);
+
+    // HOLD / FIRE stacked
+    var holdFireWrap = document.createElement('div');
+    holdFireWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;grid-row:1;';
+    var holdBtn = buildButton('HOLD', {
+      fill: T.cyan, color: T.bgDark, fontSize: '18px', fontFamily: T.fh, height: 38,
+    });
+    var fireBtn = buildButton('FIRE', {
+      fill: T.red, color: '#fff', fontSize: '18px', fontFamily: T.fh, height: 38,
+    });
+    holdFireWrap.appendChild(holdBtn);
+    holdFireWrap.appendChild(fireBtn);
+    _actionBar.appendChild(holdFireWrap);
 
     var addItemBtn = buildButton('ADD ITEM', {
-      fill: T.mint, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      fill: T.mint, color: T.bgDark, fontSize: '18px', fontFamily: T.fh, height: 80,
       onTap: function() {
         ticketMode = 'adding';
         rebuildTicketPanel();
-        rebuildActionBar();
       },
     });
+    addItemBtn.style.gridRow = '1';
+    _actionBar.appendChild(addItemBtn);
+
+    // Row 2: PAY | PRINT | VOID | DISC
+    _actionBar.style.gridTemplateColumns = '2fr 1fr 1fr';
+
+    var row2 = document.createElement('div');
+    row2.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;';
+
+    var payBtn = buildButton('PAY', {
+      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { handlePay(_payParams); },
+    });
+    row2.appendChild(payBtn);
+
     var printBtn = buildButton('PRINT', {
       fill: T.cyan, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
       onTap: function() {
@@ -938,8 +990,21 @@ function rebuildActionBar() {
           .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
       },
     });
-    _actionBar.appendChild(addItemBtn);
-    _actionBar.appendChild(printBtn);
+    row2.appendChild(printBtn);
+
+    var voidBtn = buildButton('VOID', {
+      fill: T.red, color: '#fff', fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { handleVoid(); },
+    });
+    row2.appendChild(voidBtn);
+
+    var discBtn = buildButton('DISC', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { handleDiscount(); },
+    });
+    row2.appendChild(discBtn);
+
+    _actionBar.appendChild(row2);
   }
 }
 
