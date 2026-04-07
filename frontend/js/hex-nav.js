@@ -8,7 +8,7 @@ import { T } from './tokens.js';
 
 var CAT_R    = 80;
 var SUBCAT_R = 70;
-var ITEM_R   = 48;
+var ITEM_R   = 58;
 var MOD_R    = 40;
 // Gap multipliers per depth — breathing room between hexes
 var GAPS = [1.12, 1.21, 1.19, 1.17, 1.17];
