@@ -228,11 +228,11 @@ class KitchenTicketTemplate(BaseTemplate):
                 prefix = "[VOID] "
             item_line = f"{prefix}{qty}x {name}"
 
-            # Use double-height for items with half-placement so the table
-            # is clearly associated with the item above it.
+            # Use double-width + double-height for items with half-placement
+            # so the item clearly stands out above its LEFT/RIGHT table.
             has_halves = has_half_modifiers(modifiers)
             cmds.append({'type': 'text', 'content': item_line, 'bold': True,
-                         'double_height': has_halves})
+                         'double_height': has_halves, 'double_width': has_halves})
 
             # Modifiers — half-placement split or flat
             if has_halves:
