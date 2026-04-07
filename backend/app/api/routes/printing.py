@@ -1,13 +1,15 @@
+import asyncio
 import json
 import logging
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pathlib import Path
 
 import aiosqlite
 
-from ..dependencies import get_ledger
+from ..dependencies import get_ledger, get_print_dispatcher
 from ...core.event_ledger import EventLedger
 from ...printing.print_queue import PrintJobQueue
 from ...services.print_context_builder import PrintContextBuilder
@@ -219,3 +221,37 @@ async def print_test(template_name: str = Body(..., embed=True), printer_mac: st
         context=context
     )
     return {"status": "test_job_queued", "job_id": job_id}
+
+
+@router.get("/failures/stream")
+async def print_failure_stream():
+    """SSE endpoint that pushes print failure events to the UI in real time.
+
+    The frontend can subscribe with:
+        const es = new EventSource('/api/v1/print/failures/stream');
+        es.onmessage = (e) => showToast(JSON.parse(e.data).error);
+    """
+    dispatcher = get_print_dispatcher()
+    if not dispatcher:
+        raise HTTPException(status_code=503, detail="Print dispatcher not running")
+
+    q = dispatcher.subscribe_failures()
+
+    async def _generate():
+        try:
+            while True:
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=30)
+                    yield f"data: {json.dumps(msg)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            dispatcher.unsubscribe_failures(q)
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )

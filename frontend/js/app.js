@@ -6,20 +6,21 @@
 import { init, push, pop, replace, onBeforeTransition, clearSceneCache } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
 import { hideKeyboard } from './keyboard.js';
+import { showToast } from './components.js';
 
 // Import scenes (self-registering)
-import './scenes/login.js';
-import './scenes/settings.js';
-import './scenes/order-entry.js?v=5';
-import './scenes/receipt-review.js';
-import './scenes/payment.js';
-import './scenes/change-due.js';
-import './scenes/tip-adjustment.js';
-import './scenes/reporting.js';
-import './scenes/server-checkout.js';
-import './scenes/close-day.js';
-import './scenes/sales-summary.js';
-import './scenes/landing.js';
+import './scenes/login.js?v=1';
+import './scenes/settings.js?v=1';
+import './scenes/order-entry.js?v=6';
+import './scenes/receipt-review.js?v=1';
+import './scenes/payment.js?v=1';
+import './scenes/change-due.js?v=1';
+import './scenes/tip-adjustment.js?v=1';
+import './scenes/reporting.js?v=1';
+import './scenes/server-checkout.js?v=1';
+import './scenes/close-day.js?v=1';
+import './scenes/sales-summary.js?v=1';
+import './scenes/landing.js?v=1';
 
 window._push = push;
 // ── Header state ──────────────────────────────────
@@ -86,6 +87,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   updateClock();
   setInterval(updateClock, 30000);
+
+  // ── Print failure SSE listener ───────────────────
+  try {
+    const es = new EventSource('/api/v1/print/failures/stream');
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        const label = data.template_id === 'kitchen_ticket' ? 'Kitchen ticket' : 'Receipt';
+        showToast(label + ' print failed — check printer', { bg: T.red, duration: 5000 });
+      } catch (_) { /* ignore parse errors */ }
+    };
+  } catch (_) { /* SSE not critical */ }
 });
 
 // ── Clock ─────────────────────────────────────────

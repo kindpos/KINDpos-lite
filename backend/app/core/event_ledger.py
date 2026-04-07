@@ -117,8 +117,16 @@ class EventLedger:
             ON events(timestamp)
         """)
         await self._db.execute("""
-            CREATE INDEX IF NOT EXISTS idx_events_synced 
+            CREATE INDEX IF NOT EXISTS idx_events_synced
             ON events(synced) WHERE synced = 0
+        """)
+
+        # Separate sync tracking table — keeps events table immutable
+        await self._db.execute("""
+            CREATE TABLE IF NOT EXISTS sync_ledger (
+                event_id TEXT PRIMARY KEY,
+                synced_at TEXT NOT NULL
+            )
         """)
 
         await self._db.commit()
@@ -469,14 +477,20 @@ class EventLedger:
         return row[0] if row else 0
 
     async def get_unsynced_events(self, limit: int = 100) -> list[Event]:
-        """Get events that haven't been synced to cloud."""
+        """Get events that haven't been synced to cloud.
+
+        Uses the separate sync_ledger table (LEFT JOIN) so that the
+        immutable events table is never UPDATEd.
+        """
         cursor = await self._db.execute(
             """
-            SELECT sequence_number, event_id, timestamp, terminal_id, event_type,
-                   payload, user_id, user_role, correlation_id, previous_checksum, checksum, idempotency_key
-            FROM events 
-            WHERE synced = 0
-            ORDER BY sequence_number ASC
+            SELECT e.sequence_number, e.event_id, e.timestamp, e.terminal_id, e.event_type,
+                   e.payload, e.user_id, e.user_role, e.correlation_id,
+                   e.previous_checksum, e.checksum, e.idempotency_key
+            FROM events e
+            LEFT JOIN sync_ledger s ON e.event_id = s.event_id
+            WHERE s.event_id IS NULL
+            ORDER BY e.sequence_number ASC
             LIMIT ?
             """,
             (limit,)
@@ -485,13 +499,13 @@ class EventLedger:
         return [self._row_to_event(row) for row in rows]
 
     async def mark_synced(self, event_ids: list[str]) -> None:
-        """Mark events as synced."""
+        """Record sync status in separate sync_ledger table (append-only)."""
         if not event_ids:
             return
-        placeholders = ",".join("?" * len(event_ids))
-        await self._db.execute(
-            f"UPDATE events SET synced = 1 WHERE event_id IN ({placeholders})",
-            event_ids
+        now = datetime.now(timezone.utc).isoformat()
+        await self._db.executemany(
+            "INSERT OR IGNORE INTO sync_ledger (event_id, synced_at) VALUES (?, ?)",
+            [(eid, now) for eid in event_ids],
         )
         await self._db.commit()
 

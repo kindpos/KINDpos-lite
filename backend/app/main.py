@@ -14,7 +14,7 @@ import sys
 from app.api.routes.printing import print_queue
 from app.printing.print_dispatcher import PrintDispatcher
 from app.config import settings
-from app.api.dependencies import init_ledger, close_ledger, set_printer_manager, get_ephemeral_log
+from app.api.dependencies import init_ledger, close_ledger, set_printer_manager, get_ephemeral_log, set_print_dispatcher
 from app.services.demo_seeder import seed_demo_data_if_empty
 from app.core.adapters.printer_manager import PrinterManager
 from app.core.adapters.mock_thermal import MockThermalPrinter
@@ -115,6 +115,7 @@ async def lifespan(app: FastAPI):
 
     _dispatcher = PrintDispatcher(print_queue)
     await _dispatcher.start()
+    set_print_dispatcher(_dispatcher)
     print("Print Dispatcher started")
 
     yield

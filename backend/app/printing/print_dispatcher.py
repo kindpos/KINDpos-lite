@@ -54,6 +54,34 @@ class PrintDispatcher:
         self._poll_interval = poll_interval
         self._running       = False
         self._task: Optional[asyncio.Task] = None
+        self._failure_subscribers: list[asyncio.Queue] = []
+
+    def subscribe_failures(self) -> asyncio.Queue:
+        """Return a queue that receives print failure dicts."""
+        q: asyncio.Queue = asyncio.Queue(maxsize=64)
+        self._failure_subscribers.append(q)
+        return q
+
+    def unsubscribe_failures(self, q: asyncio.Queue) -> None:
+        try:
+            self._failure_subscribers.remove(q)
+        except ValueError:
+            pass
+
+    def _broadcast_failure(self, job: dict, error: str) -> None:
+        msg = {
+            "type": "print_failure",
+            "job_id": job.get("job_id"),
+            "order_id": job.get("order_id"),
+            "template_id": job.get("template_id"),
+            "printer_mac": job.get("printer_mac"),
+            "error": error,
+        }
+        for q in list(self._failure_subscribers):
+            try:
+                q.put_nowait(msg)
+            except asyncio.QueueFull:
+                pass  # drop if subscriber is too slow
 
         # Receipt printer: 48 chars per line
         # Kitchen printer: 33 chars per line
@@ -109,6 +137,7 @@ class PrintDispatcher:
         if attempt > MAX_ATTEMPTS:
             await self._queue.mark_failed(job_id)
             logger.error(f"Job {job_id} exceeded max attempts — marked FAILED")
+            self._broadcast_failure(job, "Exceeded max retry attempts")
             return
 
         delay = RETRY_DELAYS[attempt - 1]
@@ -141,6 +170,7 @@ class PrintDispatcher:
             if attempt >= MAX_ATTEMPTS:
                 await self._queue.mark_failed(job_id)
                 logger.error(f"Job {job_id} FAILED after {attempt} attempts: {e}")
+                self._broadcast_failure(job, str(e))
 
     # ── Render ────────────────────────────────────────────────────────────────
 

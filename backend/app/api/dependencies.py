@@ -10,13 +10,15 @@ from app.core.event_ledger import EventLedger
 from app.core.ephemeral_log import EphemeralLog
 from app.core.adapters.printer_manager import PrinterManager
 from app.services.diagnostic_collector import DiagnosticCollector
+from app.printing.print_dispatcher import PrintDispatcher
 from app.config import settings
 
-# Global ledger instance (initialized on startup)
+# Global singleton instances (initialized on startup)
 _ledger: EventLedger | None = None
 _ephemeral_log: EphemeralLog | None = None
 _printer_manager: PrinterManager | None = None
 _diagnostic_collector: DiagnosticCollector | None = None
+_print_dispatcher: PrintDispatcher | None = None
 
 
 async def get_ledger() -> EventLedger:
@@ -76,3 +78,14 @@ def set_diagnostic_collector(collector: DiagnosticCollector) -> None:
     """Register a DiagnosticCollector instance (called during startup)."""
     global _diagnostic_collector
     _diagnostic_collector = collector
+
+
+def get_print_dispatcher() -> Optional[PrintDispatcher]:
+    """Optional dependency — returns None if PrintDispatcher not initialized."""
+    return _print_dispatcher
+
+
+def set_print_dispatcher(dispatcher: PrintDispatcher) -> None:
+    """Register a PrintDispatcher instance (called during startup)."""
+    global _print_dispatcher
+    _print_dispatcher = dispatcher
