@@ -19,6 +19,7 @@ var selectedAction = null;
 var employees = [];  // loaded from /api/v1/servers on scene enter
 var actionButtons = [];  // track buttons for highlight
 var _numpadRef = null;
+var _loggedInEmp = null;  // employee after PIN validation
 
 function clearHighlights() {
   var b = T.bevel;
@@ -76,6 +77,7 @@ registerScene('login', {
     setHeaderBack();
     selectedAction = null;
     actionButtons = [];
+    _loggedInEmp = null;
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
       employees = data.servers || [];
     }).catch(function() { employees = []; });
@@ -188,6 +190,9 @@ registerScene('login', {
     right.appendChild(version);
 
     el.appendChild(right);
+
+    // Start with all action buttons hidden until PIN is entered
+    actionButtons.forEach(function(item) { item.wrap.style.display = 'none'; });
   },
   timeoutMs: 0,
 });
@@ -204,22 +209,20 @@ var actionLabels = {
 };
 
 function handleAction(action) {
+  if (!_loggedInEmp) {
+    // Not authenticated yet — prompt for PIN
+    selectedAction = action;
+    if (_pinPromptEl) {
+      _pinPromptEl.textContent = 'Enter PIN';
+      _pinPromptEl.style.color = T.gold;
+    }
+    return;
+  }
+
+  // Already authenticated — navigate directly
   selectedAction = action;
   setTimeout(function() { highlightButton(action); }, 0);
-
-  // If PIN already entered, submit immediately
-  if (_numpadRef) {
-    var existingPin = _numpadRef.getPin();
-    if (existingPin.length > 0) {
-      handlePinSubmit(existingPin, _pinPromptEl);
-      return;
-    }
-  }
-
-  if (_pinPromptEl) {
-    _pinPromptEl.textContent = 'Enter PIN for ' + (actionLabels[action] || action);
-    _pinPromptEl.style.color = T.gold;
-  }
+  navigateToAction(action, _loggedInEmp);
 }
 
 function handlePinSubmit(pin, promptEl) {
@@ -233,7 +236,35 @@ function handlePinSubmit(pin, promptEl) {
     return;
   }
 
-  var action = selectedAction || 'quick-service';
+  // Authenticated — show role-appropriate buttons
+  _loggedInEmp = emp;
+  var empRoles = emp.roles || [emp.role || 'server'];
+  var isManager = empRoles.indexOf('manager') !== -1;
+
+  if (_pinPromptEl) {
+    _pinPromptEl.textContent = 'Welcome, ' + (emp.name || 'User');
+    _pinPromptEl.style.color = T.mint;
+  }
+
+  // Clear numpad
+  if (_numpadRef && _numpadRef.clear) _numpadRef.clear();
+
+  // Reveal buttons based on role
+  actionButtons.forEach(function(item) {
+    var show = true;
+    if (item.action === 'configuration' && !isManager) show = false;
+    if (item.action === 'reporting' && !isManager) show = false;
+    item.wrap.style.display = show ? '' : 'none';
+  });
+
+  // If an action was already selected before PIN, navigate now
+  if (selectedAction) {
+    navigateToAction(selectedAction, emp);
+  }
+}
+
+function navigateToAction(action, emp) {
+  var pin = emp.pin;
   var empRoles = emp.roles || [emp.role || 'server'];
   var role = empRoles[0] || 'server';
   var base = { pin: pin, employeeId: emp.id, employeeName: emp.name, role: role, roles: empRoles };
@@ -243,14 +274,6 @@ function handlePinSubmit(pin, promptEl) {
     case 'clock':         handleClockOverlay(emp); break;
     case 'reporting':     push('reporting', base); break;
     case 'configuration':
-      if (empRoles.indexOf('manager') === -1) {
-        if (promptEl || _pinPromptEl) {
-          var el = promptEl || _pinPromptEl;
-          el.textContent = 'Manager access only';
-          el.style.color = T.red;
-        }
-        return;
-      }
       push('settings', { pin: pin });
       break;
     case 'recall-table':
