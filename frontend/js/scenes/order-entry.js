@@ -810,30 +810,23 @@ function applyModifier(mod) {
   if (!prefix) return;
 
   var placement = modifierSession.hasPizza ? (modifierSession.activePlacement || 'whole') : null;
-  var placementPrefix = '';
-  if (placement === 'left') placementPrefix = '(L) ';
-  else if (placement === 'right') placementPrefix = '(R) ';
-
-  var modName = prefix.label + ' ' + placementPrefix + mod.label;
+  var modName = prefix.label + ' ' + mod.label;
   var modRefs = [];
 
   modifierSession.selectedItems.forEach(function(id) {
     var inst = ticket.find(function(i) { return i.id === id; });
     if (!inst) return;
-    // Only apply placement to pizza items
     var isPizza = inst.category === 'pizza';
-    var thisPlacement = isPizza ? placement : null;
-    var thisName = isPizza ? modName : (prefix.label + ' ' + mod.label);
     var halfSide = null;
-    if (isPizza && thisPlacement === 'left') halfSide = 'Left';
-    else if (isPizza && thisPlacement === 'right') halfSide = 'Right';
+    if (isPizza && placement === 'left') halfSide = 'Left';
+    else if (isPizza && placement === 'right') halfSide = 'Right';
 
-    var modObj = { name: thisName, price: 0, charged: false, prefix: halfSide };
+    var modObj = { name: modName, price: 0, charged: false, prefix: halfSide };
     inst.mods.push(modObj);
     modRefs.push({ inst: inst, mod: modObj });
   });
 
-  var logLabel = prefix.label + ' ' + (placementPrefix || '') + mod.label;
+  var logLabel = modName;
   modifierSession.appliedMods.push({
     prefixId: prefix.id,
     prefixLabel: prefix.label,
@@ -1185,10 +1178,7 @@ function renderTicket() {
         var sep = buildSeparator();
         gc.appendChild(sep);
         chargedMods.forEach(function(m) {
-          var dn = m.name;
-          if (m.prefix === 'Left' && dn.indexOf('(L)') === -1) dn = '(L) ' + m.name;
-          else if (m.prefix === 'Right' && dn.indexOf('(R)') === -1) dn = '(R) ' + m.name;
-          gc.appendChild(buildModRow(dn, m.price, true, false));
+          gc.appendChild(buildModRow(m.name, m.price, true, false));
         });
       }
 
@@ -1252,8 +1242,8 @@ function renderTicket() {
           var leftMods = [];
           var rightMods = [];
           visibleMods.forEach(function(m) {
-            if (m.prefix === 'Left' || m.name.indexOf('(L)') !== -1) leftMods.push(m);
-            else if (m.prefix === 'Right' || m.name.indexOf('(R)') !== -1) rightMods.push(m);
+            if (m.prefix === 'Left') leftMods.push(m);
+            else if (m.prefix === 'Right') rightMods.push(m);
             else wholeMods.push(m);
           });
 
@@ -1400,8 +1390,7 @@ function buildHalfTable(leftMods, rightMods, fontSize) {
 }
 
 function stripPlacementPrefix(name) {
-  // Remove "(L) ", "(R) " and prefix labels like "Add ", "No ", etc.
-  return name.replace(/^\(L\)\s*/, '').replace(/^\(R\)\s*/, '');
+  return name;
 }
 
 function handleVoid() {
