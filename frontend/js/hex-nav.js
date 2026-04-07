@@ -348,7 +348,7 @@ export function HexNav(container, opts) {
     slots.forEach(function(pos) {
       var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
-        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 1.05;
+        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.92;
       });
       if (!overlaps) freeSlots.push(pos);
     });
