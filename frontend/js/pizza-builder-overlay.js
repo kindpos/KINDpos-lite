@@ -165,11 +165,37 @@ function _buildOverlay(el, sizeItem, builderData) {
     });
   }
 
-  // ═══ PLACEMENT BAR — horizontal selector: < 1st // Whole // 2nd > ═══
+  // ═══ MAIN BODY: HexNav (left) + Right panel (mods log + placement) ═══
+  var body = document.createElement('div');
+  body.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
+
+  var hexArea = document.createElement('div');
+  hexArea.style.cssText = 'flex:1;position:relative;overflow:hidden;';
+  body.appendChild(hexArea);
+
+  // ═══ RIGHT PANEL: Mods log + Placement bar ═══
+  var rightPanel = document.createElement('div');
+  rightPanel.style.cssText = [
+    'width:200px;flex-shrink:0;display:flex;flex-direction:column;',
+    'background:' + T.bgDark + ';',
+    'border-left:2px solid ' + T.border + ';',
+  ].join('');
+
+  // Applied mods log
+  var logWrap = document.createElement('div');
+  logWrap.style.cssText = [
+    'flex:1;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
+    'padding:6px 8px;',
+  ].join('');
+  applySunkenStyle(logWrap);
+  renderLog();
+  rightPanel.appendChild(logWrap);
+
+  // Placement bar (bottom of right panel)
   var placeBar = document.createElement('div');
   placeBar.style.cssText = [
     'display:flex;align-items:center;flex-shrink:0;',
-    'padding:1px 4px;gap:0;',
+    'padding:2px 4px;gap:0;',
   ].join('');
   var placeBtns = {};
   var pizzaColor = T.catColor('PIZZA');
@@ -183,25 +209,20 @@ function _buildOverlay(el, sizeItem, builderData) {
   placeSegments.forEach(function(seg, i) {
     if (i > 0) {
       var divider = document.createElement('div');
-      divider.style.cssText = [
-        'width:2px;height:28px;',
-        'background:' + pizzaColor + ';',
-        'flex-shrink:0;',
-      ].join('');
+      divider.style.cssText = 'width:2px;height:28px;background:' + pizzaColor + ';flex-shrink:0;';
       placeBar.appendChild(divider);
     }
     var isActive = activePlacement === seg.id;
     var btn = document.createElement('div');
     btn.style.cssText = [
       'flex:1;height:32px;display:flex;align-items:center;justify-content:center;',
-      'font-family:' + T.fh + ';font-size:22px;cursor:pointer;',
+      'font-family:' + T.fh + ';font-size:20px;cursor:pointer;',
       'background:' + (isActive ? pizzaColor : T.darkBtn) + ';',
       'color:' + (isActive ? '#1a0a0a' : pizzaColor) + ';',
       'border-top:2px solid ' + pizzaColor + ';',
       'border-bottom:2px solid ' + pizzaColor + ';',
       'transition:background 80ms,color 80ms;',
     ].join('');
-    // Add left/right border on edges
     if (i === 0) btn.style.borderLeft = '2px solid ' + pizzaColor;
     if (i === placeSegments.length - 1) btn.style.borderRight = '2px solid ' + pizzaColor;
     btn.textContent = seg.label;
@@ -215,7 +236,7 @@ function _buildOverlay(el, sizeItem, builderData) {
     placeBtns[seg.id] = btn;
     placeBar.appendChild(btn);
   });
-  panel.appendChild(placeBar);
+  rightPanel.appendChild(placeBar);
 
   function refreshPlacement() {
     placeSegments.forEach(function(seg) {
@@ -226,26 +247,7 @@ function _buildOverlay(el, sizeItem, builderData) {
     });
   }
 
-  // ═══ MAIN BODY: HexNav (left) + Applied Mods Log (right) ═══
-  var body = document.createElement('div');
-  body.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
-
-  var hexArea = document.createElement('div');
-  hexArea.style.cssText = 'flex:1;position:relative;overflow:hidden;';
-  body.appendChild(hexArea);
-
-  // ═══ APPLIED MODS LOG (right side) ═══
-  var logWrap = document.createElement('div');
-  logWrap.style.cssText = [
-    'width:200px;flex-shrink:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-    'background:' + T.bgDark + ';padding:6px 8px;',
-    'border-left:2px solid ' + T.border + ';',
-    'display:flex;flex-direction:column;',
-  ].join('');
-  applySunkenStyle(logWrap);
-  renderLog();
-  body.appendChild(logWrap);
-
+  body.appendChild(rightPanel);
   panel.appendChild(body);
 
   // ═══ BOTTOM BAR ═══
@@ -285,10 +287,10 @@ function _buildOverlay(el, sizeItem, builderData) {
 
   // ADD TO ORDER
   var addPair = buildStyledButton(T.goGreen);
-  addPair.wrap.style.cssText += 'flex:3;height:40px;';
-  addPair.inner.textContent = 'ADD TO ORDER';
+  addPair.wrap.style.cssText += 'flex:2;height:40px;';
+  addPair.inner.textContent = 'ADD';
   addPair.inner.style.color = '#1a2a1a';
-  addPair.inner.style.fontSize = T.fsBtn;
+  addPair.inner.style.fontSize = T.fsSmall;
   addPair.inner.style.fontFamily = T.fh;
   addPair.wrap.addEventListener('pointerup', function() {
     if (builderNav) builderNav.destroy();
