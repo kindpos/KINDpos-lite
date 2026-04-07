@@ -398,6 +398,23 @@ export function HexNav(container, opts) {
         data:      item,
       });
     });
+
+    // Prevent sibling overlap — shrink any hex that overlaps a neighbor
+    var childStart = lockedHexes.length;
+    for (var a = childStart; a < hexes.length; a++) {
+      for (var b = a + 1; b < hexes.length; b++) {
+        var dx = hexes[a].x - hexes[b].x;
+        var dy = hexes[a].y - hexes[b].y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var minDist = (hexes[a].r + hexes[b].r) * 0.95;
+        if (dist < minDist && dist > 0) {
+          var shrink = dist / minDist;
+          hexes[a].r = Math.round(hexes[a].r * shrink);
+          hexes[b].r = Math.round(hexes[b].r * shrink);
+        }
+      }
+    }
+
     return hexes;
   }
 
