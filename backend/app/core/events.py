@@ -375,20 +375,27 @@ def modifier_applied(
         modifier_name: str,
         modifier_price: float = 0.0,
         action: str = "add",  # add, remove, replace
+        prefix: str = None,
+        half_price: float = None,
         **kwargs
 ) -> Event:
     """Create a MODIFIER_APPLIED event."""
+    payload = {
+        "order_id": order_id,
+        "item_id": item_id,
+        "modifier_id": modifier_id,
+        "modifier_name": modifier_name,
+        "modifier_price": modifier_price,
+        "action": action,
+    }
+    if prefix is not None:
+        payload["prefix"] = prefix
+    if half_price is not None:
+        payload["half_price"] = half_price
     return create_event(
         event_type=EventType.MODIFIER_APPLIED,
         terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "item_id": item_id,
-            "modifier_id": modifier_id,
-            "modifier_name": modifier_name,
-            "modifier_price": modifier_price,
-            "action": action,
-        },
+        payload=payload,
         correlation_id=order_id,
         **kwargs
     )

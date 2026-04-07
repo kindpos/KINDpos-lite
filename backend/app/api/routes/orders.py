@@ -90,6 +90,8 @@ class InlineModifier(BaseModel):
     price: float = 0.0
     modifier_price: float = 0.0
     charged: Optional[bool] = True
+    prefix: Optional[str] = None       # 'Left' or 'Right' for half-placement
+    half_price: Optional[float] = None
 
 
 class AddItemRequest(BaseModel):
@@ -670,6 +672,8 @@ async def add_item(
             modifier_name=mod.name,
             modifier_price=mod.price if mod.charged else 0.0,
             action="add",
+            prefix=mod.prefix,
+            half_price=mod.half_price,
         )
         await ledger.append(mod_event)
 

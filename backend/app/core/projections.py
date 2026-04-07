@@ -246,6 +246,8 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                             "name": payload["modifier_name"],
                             "price": payload.get("modifier_price", 0),
                             "action": payload.get("action", "add"),
+                            "prefix": payload.get("prefix"),
+                            "half_price": payload.get("half_price"),
                         }
                         if payload.get("action") == "remove":
                             item.modifiers = [
