@@ -291,7 +291,7 @@ registerScene('order-entry', {
     ticketSeq      = 0;
     activeSeat     = 1;
     seatCount      = 1;
-    ticketMode     = (params && params.recallOrderId) ? 'summary' : 'adding';
+    ticketMode     = 'summary';
     sceneParams    = params || {};
     prefixCard     = null;
     saveBtn        = null;
