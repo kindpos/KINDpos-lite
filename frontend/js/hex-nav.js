@@ -380,8 +380,8 @@ export function HexNav(container, opts) {
       var longest = 0;
       words.forEach(function(w) { if (w.length > longest) longest = w.length; });
       var totalChars = label.length;
-      // Base: labels ~10 chars get full r, shorter shrink to 75%, longer grow up to 115%
-      var charScale = Math.min(Math.max(0.75, (totalChars + longest) / 16), 1.15);
+      // Base: labels ~10 chars get full r, shorter shrink to 88%, longer grow up to 112%
+      var charScale = Math.min(Math.max(0.88, (totalChars + longest) / 16), 1.12);
       var itemR = Math.round(r * charScale);
       if (pos.y + itemR > svgH - 4) {
         svgH = pos.y + itemR + 10;
