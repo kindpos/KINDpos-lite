@@ -336,10 +336,27 @@ export function HexNav(container, opts) {
       if (!overlaps) freeSlots.push(pos);
     });
 
+    // Sort slots top-to-bottom, left-to-right so alphabetical items read naturally
+    var sortedSlots = freeSlots.slice(0, childItems.length);
+    sortedSlots.sort(function(a, b) {
+      var rowSize = r * 0.8;  // threshold for "same row"
+      var rowA = Math.round(a.y / rowSize);
+      var rowB = Math.round(b.y / rowSize);
+      if (rowA !== rowB) return rowA - rowB;
+      return a.x - b.x;
+    });
+
+    // Sort child items alphabetically by label
+    var sortedItems = childItems.slice().sort(function(a, b) {
+      var la = (a.label || a).toLowerCase();
+      var lb = (b.label || b).toLowerCase();
+      return la < lb ? -1 : la > lb ? 1 : 0;
+    });
+
     var hexes = lockedHexes.slice();
-    childItems.forEach(function(item, i) {
-      if (i >= freeSlots.length) return;
-      var pos = freeSlots[i];
+    sortedItems.forEach(function(item, i) {
+      if (i >= sortedSlots.length) return;
+      var pos = sortedSlots[i];
       if (pos.y + r > svgH - 4) {
         svgH = pos.y + r + 10;
         svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
