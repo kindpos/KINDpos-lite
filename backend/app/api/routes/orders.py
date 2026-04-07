@@ -155,6 +155,7 @@ class OrderItemResponse(BaseModel):
     quantity: int
     category: Optional[str]
     notes: Optional[str]
+    seat_number: Optional[int] = None
     modifiers: list[dict]
     subtotal: float
 
@@ -212,6 +213,7 @@ class OrderResponse(BaseModel):
                     quantity=item.quantity,
                     category=item.category,
                     notes=item.notes,
+                    seat_number=item.seat_number,
                     modifiers=item.modifiers,
                     subtotal=money_round(item.subtotal),
                 )

@@ -241,8 +241,10 @@ var comboFlow    = null;  // { step: 'side'|'drink', ticketItem: ref }
 var hexNav       = null;
 var activeTab    = 'items';
 var activePrefix = 'add';
-var ticket       = [];    // [{ id, name, unitPrice, mods:[{name,price,charged}], selected, sent }]
+var ticket       = [];    // [{ id, name, unitPrice, mods:[{name,price,charged}], selected, sent, seat }]
 var ticketSeq    = 0;     // monotonic ID counter
+var activeSeat   = 1;     // current seat number (0 = show all)
+var seatCount    = 1;     // total number of seats
 var sceneParams  = {};
 var prefixCard   = null;  // DOM ref for show/hide
 var savedTabs    = [];    // [{ id, checkNum, label, ticket }] — in-memory for pilot
@@ -289,6 +291,8 @@ registerScene('order-entry', {
     activePrefix   = 'add';
     ticket         = [];
     ticketSeq      = 0;
+    activeSeat     = 1;
+    seatCount      = 1;
     sceneParams    = params || {};
     prefixCard     = null;
     saveBtn        = null;
@@ -331,10 +335,11 @@ registerScene('order-entry', {
 });
 
 // ── TOTALS HELPER ─────────────────────────────────
-function computeTotals() {
+function computeTotals(seatFilter) {
   var subtotal = 0;
   var counts = {};
-  ticket.forEach(function(inst) {
+  var items = seatFilter ? ticket.filter(function(i) { return i.seat === seatFilter; }) : ticket;
+  items.forEach(function(inst) {
     var lineTotal = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
     counts[inst.name] = counts[inst.name] || { unitPrice: inst.unitPrice, qty: 0 };
     counts[inst.name].qty += 1;
@@ -378,6 +383,13 @@ function buildTicket(parentEl) {
   itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
   panel.appendChild(itemList);
 
+  // Seat selector — shows current seat and allows switching
+  var seatBar = document.createElement('div');
+  seatBar.id = 'seat-bar';
+  seatBar.style.cssText = 'display:flex;gap:4px;flex-shrink:0;align-items:center;padding:2px 0;';
+  buildSeatBar(seatBar);
+  panel.appendChild(seatBar);
+
   // Summary + Totals — combined card with sunken bevel
   var summaryTotals = document.createElement('div');
   summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;flex-shrink:0;';
@@ -417,6 +429,58 @@ function buildTotalRow(label, value, id) {
   row.innerHTML = '<span>' + label + '</span>';
   row.appendChild(valEl);
   return row;
+}
+
+// ── SEAT BAR ─────────────────────────────────────
+function buildSeatBar(container) {
+  container.innerHTML = '';
+
+  // "ALL" button
+  var allBtn = document.createElement('div');
+  var allActive = activeSeat === 0;
+  allBtn.style.cssText = 'flex-shrink:0;padding:2px 8px;font-family:' + T.fh + ';font-size:16px;cursor:pointer;text-align:center;' +
+    'background:' + (allActive ? T.cyan : T.bg) + ';color:' + (allActive ? T.bgDark : T.mutedText) + ';';
+  allBtn.textContent = 'ALL';
+  allBtn.addEventListener('pointerup', function() {
+    activeSeat = 0;
+    refreshSeatBar();
+    renderTicket();
+  });
+  container.appendChild(allBtn);
+
+  // Seat buttons
+  for (var i = 1; i <= seatCount; i++) {
+    (function(seatNum) {
+      var btn = document.createElement('div');
+      var isActive = activeSeat === seatNum;
+      btn.style.cssText = 'flex:1;padding:2px 4px;font-family:' + T.fb + ';font-size:16px;cursor:pointer;text-align:center;' +
+        'background:' + (isActive ? T.gold : T.bg) + ';color:' + (isActive ? T.bgDark : T.mutedText) + ';';
+      btn.textContent = 'S' + seatNum;
+      btn.addEventListener('pointerup', function() {
+        activeSeat = seatNum;
+        refreshSeatBar();
+        renderTicket();
+      });
+      container.appendChild(btn);
+    })(i);
+  }
+
+  // "+" add seat button
+  var addBtn = document.createElement('div');
+  addBtn.style.cssText = 'flex-shrink:0;padding:2px 8px;font-family:' + T.fb + ';font-size:16px;cursor:pointer;text-align:center;color:' + T.mint + ';background:' + T.bg + ';';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('pointerup', function() {
+    seatCount++;
+    activeSeat = seatCount;
+    refreshSeatBar();
+    renderTicket();
+  });
+  container.appendChild(addBtn);
+}
+
+function refreshSeatBar() {
+  var bar = document.getElementById('seat-bar');
+  if (bar) buildSeatBar(bar);
 }
 
 // ── PREFIX CARD ───────────────────────────────────
@@ -1128,6 +1192,7 @@ function handleItemSelect(item) {
       selected:  false,
       sent:      false,
       category:  'combo',
+      seat:      activeSeat || 1,
     };
     ticket.push(ticketItem);
     comboFlow = { step: 'side', ticketItem: ticketItem };
@@ -1151,6 +1216,7 @@ function handleItemSelect(item) {
         selected:  false,
         sent:      false,
         category:  'pizza',
+        seat:      activeSeat || 1,
       });
       renderTicket();
       rebuildBottomBar();
@@ -1227,6 +1293,7 @@ function addToTicket(item) {
       selected:  false,
       sent:      false,
       category:  hexNav ? hexNav.getCatId() : null,
+      seat:      activeSeat || 1,
     });
   }
   renderTicket();
@@ -1238,10 +1305,13 @@ function renderTicket() {
   if (!list) return;
   list.innerHTML = '';
 
+  // ── Filter by active seat ────────────────────────
+  var visibleItems = activeSeat === 0 ? ticket : ticket.filter(function(i) { return i.seat === activeSeat; });
+
   // ── Group instances by name ──────────────────────
   var groups = {};
   var groupOrder = [];
-  ticket.forEach(function(inst) {
+  visibleItems.forEach(function(inst) {
     if (!groups[inst.name]) {
       groups[inst.name] = [];
       groupOrder.push(inst.name);
@@ -1410,8 +1480,8 @@ function renderTicket() {
     }
   });
 
-  // ── Live totals ───────────────────────────────────
-  var totals = computeTotals();
+  // ── Live totals (scoped to active seat or all) ────
+  var totals = computeTotals(activeSeat || undefined);
   var subEl  = document.getElementById('ticket-subtotal');
   var taxEl  = document.getElementById('ticket-tax');
   var totEl  = document.getElementById('ticket-total');
@@ -1839,7 +1909,7 @@ async function handleSend() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_type:  'quick_service',
-          guest_count: 1,
+          guest_count: seatCount,
           customer_name: customerName || null,
         }),
       });
@@ -1865,6 +1935,7 @@ async function handleSend() {
           price:        inst.unitPrice,
           quantity:     1,
           category:     inst.category || 'general',
+          seat_number:  inst.seat || 1,
           modifiers:    inst.mods.map(function(m) {
             return { name: m.name, price: m.price, modifier_price: m.price, charged: m.charged, prefix: m.prefix || null, half_price: m.half_price != null ? m.half_price : null };
           }),

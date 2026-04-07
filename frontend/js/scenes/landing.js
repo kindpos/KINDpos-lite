@@ -390,6 +390,17 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
       }
 
       filtered.forEach(function(order) {
+        // Compute seat breakdown from items
+        var seats = {};
+        (order.items || []).forEach(function(item) {
+          var sn = item.seat_number || 1;
+          if (!seats[sn]) seats[sn] = { count: 0, total: 0 };
+          seats[sn].count += item.quantity;
+          seats[sn].total += item.subtotal;
+        });
+        var seatNums = Object.keys(seats).sort(function(a, b) { return a - b; });
+        var hasMultipleSeats = seatNums.length > 1;
+
         var label = '';
         if (order.check_number) label += order.check_number;
         if (order.customer_name) label += (label ? '\n' : '') + order.customer_name;
@@ -397,11 +408,16 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
         label += '\n$' + (order.total || 0).toFixed(2);
         var itemCount = (order.items || []).length;
         label += '  (' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + ')';
+        if (hasMultipleSeats) {
+          label += '\n' + seatNums.map(function(s) {
+            return 'S' + s + ':$' + seats[s].total.toFixed(2);
+          }).join('  ');
+        }
 
         var statusColor = order.balance_due > 0 ? T.gold : T.goGreen;
         var card = buildButton(label, {
           fill: T.bgDark, color: statusColor, fontSize: '22px', fontFamily: T.fb,
-          height: 100,
+          height: hasMultipleSeats ? 120 : 100,
           onTap: function() { toggleSelect(order, card); },
         });
         card.style.width = '100%';
