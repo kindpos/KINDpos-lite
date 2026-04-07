@@ -263,7 +263,7 @@ export function drawStackedArea(svg, data, options) {
 
   // X labels
   for (var i = 0; i < n; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: DATA.coral, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: DATA.coral, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 
   // Axis labels
@@ -396,11 +396,11 @@ export function drawHorizontalBars(svg, data, options) {
     var barColor = data[i].color || options.color || DATA.orange;
     var barWidth = (data[i].value / maxVal) * chartW;
 
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: DATA.coral, 'font-size': fs(26, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: barColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = data[i].label;
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barWidth, height: barH, fill: barColor }));
 
     if (data[i].sublabel) {
-      svg.appendChild(svgEl('text', { x: padLeft + 6, y: y + rowH / 2 + 4, fill: '#333333', 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'start', 'font-weight': 'bold' })).textContent = data[i].sublabel;
+      svg.appendChild(svgEl('text', { x: padLeft + 6, y: y + rowH / 2 + 4, fill: '#333333', 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'start', 'font-weight': 'bold' })).textContent = data[i].sublabel;
     }
   }
 }
@@ -461,7 +461,7 @@ export function drawTrendLine(svg, data, options) {
     var gv = yMin + (g / 4) * yRange;
     var gy = toY(gv);
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = gv.toFixed(1);
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = gv.toFixed(1);
   }
 
   // Threshold lines
@@ -506,7 +506,7 @@ export function drawTrendLine(svg, data, options) {
 
   // X labels
   for (var i = 0; i < data.length; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: DATA.coral, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: DATA.coral, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 }
 
@@ -825,13 +825,13 @@ export function drawParetoHBar(svg, data, options) {
     var strokeColor = sorted[i].color || DATA.orange;
 
     // Item name label
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = sorted[i].label;
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: y + rowH / 2 + 4, fill: strokeColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = sorted[i].label;
 
     // Bar
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barW, height: barH, fill: fill, stroke: strokeColor, 'stroke-width': '1.5' }));
 
     // Dollar label with glow
-    svg.appendChild(svgEl('text', { x: padLeft + barW + 4, y: y + rowH / 2 + 4, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'start', filter: GLOW.coral })).textContent = '$' + sorted[i].value;
+    svg.appendChild(svgEl('text', { x: padLeft + barW + 4, y: y + rowH / 2 + 4, fill: strokeColor, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'start', filter: GLOW.coral })).textContent = '$' + sorted[i].value;
 
     // Cumulative %
     cumul += sorted[i].value;

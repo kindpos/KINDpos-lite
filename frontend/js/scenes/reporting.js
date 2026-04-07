@@ -497,28 +497,27 @@ function buildManagerSalesPanels(sales, fullSize) {
   }, trendLegend);
 
   // Q4 — Pareto Bar: House Top Revenue Items
-  var paretoLegend = [
-    { label: 'Food', color: DATA.orange },
-    { label: 'Drink', color: DATA.pink },
-  ];
+  var paretoLegendMap = {};
+  var paretoData = [];
+  for (var i = 0; i < topItems.length; i++) {
+    var item = topItems[i];
+    var cat = (item.category || '').toUpperCase();
+    var catCol = T.catColor(cat);
+    paretoData.push({
+      label: item.name || item.label,
+      value: item.revenue || item.value || 0,
+      color: catCol,
+    });
+    if (!paretoLegendMap[cat]) paretoLegendMap[cat] = catCol;
+  }
+  var paretoLegend = [];
+  for (var k in paretoLegendMap) paretoLegend.push({ label: k.charAt(0) + k.slice(1).toLowerCase(), color: paretoLegendMap[k] });
   var p4 = buildChartPanel('TOP ITEMS', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
-    var data = [];
-    for (var i = 0; i < topItems.length; i++) {
-      var item = topItems[i];
-      var cat = (item.category || '').toLowerCase();
-      var isFood = cat !== 'drinks' && cat !== 'soda' && cat !== 'beverage';
-      data.push({
-        label: item.name || item.label,
-        value: item.revenue || item.value || 0,
-        color: isFood ? DATA.orange : DATA.pink,
-        pattern: isFood ? PAT.orange : PAT.pink,
-      });
-    }
+    var data = paretoData;
     if (data.length === 0) {
-      // Fallback: use hourly as simple items
       for (var i = 0; i < hourly.length && i < 8; i++) {
-        data.push({ label: hourly[i].hour + '', value: hourly[i].net || 0, color: DATA.orange, pattern: PAT.orange });
+        data.push({ label: hourly[i].hour + '', value: hourly[i].net || 0, color: DATA.orange });
       }
     }
     drawParetoHBar(svg, data, { width: svgW, height: svgH });
@@ -539,7 +538,7 @@ function buildManagerLaborPanels(labor, fullSize) {
   var otAlerts = l.ot_alerts || [];
   var svgW = fullSize ? 900 : 400;
   var svgH = fullSize ? 380 : 160;
-  var lblW = fullSize ? 80 : 55;
+  var lblW = fullSize ? 120 : 80;
   var fontSize = fullSize ? T.fsSmall : T.fsBtn;
 
   // TOTAL HRS — horizontal bars: employees by hours
@@ -709,32 +708,32 @@ function buildServerShiftPanels(sales, fullSize) {
   }, trendLegend);
 
   // Q4 — Pareto Bar: My Top Items Sold
-  var paretoLegend = [
-    { label: 'Food', color: DATA.orange },
-    { label: 'Drink', color: DATA.pink },
-  ];
+  var paretoLegendMap2 = {};
+  var paretoData2 = [];
+  for (var i = 0; i < topItems.length; i++) {
+    var item = topItems[i];
+    var cat = (item.category || '').toUpperCase();
+    var catCol = T.catColor(cat);
+    paretoData2.push({
+      label: item.name || item.label,
+      value: item.revenue || item.value || 0,
+      color: catCol,
+    });
+    if (!paretoLegendMap2[cat]) paretoLegendMap2[cat] = catCol;
+  }
+  var paretoLegend2 = [];
+  for (var k in paretoLegendMap2) paretoLegend2.push({ label: k.charAt(0) + k.slice(1).toLowerCase(), color: paretoLegendMap2[k] });
   var p4 = buildChartPanel('TOP ITEMS', s.net_sales ? fmt(s.net_sales || 0) : '--', function(body) {
     var svg = createSVG(svgW, svgH);
-    var data = [];
-    for (var i = 0; i < topItems.length; i++) {
-      var item = topItems[i];
-      var cat = (item.category || '').toLowerCase();
-      var isFood = cat !== 'drinks' && cat !== 'soda' && cat !== 'beverage';
-      data.push({
-        label: item.name || item.label,
-        value: item.revenue || item.value || 0,
-        color: isFood ? DATA.orange : DATA.pink,
-        pattern: isFood ? PAT.orange : PAT.pink,
-      });
-    }
+    var data = paretoData2;
     if (data.length === 0) {
       for (var i = 0; i < hourly.length && i < 8; i++) {
-        data.push({ label: hourly[i].hour + '', value: hourly[i].net || 0, color: DATA.orange, pattern: PAT.orange });
+        data.push({ label: hourly[i].hour + '', value: hourly[i].net || 0, color: DATA.orange });
       }
     }
     drawParetoHBar(svg, data, { width: svgW, height: svgH });
     body.appendChild(svg);
-  }, paretoLegend);
+  }, paretoLegend2);
 
   return [p1, p2, p3, p4];
 }
