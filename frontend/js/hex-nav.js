@@ -11,7 +11,7 @@ var SUBCAT_R = 70;
 var ITEM_R   = 70;
 var MOD_R    = 70;
 // Gap multipliers per depth — breathing room between hexes
-var GAPS = [1.12, 1.08, 1.08, 1.08, 1.08];
+var GAPS = [1.12, 1.02, 1.02, 1.02, 1.02];
 function gapForLevel(level) { return GAPS[level] || GAPS[GAPS.length - 1]; }
 
 // ═══════════════════════════════════════════════════
@@ -348,7 +348,7 @@ export function HexNav(container, opts) {
     slots.forEach(function(pos) {
       var overlaps = lockedHexes.some(function(lh) {
         var dx = lh.x - pos.x, dy = lh.y - pos.y;
-        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.92;
+        return Math.sqrt(dx * dx + dy * dy) < (lh.r + r) * 0.98;
       });
       if (!overlaps) freeSlots.push(pos);
     });
