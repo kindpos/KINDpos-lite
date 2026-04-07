@@ -12,7 +12,7 @@ import { registerScene, push, replace, clearSceneCache } from '../scene-manager.
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildChartGrid } from '../chart-helpers.js';
 import {
-  fetchReportData, buildLeftCard, buildRightCard, buildCardWrap,
+  fetchReportData, buildLeftCard, buildLeftCardButtons, buildRightCard, buildCardWrap,
   buildServerShiftPanels, buildServerHoursPanels,
   buildManagerSalesPanels, buildManagerLaborPanels,
 } from './reporting.js';
@@ -165,18 +165,25 @@ function buildCardLanding(el, params, sales, labor) {
   //  LEFT — SHIFT (server) or SALES (manager) Card
   // ══════════════════════════════════════════════
   var leftCol = document.createElement('div');
-  leftCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;';
+  leftCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;gap:8px;';
 
   if (sales !== undefined) {
     var leftCard = buildLeftCard(baseParams, sales, labor);
     var leftWrap = buildCardWrap(leftCard);
     leftWrap.style.maxWidth = '100%';
-    leftWrap.style.maxHeight = '95%';
+    leftWrap.style.flexShrink = '1';
+    leftWrap.style.minHeight = '0';
     leftWrap.addEventListener('pointerup', function() {
       expandedCard = 'left';
       renderLanding();
     });
     leftCol.appendChild(leftWrap);
+
+    var leftBtns = buildLeftCardButtons(baseParams, sales);
+    leftBtns.style.flexShrink = '0';
+    leftBtns.style.width = '100%';
+    leftBtns.style.maxWidth = leftWrap.style.maxWidth;
+    leftCol.appendChild(leftBtns);
   } else {
     var loadLeft = document.createElement('div');
     loadLeft.style.cssText = 'font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:28px;text-align:center;';

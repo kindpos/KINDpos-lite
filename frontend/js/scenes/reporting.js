@@ -151,6 +151,7 @@ function buildLeftCard(params, sales, labor) {
     }
 
     // Close Day + Tip Adjustment buttons + active checks
+    if (!compact) {
     var btnArea = document.createElement('div');
     btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:' + (compact ? '3' : '4') + 'px;';
 
@@ -200,6 +201,7 @@ function buildLeftCard(params, sales, labor) {
     btnArea.appendChild(activeChecks);
 
     card.appendChild(btnArea);
+    }
   } else {
     // SHIFT card — title gold, numbers gold
     var title = document.createElement('div');
@@ -219,6 +221,7 @@ function buildLeftCard(params, sales, labor) {
     card.appendChild(kpis);
 
     // Checkout + Tip Adjustment buttons + active checks
+    if (!compact) {
     var btnArea = document.createElement('div');
     btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:' + (compact ? '3' : '4') + 'px;';
 
@@ -255,9 +258,100 @@ function buildLeftCard(params, sales, labor) {
     btnArea.appendChild(activeChecks);
 
     card.appendChild(btnArea);
+    }
   }
 
   return card;
+}
+
+function buildLeftCardButtons(params, sales) {
+  var s = sales;
+  var btnFs = '18px';
+  var btnPad = '3px 8px';
+
+  var btnArea = document.createElement('div');
+  btnArea.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-self:stretch;';
+
+  if (params.role === 'manager') {
+    var detailBtn = buildStyledButton(T.darkBtn);
+    detailBtn.inner.textContent = 'Sales Detail';
+    detailBtn.inner.style.fontFamily = T.fh;
+    detailBtn.inner.style.fontSize = btnFs;
+    detailBtn.inner.style.color = T.mint;
+    detailBtn.inner.style.padding = btnPad;
+    detailBtn.wrap.style.alignSelf = 'stretch';
+    detailBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('sales-summary', { role: params.role, employeeId: params.employeeId });
+    });
+    btnArea.appendChild(detailBtn.wrap);
+
+    var closeDayBtn = buildStyledButton(T.red);
+    closeDayBtn.inner.textContent = 'Close Day';
+    closeDayBtn.inner.style.fontFamily = T.fh;
+    closeDayBtn.inner.style.fontSize = btnFs;
+    closeDayBtn.inner.style.color = '#fff';
+    closeDayBtn.inner.style.padding = btnPad;
+    closeDayBtn.wrap.style.alignSelf = 'stretch';
+    closeDayBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('close-day', params);
+    });
+    btnArea.appendChild(closeDayBtn.wrap);
+
+    var tipAdjBtn = buildStyledButton(T.gold);
+    tipAdjBtn.inner.textContent = 'Tip Adjustment';
+    tipAdjBtn.inner.style.fontFamily = T.fh;
+    tipAdjBtn.inner.style.fontSize = btnFs;
+    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.padding = btnPad;
+    tipAdjBtn.wrap.style.alignSelf = 'stretch';
+    tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('tip-adjustment', params);
+    });
+    btnArea.appendChild(tipAdjBtn.wrap);
+
+    var activeChecks = document.createElement('div');
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + btnFs + ';color:' + T.mint + ';text-align:center;';
+    var checkCount = s ? s.total_checks : 0;
+    activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
+    btnArea.appendChild(activeChecks);
+  } else {
+    var checkoutBtn = buildStyledButton('#33ff99');
+    checkoutBtn.inner.textContent = 'Checkout';
+    checkoutBtn.inner.style.fontFamily = T.fh;
+    checkoutBtn.inner.style.fontSize = btnFs;
+    checkoutBtn.inner.style.color = T.bgDark;
+    checkoutBtn.inner.style.padding = btnPad;
+    checkoutBtn.wrap.style.alignSelf = 'stretch';
+    checkoutBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('server-checkout', params);
+    });
+    btnArea.appendChild(checkoutBtn.wrap);
+
+    var tipAdjBtn = buildStyledButton(T.gold);
+    tipAdjBtn.inner.textContent = 'Tip Adjustment';
+    tipAdjBtn.inner.style.fontFamily = T.fh;
+    tipAdjBtn.inner.style.fontSize = btnFs;
+    tipAdjBtn.inner.style.color = T.bgDark;
+    tipAdjBtn.inner.style.padding = btnPad;
+    tipAdjBtn.wrap.style.alignSelf = 'stretch';
+    tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      push('tip-adjustment', params);
+    });
+    btnArea.appendChild(tipAdjBtn.wrap);
+
+    var activeChecks = document.createElement('div');
+    activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + btnFs + ';color:' + T.mint + ';text-align:center;';
+    var checkCount = s ? s.total_checks : 0;
+    activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
+    btnArea.appendChild(activeChecks);
+  }
+
+  return btnArea;
 }
 
 // ── RIGHT CARD: LABOR (manager) or HOURS (server) ──
@@ -986,4 +1080,4 @@ registerScene('reporting', {
 // ═══════════════════════════════════════════════════
 //  PUBLIC API — reused by landing page
 // ═══════════════════════════════════════════════════
-export { fetchData as fetchReportData, buildLeftCard, buildRightCard, buildCardWrap, buildServerShiftPanels, buildServerHoursPanels, buildManagerSalesPanels, buildManagerLaborPanels };
+export { fetchData as fetchReportData, buildLeftCard, buildLeftCardButtons, buildRightCard, buildCardWrap, buildServerShiftPanels, buildServerHoursPanels, buildManagerSalesPanels, buildManagerLaborPanels };
