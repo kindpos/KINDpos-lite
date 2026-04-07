@@ -8,7 +8,7 @@ import { T } from './tokens.js';
 
 var CAT_R    = 80;
 var SUBCAT_R = 70;
-var ITEM_R   = 58;
+var ITEM_R   = 70;
 var MOD_R    = 40;
 // Gap multipliers per depth — breathing room between hexes
 var GAPS = [1.12, 1.21, 1.19, 1.17, 1.17];
@@ -129,7 +129,7 @@ export function HexNav(container, opts) {
     }
 
     // Label — scale font to fit longest word within hex width
-    var baseFontSize = h.r > 70 * scale ? Math.round(28 * scale) : h.r > 30 * scale ? Math.round(22 * scale) : Math.round(18 * scale);
+    var baseFontSize = h.r >= 70 * scale ? Math.round(28 * scale) : h.r > 30 * scale ? Math.round(22 * scale) : Math.round(18 * scale);
     var lines    = h.label.split(' ');
     // Estimate max char width: hex usable width ≈ r * 1.5, each char ≈ fontSize * 0.6
     var maxWidth = h.r * 1.5;
