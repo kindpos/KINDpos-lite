@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
+import { T, buildStyledButton, applySunkenStyle, chamfer } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { registerScene, push, pop, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -387,18 +387,38 @@ function buildTicketSummary(panel) {
   checkHdr.textContent = currentCheckNumber || 'NEW ORDER';
   panel.appendChild(checkHdr);
 
-  // Seat selector
-  var seatBar = document.createElement('div');
-  seatBar.id = 'seat-bar';
-  seatBar.style.cssText = 'display:flex;gap:4px;flex-shrink:0;align-items:center;padding:2px 0;';
-  buildSeatBar(seatBar);
-  panel.appendChild(seatBar);
+  // Scrollable content area — seat cards or drilled-down items
+  var content = document.createElement('div');
+  content.id = 'ticket-list';
+  content.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:6px;scrollbar-width:none;-ms-overflow-style:none;';
 
-  // Item list (receipt view)
-  var itemList = document.createElement('div');
-  itemList.id = 'ticket-list';
-  itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
-  panel.appendChild(itemList);
+  if (activeSeat === 0 || seatCount <= 1) {
+    // ── Card grid: one box per seat ──────────────────
+    buildSeatCardGrid(content);
+  } else {
+    // ── Drilled into a seat: show items ──────────────
+    var backRow = document.createElement('div');
+    backRow.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;padding:2px 0;';
+    var backArrow = document.createElement('span');
+    backArrow.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
+    backArrow.textContent = '\u25c0';
+    var backLabel = document.createElement('span');
+    backLabel.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';letter-spacing:1px;';
+    backLabel.textContent = 'SEAT ' + activeSeat;
+    backRow.appendChild(backArrow);
+    backRow.appendChild(backLabel);
+    backRow.addEventListener('pointerup', function() {
+      activeSeat = 0;
+      rebuildTicketPanel();
+    });
+    content.appendChild(backRow);
+
+    // Render items for this seat
+    var seatItems = ticket.filter(function(i) { return i.seat === activeSeat; });
+    renderSeatItems(content, seatItems);
+  }
+
+  panel.appendChild(content);
 
   // Summary + Totals
   var summaryTotals = document.createElement('div');
@@ -413,14 +433,138 @@ function buildTicketSummary(panel) {
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
 
-  // Action buttons grid
+  // Action buttons
+  buildSummaryActions(panel);
+
+  // Update totals
+  var totals = computeTotals(activeSeat || undefined);
+  var subEl  = document.getElementById('ticket-subtotal');
+  var taxEl  = document.getElementById('ticket-tax');
+  var totEl  = document.getElementById('ticket-total');
+  var cashEl = document.getElementById('ticket-cash');
+  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
+  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
+  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
+  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
+}
+
+function buildSeatCardGrid(container) {
+  var BEVEL = 4;
+  var CHAM = 8;
+
+  for (var s = 1; s <= seatCount; s++) {
+    (function(seatNum) {
+      var items = ticket.filter(function(i) { return i.seat === seatNum; });
+      var seatTotals = computeTotals(seatNum);
+      var hasUnsent = items.some(function(i) { return !i.sent; });
+      var allSent = items.length > 0 && items.every(function(i) { return i.sent; });
+
+      var pair = buildStyledButton(T.darkBtn);
+      var wrap = pair.wrap;
+      var inner = pair.inner;
+
+      inner.style.borderWidth = BEVEL + 'px';
+      inner.style.clipPath = chamfer(CHAM);
+      inner.style.flexDirection = 'column';
+      inner.style.alignItems = 'stretch';
+      inner.style.justifyContent = 'flex-start';
+      inner.style.padding = '6px 8px';
+      inner.style.position = 'relative';
+      inner.style.gap = '1px';
+      wrap.style.flexShrink = '0';
+
+      // Title
+      var title = document.createElement('div');
+      title.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';font-weight:bold;text-align:center;';
+      title.textContent = 'SEAT ' + seatNum;
+      inner.appendChild(title);
+
+      // Divider
+      var hr = document.createElement('div');
+      hr.style.cssText = 'height:1px;background:' + T.border + ';margin:3px 0;';
+      inner.appendChild(hr);
+
+      // Hero — subtotal
+      var hero = document.createElement('div');
+      hero.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.gold + ';font-weight:bold;text-align:center;padding:2px 0;';
+      hero.textContent = '$' + seatTotals.subtotal.toFixed(2);
+      inner.appendChild(hero);
+
+      // Subtitle — item count
+      var sub = document.createElement('div');
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';text-align:center;';
+      sub.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+      inner.appendChild(sub);
+
+      // Hint
+      var hint = document.createElement('div');
+      hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';text-align:center;margin-top:1px;';
+      hint.textContent = '\u25b8';
+      inner.appendChild(hint);
+
+      // Status dot
+      var dotColor = hasUnsent ? T.gold : (allSent ? T.goGreen : T.cyan);
+      var dot = document.createElement('div');
+      dot.style.cssText = 'position:absolute;bottom:6px;right:6px;width:8px;height:8px;clip-path:circle(50%);background:' + dotColor + ';opacity:' + (items.length > 0 ? '1' : '0.4') + ';';
+      inner.appendChild(dot);
+
+      wrap.addEventListener('pointerup', function() {
+        // If items are selected, transfer them to this seat
+        if (modifierSession.selectedItems.length > 0) {
+          modifierSession.selectedItems.forEach(function(itemId) {
+            var inst = ticket.find(function(t) { return t.id === itemId; });
+            if (inst) inst.seat = seatNum;
+          });
+          modifierSession.selectedItems = [];
+          ticket.forEach(function(t) { t.selected = false; });
+          rebuildTicketPanel();
+          return;
+        }
+        // Otherwise drill into this seat
+        activeSeat = seatNum;
+        rebuildTicketPanel();
+      });
+
+      container.appendChild(wrap);
+    })(s);
+  }
+
+  // "+" add seat card
+  var addPair = buildStyledButton(T.bg);
+  addPair.inner.style.borderWidth = '4px';
+  addPair.inner.style.clipPath = chamfer(8);
+  addPair.inner.style.flexDirection = 'column';
+  addPair.inner.style.alignItems = 'center';
+  addPair.inner.style.justifyContent = 'center';
+  addPair.inner.style.padding = '8px';
+  addPair.inner.style.borderStyle = 'dashed';
+  addPair.wrap.style.flexShrink = '0';
+
+  var addLabel = document.createElement('div');
+  addLabel.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';';
+  addLabel.textContent = '+';
+  addPair.inner.appendChild(addLabel);
+
+  var addSub = document.createElement('div');
+  addSub.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
+  addSub.textContent = 'Add Seat';
+  addPair.inner.appendChild(addSub);
+
+  addPair.wrap.addEventListener('pointerup', function() {
+    seatCount++;
+    activeSeat = seatCount;
+    rebuildTicketPanel();
+  });
+  container.appendChild(addPair.wrap);
+}
+
+function buildSummaryActions(panel) {
   var actions = document.createElement('div');
   actions.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;padding:4px 0;';
 
   var hasSelection = modifierSession.selectedItems.length > 0;
 
   if (modifierSession.active) {
-    // Modifier session active — UNDO + FINALIZE
     var undoBtn = buildButton('UNDO', {
       fill: T.darkBtn, color: T.red, fontSize: '20px', fontFamily: T.fh, height: 38,
       onTap: function() { undoLastMod(); renderTicket(); },
@@ -440,7 +584,6 @@ function buildTicketSummary(panel) {
     cancelBtn.style.gridColumn = '1 / -1';
     actions.appendChild(cancelBtn);
   } else if (hasSelection) {
-    // Items selected — MODIFY + DESELECT
     var modifyBtn = buildButton('MODIFY', {
       fill: T.gold, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
       onTap: function() { openModifierSession(); },
@@ -458,19 +601,16 @@ function buildTicketSummary(panel) {
       onTap: function() {
         ticketMode = 'adding';
         rebuildTicketPanel();
-        renderTicket();
       },
     });
     addItemBtn.style.gridColumn = '1 / -1';
     actions.appendChild(addItemBtn);
   } else {
-    // Idle — full action set
     var addItemBtn = buildButton('ADD ITEM', {
       fill: T.mint, color: T.bgDark, fontSize: '20px', fontFamily: T.fh, height: 38,
       onTap: function() {
         ticketMode = 'adding';
         rebuildTicketPanel();
-        renderTicket();
       },
     });
     addItemBtn.style.gridColumn = '1 / -1';
@@ -518,7 +658,6 @@ function buildTicketSummary(panel) {
     });
     actions.appendChild(voidBtn);
 
-    // SAVE / RECALL
     saveBtn = buildButton('SAVE', {
       fill: T.darkBtn, color: T.mint, fontSize: '20px', height: 38, fontFamily: T.fh,
       onTap: function() { handleSave(); },
@@ -533,9 +672,6 @@ function buildTicketSummary(panel) {
   }
 
   panel.appendChild(actions);
-
-  // Render items
-  renderTicket();
 }
 
 function buildTicketAdding(panel) {
@@ -1366,13 +1502,12 @@ function addToTicket(item) {
 function renderTicket() {
   var list = document.getElementById('ticket-list');
   if (!list) return;
-  list.innerHTML = '';
 
-  // ── Adding mode: only unsent items for active seat ──
+  // In adding mode, render unsent items and update staging totals
   if (ticketMode === 'adding') {
+    list.innerHTML = '';
     var unsent = ticket.filter(function(i) { return !i.sent && i.seat === (activeSeat || 1); });
     renderSeatItems(list, unsent);
-    // Update totals for unsent staging items
     var stageTotals = { subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 };
     unsent.forEach(function(i) {
       stageTotals.subtotal += i.unitPrice + i.mods.reduce(function(s, m) { return s + m.price; }, 0);
@@ -1391,83 +1526,7 @@ function renderTicket() {
     return;
   }
 
-  // ── Summary mode: receipt-style seat groups ────────
-  var seatItems = {};
-  for (var s = 1; s <= seatCount; s++) seatItems[s] = [];
-  ticket.forEach(function(inst) {
-    var sn = inst.seat || 1;
-    if (!seatItems[sn]) seatItems[sn] = [];
-    seatItems[sn].push(inst);
-  });
-
-  var seatsToShow = activeSeat === 0
-    ? Object.keys(seatItems).sort(function(a, b) { return a - b; })
-    : [String(activeSeat)];
-
-  seatsToShow.forEach(function(seatKey) {
-    var seatNum = parseInt(seatKey, 10);
-    var items = seatItems[seatKey] || [];
-    var isSeatActive = activeSeat === seatNum;
-    var seatTotals = computeTotals(seatNum);
-
-    // ── Seat header ────────────────────────────────
-    var seatHdr = document.createElement('div');
-    var hdrBg = isSeatActive ? T.gold : T.bg;
-    var hdrColor = isSeatActive ? T.bgDark : T.mutedText;
-    seatHdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:' + hdrBg + ';cursor:pointer;flex-shrink:0;margin-top:' + (seatKey === seatsToShow[0] ? '0' : '6px') + ';';
-
-    var hdrLabel = document.createElement('span');
-    hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + hdrColor + ';letter-spacing:1px;';
-    hdrLabel.textContent = 'SEAT ' + seatNum;
-
-    var hdrTotal = document.createElement('span');
-    hdrTotal.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + hdrColor + ';';
-    hdrTotal.textContent = '$' + seatTotals.subtotal.toFixed(2) + '  (' + items.length + ')';
-
-    seatHdr.appendChild(hdrLabel);
-    seatHdr.appendChild(hdrTotal);
-    seatHdr.addEventListener('pointerup', function() {
-      // If items are selected and tapping a different seat, transfer them
-      if (modifierSession.selectedItems.length > 0 && seatNum !== activeSeat) {
-        modifierSession.selectedItems.forEach(function(itemId) {
-          var inst = ticket.find(function(t) { return t.id === itemId; });
-          if (inst) inst.seat = seatNum;
-        });
-        modifierSession.selectedItems = [];
-        ticket.forEach(function(t) { t.selected = false; });
-        renderTicket();
-        rebuildBottomBar();
-        return;
-      }
-      // Otherwise toggle seat view
-      activeSeat = (activeSeat === seatNum) ? 0 : seatNum;
-      refreshSeatBar();
-      renderTicket();
-    });
-    list.appendChild(seatHdr);
-
-    // ── Items for this seat ────────────────────────
-    renderSeatItems(list, items);
-
-    // ── Seat subtotal line ─────────────────────────
-    if (items.length > 0 && activeSeat === 0) {
-      var seatSub = document.createElement('div');
-      seatSub.style.cssText = 'display:flex;justify-content:flex-end;padding:2px 8px;font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';flex-shrink:0;';
-      seatSub.textContent = '$' + seatTotals.subtotal.toFixed(2);
-      list.appendChild(seatSub);
-    }
-  });
-
-  // ── Live totals (scoped to active seat or all) ────
-  var totals = computeTotals(activeSeat || undefined);
-  var subEl  = document.getElementById('ticket-subtotal');
-  var taxEl  = document.getElementById('ticket-tax');
-  var totEl  = document.getElementById('ticket-total');
-  var cashEl = document.getElementById('ticket-cash');
-  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
-  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
-  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
-  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
+  // Summary mode rendering is handled by buildTicketSummary directly
 }
 
 function renderSeatItems(list, items) {
