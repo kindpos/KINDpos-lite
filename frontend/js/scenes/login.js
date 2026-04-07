@@ -23,11 +23,11 @@ registerScene('login', {
       employees = data.servers || [];
     }).catch(function() { employees = []; });
 
-    el.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+    el.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:12px;position:relative;';
 
     // PIN prompt
     var pinPrompt = document.createElement('div');
-    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';text-align:center;padding:2px 0;min-height:26px;';
+    pinPrompt.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';text-align:center;padding:2px 0 8px;min-height:26px;';
     pinPrompt.textContent = 'Enter PIN';
     _pinPromptEl = pinPrompt;
     el.appendChild(pinPrompt);
@@ -46,9 +46,9 @@ registerScene('login', {
     });
     el.appendChild(_numpadRef);
 
-    // Version label at bottom
+    // Version label at bottom-right
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:30px;padding:12px 0 0;';
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:30px;position:absolute;bottom:4px;right:12px;';
     var parts = [
       { text: 'KIND', color: T.gold, fontFamily: T.fh, fontSize: '28px' },
       { text: 'pos', color: T.red },
