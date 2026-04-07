@@ -13,7 +13,7 @@ import { PREFIXES as UNI_PREFIXES } from './data/universal-modifiers.js';
 // ── Pizza builder HexNav categories ──────────────
 var PIZZA_BUILDER_DATA = [
   {
-    id: 'specials', label: 'SPECIALS', color: '#ff4757', textColor: '#1a0a0a',
+    id: 'specials', label: 'SPECIALS', color: T.gold, textColor: '#1a1000',
     subcats: [{ id: 'specials-items', label: 'Specials', items: [
       { label: 'Meat Lovers', id: 'meat-lovers' },
       { label: 'Veggie Lovers', id: 'veggie-lovers' },
@@ -26,20 +26,33 @@ var PIZZA_BUILDER_DATA = [
     ]}],
   },
   {
-    id: 'prep', label: 'PREP', color: '#b48efa', textColor: '#1a0030',
-    subcats: [{ id: 'prep-items', label: 'Prep', items: [
-      { label: 'Sub GF Crust', id: 'gf-crust' },
-      { label: 'Thin Crust', id: 'thin-crust' },
-      { label: 'Thick Crust', id: 'thick-crust' },
-      { label: 'Well Done', id: 'well-done' },
-      { label: 'Light Sauce', id: 'light-sauce' },
-      { label: 'Extra Sauce', id: 'extra-sauce' },
-      { label: 'No Sauce', id: 'no-sauce' },
-      { label: 'Cut Square', id: 'cut-square' },
-    ]}],
+    id: 'prep', label: 'PREP', color: T.lavender, textColor: '#1a0030',
+    subcats: [
+      { id: 'prep-crust', label: 'Crust', items: [
+        { label: 'Sub GF Crust', id: 'gf-crust' },
+        { label: 'Thin Crust', id: 'thin-crust' },
+        { label: 'Thick Crust', id: 'thick-crust' },
+        { label: 'Stuffed Crust', id: 'stuffed-crust' },
+      ]},
+      { id: 'prep-temp', label: 'Temp', items: [
+        { label: 'Well Done', id: 'well-done' },
+        { label: 'Light Bake', id: 'light-bake' },
+      ]},
+      { id: 'prep-sauce', label: 'Sauce', items: [
+        { label: 'Light Sauce', id: 'light-sauce' },
+        { label: 'Extra Sauce', id: 'extra-sauce' },
+        { label: 'No Sauce', id: 'no-sauce' },
+        { label: 'White Sauce', id: 'white-sauce' },
+        { label: 'BBQ Sauce', id: 'bbq-sauce' },
+      ]},
+      { id: 'prep-cut', label: 'Cut', items: [
+        { label: 'Cut Square', id: 'cut-square' },
+        { label: 'No Cut', id: 'no-cut' },
+      ]},
+    ],
   },
   {
-    id: 'toppings', label: 'TOPPINGS', color: '#ff4757', textColor: '#fff',
+    id: 'toppings', label: 'TOPPINGS', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
     subcats: [{ id: 'toppings-items', label: 'Toppings', items: [
       { label: 'Pepperoni', id: 'pepperoni', price: 1.50 },
       { label: 'Sausage', id: 'sausage', price: 1.50 },
@@ -96,7 +109,7 @@ function _buildOverlay(el, sizeItem) {
 
   var panel = document.createElement('div');
   panel.style.cssText = [
-    'width:95%;max-width:960px;height:85%;max-height:540px;',
+    'width:98%;max-width:1100px;height:95%;',
     'background:' + T.bg + ';',
     'border:4px solid ' + T.catColor('PIZZA') + ';',
     'display:flex;flex-direction:column;',
@@ -185,7 +198,7 @@ function _buildOverlay(el, sizeItem) {
   // ── Placement hex area ──
   var placeArea = document.createElement('div');
   placeArea.style.cssText = [
-    'width:220px;flex-shrink:0;display:flex;align-items:center;justify-content:center;',
+    'width:260px;flex-shrink:0;display:flex;align-items:center;justify-content:center;',
     'background:' + T.bg5 + ';',
   ].join('');
 
@@ -283,7 +296,7 @@ function _buildOverlay(el, sizeItem) {
     requestAnimationFrame(function() {
       builderNav = new HexNav(hexArea, {
         data: PIZZA_BUILDER_DATA,
-        scale: 0.65,
+        scale: 0.85,
         onSelect: function(item) {
           handleModSelect(item);
         },
@@ -350,16 +363,16 @@ function _buildOverlay(el, sizeItem) {
 
 function _buildSplitHex(activePlacement, onTap) {
   var svgNS = 'http://www.w3.org/2000/svg';
-  var r = 90;
-  var cx = 110;
-  var cy = 100;
+  var r = 110;
+  var cx = 130;
+  var cy = 120;
   var sin60 = Math.sqrt(3) / 2;
-  var w = 220;
-  var h = 200;
+  var w = 260;
+  var h = 240;
 
   var svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-  svg.style.cssText = 'width:200px;height:180px;display:block;touch-action:none;';
+  svg.style.cssText = 'width:240px;height:220px;display:block;touch-action:none;';
 
   // Hex vertices (flat-top)
   var v0 = { x: cx + r,     y: cy };                   // right
@@ -385,9 +398,9 @@ function _buildSplitHex(activePlacement, onTap) {
   var rightPoly  = [topR, v5, v0, v1, botR];
 
   var zones = [
-    { id: '1st-half', label: '1st',  label2: '1/2',  poly: leftPoly },
-    { id: 'whole',    label: 'Whole', label2: null,   poly: centerPoly },
-    { id: '2nd-half', label: '2nd',  label2: '1/2',  poly: rightPoly },
+    { id: '1st-half', label: '1/2',   poly: leftPoly },
+    { id: 'whole',    label: 'Whole',  poly: centerPoly },
+    { id: '2nd-half', label: '1/2',   poly: rightPoly },
   ];
 
   var pizzaColor = T.catColor('PIZZA');
@@ -415,31 +428,16 @@ function _buildSplitHex(activePlacement, onTap) {
 
     var text1 = document.createElementNS(svgNS, 'text');
     text1.setAttribute('x', centX);
-    text1.setAttribute('y', zone.label2 ? centY - 10 : centY);
+    text1.setAttribute('y', centY);
     text1.setAttribute('text-anchor', 'middle');
     text1.setAttribute('dominant-baseline', 'central');
     text1.setAttribute('font-family', T.fh);
-    text1.setAttribute('font-size', '18');
+    text1.setAttribute('font-size', '24');
     text1.setAttribute('font-weight', 'bold');
     text1.setAttribute('fill', isActive ? '#1a0a0a' : pizzaColor);
     text1.setAttribute('pointer-events', 'none');
     text1.textContent = zone.label;
     g.appendChild(text1);
-
-    if (zone.label2) {
-      var text2 = document.createElementNS(svgNS, 'text');
-      text2.setAttribute('x', centX);
-      text2.setAttribute('y', centY + 12);
-      text2.setAttribute('text-anchor', 'middle');
-      text2.setAttribute('dominant-baseline', 'central');
-      text2.setAttribute('font-family', T.fh);
-      text2.setAttribute('font-size', '18');
-      text2.setAttribute('font-weight', 'bold');
-      text2.setAttribute('fill', isActive ? '#1a0a0a' : pizzaColor);
-      text2.setAttribute('pointer-events', 'none');
-      text2.textContent = zone.label2;
-      g.appendChild(text2);
-    }
 
     // Tap handler
     g.addEventListener('pointerup', function() {
