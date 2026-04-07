@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
+import { T, buildStyledButton, applySunkenStyle, chamfer } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { registerScene, push, pop, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -241,8 +241,11 @@ var comboFlow    = null;  // { step: 'side'|'drink', ticketItem: ref }
 var hexNav       = null;
 var activeTab    = 'items';
 var activePrefix = 'add';
-var ticket       = [];    // [{ id, name, unitPrice, mods:[{name,price,charged}], selected, sent }]
+var ticket       = [];    // [{ id, name, unitPrice, mods:[{name,price,charged}], selected, sent, seat }]
 var ticketSeq    = 0;     // monotonic ID counter
+var activeSeat   = 1;     // current seat number (0 = show all)
+var seatCount    = 1;     // total number of seats
+var ticketMode   = 'summary'; // 'summary' | 'adding'
 var sceneParams  = {};
 var prefixCard   = null;  // DOM ref for show/hide
 var savedTabs    = [];    // [{ id, checkNum, label, ticket }] — in-memory for pilot
@@ -250,10 +253,7 @@ var saveSeq      = 0;     // saved tab ID counter
 var saveBtn      = null;  // DOM ref for SAVE button state
 var customerName = '';    // current tab's customer name (from save/recall)
 var modHistory   = [];    // [{inst, mod}] — undo stack for modifier additions
-var _tabCanvas   = null;  // DOM refs for tab switching from CONFIRM
-var _tabItemsBtn = null;
-var _tabModsBtn  = null;
-var _bottomBar   = null;  // DOM ref for bottom action bar
+var _tabCanvas   = null;  // DOM ref for hex canvas
 var _mainArea    = null;  // DOM ref for right panel
 
 // ── Batch Modifier Session ───────────────────────
@@ -289,6 +289,9 @@ registerScene('order-entry', {
     activePrefix   = 'add';
     ticket         = [];
     ticketSeq      = 0;
+    activeSeat     = 1;
+    seatCount      = 1;
+    ticketMode     = (params && params.recallOrderId) ? 'summary' : 'adding';
     sceneParams    = params || {};
     prefixCard     = null;
     saveBtn        = null;
@@ -298,8 +301,9 @@ registerScene('order-entry', {
     customerName   = '';     // reset tab name
     modHistory     = [];     // reset undo stack
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
-    _bottomBar     = null;
     _mainArea      = null;
+    _ticketPanel   = null;
+    _actionBar     = null;
 
     el.style.cssText = [
       'width:100%;height:100%;',
@@ -331,10 +335,11 @@ registerScene('order-entry', {
 });
 
 // ── TOTALS HELPER ─────────────────────────────────
-function computeTotals() {
+function computeTotals(seatFilter) {
   var subtotal = 0;
   var counts = {};
-  ticket.forEach(function(inst) {
+  var items = seatFilter ? ticket.filter(function(i) { return i.seat === seatFilter; }) : ticket;
+  items.forEach(function(inst) {
     var lineTotal = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
     counts[inst.name] = counts[inst.name] || { unitPrice: inst.unitPrice, qty: 0 };
     counts[inst.name].qty += 1;
@@ -347,6 +352,8 @@ function computeTotals() {
 }
 
 // ── TICKET PANEL ──────────────────────────────────
+var _ticketPanel = null;
+
 function buildTicket(parentEl) {
   var panel = document.createElement('div');
   panel.style.cssText = [
@@ -354,31 +361,67 @@ function buildTicket(parentEl) {
     'display:flex;flex-direction:column;',
     'padding-right:' + GAP + 'px;',
   ].join('');
+  _ticketPanel = panel;
 
-  // SAVE / RECALL
-  var topRow = document.createElement('div');
-  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;';
+  rebuildTicketPanel();
+  return panel;
+}
 
-  saveBtn = buildButton('SAVE', {
-    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
-    onTap: function() { handleSave(); },
-  });
+var _rebuildingTicket = false;
+function rebuildTicketPanel() {
+  if (!_ticketPanel || _rebuildingTicket) return;
+  _rebuildingTicket = true;
+  _ticketPanel.innerHTML = '';
 
-  var recallBtnEl = buildButton('RECALL', {
-    fill: T.mint, color: T.bgDark, fontSize: '26px', height: 36, fontFamily: T.fh,
-    onTap: function() { handleRecall(); },
-  });
+  if (ticketMode === 'adding') {
+    buildTicketAdding(_ticketPanel);
+  } else {
+    buildTicketSummary(_ticketPanel);
+  }
+  _rebuildingTicket = false;
+}
 
-  topRow.appendChild(saveBtn);
-  topRow.appendChild(recallBtnEl);
+function buildTicketSummary(panel) {
+  // Check number header
+  var checkHdr = document.createElement('div');
+  checkHdr.style.cssText = 'flex-shrink:0;text-align:center;padding:4px 0;font-family:' + T.fh + ';font-size:22px;color:' + T.cyan + ';letter-spacing:2px;';
+  checkHdr.textContent = currentCheckNumber || 'NEW ORDER';
+  panel.appendChild(checkHdr);
 
-  // Item list
-  var itemList = document.createElement('div');
-  itemList.id = 'ticket-list';
-  itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
-  panel.appendChild(itemList);
+  // Scrollable content area — seat cards or drilled-down items
+  var content = document.createElement('div');
+  content.id = 'ticket-list';
+  content.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:6px;scrollbar-width:none;-ms-overflow-style:none;';
 
-  // Summary + Totals — combined card with sunken bevel
+  if (activeSeat === 0 || seatCount <= 1) {
+    // ── Card grid: one box per seat ──────────────────
+    buildSeatCardGrid(content);
+  } else {
+    // ── Drilled into a seat: show items ──────────────
+    var backRow = document.createElement('div');
+    backRow.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;padding:2px 0;';
+    var backArrow = document.createElement('span');
+    backArrow.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mint + ';';
+    backArrow.textContent = '\u25c0';
+    var backLabel = document.createElement('span');
+    backLabel.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';letter-spacing:1px;';
+    backLabel.textContent = 'SEAT ' + activeSeat;
+    backRow.appendChild(backArrow);
+    backRow.appendChild(backLabel);
+    backRow.addEventListener('pointerup', function() {
+      activeSeat = 0;
+      rebuildTicketPanel();
+    });
+    content.appendChild(backRow);
+
+    // Render items for this seat
+    var seatItems = ticket.filter(function(i) { return i.seat === activeSeat; });
+    renderSeatItems(content, seatItems);
+  }
+
+  panel.appendChild(content);
+
+  // Summary + Totals
   var summaryTotals = document.createElement('div');
   summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;flex-shrink:0;';
   applySunkenStyle(summaryTotals);
@@ -391,10 +434,179 @@ function buildTicket(parentEl) {
   summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
   panel.appendChild(summaryTotals);
 
-  // SAVE / RECALL below totals
-  panel.appendChild(topRow);
+  // Update action bar on the right
+  rebuildActionBar();
 
-  return panel;
+  // Update totals
+  var totals = computeTotals(activeSeat || undefined);
+  var subEl  = document.getElementById('ticket-subtotal');
+  var taxEl  = document.getElementById('ticket-tax');
+  var totEl  = document.getElementById('ticket-total');
+  var cashEl = document.getElementById('ticket-cash');
+  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
+  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
+  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
+  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
+}
+
+function buildSeatCardGrid(container) {
+  var BEVEL = 4;
+  var CHAM = 8;
+
+  for (var s = 1; s <= seatCount; s++) {
+    (function(seatNum) {
+      var items = ticket.filter(function(i) { return i.seat === seatNum; });
+      var seatTotals = computeTotals(seatNum);
+      var hasUnsent = items.some(function(i) { return !i.sent; });
+      var allSent = items.length > 0 && items.every(function(i) { return i.sent; });
+
+      var pair = buildStyledButton(T.darkBtn);
+      var wrap = pair.wrap;
+      var inner = pair.inner;
+
+      inner.style.borderWidth = BEVEL + 'px';
+      inner.style.clipPath = chamfer(CHAM);
+      inner.style.flexDirection = 'column';
+      inner.style.alignItems = 'stretch';
+      inner.style.justifyContent = 'flex-start';
+      inner.style.padding = '6px 8px';
+      inner.style.position = 'relative';
+      inner.style.gap = '1px';
+      wrap.style.flexShrink = '0';
+
+      // Title
+      var title = document.createElement('div');
+      title.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';font-weight:bold;text-align:center;';
+      title.textContent = 'SEAT ' + seatNum;
+      inner.appendChild(title);
+
+      // Divider
+      var hr = document.createElement('div');
+      hr.style.cssText = 'height:1px;background:' + T.border + ';margin:3px 0;';
+      inner.appendChild(hr);
+
+      // Hero — subtotal
+      var hero = document.createElement('div');
+      hero.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.gold + ';font-weight:bold;text-align:center;padding:2px 0;';
+      hero.textContent = '$' + seatTotals.subtotal.toFixed(2);
+      inner.appendChild(hero);
+
+      // Subtitle — item count
+      var sub = document.createElement('div');
+      sub.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';text-align:center;';
+      sub.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+      inner.appendChild(sub);
+
+      // Hint
+      var hint = document.createElement('div');
+      hint.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';text-align:center;margin-top:1px;';
+      hint.textContent = '\u25b8';
+      inner.appendChild(hint);
+
+      // Status dot
+      var dotColor = hasUnsent ? T.gold : (allSent ? T.goGreen : T.cyan);
+      var dot = document.createElement('div');
+      dot.style.cssText = 'position:absolute;bottom:6px;right:6px;width:8px;height:8px;clip-path:circle(50%);background:' + dotColor + ';opacity:' + (items.length > 0 ? '1' : '0.4') + ';';
+      inner.appendChild(dot);
+
+      wrap.addEventListener('pointerup', function() {
+        // If items are selected, transfer them to this seat
+        if (modifierSession.selectedItems.length > 0) {
+          modifierSession.selectedItems.forEach(function(itemId) {
+            var inst = ticket.find(function(t) { return t.id === itemId; });
+            if (inst) inst.seat = seatNum;
+          });
+          modifierSession.selectedItems = [];
+          ticket.forEach(function(t) { t.selected = false; });
+          rebuildTicketPanel();
+          return;
+        }
+        // Otherwise drill into this seat
+        activeSeat = seatNum;
+        rebuildTicketPanel();
+      });
+
+      container.appendChild(wrap);
+    })(s);
+  }
+
+  // "+" add seat card
+  var addPair = buildStyledButton(T.bg);
+  addPair.inner.style.borderWidth = '4px';
+  addPair.inner.style.clipPath = chamfer(8);
+  addPair.inner.style.flexDirection = 'column';
+  addPair.inner.style.alignItems = 'center';
+  addPair.inner.style.justifyContent = 'center';
+  addPair.inner.style.padding = '8px';
+  addPair.inner.style.borderStyle = 'dashed';
+  addPair.wrap.style.flexShrink = '0';
+
+  var addLabel = document.createElement('div');
+  addLabel.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.mint + ';';
+  addLabel.textContent = '+';
+  addPair.inner.appendChild(addLabel);
+
+  var addSub = document.createElement('div');
+  addSub.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
+  addSub.textContent = 'Add Seat';
+  addPair.inner.appendChild(addSub);
+
+  addPair.wrap.addEventListener('pointerup', function() {
+    seatCount++;
+    activeSeat = seatCount;
+    rebuildTicketPanel();
+  });
+  container.appendChild(addPair.wrap);
+}
+
+
+function buildTicketAdding(panel) {
+  var isFreshOrder = !currentOrderId && !ticket.some(function(i) { return i.sent; });
+  var hasCheckToReturn = currentOrderId || ticket.some(function(i) { return i.sent; });
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;padding:4px 0;';
+
+  if (hasCheckToReturn) {
+    var backBtn = document.createElement('div');
+    backBtn.style.cssText = 'cursor:pointer;font-family:' + T.fb + ';font-size:24px;color:' + T.mint + ';padding:0 4px;';
+    backBtn.textContent = '\u25c0';
+    backBtn.addEventListener('pointerup', function() {
+      ticketMode = 'summary';
+      rebuildTicketPanel();
+    });
+    hdr.appendChild(backBtn);
+  }
+
+  var hdrLabel = document.createElement('div');
+  hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + T.cyan + ';letter-spacing:2px;';
+  hdrLabel.textContent = isFreshOrder ? 'NEW ORDER' : 'ADD ITEMS — SEAT ' + (activeSeat || 1);
+  hdr.appendChild(hdrLabel);
+  panel.appendChild(hdr);
+
+  // Unsent items list
+  var itemList = document.createElement('div');
+  itemList.id = 'ticket-list';
+  itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
+  panel.appendChild(itemList);
+
+  // Staging totals (unsent only)
+  var summaryTotals = document.createElement('div');
+  summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;flex-shrink:0;';
+  applySunkenStyle(summaryTotals);
+  summaryTotals.appendChild(buildSummaryRow('Subtotal', '$0.00', 'ticket-subtotal'));
+  summaryTotals.appendChild(buildSummaryRow('Tax',      '$0.00', 'ticket-tax'));
+  var mintSep = document.createElement('div');
+  mintSep.style.cssText = 'height:2px;background:' + T.mint + ';margin:2px 0;';
+  summaryTotals.appendChild(mintSep);
+  summaryTotals.appendChild(buildTotalRow('Total', '$0.00', 'ticket-total'));
+  summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
+  panel.appendChild(summaryTotals);
+
+  // Render unsent items only
+  renderTicket();
+  rebuildActionBar();
 }
 
 function buildSummaryRow(label, value, id) {
@@ -417,6 +629,58 @@ function buildTotalRow(label, value, id) {
   row.innerHTML = '<span>' + label + '</span>';
   row.appendChild(valEl);
   return row;
+}
+
+// ── SEAT BAR ─────────────────────────────────────
+function buildSeatBar(container) {
+  container.innerHTML = '';
+
+  // "ALL" button
+  var allBtn = document.createElement('div');
+  var allActive = activeSeat === 0;
+  allBtn.style.cssText = 'flex-shrink:0;padding:2px 8px;font-family:' + T.fh + ';font-size:16px;cursor:pointer;text-align:center;' +
+    'background:' + (allActive ? T.cyan : T.bg) + ';color:' + (allActive ? T.bgDark : T.mutedText) + ';';
+  allBtn.textContent = 'ALL';
+  allBtn.addEventListener('pointerup', function() {
+    activeSeat = 0;
+    refreshSeatBar();
+    renderTicket();
+  });
+  container.appendChild(allBtn);
+
+  // Seat buttons
+  for (var i = 1; i <= seatCount; i++) {
+    (function(seatNum) {
+      var btn = document.createElement('div');
+      var isActive = activeSeat === seatNum;
+      btn.style.cssText = 'flex:1;padding:2px 4px;font-family:' + T.fb + ';font-size:16px;cursor:pointer;text-align:center;' +
+        'background:' + (isActive ? T.gold : T.bg) + ';color:' + (isActive ? T.bgDark : T.mutedText) + ';';
+      btn.textContent = 'S' + seatNum;
+      btn.addEventListener('pointerup', function() {
+        activeSeat = seatNum;
+        refreshSeatBar();
+        renderTicket();
+      });
+      container.appendChild(btn);
+    })(i);
+  }
+
+  // "+" add seat button
+  var addBtn = document.createElement('div');
+  addBtn.style.cssText = 'flex-shrink:0;padding:2px 8px;font-family:' + T.fb + ';font-size:16px;cursor:pointer;text-align:center;color:' + T.mint + ';background:' + T.bg + ';';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('pointerup', function() {
+    seatCount++;
+    activeSeat = seatCount;
+    refreshSeatBar();
+    renderTicket();
+  });
+  container.appendChild(addBtn);
+}
+
+function refreshSeatBar() {
+  var bar = document.getElementById('seat-bar');
+  if (bar) buildSeatBar(bar);
 }
 
 // ── PREFIX CARD ───────────────────────────────────
@@ -521,6 +785,8 @@ function buildPrefixCard() {
 }
 
 // ── MAIN AREA ─────────────────────────────────────
+var _actionBar = null;
+
 function buildMain(parentEl, params) {
   var main = document.createElement('div');
   main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
@@ -531,30 +797,22 @@ function buildMain(parentEl, params) {
   canvas.style.cssText = [
     'flex:1;background:' + T.bg5 + ';',
     'border:7px solid ' + T.mint + ';',
-    'margin-bottom:0;padding-bottom:' + OVERLAP + 'px;',
     'position:relative;overflow:hidden;',
   ].join('');
   main.appendChild(canvas);
 
-  var bottom = document.createElement('div');
-  bottom.id = 'bottom-bar';
-  bottom.style.cssText = [
-    'display:grid;',
-    'grid-template-columns:1fr 1fr 1fr 1fr 1fr;',
-    'grid-template-rows:auto auto;',
-    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;row-gap:16px;',
-    'position:relative;z-index:2;',
-    'margin-top:-' + OVERLAP + 'px;',
-  ].join('');
-  _bottomBar = bottom;
+  // Action bar below hex nav
+  var actionBar = document.createElement('div');
+  actionBar.id = 'action-bar';
+  actionBar.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 0;flex-shrink:0;';
+  _actionBar = actionBar;
+  main.appendChild(actionBar);
 
   // Store refs
   _tabCanvas   = canvas;
+  _payParams   = params;
 
-  // Build bottom bar initial state (idle)
-  rebuildBottomBar(params);
-
-  main.appendChild(bottom);
+  rebuildActionBar();
 
   requestAnimationFrame(function() {
     hexNav = new HexNav(canvas, {
@@ -567,148 +825,131 @@ function buildMain(parentEl, params) {
   return main;
 }
 
-// ── BOTTOM BAR — Three States ────────────────────
+function rebuildActionBar() {
+  if (!_actionBar) return;
+  _actionBar.innerHTML = '';
+  _actionBar.style.gridTemplateColumns = '1fr 1fr';
+
+  var hasSelection = modifierSession.selectedItems.length > 0;
+  var isFreshOrder = !currentOrderId && !ticket.some(function(i) { return i.sent; });
+  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
+  var hasUnsent = ticket.some(function(i) { return !i.sent; });
+
+  if (modifierSession.active) {
+    // Modifier session — UNDO + DONE
+    var undoBtn = buildButton('UNDO', {
+      fill: T.darkBtn, color: T.red, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { undoLastMod(); renderTicket(); },
+    });
+    _actionBar.appendChild(undoBtn);
+
+    var doneBtn = buildButton('DONE', {
+      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { finalizeSession(); },
+    });
+    _actionBar.appendChild(doneBtn);
+  } else if (hasSelection) {
+    // Items selected — MODIFY + DESELECT
+    var modifyBtn = buildButton('MODIFY', {
+      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { openModifierSession(); },
+    });
+    _actionBar.appendChild(modifyBtn);
+
+    var deselectBtn = buildButton('DESELECT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { clearModifierSelection(); },
+    });
+    _actionBar.appendChild(deselectBtn);
+  } else if (ticketMode === 'adding') {
+    // Adding mode — SAVE + SEND + PAY (fresh) or SAVE + SEND (existing)
+    _actionBar.style.gridTemplateColumns = isFreshOrder ? '1fr 1fr 1fr' : '1fr 1fr';
+    var sendBtn = buildButton('SEND', {
+      fill: T.goGreen, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() {
+        handleSend().then(function() {
+          ticketMode = 'summary';
+          rebuildTicketPanel();
+          rebuildActionBar();
+        }).catch(function() {
+          renderTicket();
+        });
+      },
+    });
+    var saveBtn2 = buildButton('SAVE', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { handleSave(); },
+    });
+    _actionBar.appendChild(saveBtn2);
+    _actionBar.appendChild(sendBtn);
+
+    if (isFreshOrder) {
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() { handlePay(_payParams); },
+      });
+      _actionBar.appendChild(payBtn);
+    }
+  } else {
+    // Summary mode — PAY (primary when all sent) + action buttons
+    if (allSent) {
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() { handlePay(_payParams); },
+      });
+      payBtn.style.gridColumn = '1 / -1';
+      _actionBar.appendChild(payBtn);
+    } else if (hasUnsent) {
+      var sendBtn = buildButton('SEND', {
+        fill: T.goGreen, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() {
+          handleSend().then(function() { rebuildTicketPanel(); rebuildActionBar(); });
+        },
+      });
+      _actionBar.appendChild(sendBtn);
+
+      var payBtn = buildButton('PAY', {
+        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() { handlePay(_payParams); },
+      });
+      _actionBar.appendChild(payBtn);
+    }
+
+    var addItemBtn = buildButton('ADD ITEM', {
+      fill: T.mint, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() {
+        ticketMode = 'adding';
+        rebuildTicketPanel();
+        rebuildActionBar();
+      },
+    });
+    var printBtn = buildButton('PRINT', {
+      fill: T.cyan, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() {
+        if (!currentOrderId) return;
+        fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
+          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+          .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
+      },
+    });
+    _actionBar.appendChild(addItemBtn);
+    _actionBar.appendChild(printBtn);
+  }
+}
+
+// ── BOTTOM BAR (legacy — now handled by ticket panel) ──
 var _payParams = null; // stash params for PAY handler
 
 function rebuildBottomBar(params) {
   if (params !== undefined) _payParams = params;
-  if (!_bottomBar) return;
-  _bottomBar.innerHTML = '';
-
-  var selectedIds = modifierSession.selectedItems;
-  var hasSelection = selectedIds.length > 0;
-
-  if (modifierSession.active) {
-    // ── State C: Session Active — UNDO + FINALIZE ──
-    var undoBtn = buildButton('UNDO', { fill: T.darkBtn, color: T.red, fontSize: '26px', fontFamily: T.fh });
-    undoBtn.style.gridColumn = '1 / 3';
-    undoBtn.style.gridRow = '1';
-    undoBtn.style.height = '100%';
-    undoBtn.style.position = 'relative';
-    undoBtn.style.overflow = 'hidden';
-
-    // Hold-to-cancel fill indicator
-    var holdFill = document.createElement('div');
-    holdFill.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:0;background:' + T.mint + ';opacity:0.3;pointer-events:none;z-index:1;';
-    undoBtn.appendChild(holdFill);
-
-    var holdTimer = null;
-    var didHold = false;
-    undoBtn.addEventListener('pointerdown', function(e) {
-      e.stopPropagation();
-      didHold = false;
-      holdFill.style.transition = 'width 600ms linear';
-      holdFill.style.width = '100%';
-      holdTimer = setTimeout(function() {
-        didHold = true;
-        holdFill.style.transition = 'none';
-        holdFill.style.width = '0';
-        cancelSession();
-      }, 600);
-    });
-    undoBtn.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
-      clearTimeout(holdTimer);
-      holdFill.style.transition = 'none';
-      holdFill.style.width = '0';
-      if (!didHold) undoLastMod();
-    });
-    undoBtn.addEventListener('pointerleave', function() {
-      clearTimeout(holdTimer);
-      holdFill.style.transition = 'none';
-      holdFill.style.width = '0';
-    });
-
-    var finalizeBtn = buildButton('FINALIZE', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { finalizeSession(); },
-    });
-    finalizeBtn.style.gridColumn = '3 / 6';
-    finalizeBtn.style.gridRow = '1';
-    finalizeBtn.style.height = '100%';
-
-    _bottomBar.appendChild(undoBtn);
-    _bottomBar.appendChild(finalizeBtn);
-    return;
-  }
-
-  // ── Row 1: ADD ITEMS tab + optional MODIFY button ──
-  if (hasSelection && !modifierSession.active) {
-    var addBtn = buildButton('ADD ITEMS', {
-      fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { clearModifierSelection(); },
-    });
-    addBtn.style.gridColumn = '1 / 3';
-    addBtn.style.gridRow = '1';
-    addBtn.style.height = '100%';
-
-    // State B: Items Selected — show MODIFY
-    var modifyBtn = buildButton('MODIFY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { openModifierSession(); },
-    });
-    modifyBtn.style.gridColumn = '3 / 6';
-    modifyBtn.style.gridRow = '1';
-    modifyBtn.style.height = '100%';
-
-    _bottomBar.appendChild(addBtn);
-    _bottomBar.appendChild(modifyBtn);
-  } else {
-    // State A: Idle — ADD ITEMS only (no MODIFY ITEMS tab)
-    var tabItems = buildButton('ADD ITEMS', {
-      fill: T.mint, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-    });
-    tabItems.style.gridColumn = '1 / 5';
-    tabItems.style.gridRow    = '1';
-    tabItems.style.height = '100%';
-    _tabItemsBtn = tabItems;
-
-    _bottomBar.appendChild(tabItems);
-  }
-
-  // ── Row 2: Action buttons (always present when not in session) ──
-  var disc  = buildButton('DISC', { fill: T.mint, color: T.bgDark, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleDiscount(); },
-  });
-  var voidB = buildButton('VOID', { fill: T.red, color: '#fff', fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleVoid(); },
-  });
-  voidB.id = 'void-btn';
-  var print = buildButton('PRINT', { fill: T.cyan, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() {
-      if (!currentOrderId) return;
-      fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
-        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
-        .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
-    },
-  });
-  var pay = buildButton('PAY', { fill: T.gold, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handlePay(_payParams); },
-  });
-  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
-  var sendLabel = allSent ? 'RESEND' : 'SEND';
-  var send = buildButton(sendLabel, { fill: T.goGreen, color: T.bg, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleSend(); },
-  });
-
-  disc.style.gridColumn  = '1'; disc.style.gridRow  = '2'; disc.style.height = '100%';
-  voidB.style.gridColumn = '2'; voidB.style.gridRow = '2'; voidB.style.height = '100%';
-  print.style.gridColumn = '3'; print.style.gridRow = '2'; print.style.height = '100%';
-  pay.style.gridColumn   = '4'; pay.style.gridRow   = '2'; pay.style.height = '100%';
-  send.style.gridColumn  = '5'; send.style.gridRow  = '2'; send.style.height = '100%';
-
-  [disc, voidB, print, pay, send].forEach(function(b) { _bottomBar.appendChild(b); });
-
-  // Update void/delete label
-  var selected = ticket.filter(function(i) { return i.selected; });
-  var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
-  var vInner = voidB.firstElementChild;
-  if (vInner) vInner.textContent = unsentSelected ? 'DELETE' : 'VOID';
+  // Bottom bar removed — action buttons now live in ticket summary panel
+  // This function is kept as a no-op for compatibility with existing callers
 }
 
 function clearModifierSelection() {
   modifierSession.selectedItems = [];
   ticket.forEach(function(i) { i.selected = false; });
-  renderTicket();
-  rebuildBottomBar();
+  rebuildTicketPanel();
 }
 
 // ── MODIFIER SESSION ─────────────────────────────
@@ -740,8 +981,8 @@ function openModifierSession() {
 
   var panel = buildModifierPanel(catIds);
   modifierSession.panelEl = panel;
-  if (_mainArea && _bottomBar) {
-    _mainArea.insertBefore(panel, _bottomBar);
+  if (_mainArea) {
+    _mainArea.appendChild(panel);
   }
 
   // Init HexNav after panel is in the DOM so it gets correct dimensions
@@ -1059,8 +1300,7 @@ function endModifierSession() {
   // Restore hex canvas
   if (_tabCanvas) _tabCanvas.style.display = '';
 
-  renderTicket();
-  rebuildBottomBar();
+  rebuildTicketPanel();
 
   // Reset hex nav if needed
   if (hexNav) hexNav.reset();
@@ -1088,6 +1328,12 @@ function getModCat(id) {
 function handleItemSelect(item) {
   var name  = item.label || item;
   var price = typeof item.price === 'number' ? item.price : 0;
+
+  // Auto-switch to adding mode
+  if (ticketMode !== 'adding') {
+    ticketMode = 'adding';
+    rebuildTicketPanel();
+  }
 
   // ── Combo flow: picking side or soda ──
   if (comboFlow) {
@@ -1128,6 +1374,7 @@ function handleItemSelect(item) {
       selected:  false,
       sent:      false,
       category:  'combo',
+      seat:      activeSeat || 1,
     };
     ticket.push(ticketItem);
     comboFlow = { step: 'side', ticketItem: ticketItem };
@@ -1151,6 +1398,7 @@ function handleItemSelect(item) {
         selected:  false,
         sent:      false,
         category:  'pizza',
+        seat:      activeSeat || 1,
       });
       renderTicket();
       rebuildBottomBar();
@@ -1224,24 +1472,53 @@ function addToTicket(item) {
       name:      name,
       unitPrice: price,
       mods:      mods,
-      selected:  false,
+      selected:  true,
       sent:      false,
       category:  hexNav ? hexNav.getCatId() : null,
+      seat:      activeSeat || 1,
     });
+    // Auto-select the new item for immediate modifier access
+    var newId = ticketSeq;
+    modifierSession.selectedItems = [newId];
   }
-  renderTicket();
-  rebuildBottomBar();
+  rebuildTicketPanel();
 }
 
 function renderTicket() {
   var list = document.getElementById('ticket-list');
   if (!list) return;
-  list.innerHTML = '';
 
+  // In adding mode, render unsent items and update staging totals
+  if (ticketMode === 'adding') {
+    list.innerHTML = '';
+    var unsent = ticket.filter(function(i) { return !i.sent && i.seat === (activeSeat || 1); });
+    renderSeatItems(list, unsent);
+    var stageTotals = { subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 };
+    unsent.forEach(function(i) {
+      stageTotals.subtotal += i.unitPrice + i.mods.reduce(function(s, m) { return s + m.price; }, 0);
+    });
+    stageTotals.tax = Math.round(stageTotals.subtotal * TAX_RATE * 100) / 100;
+    stageTotals.cardTotal = Math.round((stageTotals.subtotal + stageTotals.tax) * 100) / 100;
+    stageTotals.cashPrice = Math.round(stageTotals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
+    var subEl  = document.getElementById('ticket-subtotal');
+    var taxEl  = document.getElementById('ticket-tax');
+    var totEl  = document.getElementById('ticket-total');
+    var cashEl = document.getElementById('ticket-cash');
+    if (subEl)  subEl.textContent  = '$' + stageTotals.subtotal.toFixed(2);
+    if (taxEl)  taxEl.textContent  = '$' + stageTotals.tax.toFixed(2);
+    if (totEl)  totEl.textContent  = '$' + stageTotals.cardTotal.toFixed(2);
+    if (cashEl) cashEl.textContent = '$' + stageTotals.cashPrice.toFixed(2);
+    return;
+  }
+
+  // Summary mode rendering is handled by buildTicketSummary directly
+}
+
+function renderSeatItems(list, items) {
   // ── Group instances by name ──────────────────────
   var groups = {};
   var groupOrder = [];
-  ticket.forEach(function(inst) {
+  items.forEach(function(inst) {
     if (!groups[inst.name]) {
       groups[inst.name] = [];
       groupOrder.push(inst.name);
@@ -1318,8 +1595,7 @@ function renderTicket() {
             modifierSession.selectedItems.push(i.id);
           }
         });
-        renderTicket();
-        rebuildBottomBar();
+        rebuildTicketPanel();
       });
 
       list.appendChild(gc);
@@ -1401,25 +1677,13 @@ function renderTicket() {
             modifierSession.selectedItems.push(inst.id);
             inst.selected = true;
           }
-          renderTicket();
-          rebuildBottomBar();
+          rebuildTicketPanel();
         });
 
         list.appendChild(ic);
       });
     }
   });
-
-  // ── Live totals ───────────────────────────────────
-  var totals = computeTotals();
-  var subEl  = document.getElementById('ticket-subtotal');
-  var taxEl  = document.getElementById('ticket-tax');
-  var totEl  = document.getElementById('ticket-total');
-  var cashEl = document.getElementById('ticket-cash');
-  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
-  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
-  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
-  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
 }
 
 // ── SEPARATOR + MOD ROW helpers ───────────────────
@@ -1839,7 +2103,7 @@ async function handleSend() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_type:  'quick_service',
-          guest_count: 1,
+          guest_count: seatCount,
           customer_name: customerName || null,
         }),
       });
@@ -1865,6 +2129,7 @@ async function handleSend() {
           price:        inst.unitPrice,
           quantity:     1,
           category:     inst.category || 'general',
+          seat_number:  inst.seat || 1,
           modifiers:    inst.mods.map(function(m) {
             return { name: m.name, price: m.price, modifier_price: m.price, charged: m.charged, prefix: m.prefix || null, half_price: m.half_price != null ? m.half_price : null };
           }),

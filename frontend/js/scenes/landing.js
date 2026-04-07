@@ -12,7 +12,7 @@ import { registerScene, push, replace, clearSceneCache } from '../scene-manager.
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildChartGrid } from '../chart-helpers.js';
 import {
-  fetchReportData, buildLeftCard, buildRightCard, buildCardWrap,
+  fetchReportData, buildLeftCard, buildLeftCardButtons, buildRightCard, buildCardWrap,
   buildServerShiftPanels, buildServerHoursPanels,
   buildManagerSalesPanels, buildManagerLaborPanels,
 } from './reporting.js';
@@ -165,18 +165,25 @@ function buildCardLanding(el, params, sales, labor) {
   //  LEFT — SHIFT (server) or SALES (manager) Card
   // ══════════════════════════════════════════════
   var leftCol = document.createElement('div');
-  leftCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;';
+  leftCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;gap:8px;';
 
   if (sales !== undefined) {
     var leftCard = buildLeftCard(baseParams, sales, labor);
     var leftWrap = buildCardWrap(leftCard);
     leftWrap.style.maxWidth = '100%';
-    leftWrap.style.maxHeight = '95%';
+    leftWrap.style.flexShrink = '1';
+    leftWrap.style.minHeight = '0';
     leftWrap.addEventListener('pointerup', function() {
       expandedCard = 'left';
       renderLanding();
     });
     leftCol.appendChild(leftWrap);
+
+    var leftBtns = buildLeftCardButtons(baseParams, sales);
+    leftBtns.style.flexShrink = '0';
+    leftBtns.style.width = '100%';
+    leftBtns.style.maxWidth = leftWrap.style.maxWidth;
+    leftCol.appendChild(leftBtns);
   } else {
     var loadLeft = document.createElement('div');
     loadLeft.style.cssText = 'font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:28px;text-align:center;';
@@ -190,7 +197,7 @@ function buildCardLanding(el, params, sales, labor) {
   //  CENTER — Open Tabs (bordered card)
   // ══════════════════════════════════════════════
   var center = document.createElement('div');
-  center.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;border:3px solid ' + T.mint + ';background:' + T.bgDark + ';box-sizing:border-box;';
+  center.style.cssText = 'grid-column:2;display:flex;flex-direction:column;overflow:hidden;border:3px solid ' + T.mint + ';background:' + T.bgDark + ';box-sizing:border-box;';
 
   var tabHeader = document.createElement('div');
   tabHeader.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.cyan + ';letter-spacing:2px;padding:8px 4px;flex-shrink:0;text-align:center;';
@@ -206,6 +213,11 @@ function buildCardLanding(el, params, sales, labor) {
   tabGrid.appendChild(loadingEl);
 
   center.appendChild(tabGrid);
+
+  // Edit action bar (hidden until checks selected)
+  var editBar = document.createElement('div');
+  editBar.style.cssText = 'flex-shrink:0;display:none;border-top:2px solid ' + T.cyan + ';padding:8px 12px;background:' + T.bg + ';';
+  center.appendChild(editBar);
 
   el.appendChild(center);
 
@@ -227,7 +239,7 @@ function buildCardLanding(el, params, sales, labor) {
   //  RIGHT — HOURS (server) or LABOR (manager) Card
   // ══════════════════════════════════════════════
   var rightCol = document.createElement('div');
-  rightCol.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;grid-row:1/-1;';
+  rightCol.style.cssText = 'grid-column:3;grid-row:1/-1;display:flex;align-items:center;justify-content:center;overflow:hidden;';
 
   if (sales !== undefined) {
     var rightCard = buildRightCard(baseParams, sales, labor);
@@ -249,14 +261,105 @@ function buildCardLanding(el, params, sales, labor) {
   el.appendChild(rightCol);
 
   // Fetch open orders
-  fetchOpenTabs(tabGrid, emp, empRoles);
+  fetchOpenTabs(tabGrid, editBar, emp, empRoles);
 }
 
 // ═══════════════════════════════════════════════════
 //  OPEN TABS FETCH (shared)
 // ═══════════════════════════════════════════════════
 
-function fetchOpenTabs(tabGrid, emp, empRoles) {
+function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
+  var selected = {};    // order_id -> order
+  var cardEls = {};     // order_id -> card element
+
+  function updateEditBar() {
+    var ids = Object.keys(selected);
+    if (ids.length === 0) {
+      editBar.style.display = 'none';
+      return;
+    }
+    editBar.style.display = 'block';
+    editBar.innerHTML = '';
+
+    // Header row: "EDIT" label + count + deselect all
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
+
+    var title = document.createElement('span');
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.cyan + ';letter-spacing:2px;';
+    title.textContent = 'EDIT (' + ids.length + ')';
+    header.appendChild(title);
+
+    var deselectBtn = document.createElement('span');
+    deselectBtn.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';cursor:pointer;';
+    deselectBtn.textContent = 'Deselect All';
+    deselectBtn.addEventListener('pointerup', function() {
+      selected = {};
+      Object.keys(cardEls).forEach(function(id) {
+        cardEls[id].style.outline = 'none';
+      });
+      updateEditBar();
+    });
+    header.appendChild(deselectBtn);
+
+    editBar.appendChild(header);
+
+    // Action buttons row
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+
+    var actions = [
+      { label: 'OPEN',  fill: T.darkBtn, color: T.mint,   min: 1, max: 1 },
+      { label: 'MERGE', fill: T.cyan,    color: T.bgDark, min: 2 },
+      { label: 'SPLIT', fill: T.gold,    color: T.bgDark, min: 1, max: 1 },
+      { label: 'PRINT', fill: T.darkBtn, color: T.mint,   min: 1 },
+      { label: 'VOID',  fill: T.red,     color: '#fff',   min: 1 },
+    ];
+
+    actions.forEach(function(act) {
+      var count = ids.length;
+      var enabled = count >= (act.min || 1) && (!act.max || count <= act.max);
+
+      var btn = buildButton(act.label, {
+        fill: enabled ? act.fill : T.bg,
+        color: enabled ? act.color : T.mutedText,
+        fontSize: '16px', fontFamily: T.fh,
+        width: 100, height: 36,
+        onTap: enabled ? function() { handleEditAction(act.label, ids); } : null,
+      });
+      if (!enabled) btn.style.opacity = '0.4';
+      btnRow.appendChild(btn);
+    });
+
+    editBar.appendChild(btnRow);
+  }
+
+  function handleEditAction(action, ids) {
+    if (action === 'OPEN') {
+      var order = selected[ids[0]];
+      push('order-entry', {
+        mode: 'service',
+        pin: emp.pin,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        recallOrderId: order.order_id,
+      });
+    }
+    // MERGE, SPLIT, PRINT, VOID — placeholder for future implementation
+  }
+
+  function toggleSelect(order, cardEl) {
+    var id = order.order_id;
+    if (selected[id]) {
+      delete selected[id];
+      cardEl.style.outline = 'none';
+    } else {
+      selected[id] = order;
+      cardEl.style.outline = '3px solid ' + T.cyan;
+    }
+    updateEditBar();
+  }
+
   fetch('/api/v1/orders/open')
     .then(function(r) { return r.json(); })
     .then(function(orders) {
@@ -287,6 +390,17 @@ function fetchOpenTabs(tabGrid, emp, empRoles) {
       }
 
       filtered.forEach(function(order) {
+        // Compute seat breakdown from items
+        var seats = {};
+        (order.items || []).forEach(function(item) {
+          var sn = item.seat_number || 1;
+          if (!seats[sn]) seats[sn] = { count: 0, total: 0 };
+          seats[sn].count += item.quantity;
+          seats[sn].total += item.subtotal;
+        });
+        var seatNums = Object.keys(seats).sort(function(a, b) { return a - b; });
+        var hasMultipleSeats = seatNums.length > 1;
+
         var label = '';
         if (order.check_number) label += order.check_number;
         if (order.customer_name) label += (label ? '\n' : '') + order.customer_name;
@@ -294,22 +408,21 @@ function fetchOpenTabs(tabGrid, emp, empRoles) {
         label += '\n$' + (order.total || 0).toFixed(2);
         var itemCount = (order.items || []).length;
         label += '  (' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + ')';
+        if (hasMultipleSeats) {
+          label += '\n' + seatNums.map(function(s) {
+            return 'S' + s + ':$' + seats[s].total.toFixed(2);
+          }).join('  ');
+        }
 
         var statusColor = order.balance_due > 0 ? T.gold : T.goGreen;
         var card = buildButton(label, {
           fill: T.bgDark, color: statusColor, fontSize: '22px', fontFamily: T.fb,
-          height: 100,
-          onTap: function() {
-            push('order-entry', {
-              mode: 'service',
-              pin: emp.pin,
-              employeeId: emp.id,
-              employeeName: emp.name,
-              recallOrderId: order.order_id,
-            });
-          },
+          height: hasMultipleSeats ? 120 : 100,
+          onTap: function() { toggleSelect(order, card); },
         });
         card.style.width = '100%';
+        card.style.outlineOffset = '-3px';
+        cardEls[order.order_id] = card;
         tabGrid.appendChild(card);
       });
 
