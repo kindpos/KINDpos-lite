@@ -62,6 +62,8 @@ async def _ensure_db():
             await db.execute("ALTER TABLE devices ADD COLUMN tpn TEXT NOT NULL DEFAULT ''")
         if 'auth_key' not in cols:
             await db.execute("ALTER TABLE devices ADD COLUMN auth_key TEXT NOT NULL DEFAULT ''")
+        if 'categories' not in cols:
+            await db.execute("ALTER TABLE devices ADD COLUMN categories TEXT NOT NULL DEFAULT ''")
         await db.commit()
 
 # ── Models ────────────────────────────────────────────────────────────────────
@@ -75,6 +77,7 @@ class DeviceRecord(BaseModel):
     register_id: str = ''  # SPIn Register ID for card readers
     tpn: str = ''          # SPIn Terminal Processing Number
     auth_key: str = ''     # SPIn Auth Key for card readers
+    categories: str = ''   # Comma-separated category IDs for kitchen printers
 
 class TestRequest(BaseModel):
     mac: str
@@ -287,8 +290,8 @@ async def save_device(device: DeviceRecord):
     now = datetime.utcnow().isoformat()
     async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
         await db.execute("""
-            INSERT INTO devices (mac, ip, type, name, port, register_id, tpn, auth_key, saved_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO devices (mac, ip, type, name, port, register_id, tpn, auth_key, categories, saved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(mac) DO UPDATE SET
                 ip          = excluded.ip,
                 type        = excluded.type,
@@ -297,9 +300,11 @@ async def save_device(device: DeviceRecord):
                 register_id = excluded.register_id,
                 tpn         = excluded.tpn,
                 auth_key    = excluded.auth_key,
+                categories  = excluded.categories,
                 saved_at    = excluded.saved_at
         """, (device.mac.upper(), device.ip, device.type,
-              device.name, device.port, device.register_id, device.tpn, device.auth_key, now))
+              device.name, device.port, device.register_id, device.tpn, device.auth_key,
+              device.categories, now))
         await db.commit()
     return {**device.dict(), 'mac': device.mac.upper(), 'saved_at': now}
 
@@ -313,6 +318,24 @@ async def delete_device(mac: str):
         await db.execute("DELETE FROM devices WHERE mac = ?", (mac,))
         await db.commit()
     return {"deleted": mac}
+
+@router.get("/kitchen-printers")
+async def list_kitchen_printers():
+    """Return kitchen printers with their assigned categories."""
+    await _ensure_db()
+    async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM devices WHERE type = 'kitchen' ORDER BY saved_at"
+        ) as cur:
+            printers = []
+            async for row in cur:
+                d = dict(row)
+                cats = d.get('categories', '')
+                d['categories_list'] = [c.strip() for c in cats.split(',') if c.strip()] if cats else []
+                printers.append(d)
+            return printers
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TEST (by MAC — resolves IP from DB)

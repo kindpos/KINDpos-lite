@@ -1268,6 +1268,59 @@ function renderEditDevice(card) {
   });
   form.appendChild(nameDisplay);
 
+  // Category assignment for kitchen printers
+  var selectedCategories = (dev.categories || '').split(',').filter(function(c) { return c.trim(); });
+
+  if (dev.type === 'kitchen' || selectedType === 'kitchen') {
+    form.appendChild(makeLabel('Assigned Categories', GOLD, T.fsSmall));
+    var catNote = makeLabel('Empty = receives all items', MINT, '22px');
+    catNote.style.opacity = '0.6';
+    catNote.style.marginTop = '-6px';
+    form.appendChild(catNote);
+
+    var ALL_CATS = [
+      { id: 'pizza', label: 'Pizza' },
+      { id: 'apps', label: 'Apps' },
+      { id: 'subs', label: 'Subs' },
+      { id: 'sides', label: 'Sides' },
+      { id: 'drinks', label: 'Drinks' },
+      { id: 'desserts', label: 'Desserts' },
+    ];
+
+    var catRow = document.createElement('div');
+    catRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+
+    var catBtnEls = {};
+    function refreshCatBtns() {
+      ALL_CATS.forEach(function(c) {
+        var b = catBtnEls[c.id] && catBtnEls[c.id].querySelector('div');
+        if (b) {
+          var active = selectedCategories.indexOf(c.id) !== -1;
+          b.style.background = active ? GOLD : BG;
+          b.style.color = active ? DARK : GOLD;
+        }
+      });
+    }
+
+    ALL_CATS.forEach(function(c) {
+      var active = selectedCategories.indexOf(c.id) !== -1;
+      var btn = buildButton(c.label, {
+        fill: active ? GOLD : BG,
+        color: active ? DARK : GOLD,
+        fontSize: T.fsBtn, height: 40,
+        onTap: function() {
+          var idx = selectedCategories.indexOf(c.id);
+          if (idx === -1) selectedCategories.push(c.id);
+          else selectedCategories.splice(idx, 1);
+          refreshCatBtns();
+        },
+      });
+      catBtnEls[c.id] = btn;
+      catRow.appendChild(btn);
+    });
+    form.appendChild(catRow);
+  }
+
   // SPIn fields for card readers
   var regLabel, regInput, tpnLabel3, tpnInput3, authLabel3, authInput3;
   var registerId3 = dev.register_id || '';
@@ -1346,6 +1399,7 @@ function renderEditDevice(card) {
           register_id: selectedType === 'card_reader' ? registerId3 : '',
           tpn: selectedType === 'card_reader' ? tpnVal3 : '',
           auth_key: selectedType === 'card_reader' ? authVal3 : '',
+          categories: selectedType === 'kitchen' ? selectedCategories.join(',') : '',
         });
         state.editingDevice = null;
         renderCurrentState();

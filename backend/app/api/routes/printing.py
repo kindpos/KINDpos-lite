@@ -5,10 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 from pathlib import Path
 
+import aiosqlite
+
 from ..dependencies import get_ledger
 from ...core.event_ledger import EventLedger
 from ...printing.print_queue import PrintJobQueue
 from ...services.print_context_builder import PrintContextBuilder
+from .hardware import HARDWARE_DB_PATH, _ensure_db
 
 router = APIRouter(prefix="/print", tags=["printing"])
 
@@ -16,6 +19,8 @@ router = APIRouter(prefix="/print", tags=["printing"])
 # For this task, we initialize them here or in main.py
 print_queue = PrintJobQueue()
 # Note: In production, PrintContextBuilder would be injected with the ledger
+
+_logger = logging.getLogger(__name__)
 
 @router.post("/receipt/{order_id}")
 async def print_receipt(
@@ -42,21 +47,66 @@ async def print_ticket(
     void: bool = False,
     ledger: EventLedger = Depends(get_ledger),
 ):
-    """Trigger kitchen ticket for order. Pass ?void=true for void tickets."""
+    """Trigger kitchen ticket for order. Pass ?void=true for void tickets.
+
+    Routing logic:
+    - Load kitchen printers from hardware_config.db
+    - Printers with assigned categories only receive items in those categories
+    - Printers with NO categories receive all items (catch-all)
+    - Each printer gets a separate ticket with companion_items showing
+      what the other printers are making
+    """
+    await _ensure_db()
     builder = PrintContextBuilder(ledger)
-    context = await builder.build_kitchen_context(order_id, station_name="General")
-    if void:
-        context["is_void"] = True
-        context["void_banner"] = "** VOID **"
     template = "kitchen_ticket_void" if void else "kitchen_ticket"
-    job_id = await print_queue.enqueue(
-        order_id=order_id,
-        template_id=template,
-        printer_mac="DEFAULT_KITCHEN",
-        ticket_number=context.get('ticket_number', 'N/A'),
-        context=context
-    )
-    return {"status": "queued", "job_id": job_id, "is_void": void}
+
+    # Load kitchen printers and their category assignments
+    async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM devices WHERE type = 'kitchen' ORDER BY saved_at"
+        ) as cur:
+            printers = [dict(row) async for row in cur]
+
+    # Parse category lists
+    for p in printers:
+        cats = p.get('categories', '')
+        p['categories_list'] = [c.strip() for c in cats.split(',') if c.strip()] if cats else []
+
+    # If no kitchen printers saved, fall back to DEFAULT_KITCHEN with all items
+    if not printers:
+        printers = [{'mac': 'DEFAULT_KITCHEN', 'name': 'Kitchen', 'categories_list': []}]
+
+    # Build one ticket per printer, filtering by category
+    job_ids = []
+    ticket_total = len(printers)
+    for idx, printer in enumerate(printers):
+        cats = printer['categories_list']
+        context = await builder.build_kitchen_context(
+            order_id,
+            station_name=printer.get('name', 'Kitchen'),
+            station_categories=cats if cats else None,
+        )
+        context['ticket_index'] = idx + 1
+        context['ticket_total'] = ticket_total
+        if void:
+            context["is_void"] = True
+            context["void_banner"] = "** VOID **"
+
+        # Skip printers that would get zero items for this order
+        if not context.get('items'):
+            continue
+
+        job_id = await print_queue.enqueue(
+            order_id=order_id,
+            template_id=template,
+            printer_mac=printer['mac'],
+            ticket_number=context.get('ticket_number', 'N/A'),
+            context=context,
+        )
+        job_ids.append(job_id)
+
+    return {"status": "queued", "job_ids": job_ids, "printers": len(job_ids), "is_void": void}
 
 @router.get("/queue")
 async def get_queue():
