@@ -848,22 +848,20 @@ function rebuildActionBar() {
       onTap: function() { finalizeSession(); },
     });
     _actionBar.appendChild(doneBtn);
-  } else if (hasSelection) {
-    // Items selected — MODIFY + DESELECT
-    var modifyBtn = buildButton('MODIFY', {
-      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { openModifierSession(); },
-    });
-    _actionBar.appendChild(modifyBtn);
-
-    var deselectBtn = buildButton('DESELECT', {
-      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { clearModifierSelection(); },
-    });
-    _actionBar.appendChild(deselectBtn);
   } else if (ticketMode === 'adding') {
-    // Adding mode — SAVE + SEND + PAY (fresh) or SAVE + SEND (existing)
-    _actionBar.style.gridTemplateColumns = isFreshOrder ? '1fr 1fr 1fr' : '1fr 1fr';
+    // Adding mode — MODIFY (if selected) + SEND + PAY (fresh only)
+    var cols = isFreshOrder ? 2 : 1;
+    if (hasSelection) cols++;
+    _actionBar.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+
+    if (hasSelection) {
+      var modifyBtn = buildButton('MODIFY', {
+        fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+        onTap: function() { openModifierSession(); },
+      });
+      _actionBar.appendChild(modifyBtn);
+    }
+
     var sendBtn = buildButton('SEND', {
       fill: T.goGreen, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
       onTap: function() {
@@ -876,11 +874,6 @@ function rebuildActionBar() {
         });
       },
     });
-    var saveBtn2 = buildButton('SAVE', {
-      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
-      onTap: function() { handleSave(); },
-    });
-    _actionBar.appendChild(saveBtn2);
     _actionBar.appendChild(sendBtn);
 
     if (isFreshOrder) {
@@ -890,6 +883,19 @@ function rebuildActionBar() {
       });
       _actionBar.appendChild(payBtn);
     }
+  } else if (hasSelection) {
+    // Summary mode with selection — MODIFY + DESELECT
+    var modifyBtn = buildButton('MODIFY', {
+      fill: T.gold, color: T.bgDark, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { openModifierSession(); },
+    });
+    _actionBar.appendChild(modifyBtn);
+
+    var deselectBtn = buildButton('DESELECT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 42,
+      onTap: function() { clearModifierSelection(); },
+    });
+    _actionBar.appendChild(deselectBtn);
   } else {
     // Summary mode — PAY (primary when all sent) + action buttons
     if (allSent) {
