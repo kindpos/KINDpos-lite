@@ -188,7 +188,7 @@ registerScene('order-entry', {
   cache: true,
   onEnter: function(el, params) {
     setSceneName('NEW ORDER');
-    setHeaderBack({ x: true });
+    setHeaderBack({ x: true, onClose: function() { handleClose(); } });
     activeTab      = 'items';
     activePrefix   = 'add';
     ticket         = [];
@@ -1799,6 +1799,26 @@ function deepCopyTicket(src) {
       category:  inst.category || null,
     };
   });
+}
+
+// ── CLOSE (X button) ────────────────────────────
+function handleClose() {
+  var hasSent = ticket.some(function(i) { return i.sent; });
+  if (hasSent && ticket.length > 0) {
+    // Auto-save sent orders to recall so they don't vanish
+    var seq = ++saveSeq;
+    var label = currentCheckNumber || ('CHECK-' + String(seq).padStart(3, '0'));
+    savedTabs.push({
+      id:       seq,
+      checkNum: label,
+      label:    customerName || '',
+      ticket:   deepCopyTicket(ticket),
+      orderId:  currentOrderId,
+    });
+    showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
+  }
+  clearSceneCache('order-entry');
+  replace('login');
 }
 
 // ── SAVE ─────────────────────────────────────────

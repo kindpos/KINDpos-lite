@@ -29,7 +29,7 @@ export function setSceneName(name) {
   updateClock();
 }
 
-export function setHeaderBack({ back = false, x = false, onBack = null } = {}) {
+export function setHeaderBack({ back = false, x = false, onBack = null, onClose = null } = {}) {
   const nav = document.getElementById('header-nav');
   const logout = document.getElementById('header-logout');
   if (nav) nav.innerHTML = '';
@@ -63,7 +63,7 @@ export function setHeaderBack({ back = false, x = false, onBack = null } = {}) {
     logoutPair.inner.style.fontSize = T.fsBtnSm;
     logoutPair.inner.style.color = '#fff';
     logoutPair.inner.textContent = 'X';
-    logoutPair.wrap.addEventListener('pointerup', () => { clearSceneCache('order-entry'); replace('login'); });
+    logoutPair.wrap.addEventListener('pointerup', onClose || (() => { clearSceneCache('order-entry'); replace('login'); }));
     logout.appendChild(logoutPair.wrap);
   } else if (logout) {
     logout.style.display = 'none';
