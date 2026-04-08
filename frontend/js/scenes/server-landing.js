@@ -820,3 +820,281 @@ SceneManager.register({
     _tipoutRate = 0;
   },
 });
+
+// ═══════════════════════════════════════════════════
+//  INTERRUPT SCENES
+// ═══════════════════════════════════════════════════
+
+// ── Reopen Confirmation ───────────────────────────
+
+SceneManager.register({
+  name: 'sl-reopen-confirm',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:400px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
+    msg.textContent = 'Reopen ' + (params.checkLabel || 'check') + '? Requires manager approval.';
+    card.appendChild(msg);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+    btns.appendChild(buildButton('CONFIRM', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() { params.onConfirm(); },
+    }));
+    btns.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(btns);
+    container.appendChild(card);
+  },
+  unmount: function() {},
+});
+
+// ── Void Gate ─────────────────────────────────────
+
+SceneManager.register({
+  name: 'sl-void-gate',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptCritical + ';padding:24px 32px;text-align:center;max-width:420px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
+    msg.textContent = params.message || 'Void requires manager approval.';
+    card.appendChild(msg);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+    btns.appendChild(buildButton('CONFIRM', {
+      fill: T.darkBtn, color: T.vermillion, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() { params.onConfirm(); },
+    }));
+    btns.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(btns);
+    container.appendChild(card);
+  },
+  unmount: function() {},
+});
+
+// ── Checkout Gate ─────────────────────────────────
+
+SceneManager.register({
+  name: 'sl-checkout-gate',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptCritical + ';padding:24px 32px;text-align:center;max-width:420px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
+    msg.textContent = 'Cannot checkout:';
+    card.appendChild(msg);
+
+    var reasons = params.reasons || [];
+    for (var i = 0; i < reasons.length; i++) {
+      var line = document.createElement('div');
+      line.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.vermillion + ';margin-bottom:4px;';
+      line.textContent = '• ' + reasons[i];
+      card.appendChild(line);
+    }
+
+    var sp = document.createElement('div'); sp.style.height = '16px'; card.appendChild(sp);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;justify-content:center;';
+    btns.appendChild(buildButton('OK', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(btns);
+    container.appendChild(card);
+  },
+  unmount: function() {},
+});
+
+// ── Manager Gate (Close Day) ──────────────────────
+
+SceneManager.register({
+  name: 'sl-manager-gate',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:400px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
+    msg.textContent = params.message || 'This action requires manager approval.';
+    card.appendChild(msg);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+    btns.appendChild(buildButton('CONFIRM', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() { params.onConfirm(); },
+    }));
+    btns.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(btns);
+    container.appendChild(card);
+  },
+  unmount: function() {},
+});
+
+// ── Transfer Choice (Internal / External) ─────────
+
+SceneManager.register({
+  name: 'sl-transfer-choice',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:400px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
+    msg.textContent = 'Transfer type:';
+    card.appendChild(msg);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+    btns.appendChild(buildButton('INTERNAL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 140, height: 44,
+      onTap: function() { params.onConfirm('internal'); },
+    }));
+    btns.appendChild(buildButton('EXTERNAL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 140, height: 44,
+      onTap: function() { params.onConfirm('external'); },
+    }));
+    card.appendChild(btns);
+
+    var cancelRow = document.createElement('div');
+    cancelRow.style.cssText = 'margin-top:12px;';
+    cancelRow.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtnSm, width: 100, height: 34,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(cancelRow);
+    container.appendChild(card);
+  },
+  unmount: function() {},
+});
+
+// ── Merge Choice (As One / As Separate Seats) ─────
+
+SceneManager.register({
+  name: 'sl-merge-choice',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:420px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:8px;';
+    msg.textContent = 'Merge ' + (params.count || 0) + ' checks:';
+    card.appendChild(msg);
+
+    var hint = document.createElement('div');
+    hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';margin-bottom:16px;';
+    hint.textContent = 'Source check numbers will be retired.';
+    card.appendChild(hint);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;flex-wrap:wrap;';
+    btns.appendChild(buildButton('AS ONE', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtnSm, width: 160, height: 44,
+      onTap: function() { params.onConfirm('as_one'); },
+    }));
+    btns.appendChild(buildButton('AS SEPARATE SEATS', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtnSm, width: 160, height: 44,
+      onTap: function() { params.onConfirm('as_separate'); },
+    }));
+    card.appendChild(btns);
+
+    var cancelRow = document.createElement('div');
+    cancelRow.style.cssText = 'margin-top:12px;';
+    cancelRow.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtnSm, width: 100, height: 34,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(cancelRow);
+    container.appendChild(card);
+  },
+  unmount: function() {},
+});
+
+// ── Internal Transfer (Transactional stub) ────────
+
+SceneManager.register({
+  name: 'sl-internal-transfer',
+  mount: function(container, params) {
+    container.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;padding:' + T.scenePad + 'px;box-sizing:border-box;';
+
+    // Header
+    container.appendChild(buildCardHeader('INTERNAL TRANSFER'));
+
+    var body = document.createElement('div');
+    body.style.cssText = 'flex:1;display:flex;gap:10px;overflow-x:auto;padding:10px 0;';
+
+    // Render each source check as a column
+    var checks = params.checks || [];
+    for (var i = 0; i < checks.length; i++) {
+      var order = checks[i];
+      var col = document.createElement('div');
+      col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;overflow-y:auto;';
+      col.style.clipPath = chamfer(6);
+
+      var colHeader = document.createElement('div');
+      colHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.mint + ';padding:6px 8px;border-bottom:1px solid ' + T.border + ';';
+      colHeader.textContent = checkNum(order);
+      col.appendChild(colHeader);
+
+      var items = order.items || [];
+      for (var j = 0; j < items.length; j++) {
+        var row = document.createElement('div');
+        row.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';padding:4px 8px;cursor:pointer;';
+        row.textContent = items[j].name + ' — ' + fmt(items[j].price || 0);
+        col.appendChild(row);
+      }
+      body.appendChild(col);
+    }
+
+    // + NEW CHECK destination column
+    var newCol = document.createElement('div');
+    newCol.style.cssText = 'flex:1;min-width:180px;border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;';
+    newCol.style.clipPath = chamfer(6);
+    var newLabel = document.createElement('div');
+    newLabel.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';';
+    newLabel.textContent = '+ NEW CHECK';
+    newCol.appendChild(newLabel);
+    body.appendChild(newCol);
+
+    container.appendChild(body);
+
+    // Bottom action bar
+    var actionBar = document.createElement('div');
+    actionBar.style.cssText = 'flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;padding-top:8px;';
+    actionBar.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 40,
+      onTap: function() { SceneManager.closeTransactional('sl-internal-transfer'); },
+    }));
+    actionBar.appendChild(buildButton('CONFIRM', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 40,
+      onTap: function() {
+        showToast('Transfer — not yet wired to backend', { bg: T.gold });
+        SceneManager.closeTransactional('sl-internal-transfer');
+      },
+    }));
+    container.appendChild(actionBar);
+  },
+  unmount: function() {},
+});
