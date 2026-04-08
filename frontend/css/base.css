@@ -117,7 +117,7 @@ html, body {
   transition: transform 100ms ease-out, opacity 100ms ease-out;
 }
 
-* {
+*:not(.embossed-btn):not(.embossed-btn *) {
   border-radius: 0 !important;
 }
 

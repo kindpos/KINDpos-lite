@@ -256,8 +256,8 @@ function _injectEmbossedStyles() {
   var s = document.createElement('style');
   s.id = 'embossed-btn-styles';
   s.textContent =
-    '.embossed-btn{position:relative;border-radius:5px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;transition:transform 50ms,filter 50ms,box-shadow 50ms;box-sizing:border-box;border:none;outline:none;}' +
-    '.embossed-btn::after{content:"";position:absolute;inset:0;border-radius:inherit;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.10) 3px,rgba(0,0,0,0.10) 4px);pointer-events:none;opacity:0.6;z-index:2;}' +
+    '.embossed-btn{position:relative;border-radius:5px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;transition:transform 50ms,filter 50ms,box-shadow 50ms;box-sizing:border-box;border:none;outline:none;isolation:isolate;}' +
+    '.embossed-btn::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.10) 3px,rgba(0,0,0,0.10) 4px);pointer-events:none;opacity:0.6;z-index:2;}' +
     '.embossed-btn-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;width:100%;height:100%;box-sizing:border-box;}';
   document.head.appendChild(s);
 }
