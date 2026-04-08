@@ -162,7 +162,7 @@ SceneManager.register({
     var panel = document.createElement('div');
     panel.style.cssText = [
       'width:960px;height:500px;',
-      'background:' + T.bgDark + ';',
+      'background:' + T.bg + ';',
       'border:3px solid ' + T.mint + ';',
       'display:flex;flex-direction:column;',
       'box-sizing:border-box;padding:20px;',
@@ -195,7 +195,7 @@ SceneManager.register({
     // Right: Pay Period Card
     var payCard = document.createElement('div');
     payCard.style.cssText = [
-      'background:' + T.bgDark + ';',
+      'background:' + T.bg + ';',
       'border:3px solid ' + T.mint + ';',
       'padding:20px 32px;',
       'display:flex;flex-direction:column;gap:12px;',
