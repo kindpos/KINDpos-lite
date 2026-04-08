@@ -54,36 +54,35 @@ SceneManager.register({
     });
     container.appendChild(_numpadRef);
 
-    // CONFIGURATION button — bottom-left
+    // Bottom bar — centered buttons + version stamp
+    var bottomBar = document.createElement('div');
+    bottomBar.style.cssText = 'position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:16px;';
+
     var configBtn = buildButton('CONFIGURATION', {
-      fill: T.gold, color: T.textPrimary, fontSize: T.fsBtnSm, fontFamily: T.fhr,
-      width: 220, height: 48,
+      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
+      width: 200, height: 44,
       onTap: function() { SceneManager.openTransactional('settings'); },
     });
-    configBtn.style.position = 'absolute';
-    configBtn.style.bottom = '8px';
-    configBtn.style.left = '12px';
-    container.appendChild(configBtn);
+    configBtn.style.border = '2px solid ' + T.gold;
+    bottomBar.appendChild(configBtn);
 
-    // CLOCK IN button — bottom-right
     var clockInBtn = buildButton('CLOCK IN', {
-      fill: T.goGreen, color: T.textPrimary, fontSize: T.fsBtnSm, fontFamily: T.fhr,
-      width: 220, height: 48,
+      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
+      width: 200, height: 44,
       onTap: function() {
         _clockInMode = !_clockInMode;
         clockInBtn.style.outline = _clockInMode ? '2px solid ' + T.mint : 'none';
-        configBtn.style.outline = 'none';
         if (_clockInMode && _numpadRef) _numpadRef.clear();
       },
     });
-    clockInBtn.style.position = 'absolute';
-    clockInBtn.style.bottom = '8px';
-    clockInBtn.style.right = '12px';
-    container.appendChild(clockInBtn);
+    clockInBtn.style.border = '2px solid ' + T.goGreen;
+    bottomBar.appendChild(clockInBtn);
 
-    // Version stamp — bottom-center
+    container.appendChild(bottomBar);
+
+    // Version stamp — bottom-right
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);';
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;right:12px;';
     version.textContent = 'KINDpos/lite_Vz1.2';
     container.appendChild(version);
   },
