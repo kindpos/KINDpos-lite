@@ -249,7 +249,11 @@ SceneManager.register({
       });
       btn.style.width = '380px';
       btn.style.height = '90px';
-      btn.style.marginLeft = (offsets[i % offsets.length]) + 'px';
+      if (roles.length === 1) {
+        btn.style.alignSelf = 'center';
+      } else {
+        btn.style.marginLeft = (offsets[i % offsets.length]) + 'px';
+      }
       btn.style.flexShrink = '0';
       roleBtns.push(btn);
       roleArea.appendChild(btn);
