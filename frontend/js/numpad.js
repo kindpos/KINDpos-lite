@@ -122,11 +122,11 @@ export function buildNumpad(opts) {
   layout.forEach(function(key) {
     var fill, textColor, fontSize, fontFamily;
     if (key.type === 'clear') {
-      fill = T.darkBtn; textColor = clearColor; fontSize = T.fsClr; fontFamily = T.fb;
+      fill = T.darkBtn; textColor = clearColor; fontSize = '60px'; fontFamily = T.fb;
     } else if (key.type === 'submit') {
-      fill = T.darkBtn; textColor = submitColor; fontSize = T.fsClr; fontFamily = T.fb;
+      fill = T.darkBtn; textColor = submitColor; fontSize = '60px'; fontFamily = T.fb;
     } else {
-      fill = T.darkBtn; textColor = digitColor; fontSize = '72px'; fontFamily = digitFont;
+      fill = T.darkBtn; textColor = digitColor; fontSize = '60px'; fontFamily = digitFont;
     }
 
     var pair = buildStyledButton(fill);
