@@ -23,6 +23,13 @@ var _drillEl = null;
 // Stub data — replaced by API in Chunk 9
 var _salesData = null;
 var _breakdownData = null;
+var _heatmapData = null;
+
+// Heatmap filter state
+var _filteredServerId = null;
+
+// Max tables threshold for full-intensity cell (configurable)
+var HEATMAP_MAX_TABLES = 5;
 
 // COB% escalation thresholds (configurable)
 var COB_WARNING = 30;
@@ -33,6 +40,25 @@ var _leftCol = null;
 var _centerCol = null;
 var _rightCol = null;
 var _headerLabel = null;
+var _heatmapEl = null;
+
+// Server palette — distinct from semantic colors (mint, gold, lime, etc.)
+// Uses role colors + category colors that won't collide with UI semantics
+var SERVER_PALETTE = [
+  T.roles.server,     // #00aaff
+  T.roles.busser,     // #cc44ff
+  T.roles.bartender,  // #00ddaa
+  T.roles.host,       // #ffee00
+  T.roles.cook,       // #ff4499
+  T.roles.manager,    // #ff8800
+  T.catBeverages,     // #70a1ff
+  T.catSauces,        // #ffa502
+  T.catProteins,      // #ff4757
+  T.lavender,         // #b48efa
+  T.cyan,             // #33ffff
+  T.sage,             // #6bc987
+];
+var _serverColorMap = {};
 
 // ── Helpers ───────────────────────────────────────
 
@@ -122,6 +148,24 @@ function loadStubData() {
       { label: '6p', value: 592 },
     ],
   };
+  _heatmapData = {
+    hours: ['11a', '12p', '1p', '2p', '3p', '4p', '5p', '6p'],
+    current_hour: 5, // index into hours (4p)
+    servers: [
+      { id: 's1', name: 'Alex M.', live_tables: 3, cells: [0, 2, 3, 1, 0, 3, 2, 0] },
+      { id: 's2', name: 'Jordan K.', live_tables: 2, cells: [1, 1, 2, 4, 3, 2, 0, 0] },
+      { id: 's3', name: 'Sam R.', live_tables: 5, cells: [0, 3, 5, 4, 2, 5, 3, 1] },
+      { id: 's4', name: 'Casey T.', live_tables: 1, cells: [2, 1, 0, 0, 1, 1, 0, 0] },
+      { id: 's5', name: 'Riley W.', live_tables: 0, cells: [1, 2, 1, 0, 0, 0, 0, 0] },
+    ],
+  };
+
+  // Assign palette colors to servers
+  _serverColorMap = {};
+  var servers = _heatmapData.servers;
+  for (var i = 0; i < servers.length; i++) {
+    _serverColorMap[servers[i].id] = SERVER_PALETTE[i % SERVER_PALETTE.length];
+  }
 }
 
 // ── Formatting ───────────────────────────────────
@@ -155,6 +199,12 @@ function statRow(label, value, color) {
   row.appendChild(l);
   row.appendChild(v);
   return row;
+}
+
+// ── Server Color Lookup ──────────────────────────
+
+function serverColor(serverId) {
+  return _serverColorMap[serverId] || SERVER_PALETTE[0];
 }
 
 // ── COB% Escalation ──────────────────────────────
@@ -550,6 +600,136 @@ function hideDrillDown() {
 }
 
 // ═══════════════════════════════════════════════════
+//  CENTER COLUMN — Heatmap + (Check grid in Chunk 5)
+// ═══════════════════════════════════════════════════
+
+function buildCenterColumn() {
+  var col = document.createElement('div');
+  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;gap:8px;';
+
+  _heatmapEl = buildHeatmapPanel();
+  col.appendChild(_heatmapEl);
+
+  return col;
+}
+
+// ── Server Workload Heatmap ──────────────────────
+
+function buildHeatmapPanel() {
+  var hm = _heatmapData || {};
+  var hours = hm.hours || [];
+  var servers = hm.servers || [];
+  var curHour = hm.current_hour != null ? hm.current_hour : -1;
+
+  // Filter out servers with no activity at all
+  var active = servers.filter(function(s) {
+    for (var i = 0; i < s.cells.length; i++) { if (s.cells[i] > 0) return true; }
+    return s.live_tables > 0;
+  });
+  if (active.length === 0) return document.createElement('div');
+
+  var panel = document.createElement('div');
+  panel.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex-shrink:0;';
+  panel.style.clipPath = chamfer(6);
+  panel.appendChild(buildCardHeader('SERVER WORKLOAD'));
+
+  // Grid: server names (left) | hour columns | live count (right)
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:auto repeat(' + hours.length + ', 1fr) auto;gap:1px;padding:4px 6px 6px;';
+
+  // Header row: empty corner + hour labels + empty corner
+  var corner = document.createElement('div');
+  corner.style.cssText = 'padding:2px 4px;';
+  grid.appendChild(corner);
+  for (var h = 0; h < hours.length; h++) {
+    var hLabel = document.createElement('div');
+    hLabel.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.mutedText + ';text-align:center;padding:2px 0;';
+    if (h === curHour) hLabel.style.color = T.lime;
+    hLabel.textContent = hours[h];
+    grid.appendChild(hLabel);
+  }
+  var cornerR = document.createElement('div');
+  cornerR.style.cssText = 'padding:2px 4px;font-family:' + T.fb + ';font-size:11px;color:' + T.mutedText + ';text-align:right;';
+  cornerR.textContent = 'NOW';
+  grid.appendChild(cornerR);
+
+  // Server rows
+  for (var s = 0; s < active.length; s++) {
+    (function(srv) {
+      var sColor = serverColor(srv.id);
+      var isFiltered = _filteredServerId === srv.id;
+
+      // Server name cell
+      var nameCell = document.createElement('div');
+      nameCell.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.textPrimary + ';padding:3px 6px 3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;cursor:pointer;user-select:none;display:flex;align-items:center;';
+      if (isFiltered) {
+        nameCell.style.borderLeft = '2px solid ' + T.mint;
+        nameCell.style.paddingLeft = '2px';
+      }
+      nameCell.textContent = srv.name;
+      nameCell.addEventListener('pointerup', function() {
+        if (_filteredServerId === srv.id) {
+          _filteredServerId = null;
+        } else {
+          _filteredServerId = srv.id;
+        }
+        rerenderHeatmap();
+      });
+      grid.appendChild(nameCell);
+
+      // Hour cells
+      for (var c = 0; c < srv.cells.length; c++) {
+        var cell = document.createElement('div');
+        var count = srv.cells[c];
+        var cellStyle = 'min-height:18px;';
+
+        // Current hour column: lime left border
+        if (c === curHour) cellStyle += 'border-left:2px solid ' + T.lime + ';';
+
+        // Intensity by table count
+        if (count === 0) {
+          cellStyle += 'background:' + T.bgDark + ';';
+        } else if (count <= 2) {
+          cellStyle += 'background:' + hexWithAlpha(sColor, 0.25) + ';';
+        } else if (count <= 4) {
+          cellStyle += 'background:' + hexWithAlpha(sColor, 0.60) + ';';
+        } else {
+          cellStyle += 'background:' + sColor + ';box-shadow:0 0 8px ' + sColor + '88;';
+        }
+
+        cell.style.cssText = cellStyle;
+        grid.appendChild(cell);
+      }
+
+      // Live table count
+      var liveCell = document.createElement('div');
+      liveCell.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + sColor + ';text-align:right;padding:3px 4px;font-weight:bold;';
+      liveCell.textContent = String(srv.live_tables);
+      grid.appendChild(liveCell);
+    })(active[s]);
+  }
+
+  panel.appendChild(grid);
+  return panel;
+}
+
+function rerenderHeatmap() {
+  if (!_heatmapEl || !_centerCol) return;
+  var newPanel = buildHeatmapPanel();
+  _centerCol.replaceChild(newPanel, _heatmapEl);
+  _heatmapEl = newPanel;
+}
+
+// ── Hex to RGBA helper ───────────────────────────
+
+function hexWithAlpha(hex, alpha) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// ═══════════════════════════════════════════════════
 //  MAIN RENDER
 // ═══════════════════════════════════════════════════
 
@@ -567,9 +747,7 @@ function renderScene() {
   grid.style.cssText = 'flex:1;display:grid;grid-template-columns:22% 50% 28%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
-
-  _centerCol = document.createElement('div');
-  _centerCol.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
+  _centerCol = buildCenterColumn();
 
   _rightCol = document.createElement('div');
   _rightCol.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
@@ -618,11 +796,15 @@ SceneManager.register({
     _params = null;
     _salesData = null;
     _breakdownData = null;
+    _heatmapData = null;
+    _filteredServerId = null;
+    _serverColorMap = {};
     _expandedCard = null;
     _expandOrigin = null;
     _leftCol = null;
     _centerCol = null;
     _rightCol = null;
     _headerLabel = null;
+    _heatmapEl = null;
   },
 });
