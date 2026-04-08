@@ -186,7 +186,7 @@ SceneManager.register({
     greetWrap.appendChild(greetHeading);
 
     var greetSub = document.createElement('div');
-    greetSub.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';margin-top:8px;';
+    greetSub.style.cssText = 'font-family:' + T.fb + ';font-size:38px;color:' + T.textPrimary + ';margin-top:8px;';
     greetSub.textContent = 'Please select a role below';
     greetWrap.appendChild(greetSub);
 
@@ -203,7 +203,7 @@ SceneManager.register({
     payCard.style.clipPath = chamfer(8);
 
     var payLine = document.createElement('div');
-    payLine.style.cssText = 'font-family:' + T.fb + ';font-size:28px;';
+    payLine.style.cssText = 'font-family:' + T.fb + ';font-size:32px;';
     var payLabel = document.createElement('span');
     payLabel.style.color = T.textPrimary;
     payLabel.textContent = 'Pay Period: ';
@@ -215,7 +215,7 @@ SceneManager.register({
     payCard.appendChild(payLine);
 
     var hoursLine = document.createElement('div');
-    hoursLine.style.cssText = 'font-family:' + T.fb + ';font-size:28px;';
+    hoursLine.style.cssText = 'font-family:' + T.fb + ';font-size:32px;';
     var hoursLabel = document.createElement('span');
     hoursLabel.style.color = T.textPrimary;
     hoursLabel.textContent = 'Total Hours: ';
