@@ -199,6 +199,20 @@ function fetchAllData() {
     };
 
     // ── Wire HEATMAP ──
+    // If heatmap endpoint returned no servers, synthesize from staff + orders
+    if (!heatmap.servers || heatmap.servers.length === 0) {
+      heatmap.servers = staff.map(function(s) {
+        var sOrders = orders.filter(function(o) { return o.server_id === s.employee_id; });
+        var openCount = sOrders.filter(function(o) { return o.status === 'open'; }).length;
+        var cells = [];
+        for (var h = 0; h < heatmap.hours.length; h++) cells.push(0);
+        // Place current open count at current hour
+        if (heatmap.current_hour >= 0 && heatmap.current_hour < cells.length) {
+          cells[heatmap.current_hour] = openCount;
+        }
+        return { id: s.employee_id, name: s.employee_name || s.name || '', live_tables: openCount, cells: cells };
+      });
+    }
     _heatmapData = heatmap;
     // Assign palette colors
     _serverColorMap = {};
@@ -307,12 +321,12 @@ function buildCardHeader(label) {
 
 function statRow(label, value, color) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;';
+  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;min-width:0;';
   var l = document.createElement('span');
-  l.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+  l.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
   l.textContent = label;
   var v = document.createElement('span');
-  v.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + color + ';font-weight:bold;';
+  v.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
@@ -362,7 +376,6 @@ function buildSalesOverviewCard() {
 
   var card = document.createElement('div');
   card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('SALES OVERVIEW'));
 
   var body = document.createElement('div');
@@ -399,7 +412,6 @@ function buildSalesBreakdownCard() {
 
   var card = document.createElement('div');
   card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('SALES BREAKDOWN'));
 
   var body = document.createElement('div');
@@ -826,7 +838,6 @@ function buildCenterColumn() {
   // ── Check grid container ──
   var checkWrap = document.createElement('div');
   checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;border:7px solid ' + CHROME + ';background:' + T.bgDark + ';';
-  checkWrap.style.clipPath = chamfer(6);
 
   // Header: "ALL CHECKS" or "{SERVER NAME}"
   _checkHeader = buildCardHeader('ALL CHECKS');
@@ -1246,7 +1257,6 @@ function buildHeatmapPanel() {
 
   var panel = document.createElement('div');
   panel.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex-shrink:0;';
-  panel.style.clipPath = chamfer(6);
   panel.appendChild(buildCardHeader('SERVER WORKLOAD'));
 
   // Grid: server names (left) | hour columns | live count (right)
@@ -1353,7 +1363,7 @@ function hexWithAlpha(hex, alpha) {
 
 function buildRightColumn() {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;min-width:0;';
 
   col.appendChild(buildServerCheckoutsCard());
   col.appendChild(buildTipPoolCard());
@@ -1385,7 +1395,6 @@ function buildServerCheckoutsCard() {
 
   var card = document.createElement('div');
   card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('SERVER CHECKOUTS'));
 
   var body = document.createElement('div');
@@ -1444,7 +1453,6 @@ function buildTipPoolCard() {
 
   var card = document.createElement('div');
   card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('TIP POOL'));
 
   var body = document.createElement('div');
@@ -1502,7 +1510,6 @@ function buildTipAdjustmentCard() {
 
   var card = document.createElement('div');
   card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('TIP ADJUSTMENT'));
 
   var body = document.createElement('div');
@@ -1534,7 +1541,6 @@ function buildCloseDayCard() {
 
   var card = document.createElement('div');
   card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('CLOSE DAY'));
 
   var body = document.createElement('div');
