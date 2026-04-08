@@ -86,7 +86,7 @@ export const T = {
   fsBtnSm:  '30px',
   appW:     1024,
   appH:     600,
-  headerH:  34,
+  headerH:  52,
   scenePad: 20,
   colGap:   20,
   bevel:    7,

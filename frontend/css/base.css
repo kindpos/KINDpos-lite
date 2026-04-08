@@ -49,14 +49,14 @@ html, body {
 
 #header {
   width: 100%;
-  height: 34px;
+  height: 52px;
   background: #87f79c;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   font-family: 'Sevastopol Interface', monospace;
-  font-size: 16px;
+  font-size: 40px;
   color: #333333;
   position: relative;
   z-index: 10;
@@ -80,10 +80,10 @@ html, body {
 #layer-interrupt,
 #layer-gate {
   position: absolute;
-  top: 34px;
+  top: 52px;
   left: 0;
   width: 100%;
-  height: calc(100% - 34px);
+  height: calc(100% - 52px);
   pointer-events: none;
 }
 
