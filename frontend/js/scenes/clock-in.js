@@ -278,52 +278,18 @@ SceneManager.register({
     bottomRow.style.cssText = 'display:flex;justify-content:flex-end;flex-shrink:0;margin-top:8px;';
     panel.appendChild(bottomRow);
 
-    var clockPair = buildStyledButton(T.numpadChassis);
+    var clockPair = buildStyledButton({ label: 'CLOCK IN', variant: 'gold', size: 'lg', disabled: true });
     var clockBtn = clockPair.wrap;
-    clockBtn.style.width = '200px';
-    clockBtn.style.height = '56px';
-    clockPair.inner.style.fontFamily = T.fhr;
-    clockPair.inner.style.fontSize = '28px';
-    clockPair.inner.style.color = T.bgDark;
-    clockPair.inner.style.letterSpacing = '3px';
-    clockPair.inner.textContent = 'CLOCK IN';
-
-    // Start disabled
-    clockBtn.style.opacity = '0.4';
-    clockBtn.style.filter = 'none';
-    clockBtn.style.pointerEvents = 'none';
-
-    function _restoreClockGlow() {
-      var greenGlow = _hexToRgba(T.green, 0.8);
-      clockBtn.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + clockBtn._shadow + ') drop-shadow(0 0 8px ' + greenGlow + ')';
-    }
 
     function _updateClockInBtn() {
-      if (_selectedRole) {
-        clockBtn.style.opacity = '1';
-        clockBtn.style.pointerEvents = 'auto';
-        _restoreClockGlow();
-      } else {
-        clockBtn.style.opacity = '0.4';
-        clockBtn.style.filter = 'none';
-        clockBtn.style.pointerEvents = 'none';
-      }
+      clockBtn.setDisabled(!_selectedRole);
     }
-
-    // Restore glow after press release (fires after built-in _wUp handler)
-    clockBtn.addEventListener('pointerup', function() {
-      if (_selectedRole) _restoreClockGlow();
-    });
-    clockBtn.addEventListener('pointerleave', function() {
-      if (_selectedRole) _restoreClockGlow();
-    });
 
     // Clock-in action
     clockBtn.addEventListener('pointerup', function() {
       if (!_selectedRole) return;
 
-      clockBtn.style.opacity = '0.6';
-      clockBtn.style.pointerEvents = 'none';
+      clockBtn.setDisabled(true);
 
       fetch(API + '/servers/clock-in', {
         method: 'POST',
@@ -345,8 +311,7 @@ SceneManager.register({
       })
       .catch(function(err) {
         showToast(err.message || 'Clock-in failed', { bg: T.red, duration: 4000 });
-        clockBtn.style.opacity = '1';
-        clockBtn.style.pointerEvents = 'auto';
+        clockBtn.setDisabled(false);
       });
     });
 

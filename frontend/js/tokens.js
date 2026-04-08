@@ -141,6 +141,20 @@ T.roles = {
 // Confirm green
 T.green = '#39b54a';
 
+// Embossed Button System tokens
+T.embDarkBg    = '#2c2926';
+T.embGoldBg    = '#c07800';
+T.embMintBg    = '#1e8a38';
+T.embVermBg    = '#aa1a00';
+T.embGhostBg   = '#201e1b';
+T.embGoldLabel = '#1a0e00';
+T.embMintLabel = '#001a0a';
+T.embVermLabel = '#ffffff';
+T.embEdge      = '#111111';
+T.embGoldEdge  = '#7a4400';
+T.embMintEdge  = '#0a5020';
+T.embVermEdge  = '#5a0800';
+
 export function chamfer(s) {
   var c = s || T.chamfer;
   return 'polygon(' + c + 'px 0%, calc(100% - ' + c + 'px) 0%, 100% ' + c + 'px, 100% calc(100% - ' + c + 'px), calc(100% - ' + c + 'px) 100%, ' + c + 'px 100%, 0% calc(100% - ' + c + 'px), 0% ' + c + 'px)';
@@ -190,75 +204,151 @@ export function shadowColor(fillColor) {
 }
 
 // ═══════════════════════════════════════════════════
-//  WRAPPER + INNER BUTTON
-//  Shadow lives on wrapper, clip-path on inner
-//  This prevents clip-path from clipping the shadow
+//  EMBOSSED BUTTON SYSTEM
+//  Sunken-face / raised-rim model with scanline overlay
+//  border-radius: 5px (buttons + cards only)
 // ═══════════════════════════════════════════════════
 
-export function buildStyledButton(fillColor) {
-  var fill = fillColor || T.darkBtn;
-  var edges = bevelEdges(fill);
-  var shadow = shadowColor(fill);
-  var b = T.bevelBtn;
+var _EMB_VARIANTS = {
+  dark: {
+    bg: T.embDarkBg, label: T.textPrimary,
+    shadow: 'inset 0 2px 0 rgba(255,255,255,0.12),inset 0 -2px 0 rgba(0,0,0,0.60),inset 2px 0 0 rgba(255,255,255,0.05),inset -2px 0 0 rgba(0,0,0,0.30),inset 0 4px 8px rgba(0,0,0,0.50),0 2px 8px rgba(0,0,0,0.60),0 0 0 1px ' + T.embEdge,
+    shadowActive: 'inset 0 2px 0 rgba(255,255,255,0.12),inset 0 -2px 0 rgba(0,0,0,0.60),inset 2px 0 0 rgba(255,255,255,0.05),inset -2px 0 0 rgba(0,0,0,0.30),inset 0 8px 16px rgba(0,0,0,0.50),0 2px 8px rgba(0,0,0,0.60),0 0 0 1px ' + T.embEdge,
+  },
+  gold: {
+    bg: T.embGoldBg, label: T.embGoldLabel,
+    shadow: 'inset 0 2px 0 rgba(255,225,150,0.45),inset 0 -2px 0 rgba(0,0,0,0.45),inset 0 4px 8px rgba(180,100,0,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(251,176,59,0.20),0 0 0 1px ' + T.embGoldEdge,
+    shadowActive: 'inset 0 2px 0 rgba(255,225,150,0.45),inset 0 -2px 0 rgba(0,0,0,0.45),inset 0 8px 16px rgba(180,100,0,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(251,176,59,0.20),0 0 0 1px ' + T.embGoldEdge,
+  },
+  mint: {
+    bg: T.embMintBg, label: T.embMintLabel,
+    shadow: 'inset 0 2px 0 rgba(180,255,200,0.45),inset 0 -2px 0 rgba(0,0,0,0.40),inset 0 4px 8px rgba(0,80,20,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(135,247,156,0.15),0 0 0 1px ' + T.embMintEdge,
+    shadowActive: 'inset 0 2px 0 rgba(180,255,200,0.45),inset 0 -2px 0 rgba(0,0,0,0.40),inset 0 8px 16px rgba(0,80,20,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(135,247,156,0.15),0 0 0 1px ' + T.embMintEdge,
+  },
+  vermillion: {
+    bg: T.embVermBg, label: T.embVermLabel,
+    shadow: 'inset 0 2px 0 rgba(255,160,140,0.35),inset 0 -2px 0 rgba(0,0,0,0.50),inset 0 4px 8px rgba(100,0,0,0.40),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(255,68,34,0.15),0 0 0 1px ' + T.embVermEdge,
+    shadowActive: 'inset 0 2px 0 rgba(255,160,140,0.35),inset 0 -2px 0 rgba(0,0,0,0.50),inset 0 8px 16px rgba(100,0,0,0.40),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(255,68,34,0.15),0 0 0 1px ' + T.embVermEdge,
+  },
+  ghost: {
+    bg: T.embGhostBg, label: T.textPrimary,
+    shadow: 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 0 4px 8px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50),0 0 0 1px rgba(135,247,156,0.20)',
+    shadowActive: 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 0 8px 16px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50),0 0 0 1px rgba(135,247,156,0.20)',
+  },
+};
 
+var _EMB_SIZES = {
+  sm: { h: '40px', w: '110px', fs: '18px', ls: '2px', pad: '4px 14px' },
+  md: { h: '55px', w: '220px', fs: '22px', ls: '3px', pad: '6px 18px' },
+  lg: { h: '62px', w: '220px', fs: '31px', ls: '3px', pad: '8px 22px' },
+};
+
+function _fillToVariant(fill) {
+  if (fill === T.darkBtn || fill === T.bg) return 'dark';
+  if (fill === T.gold) return 'gold';
+  if (fill === T.mint || fill === T.goGreen || fill === T.green || fill === T.numpadChassis || fill === T.mintB) return 'mint';
+  if (fill === T.red || fill === T.vermillion || fill === T.redB) return 'vermillion';
+  return 'ghost';
+}
+
+function _injectEmbossedStyles() {
+  if (document.getElementById('embossed-btn-styles')) return;
+  var s = document.createElement('style');
+  s.id = 'embossed-btn-styles';
+  s.textContent =
+    '.embossed-btn{position:relative;border-radius:5px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;transition:transform 50ms,filter 50ms,box-shadow 50ms;box-sizing:border-box;border:none;outline:none;isolation:isolate;}' +
+    '.embossed-btn::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.10) 3px,rgba(0,0,0,0.10) 4px);pointer-events:none;opacity:0.6;z-index:2;}' +
+    '.embossed-btn-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;width:100%;height:100%;box-sizing:border-box;}';
+  document.head.appendChild(s);
+}
+
+export function buildStyledButton(arg) {
+  _injectEmbossedStyles();
+
+  var isNewApi = (typeof arg === 'object' && arg !== null && arg.variant !== undefined);
+  var variant, sizeKey, label, onClick, disabled;
+
+  if (isNewApi) {
+    variant = arg.variant || 'dark';
+    sizeKey = arg.size || 'md';
+    label = arg.label || '';
+    onClick = arg.onClick || null;
+    disabled = !!arg.disabled;
+  } else {
+    variant = _fillToVariant(arg || T.darkBtn);
+    sizeKey = null;
+    label = null;
+    onClick = null;
+    disabled = false;
+  }
+
+  var v = _EMB_VARIANTS[variant] || _EMB_VARIANTS.dark;
+  var sz = sizeKey ? (_EMB_SIZES[sizeKey] || _EMB_SIZES.md) : null;
 
   var wrap = document.createElement('div');
-  wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadow + ')';
-  wrap.style.transition = 'transform 50ms, filter 50ms';
-  wrap.style.cursor = 'pointer';
-  wrap.style.userSelect = 'none';
-  wrap.style.webkitUserSelect = 'none';
-  wrap.style.touchAction = 'manipulation';
+  wrap.className = 'embossed-btn';
+  wrap.style.background = v.bg;
+  wrap.style.boxShadow = v.shadow;
+  if (sz) {
+    wrap.style.height = sz.h;
+    wrap.style.minWidth = sz.w;
+  }
 
   var inner = document.createElement('div');
-  inner.style.background = fill;
-  inner.style.borderTop    = b + 'px solid ' + edges.light;
-  inner.style.borderLeft   = b + 'px solid ' + edges.light;
-  inner.style.borderBottom = b + 'px solid ' + edges.dark;
-  inner.style.borderRight  = b + 'px solid ' + edges.dark;
-  inner.style.clipPath = chamfer();
-  inner.style.width = '100%';
-  inner.style.height = '100%';
-  inner.style.display = 'flex';
-  inner.style.alignItems = 'center';
-  inner.style.justifyContent = 'center';
-  inner.style.textAlign = 'center';
-  inner.style.boxSizing = 'border-box';
-  inner.style.padding = '8px 12px';
+  inner.className = 'embossed-btn-inner';
+  inner.style.color = v.label;
+  inner.style.fontFamily = isNewApi ? T.fhr : T.fb;
+  inner.style.whiteSpace = 'pre-line';
+  inner.style.padding = sz ? sz.pad : '8px 12px';
+  if (isNewApi) {
+    inner.style.textTransform = 'uppercase';
+    inner.style.lineHeight = '1.05';
+    if (sz) {
+      inner.style.fontSize = sz.fs;
+      inner.style.letterSpacing = sz.ls;
+    }
+  }
+  if (label) inner.textContent = label;
 
   wrap.appendChild(inner);
-  wrap._edges = edges;
-  wrap._shadow = shadow;
   wrap._inner = inner;
-  wrap._bevel = b;
+  wrap._embV = v;
+  wrap._edges = { light: '', dark: '' };
+  wrap._shadow = '';
+  wrap._bevel = 0;
 
-  wrap.addEventListener('pointerdown', _wDown);
-  wrap.addEventListener('pointerup', _wUp);
-  wrap.addEventListener('pointerleave', _wUp);
+  wrap.addEventListener('pointerenter', function() {
+    if (wrap._embDisabled) return;
+    wrap.style.filter = 'brightness(1.2)';
+  });
+  wrap.addEventListener('pointerdown', function() {
+    if (wrap._embDisabled) return;
+    wrap.style.transform = 'scale(0.97) translateY(1px)';
+    wrap.style.boxShadow = wrap._embV.shadowActive;
+  });
+  wrap.addEventListener('pointerup', function() {
+    if (wrap._embDisabled) return;
+    wrap.style.transform = '';
+    wrap.style.boxShadow = wrap._embV.shadow;
+  });
+  wrap.addEventListener('pointerleave', function() {
+    if (wrap._embDisabled) return;
+    wrap.style.filter = '';
+    wrap.style.transform = '';
+    wrap.style.boxShadow = wrap._embV.shadow;
+  });
+
+  if (onClick) wrap.addEventListener('pointerup', onClick);
+
+  wrap._embDisabled = false;
+  wrap.setDisabled = function(d) {
+    wrap._embDisabled = d;
+    wrap.style.opacity = d ? '0.35' : '';
+    wrap.style.pointerEvents = d ? 'none' : '';
+  };
+  if (disabled) wrap.setDisabled(true);
 
   return { wrap: wrap, inner: inner };
-}
-
-function _wDown(e) {
-  var w = e.currentTarget;
-  var b = w._bevel || T.bevelBtn;
-  w._inner.style.borderTop    = b + 'px solid ' + w._edges.dark;
-  w._inner.style.borderLeft   = b + 'px solid ' + w._edges.dark;
-  w._inner.style.borderBottom = b + 'px solid ' + w._edges.light;
-  w._inner.style.borderRight  = b + 'px solid ' + w._edges.light;
-  w.style.filter = 'drop-shadow(0px 0px 0px transparent)';
-  w.style.transform = 'translate(' + T.shadowX + 'px, ' + T.shadowY + 'px)';
-}
-
-function _wUp(e) {
-  var w = e.currentTarget;
-  var b = w._bevel || T.bevelBtn;
-  w._inner.style.borderTop    = b + 'px solid ' + w._edges.light;
-  w._inner.style.borderLeft   = b + 'px solid ' + w._edges.light;
-  w._inner.style.borderBottom = b + 'px solid ' + w._edges.dark;
-  w._inner.style.borderRight  = b + 'px solid ' + w._edges.dark;
-  w.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + w._shadow + ')';
-  w.style.transform = 'translate(0,0)';
 }
 
 export function applySunkenStyle(el) {
