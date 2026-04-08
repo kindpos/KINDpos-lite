@@ -351,20 +351,6 @@ function buildLeftColumn() {
   col.appendChild(buildSalesOverviewCard());
   col.appendChild(buildSalesBreakdownCard());
 
-  // ── Action Button ──
-  var actions = document.createElement('div');
-  actions.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:auto;';
-  actions.appendChild(buildButton('SALES DETAIL', {
-    fill: T.darkBtn, color: T.mint, fontSize: '18px', fontFamily: T.fh, height: 36,
-    onTap: function() {
-      var emp = _params.emp || _params;
-      SceneManager.openTransactional('reporting', {
-        pin: emp.pin, employeeId: emp.id, employeeName: emp.name, role: 'manager',
-      });
-    },
-  }));
-  col.appendChild(actions);
-
   return col;
 }
 
@@ -843,9 +829,8 @@ function buildCenterColumn() {
   checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;border:7px solid ' + CHROME + ';background:' + T.bgDark + ';';
   checkWrap.style.clipPath = chamfer(6);
 
-  // Header: "// ALL CHECKS //" or "// {SERVER NAME} //"
-  _checkHeader = document.createElement('div');
-  _checkHeader.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + CHROME + ';letter-spacing:2px;padding:6px 10px;flex-shrink:0;';
+  // Header: "ALL CHECKS" or "{SERVER NAME}"
+  _checkHeader = buildCardHeader('ALL CHECKS');
   updateCheckHeader();
   checkWrap.appendChild(_checkHeader);
 
@@ -904,12 +889,12 @@ function applyTabStyle(el, active) {
 }
 
 function updateCheckHeader() {
-  if (!_checkHeader) return;
+  if (!_checkHeader || !_checkHeader.firstChild) return;
   if (_filteredServerId && _heatmapData) {
     var srv = (_heatmapData.servers || []).find(function(s) { return s.id === _filteredServerId; });
-    _checkHeader.textContent = (srv ? srv.name.toUpperCase() : 'SERVER');
+    _checkHeader.firstChild.textContent = (srv ? srv.name.toUpperCase() : 'SERVER');
   } else {
-    _checkHeader.textContent = 'ALL CHECKS';
+    _checkHeader.firstChild.textContent = 'ALL CHECKS';
   }
 }
 
@@ -1080,10 +1065,7 @@ function writeAuditEvent(action, checkId, originalServerId) {
 function renderOpsPanel() {
   if (!_opsPanel) return;
   _opsPanel.innerHTML = '';
-  var header = document.createElement('div');
-  header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + CHROME + ';letter-spacing:2px;padding:6px 10px;';
-  header.textContent = 'CHECK OPERATION';
-  _opsPanel.appendChild(header);
+  _opsPanel.appendChild(buildCardHeader('CHECK OPERATION'));
 
   if (_activeTab !== 'open') return;
   var ids = Object.keys(_selected);
