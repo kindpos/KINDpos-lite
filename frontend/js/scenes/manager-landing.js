@@ -26,6 +26,11 @@ var _breakdownData = null;
 var _heatmapData = null;
 var _staffData = null;
 var _tipPoolData = null;
+var _tipAdjData = null;
+var _closeDayData = null;
+
+// Tip adjustment escalation threshold (configurable)
+var TIP_ADJ_THRESHOLD = 5;
 
 // Heatmap filter state
 var _filteredServerId = null;
@@ -206,6 +211,25 @@ function loadStubData() {
       { id: 's4', name: 'Casey T.', share: 129.36 },
       { id: 's5', name: 'Riley W.', share: 86.24 },
     ],
+  };
+
+  _tipAdjData = {
+    unadjusted_count: 3,
+  };
+
+  // Close day gate conditions derived from staff + tip data
+  var staffServers = _staffData.servers;
+  var pendingCount = 0;
+  for (var i = 0; i < staffServers.length; i++) {
+    if (staffServers[i].status !== 'checked_out') pendingCount++;
+  }
+  _closeDayData = {
+    all_checked_out: pendingCount === 0,
+    pending_count: pendingCount,
+    all_tips_adjusted: (_tipAdjData.unadjusted_count || 0) === 0,
+    unadjusted_count: _tipAdjData.unadjusted_count || 0,
+    batch_ready: false,
+    day_closed: false,
   };
 }
 
@@ -1299,6 +1323,13 @@ function buildRightColumn() {
 
   col.appendChild(buildServerCheckoutsCard());
   col.appendChild(buildTipPoolCard());
+  col.appendChild(buildTipAdjustmentCard());
+
+  // CLOSE DAY pinned to bottom
+  var spacer = document.createElement('div');
+  spacer.style.cssText = 'flex:1;';
+  col.appendChild(spacer);
+  col.appendChild(buildCloseDayCard());
 
   return col;
 }
@@ -1416,6 +1447,162 @@ function buildTipPoolCard() {
   return card;
 }
 
+// ── TIP ADJUSTMENT Card ──────────────────────────
+
+function buildTipAdjustmentCard() {
+  var ta = _tipAdjData || {};
+  var count = ta.unadjusted_count || 0;
+
+  // Frame/color escalation
+  var countColor, frameColor;
+  if (count === 0) {
+    countColor = T.green;
+    frameColor = T.mint;
+  } else if (count >= TIP_ADJ_THRESHOLD) {
+    countColor = T.vermillion;
+    frameColor = T.vermillion;
+  } else {
+    countColor = T.yellow;
+    frameColor = T.yellow;
+  }
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.clipPath = chamfer(6);
+  card.appendChild(buildCardHeader('TIP ADJUSTMENT'));
+
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:6px 0;';
+  body.appendChild(statRow('Unadjusted:', String(count), countColor));
+  card.appendChild(body);
+
+  // TIP ADJUSTMENT button
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'padding:4px 8px 6px;';
+  btnRow.appendChild(buildButton('TIP ADJUSTMENT', {
+    fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 32,
+    onTap: function() {
+      var emp = _params.emp || _params;
+      SceneManager.openTransactional('tip-adjustment', {
+        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+      });
+    },
+  }));
+  card.appendChild(btnRow);
+
+  return card;
+}
+
+// ── CLOSE DAY + BATCH SETTLEMENT Card ────────────
+
+function buildCloseDayCard() {
+  var cd = _closeDayData || {};
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.clipPath = chamfer(6);
+  card.appendChild(buildCardHeader('CLOSE DAY'));
+
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:6px 0;';
+
+  // Gate status list
+  body.appendChild(gateRow(
+    cd.all_checked_out,
+    cd.all_checked_out ? 'All servers checked out' : cd.pending_count + ' servers pending'
+  ));
+  body.appendChild(gateRow(
+    cd.all_tips_adjusted,
+    cd.all_tips_adjusted ? 'All tips adjusted' : cd.unadjusted_count + ' tips unadjusted'
+  ));
+  body.appendChild(gateRow(
+    cd.batch_ready,
+    cd.batch_ready ? 'Batch ready' : 'Awaiting close day'
+  ));
+  card.appendChild(body);
+
+  // Buttons
+  var btnGrid = document.createElement('div');
+  btnGrid.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:4px 8px 6px;';
+
+  var allClear = cd.all_checked_out && cd.all_tips_adjusted;
+
+  // CLOSE DAY button — red outline gate until conditions met
+  var closeDayBtn = buildButton('CLOSE DAY', {
+    fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+    onTap: function() {
+      if (!allClear) {
+        // Tap while gated → interrupt listing unmet conditions
+        var reasons = [];
+        if (!cd.all_checked_out) reasons.push(cd.pending_count + ' server(s) not checked out');
+        if (!cd.all_tips_adjusted) reasons.push(cd.unadjusted_count + ' tip(s) unadjusted');
+        SceneManager.interrupt('ml-close-gate', {
+          onConfirm: function() {},
+          onCancel: function() {},
+          params: { reasons: reasons },
+        });
+        return;
+      }
+      // Tap when clear → manager confirmation
+      SceneManager.interrupt('ml-close-confirm', {
+        onConfirm: function() {
+          writeAuditEvent('close_day', null, null);
+          fetch('/api/v1/orders/close-day', { method: 'POST' })
+            .then(function(r) {
+              if (r.ok) {
+                showToast('Day closed', { bg: T.goGreen });
+                cd.day_closed = true;
+                cd.batch_ready = true;
+                renderScene();
+              } else { showToast('Close day failed', { bg: T.red }); }
+            }).catch(function() { showToast('Close day failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+      });
+    },
+  });
+  if (!allClear) closeDayBtn.style.border = '2px solid ' + T.vermillion;
+  btnGrid.appendChild(closeDayBtn);
+
+  // SETTLE BATCH button — red outline gate until close day confirmed
+  var settleBatchBtn = buildButton('SETTLE BATCH', {
+    fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+    onTap: function() {
+      if (!cd.day_closed) {
+        showToast('Close day before settling batch', { bg: T.yellow });
+        return;
+      }
+      writeAuditEvent('settle_batch', null, null);
+      SceneManager.openTransactional('batch-settlement', {
+        batchTransactions: 0,
+        batchTotal: 0,
+        onSettled: function() {
+          showToast('Batch settled', { bg: T.goGreen });
+        },
+      });
+    },
+  });
+  if (!cd.day_closed) settleBatchBtn.style.border = '2px solid ' + T.vermillion;
+  btnGrid.appendChild(settleBatchBtn);
+
+  card.appendChild(btnGrid);
+  return card;
+}
+
+function gateRow(met, label) {
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:2px 8px;';
+  var icon = document.createElement('span');
+  icon.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (met ? T.green : T.vermillion) + ';';
+  icon.textContent = met ? '\u2713' : '\u2717';
+  var text = document.createElement('span');
+  text.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + (met ? T.green : T.vermillion) + ';';
+  text.textContent = label;
+  row.appendChild(icon);
+  row.appendChild(text);
+  return row;
+}
+
 // ═══════════════════════════════════════════════════
 //  MAIN RENDER
 // ═══════════════════════════════════════════════════
@@ -1500,5 +1687,81 @@ SceneManager.register({
     _centerGrid = null;
     _opsPanel = null;
     _checkHeader = null;
+    _tipAdjData = null;
+    _closeDayData = null;
   },
+});
+
+// ═══════════════════════════════════════════════════
+//  INTERRUPT SCENES
+// ═══════════════════════════════════════════════════
+
+// ── Close Day Gate (unmet conditions) ────────────
+
+SceneManager.register({
+  name: 'ml-close-gate',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptCritical + ';padding:24px 32px;text-align:center;max-width:420px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
+    msg.textContent = 'Cannot close day:';
+    card.appendChild(msg);
+
+    var reasons = params.reasons || [];
+    for (var i = 0; i < reasons.length; i++) {
+      var line = document.createElement('div');
+      line.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.vermillion + ';margin-bottom:4px;';
+      line.textContent = '\u2717 ' + reasons[i];
+      card.appendChild(line);
+    }
+
+    var sp = document.createElement('div'); sp.style.height = '16px'; card.appendChild(sp);
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;justify-content:center;';
+    btns.appendChild(buildButton('OK', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(btns);
+    container.appendChild(card);
+  },
+  unmount: function() {},
+});
+
+// ── Close Day Confirmation ───────────────────────
+
+SceneManager.register({
+  name: 'ml-close-confirm',
+  mount: function(container, params) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:420px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:8px;';
+    msg.textContent = 'Close day?';
+    card.appendChild(msg);
+
+    var sub = document.createElement('div');
+    sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';margin-bottom:16px;';
+    sub.textContent = 'All gates passed. This will finalize the service day.';
+    card.appendChild(sub);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+    btns.appendChild(buildButton('CONFIRM', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 140, height: 44,
+      onTap: function() { params.onConfirm(); },
+    }));
+    btns.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.vermillion, fontSize: T.fsBtn, width: 140, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(btns);
+    container.appendChild(card);
+  },
+  unmount: function() {},
 });
