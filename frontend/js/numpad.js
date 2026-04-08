@@ -38,6 +38,10 @@ export function buildNumpad(opts) {
   var digitColor  = o.digitColor  || T.mint;
   var clearColor  = o.clearColor  || T.mint;
   var submitColor = o.submitColor || T.mint;
+  var displayColor = o.displayColor || T.gold;
+  var displayBg    = o.displayBg   || T.bg;
+  var chassisColor = o.chassisColor || T.mint;
+  var maskChar     = o.maskChar    || '\u25CF';
 
   var pin = '';
   var _submitCooldown = false;
@@ -59,13 +63,13 @@ export function buildNumpad(opts) {
   display.style.width = '100%';
   display.style.height = '100%';
   display.style.boxSizing = 'border-box';
-  display.style.background = T.bg;
+  display.style.background = displayBg;
   display.style.display = 'flex';
   display.style.alignItems = 'center';
   display.style.justifyContent = 'center';
   display.style.fontFamily = T.fb;
   display.style.fontSize = '60px';
-  display.style.color = T.gold;
+  display.style.color = displayColor;
   display.style.letterSpacing = '5px';
   applySunkenStyle(display);
 
@@ -76,7 +80,7 @@ export function buildNumpad(opts) {
   var cardWrap = document.createElement('div');
   cardWrap.style.width = '100%';
   cardWrap.style.height = cardH + 'px';
-  cardWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadowColor(T.mint) + ')';
+  cardWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + shadowColor(chassisColor) + ')';
 
   var card = document.createElement('div');
   card.style.width = '100%';
@@ -87,7 +91,7 @@ export function buildNumpad(opts) {
   card.style.gridTemplateRows = 'repeat(4, ' + keyH + 'px)';
   card.style.gap = keyGap + 'px';
   card.style.boxSizing = 'border-box';
-  applyRaisedStyle(card, T.mint);
+  applyRaisedStyle(card, chassisColor);
 
   cardWrap.appendChild(card);
   container.appendChild(cardWrap);
@@ -179,7 +183,7 @@ export function buildNumpad(opts) {
     if (displayFormat) {
       display.textContent = displayFormat(pin);
     } else if (masked) {
-      display.textContent = Array(pin.length + 1).join('\u25CF ').trim();
+      display.textContent = Array(pin.length + 1).join(maskChar + ' ').trim();
     } else {
       display.textContent = pin;
     }
@@ -191,7 +195,7 @@ export function buildNumpad(opts) {
     display.textContent = msg || '';
     display.style.color = T.red;
     setTimeout(function() {
-      display.style.color = T.gold;
+      display.style.color = displayColor;
       pin = ''; render();
     }, 1200);
   };

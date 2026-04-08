@@ -25,7 +25,7 @@ registerScene('login', {
 
     el.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;';
 
-    // CENTER — numpad only
+    // CENTER — numpad
     var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
       ? window.KINDpos.maskPinDigits : true;
     _numpadRef = buildNumpad({
@@ -36,9 +36,13 @@ registerScene('login', {
       keyH: 84,
       keyGap: 12,
       cardPad: 18,
-      digitColor: T.gold,
-      clearColor: T.red,
-      submitColor: T.mint,
+      digitColor: T.digitColor,
+      clearColor: T.clrColor,
+      submitColor: T.submitColor,
+      displayColor: T.pinDot,
+      displayBg: T.pinFieldBg,
+      chassisColor: T.numpadChassis,
+      maskChar: '\u25C6',
       onSubmit: function(pin) { handlePinSubmit(pin); },
     });
     el.appendChild(_numpadRef);
@@ -54,25 +58,10 @@ registerScene('login', {
     configBtn.style.left = '12px';
     el.appendChild(configBtn);
 
-    // Version label — bottom-right
+    // Version stamp — bottom-right, gold 9px, 35% opacity
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:30px;position:absolute;bottom:4px;right:12px;';
-    var parts = [
-      { text: 'KIND', color: T.gold, fontFamily: T.fh, fontSize: '28px' },
-      { text: 'pos', color: T.red },
-      { text: '/lite', color: T.gold },
-      { text: '_', color: T.mint },
-      { text: 'Vz', color: T.mint },
-      { text: '1.2', color: T.gold },
-    ];
-    parts.forEach(function(p) {
-      var span = document.createElement('span');
-      span.style.color = p.color;
-      if (p.fontFamily) span.style.fontFamily = p.fontFamily;
-      if (p.fontSize) span.style.fontSize = p.fontSize;
-      span.textContent = p.text;
-      version.appendChild(span);
-    });
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:9px;color:' + T.gold + ';opacity:0.35;position:absolute;bottom:4px;right:12px;';
+    version.textContent = 'KINDpos/lite // Vz1.2';
     el.appendChild(version);
   },
   onExit: function() {

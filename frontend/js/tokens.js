@@ -58,6 +58,19 @@ export const T = {
   catStarches:  '#7bed9f',
   catStarchesL: '#aff4c4',
   catStarchesD: '#3a7a4d',
+  // Vz1.2 login/numpad tokens
+  numpadChassis: '#87f79c',
+  numpadChassisL:'#b8ffd0',
+  numpadChassisD:'#2e8040',
+  pinFieldBg:'#1a1a1a',
+  pinDot:    '#fbb03b',
+  digitColor:'#fbb03b',
+  clrColor:  '#ff4422',
+  submitColor:'#39b54a',
+  sage:      '#6bc987',
+  lime:      '#ccff33',
+  electricPink:'#ff66cc',
+  vermillion:'#ff4422',
   fh:   'Alien Encounters Solid Bold, monospace',
   fb:   'Sevastopol Interface, monospace',
   fsQuick:  '70px',
@@ -103,6 +116,7 @@ export function bevelEdges(fillColor) {
   if (fillColor === T.bg)      return { light: T.bgLight,    dark: T.bgEdge    };
   if (fillColor === T.darkBtn) return { light: T.darkBtnL,   dark: T.darkBtnD  };
   if (fillColor === T.mint)    return { light: T.mintEdgeL,   dark: T.mintEdgeD };
+  if (fillColor === T.numpadChassis) return { light: T.numpadChassisL, dark: T.numpadChassisD };
   if (fillColor === T.goGreen) return { light: T.greenL,      dark: T.greenD   };
   if (fillColor === T.gold)    return { light: T.goldL,       dark: T.goldD    };
   if (fillColor === T.red)     return { light: T.redL,        dark: T.redD     };
@@ -123,6 +137,7 @@ export function shadowColor(fillColor) {
   if (fillColor === T.bg)       return 'rgba(198, 255, 187, 0.55)';
   if (fillColor === T.darkBtn)  return 'rgba(198, 255, 187, 0.55)';
   if (fillColor === T.mint)     return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.numpadChassis) return 'rgba(0, 0, 0, 0.55)';
   if (fillColor === T.goGreen)  return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.gold)     return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.red)      return 'rgba(10, 10, 10, 0.8)';
