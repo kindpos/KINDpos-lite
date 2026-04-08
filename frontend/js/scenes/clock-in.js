@@ -66,7 +66,7 @@ function _lightenHex(hex, pct) {
 // ── Role Button Builder ─────────────────────────
 
 function _buildRoleButton(roleName, roleColor, onSelect) {
-  var borderW = 3;
+  var borderW = 10;
   var glowDefault = _hexToRgba(roleColor, 0.5);
   var baseShadow = shadowColor(T.bg);
 
@@ -163,7 +163,7 @@ SceneManager.register({
     panel.style.cssText = [
       'width:960px;height:500px;',
       'background:' + T.bg + ';',
-      'border:5px solid ' + T.numpadChassis + ';',
+      'border:7px solid ' + T.numpadChassis + ';',
       'display:flex;flex-direction:column;',
       'box-sizing:border-box;padding:20px;',
       'position:relative;',
@@ -196,7 +196,7 @@ SceneManager.register({
     var payCard = document.createElement('div');
     payCard.style.cssText = [
       'background:' + T.bg + ';',
-      'border:5px solid ' + T.numpadChassis + ';',
+      'border:7px solid ' + T.numpadChassis + ';',
       'padding:20px 32px;',
       'display:flex;flex-direction:column;gap:12px;',
     ].join('');

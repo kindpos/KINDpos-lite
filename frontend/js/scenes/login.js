@@ -13,6 +13,7 @@ import { setSceneName, setHeaderBack } from '../app.js';
 var employees = [];
 var _numpadRef = null;
 var _clockInMode = false;
+var _lastValidEmp = null;
 
 SceneManager.register({
   name: 'login',
@@ -22,6 +23,7 @@ SceneManager.register({
     setHeaderBack();
     _numpadRef = null;
     _clockInMode = false;
+    _lastValidEmp = null;
 
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
       employees = data.servers || [];
@@ -68,6 +70,15 @@ SceneManager.register({
       fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
       width: 200, height: 44,
       onTap: function() {
+        // If PIN already entered, go straight to clock-in
+        if (_lastValidEmp) {
+          SceneManager.closeGate('login');
+          SceneManager.mountWorking('landing', { emp: _lastValidEmp });
+          SceneManager.openTransactional('clock-in', { emp: _lastValidEmp });
+          _lastValidEmp = null;
+          return;
+        }
+        // Otherwise toggle mode for next PIN entry
         _clockInMode = !_clockInMode;
         clockInBtn._inner.style.borderColor = _clockInMode ? T.mint : T.goGreen;
         if (_clockInMode && _numpadRef) _numpadRef.clear();
@@ -98,11 +109,17 @@ function handlePinSubmit(pin) {
   var empRoles = emp.roles || [emp.role || 'server'];
   var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
 
-  SceneManager.closeGate('login');
-  SceneManager.mountWorking('landing', { emp: empData });
-
   if (_clockInMode) {
-    SceneManager.openTransactional('clock-in', { emp: empData });
+    // Clock-in mode active — go straight to clock-in
     _clockInMode = false;
+    _lastValidEmp = null;
+    SceneManager.closeGate('login');
+    SceneManager.mountWorking('landing', { emp: empData });
+    SceneManager.openTransactional('clock-in', { emp: empData });
+  } else {
+    // Normal flow — store emp so CLOCK IN button can use it after
+    _lastValidEmp = empData;
+    SceneManager.closeGate('login');
+    SceneManager.mountWorking('landing', { emp: empData });
   }
 }
