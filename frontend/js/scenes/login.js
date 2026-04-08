@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T } from '../tokens.js';
+import { T, buildStyledButton } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { buildNumpad } from '../numpad.js';
 import { SceneManager } from '../scene-manager.js';
@@ -32,13 +32,8 @@ SceneManager.register({
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';';
 
     // LEFT — CONFIGURATION button
-    var configBtn = buildButton('CONFIGURATION', {
-      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
-      width: 200, height: 44,
-      onTap: function() { SceneManager.openTransactional('settings'); },
-    });
-    configBtn._inner.style.borderColor = T.gold;
-    container.appendChild(configBtn);
+    var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
+    container.appendChild(configPair.wrap);
 
     // CENTER — numpad
     var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
