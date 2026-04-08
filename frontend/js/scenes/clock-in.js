@@ -156,14 +156,14 @@ SceneManager.register({
       onBack: function() { SceneManager.closeTransactional('clock-in'); SceneManager.openGate('login'); },
     });
 
-    el.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+    el.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:' + T.bg + ';';
 
     // ── Main Panel ──────────────────────────
     var panel = document.createElement('div');
     panel.style.cssText = [
       'width:960px;height:500px;',
       'background:' + T.bgDark + ';',
-      'border:2px solid ' + T.mint + ';',
+      'border:3px solid ' + T.mint + ';',
       'display:flex;flex-direction:column;',
       'box-sizing:border-box;padding:20px;',
       'position:relative;',
@@ -196,14 +196,14 @@ SceneManager.register({
     var payCard = document.createElement('div');
     payCard.style.cssText = [
       'background:' + T.bgDark + ';',
-      'border:2px solid ' + T.mint + ';',
-      'padding:12px 16px;',
-      'display:flex;flex-direction:column;gap:6px;',
+      'border:3px solid ' + T.mint + ';',
+      'padding:16px 24px;',
+      'display:flex;flex-direction:column;gap:8px;',
     ].join('');
-    payCard.style.clipPath = chamfer(6);
+    payCard.style.clipPath = chamfer(8);
 
     var payLine = document.createElement('div');
-    payLine.style.cssText = 'font-family:' + T.fb + ';font-size:20px;';
+    payLine.style.cssText = 'font-family:' + T.fb + ';font-size:28px;';
     var payLabel = document.createElement('span');
     payLabel.style.color = T.textPrimary;
     payLabel.textContent = 'Pay Period: ';
@@ -215,7 +215,7 @@ SceneManager.register({
     payCard.appendChild(payLine);
 
     var hoursLine = document.createElement('div');
-    hoursLine.style.cssText = 'font-family:' + T.fb + ';font-size:20px;';
+    hoursLine.style.cssText = 'font-family:' + T.fb + ';font-size:28px;';
     var hoursLabel = document.createElement('span');
     hoursLabel.style.color = T.textPrimary;
     hoursLabel.textContent = 'Total Hours: ';
@@ -255,25 +255,10 @@ SceneManager.register({
       roleArea.appendChild(btn);
     });
 
-    // ── BOTTOM ROW — active checks + CLOCK IN ──
+    // ── BOTTOM ROW — CLOCK IN ──
     var bottomRow = document.createElement('div');
-    bottomRow.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-end;flex-shrink:0;margin-top:8px;';
+    bottomRow.style.cssText = 'display:flex;justify-content:flex-end;flex-shrink:0;margin-top:8px;';
     panel.appendChild(bottomRow);
-
-    // Active checks count (bottom-left)
-    var checksLabel = document.createElement('div');
-    checksLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';';
-    checksLabel.textContent = '0 active checks';
-    bottomRow.appendChild(checksLabel);
-
-    // Fetch active check count
-    fetch(API + '/orders/open')
-      .then(function(r) { return r.json(); })
-      .then(function(orders) {
-        var count = (orders || []).filter(function(o) { return (o.total || 0) > 0 || (o.items || []).length > 0; }).length;
-        checksLabel.textContent = count + ' active check' + (count !== 1 ? 's' : '');
-      })
-      .catch(function() {});
 
     var clockPair = buildStyledButton(T.numpadChassis);
     var clockBtn = clockPair.wrap;
@@ -364,11 +349,6 @@ SceneManager.register({
         hoursValue.textContent = '0.00';
       });
 
-    // ── Version stamp ───────────────────────
-    var version = document.createElement('div');
-    version.style.cssText = 'position:absolute;bottom:4px;right:12px;font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';';
-    version.textContent = 'KINDpos/lite_Vz1.2';
-    panel.appendChild(version);
   },
 
   unmount: function() {
