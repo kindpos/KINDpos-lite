@@ -316,7 +316,9 @@ registerScene('order-entry', {
     // Fetch dynamic menu from API (updates MENU_DATA + PIZZA_BUILDER_DATA)
     if (!_menuFetched) fetchMenuFromAPI();
 
-    if (params && params.autoRecall) {
+    if (params && params.recallOrderId) {
+      recallFromBackend(params.recallOrderId);
+    } else if (params && params.autoRecall) {
       setTimeout(function() { handleRecall(); }, 100);
     }
   },
@@ -2132,6 +2134,51 @@ function recallTabInterrupt(tab, grid, overlayEl) {
     },
   }).catch(function() {});
 }
+// ── RECALL FROM BACKEND (open saved check) ──────
+function recallFromBackend(orderId) {
+  fetch(API + '/orders/' + orderId)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(order) {
+      currentOrderId = order.order_id;
+      currentCheckNumber = order.check_number || null;
+      customerName = order.customer_name || '';
+      if (currentCheckNumber) setSceneName(currentCheckNumber);
+
+      // Convert backend items to frontend ticket format
+      ticket = (order.items || []).map(function(item) {
+        ticketSeq += 1;
+        return {
+          id:        ticketSeq,
+          idemKey:   _idemKey(),
+          name:      item.name,
+          unitPrice: item.price,
+          mods:      (item.modifiers || []).map(function(m) {
+            return {
+              name:       m.name,
+              price:      m.modifier_price != null ? m.modifier_price : (m.price || 0),
+              charged:    m.charged != null ? m.charged : true,
+              prefix:     m.prefix || null,
+              half_price: m.half_price != null ? m.half_price : null,
+            };
+          }),
+          selected:  false,
+          sent:      true,  // items from backend have already been sent
+          category:  item.category || null,
+        };
+      });
+
+      renderTicket();
+      rebuildBottomBar();
+    })
+    .catch(function(err) {
+      console.warn('[KINDpos] Failed to recall order:', err);
+      showToast('Failed to load saved check', { bg: T.red, duration: 2000 });
+    });
+}
+
 async function handlePay(params) {
   if (ticket.length === 0) return;
 
