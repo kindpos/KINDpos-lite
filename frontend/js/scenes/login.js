@@ -38,6 +38,8 @@ SceneManager.register({
       keyH: 84,
       keyGap: 12,
       cardPad: 18,
+      chassisChamfer: 6,
+      chassisBevel: 5,
       digitColor: T.digitColor,
       clearColor: T.clrColor,
       submitColor: T.submitColor,
@@ -63,7 +65,7 @@ SceneManager.register({
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;right:12px;';
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;right:12px;';
     version.textContent = 'KINDpos/lite_Vz1.2';
     container.appendChild(version);
   },

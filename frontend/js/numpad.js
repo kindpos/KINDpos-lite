@@ -44,8 +44,10 @@ export function buildNumpad(opts) {
   var chassisColor = o.chassisColor || T.mint;
   var maskChar     = o.maskChar    || '\u25CF';
   var digitFont    = o.digitFont   || T.fh;
-  var keyChamfer   = o.chamfer     != null ? o.chamfer : null;  // null = use default
-  var keyBevel     = o.bevel       != null ? o.bevel   : null;  // null = use default
+  var keyChamfer   = o.chamfer     != null ? o.chamfer : null;
+  var keyBevel     = o.bevel       != null ? o.bevel   : null;
+  var chassisChamfer = o.chassisChamfer != null ? o.chassisChamfer : null;
+  var chassisBevel   = o.chassisBevel   != null ? o.chassisBevel   : null;
 
   var pin = '';
   var _submitCooldown = false;
@@ -101,15 +103,15 @@ export function buildNumpad(opts) {
   card.style.gridTemplateRows = 'repeat(4, ' + keyH + 'px)';
   card.style.gap = keyGap + 'px';
   card.style.boxSizing = 'border-box';
-  if (keyBevel != null || keyChamfer != null) {
-    // Use overridden bevel/chamfer for numpad-specific geometry
-    var _edges = { light: T.numpadChassisL, dark: T.numpadChassisD };
+  if (chassisBevel != null || chassisChamfer != null) {
+    var _cEdges = { light: T.numpadChassisL, dark: T.numpadChassisD };
+    var _cBevel = chassisBevel != null ? chassisBevel : T.bevel;
     card.style.background = chassisColor;
-    card.style.borderTop    = _bevel + 'px solid ' + _edges.light;
-    card.style.borderLeft   = _bevel + 'px solid ' + _edges.light;
-    card.style.borderBottom = _bevel + 'px solid ' + _edges.dark;
-    card.style.borderRight  = _bevel + 'px solid ' + _edges.dark;
-    card.style.clipPath = chamfer(keyChamfer != null ? keyChamfer + 6 : 10);
+    card.style.borderTop    = _cBevel + 'px solid ' + _cEdges.light;
+    card.style.borderLeft   = _cBevel + 'px solid ' + _cEdges.light;
+    card.style.borderBottom = _cBevel + 'px solid ' + _cEdges.dark;
+    card.style.borderRight  = _cBevel + 'px solid ' + _cEdges.dark;
+    card.style.clipPath = chamfer(chassisChamfer != null ? chassisChamfer : 10);
   } else {
     applyRaisedStyle(card, chassisColor);
   }
