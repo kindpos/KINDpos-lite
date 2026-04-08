@@ -23,6 +23,7 @@ import './scenes/sales-summary.js?v=2';
 import './scenes/landing.js?v=2';
 import './scenes/server-landing.js?v=2';
 import './scenes/clock-in.js?v=2';
+import './scenes/manager-landing.js?v=2';
 
 // ── Header state ──────────────────────────────────
 let _sceneName = null;

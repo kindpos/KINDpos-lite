@@ -91,7 +91,7 @@ SceneManager.register({
 });
 
 function landingScene(empRoles) {
-  return empRoles.indexOf('manager') !== -1 ? 'landing' : 'server-landing';
+  return empRoles.indexOf('manager') !== -1 ? 'manager-landing' : 'server-landing';
 }
 
 function handlePinSubmit(pin) {
