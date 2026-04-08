@@ -63,7 +63,7 @@ SceneManager.register({
       width: 200, height: 44,
       onTap: function() { SceneManager.openTransactional('settings'); },
     });
-    configBtn.style.border = '2px solid ' + T.gold;
+    configBtn._inner.style.borderColor = T.gold;
     bottomBar.appendChild(configBtn);
 
     var clockInBtn = buildButton('CLOCK IN', {
@@ -71,11 +71,11 @@ SceneManager.register({
       width: 200, height: 44,
       onTap: function() {
         _clockInMode = !_clockInMode;
-        clockInBtn.style.outline = _clockInMode ? '2px solid ' + T.mint : 'none';
+        clockInBtn._inner.style.borderColor = _clockInMode ? T.mint : T.goGreen;
         if (_clockInMode && _numpadRef) _numpadRef.clear();
       },
     });
-    clockInBtn.style.border = '2px solid ' + T.goGreen;
+    clockInBtn._inner.style.borderColor = T.goGreen;
     bottomBar.appendChild(clockInBtn);
 
     container.appendChild(bottomBar);
