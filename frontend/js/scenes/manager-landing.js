@@ -1583,7 +1583,7 @@ function renderScene() {
   if (!_el || !_params) return;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:25% 42% 33%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:25fr 42fr 33fr;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
