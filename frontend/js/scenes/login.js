@@ -27,7 +27,16 @@ SceneManager.register({
       employees = data.servers || [];
     }).catch(function() { employees = []; });
 
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;background:' + T.bg + ';';
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';';
+
+    // LEFT — CONFIGURATION button
+    var configBtn = buildButton('CONFIGURATION', {
+      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
+      width: 200, height: 44,
+      onTap: function() { SceneManager.openTransactional('settings'); },
+    });
+    configBtn._inner.style.borderColor = T.gold;
+    container.appendChild(configBtn);
 
     // CENTER — numpad
     var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
@@ -54,18 +63,7 @@ SceneManager.register({
     });
     container.appendChild(_numpadRef);
 
-    // Bottom bar — centered buttons + version stamp
-    var bottomBar = document.createElement('div');
-    bottomBar.style.cssText = 'position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:16px;';
-
-    var configBtn = buildButton('CONFIGURATION', {
-      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
-      width: 200, height: 44,
-      onTap: function() { SceneManager.openTransactional('settings'); },
-    });
-    configBtn._inner.style.borderColor = T.gold;
-    bottomBar.appendChild(configBtn);
-
+    // RIGHT — CLOCK IN button
     var clockInBtn = buildButton('CLOCK IN', {
       fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
       width: 200, height: 44,
@@ -76,9 +74,7 @@ SceneManager.register({
       },
     });
     clockInBtn._inner.style.borderColor = T.goGreen;
-    bottomBar.appendChild(clockInBtn);
-
-    container.appendChild(bottomBar);
+    container.appendChild(clockInBtn);
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
