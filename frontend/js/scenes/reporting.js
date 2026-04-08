@@ -6,7 +6,7 @@
 
 import { T, chamfer, buildStyledButton, applySunkenStyle, bevelEdges, shadowColor } from '../tokens.js';
 import { buildButton, buildGap } from '../components.js';
-import { registerScene, push, pop } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { CHART, createSVG, svgEl, drawBarChart, drawStackedArea, drawParetoChart, drawHorizontalBars, drawTrendLine, drawProgressBar, drawStackedColumn, drawHistogram, drawHeatmap, drawParetoHBar, buildChartPanel, buildChartGrid } from '../chart-helpers.js';
 import { DATA } from '../chart-colors.js';
@@ -164,7 +164,7 @@ function buildLeftCard(params, sales, labor) {
     detailBtn.wrap.style.alignSelf = 'stretch';
     detailBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('sales-summary', { role: params.role, employeeId: params.employeeId });
+      SceneManager.openTransactional('sales-summary', { role: params.role, employeeId: params.employeeId });
     });
     btnArea.appendChild(detailBtn.wrap);
 
@@ -177,7 +177,7 @@ function buildLeftCard(params, sales, labor) {
     closeDayBtn.wrap.style.alignSelf = 'stretch';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('close-day', params);
+      SceneManager.openTransactional('close-day', params);
     });
     btnArea.appendChild(closeDayBtn.wrap);
 
@@ -190,7 +190,7 @@ function buildLeftCard(params, sales, labor) {
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('tip-adjustment', params);
+      SceneManager.openTransactional('tip-adjustment', params);
     });
     btnArea.appendChild(tipAdjBtn.wrap);
 
@@ -234,7 +234,7 @@ function buildLeftCard(params, sales, labor) {
     checkoutBtn.wrap.style.alignSelf = 'stretch';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('server-checkout', params);
+      SceneManager.openTransactional('server-checkout', params);
     });
     btnArea.appendChild(checkoutBtn.wrap);
 
@@ -247,7 +247,7 @@ function buildLeftCard(params, sales, labor) {
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('tip-adjustment', params);
+      SceneManager.openTransactional('tip-adjustment', params);
     });
     btnArea.appendChild(tipAdjBtn.wrap);
 
@@ -282,7 +282,7 @@ function buildLeftCardButtons(params, sales) {
     detailBtn.wrap.style.alignSelf = 'stretch';
     detailBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('sales-summary', { role: params.role, employeeId: params.employeeId });
+      SceneManager.openTransactional('sales-summary', { role: params.role, employeeId: params.employeeId });
     });
     btnArea.appendChild(detailBtn.wrap);
 
@@ -295,7 +295,7 @@ function buildLeftCardButtons(params, sales) {
     closeDayBtn.wrap.style.alignSelf = 'stretch';
     closeDayBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('close-day', params);
+      SceneManager.openTransactional('close-day', params);
     });
     btnArea.appendChild(closeDayBtn.wrap);
 
@@ -308,7 +308,7 @@ function buildLeftCardButtons(params, sales) {
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('tip-adjustment', params);
+      SceneManager.openTransactional('tip-adjustment', params);
     });
     btnArea.appendChild(tipAdjBtn.wrap);
 
@@ -327,7 +327,7 @@ function buildLeftCardButtons(params, sales) {
     checkoutBtn.wrap.style.alignSelf = 'stretch';
     checkoutBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('server-checkout', params);
+      SceneManager.openTransactional('server-checkout', params);
     });
     btnArea.appendChild(checkoutBtn.wrap);
 
@@ -340,7 +340,7 @@ function buildLeftCardButtons(params, sales) {
     tipAdjBtn.wrap.style.alignSelf = 'stretch';
     tipAdjBtn.wrap.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      push('tip-adjustment', params);
+      SceneManager.openTransactional('tip-adjustment', params);
     });
     btnArea.appendChild(tipAdjBtn.wrap);
 
@@ -1027,7 +1027,7 @@ function renderCurrentState() {
     buildExpandedView(currentEl, currentParams, salesData, laborData);
   } else {
     setSceneName('Reporting');
-    setHeaderBack({ x: true });
+    setHeaderBack({ x: true, onBack: function() { SceneManager.closeTransactional('reporting'); } });
     buildCollapsedView(currentEl, currentParams, salesData, laborData);
   }
 }
@@ -1051,14 +1051,15 @@ function buildScene(el, params) {
 //  REGISTRATION
 // ═══════════════════════════════════════════════════
 
-registerScene('reporting', {
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'reporting',
+  mount: function(container, params) {
     setSceneName('Reporting');
-    setHeaderBack({ x: true });
+    setHeaderBack({ x: true, onBack: function() { SceneManager.closeTransactional('reporting'); } });
     expandedCard = null;
-    buildScene(el, params);
+    buildScene(container, params);
   },
-  onExit: function() {},
+  unmount: function() {},
   canExit: function() {
     if (expandedPanel !== null) {
       expandedPanel = null;

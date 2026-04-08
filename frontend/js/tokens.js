@@ -94,6 +94,22 @@ export const T = {
   chamfer:  8,
   shadowX:  3,
   shadowY:  4,
+
+  // Scrim opacities
+  scrimWorking:     'rgba(26, 26, 26, 0.60)',
+  scrimInterrupt:   'rgba(26, 26, 26, 0.85)',
+  scrimGate:        'rgba(26, 26, 26, 1.00)',
+
+  // Layer z-indexes
+  zWorking:         10,
+  zTransactional:   20,
+  zInterrupt:       30,
+  zGate:            100,
+
+  // Overlay frame colors
+  frameTransactional:      '#C6FFBB',  // mint
+  frameInterruptDecision:  '#fcbe40',  // gold
+  frameInterruptCritical:  '#da331c',  // red
 };
 
 // Default palette: Terminal Glow

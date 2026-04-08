@@ -6,28 +6,36 @@
 
 import { T, chamfer, applySunkenStyle, buildStyledButton, shadowColor, bevelEdges } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, push, pop } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var PAD = T.scenePad;
 var GAP = T.colGap;
 
-registerScene('receipt-review', {
-  onEnter: function(el, params) {
-    setSceneName(params.checkId || 'ORDER');
-    setHeaderBack({ back: true, x: true });
+SceneManager.register({
+  name: 'receipt-review',
 
-    el.style.cssText = [
+  mount: function(container, params) {
+    params = params || {};
+    setSceneName(params.checkId || 'ORDER');
+    setHeaderBack({
+      back: true,
+      onBack: function() { SceneManager.closeTransactional('receipt-review'); },
+      x: true,
+    });
+
+    container.style.cssText = [
       'width:100%;height:100%;',
       'display:flex;gap:' + GAP + 'px;',
       'padding:' + PAD + 'px;',
       'box-sizing:border-box;overflow:hidden;',
     ].join('');
 
-    el.appendChild(buildReceiptPanel(params));
-    el.appendChild(buildMethodPanel(params));
+    container.appendChild(buildReceiptPanel(params));
+    container.appendChild(buildMethodPanel(params));
   },
-  onExit: function() {},
+
+  unmount: function() {},
 });
 
 
@@ -191,7 +199,7 @@ function buildMethodPanel(params) {
     fill: T.darkBtn,
     textColor: T.mint,
     onTap: function() {
-      push('payment', makePaymentParams(params, 'card'));
+      SceneManager.openTransactional('payment', makePaymentParams(params, 'card'));
     },
   }));
 
@@ -203,7 +211,7 @@ function buildMethodPanel(params) {
     fill: T.darkBtn,
     textColor: T.mint,
     onTap: function() {
-      push('payment', makePaymentParams(params, 'cash'));
+      SceneManager.openTransactional('payment', makePaymentParams(params, 'cash'));
     },
   }));
 
@@ -213,7 +221,7 @@ function buildMethodPanel(params) {
   var back = buildButton('\u2190 BACK', {
     fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
     height: 48,
-    onTap: function() { pop(); },
+    onTap: function() { SceneManager.closeTransactional('receipt-review'); },
   });
   back.style.flexShrink = '0';
   panel.appendChild(back);

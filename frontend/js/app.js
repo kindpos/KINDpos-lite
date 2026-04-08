@@ -3,27 +3,26 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { init, push, pop, replace, onBeforeTransition, clearSceneCache } from './scene-manager.js';
+import { SceneManager } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
 import { hideKeyboard } from './keyboard.js';
 import { showToast } from './components.js';
 
 // Import scenes (self-registering)
-import './scenes/login.js?v=1';
-import './scenes/settings.js?v=1';
-import './scenes/order-entry.js?v=6';
-import './scenes/receipt-review.js?v=1';
-import './scenes/payment.js?v=1';
-import './scenes/change-due.js?v=1';
-import './scenes/tip-adjustment.js?v=1';
-import './scenes/reporting.js?v=1';
-import './scenes/server-checkout.js?v=1';
-import './scenes/close-day.js?v=1';
-import './scenes/sales-summary.js?v=1';
-import './scenes/landing.js?v=1';
-import './scenes/clock-in.js?v=1';
+import './scenes/login.js?v=2';
+import './scenes/settings.js?v=2';
+import './scenes/order-entry.js?v=7';
+import './scenes/receipt-review.js?v=2';
+import './scenes/payment.js?v=2';
+import './scenes/change-due.js?v=2';
+import './scenes/tip-adjustment.js?v=2';
+import './scenes/reporting.js?v=2';
+import './scenes/server-checkout.js?v=2';
+import './scenes/close-day.js?v=2';
+import './scenes/sales-summary.js?v=2';
+import './scenes/landing.js?v=2';
+import './scenes/clock-in.js?v=2';
 
-window._push = push;
 // ── Header state ──────────────────────────────────
 let _sceneName = null;
 
@@ -50,7 +49,7 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
     backPair.inner.style.fontSize = T.fsBtnSm;
     backPair.inner.style.color = T.mint;
     backPair.inner.textContent = '<<<';
-    backPair.wrap.addEventListener('pointerup', onBack || (() => pop()));
+    backPair.wrap.addEventListener('pointerup', onBack || function() { /* scenes handle their own back */ });
     nav.appendChild(backPair.wrap);
   } else if (nav) {
     nav.style.display = 'none';
@@ -66,7 +65,11 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
     logoutPair.inner.style.fontSize = T.fsBtnSm;
     logoutPair.inner.style.color = T.mint;
     logoutPair.inner.textContent = 'X';
-    logoutPair.wrap.addEventListener('pointerup', onClose || (() => { clearSceneCache('order-entry'); replace('login'); }));
+    logoutPair.wrap.addEventListener('pointerup', onClose || function() {
+      SceneManager.closeAllTransactional();
+      SceneManager.unmountWorking(SceneManager.getActiveWorking());
+      SceneManager.openGate('login');
+    });
     logout.appendChild(logoutPair.wrap);
   } else if (logout) {
     logout.style.display = 'none';
@@ -75,16 +78,11 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
 
 // ── Boot ──────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  init({
-    sceneContainer:     document.getElementById('scene-container'),
-    overlayContainer:   document.getElementById('overlay-container'),
-    interruptContainer: document.getElementById('interrupt-container'),
-    onDiagnostic: null,
-  });
+  SceneManager.init();
+  SceneManager.onBeforeTransition(hideKeyboard);
 
-  onBeforeTransition(hideKeyboard);
-
-  push('login');
+  // Open login gate on boot
+  SceneManager.openGate('login');
 
   updateClock();
   setInterval(updateClock, 30000);

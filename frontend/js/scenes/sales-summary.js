@@ -6,7 +6,7 @@
 
 import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, pop } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var PAD   = 16;
@@ -29,14 +29,15 @@ function todayStr() {
 //  SCENE
 // ═══════════════════════════════════════════════════
 
-registerScene('sales-summary', {
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'sales-summary',
+  mount: function(container, params) {
     var role = params.role || 'server';
 
     setSceneName('Sales Summary');
-    setHeaderBack({ back: true });
+    setHeaderBack({ back: true, onBack: function() { SceneManager.closeTransactional('sales-summary'); } });
 
-    el.style.cssText = [
+    container.style.cssText = [
       'width:100%;height:100%;',
       'display:flex;flex-direction:column;',
       'padding:' + PAD + 'px;gap:' + GAP + 'px;',
@@ -63,7 +64,7 @@ registerScene('sales-summary', {
 
     titleBar.appendChild(titleLabel);
     titleBar.appendChild(roleLabel);
-    el.appendChild(titleBar);
+    container.appendChild(titleBar);
 
     // ── Content area (populated after fetch) ──
     var grid = document.createElement('div');
@@ -82,15 +83,15 @@ registerScene('sales-summary', {
     ].join('');
     loading.textContent = 'Loading...';
     grid.appendChild(loading);
-    el.appendChild(grid);
+    container.appendChild(grid);
 
     // ── Back button ──
     var backBtn = buildButton('\u2190 BACK', {
       fill: T.darkBtn, color: T.mint, fontSize: '28px',
       height: BTN_H,
-      onTap: function() { pop(); },
+      onTap: function() { SceneManager.closeTransactional('sales-summary'); },
     });
-    el.appendChild(backBtn);
+    container.appendChild(backBtn);
 
     // ── Fetch from API ──
     var url = API + '/reporting/sales-summary?date=' + todayStr();
@@ -119,7 +120,7 @@ registerScene('sales-summary', {
         grid.appendChild(errMsg);
       });
   },
-  onExit: function() {},
+  unmount: function() {},
   cache: false,
   timeoutMs: 0,
 });

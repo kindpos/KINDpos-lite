@@ -6,7 +6,7 @@
 
 import { T, buildStyledButton, chamfer, shadowColor } from '../tokens.js';
 import { showToast } from '../components.js';
-import { registerScene, replace } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var API = '/api/v1';
@@ -163,15 +163,18 @@ function _buildRoleButton(roleName, roleColor, onSelect) {
 //  SCENE REGISTRATION
 // ═══════════════════════════════════════════════════
 
-registerScene('clock-in', {
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'clock-in',
+
+  mount: function(el, params) {
+    params = params || {};
     var emp = params.emp || {};
     _selectedRole = null;
 
     setSceneName('Clock In');
     setHeaderBack({
       back: true,
-      onBack: function() { replace('login'); },
+      onBack: function() { SceneManager.closeTransactional('clock-in'); SceneManager.openGate('login'); },
     });
 
     el.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
@@ -341,7 +344,8 @@ registerScene('clock-in', {
       })
       .then(function() {
         showToast(emp.name + ' clocked in as ' + _selectedRole.toUpperCase(), { bg: T.goGreen, duration: 3000 });
-        replace('login');
+        SceneManager.closeTransactional('clock-in');
+        SceneManager.openGate('login');
       })
       .catch(function(err) {
         showToast(err.message || 'Clock-in failed', { bg: T.red, duration: 4000 });
@@ -374,9 +378,7 @@ registerScene('clock-in', {
     panel.appendChild(version);
   },
 
-  onExit: function() {
+  unmount: function() {
     _selectedRole = null;
   },
-
-  timeoutMs: 0,
 });

@@ -8,7 +8,7 @@
 
 import { T } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, push, replace, clearSceneCache } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildChartGrid } from '../chart-helpers.js';
 import {
@@ -70,8 +70,9 @@ function buildExpandedLanding(el, params, sales, labor) {
     onClose: function() {
       expandedCard = null;
       expandedPanel = null;
-      clearSceneCache('order-entry');
-      replace('login');
+      SceneManager.closeAllTransactional();
+      SceneManager.unmountWorking('landing');
+      SceneManager.openGate('login');
     },
   });
 
@@ -154,8 +155,9 @@ function buildCardLanding(el, params, sales, labor) {
     onClose: function() {
       expandedCard = null;
       expandedPanel = null;
-      clearSceneCache('order-entry');
-      replace('login');
+      SceneManager.closeAllTransactional();
+      SceneManager.unmountWorking('landing');
+      SceneManager.openGate('login');
     },
   });
 
@@ -229,7 +231,7 @@ function buildCardLanding(el, params, sales, labor) {
     var configBtn = buildButton('CONFIGURATION', {
       fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh,
       width: 200, height: 42,
-      onTap: function() { push('settings', { pin: emp.pin }); },
+      onTap: function() { SceneManager.openTransactional('settings', { pin: emp.pin }); },
     });
     configRow.appendChild(configBtn);
     el.appendChild(configRow);
@@ -337,11 +339,12 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
   function handleEditAction(action, ids) {
     if (action === 'OPEN') {
       var order = selected[ids[0]];
-      push('order-entry', {
+      SceneManager.mountWorking('order-entry', {
         mode: 'service',
         pin: emp.pin,
         employeeId: emp.id,
         employeeName: emp.name,
+        roles: empRoles,
         recallOrderId: order.order_id,
       });
     }
@@ -378,8 +381,8 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
         newCheckEmpty.style.cssText = 'width:100%;height:100px;display:flex;align-items:center;justify-content:center;border:3px dashed ' + T.mint + ';box-sizing:border-box;cursor:pointer;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';user-select:none;';
         newCheckEmpty.textContent = '+';
         newCheckEmpty.addEventListener('pointerup', function() {
-          clearSceneCache('order-entry');
-          push('order-entry', {
+
+          SceneManager.mountWorking('order-entry', {
             mode: 'service',
             pin: emp.pin,
             employeeId: emp.id,
@@ -432,12 +435,12 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
       newCheckBtn.style.cssText = 'width:100%;height:100px;display:flex;align-items:center;justify-content:center;border:3px dashed ' + T.mint + ';box-sizing:border-box;cursor:pointer;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';user-select:none;';
       newCheckBtn.textContent = '+';
       newCheckBtn.addEventListener('pointerup', function() {
-        clearSceneCache('order-entry');
-        push('order-entry', {
+        SceneManager.mountWorking('order-entry', {
           mode: 'service',
           pin: emp.pin,
           employeeId: emp.id,
           employeeName: emp.name,
+          roles: empRoles,
         });
       });
       tabGrid.appendChild(newCheckBtn);
@@ -455,8 +458,10 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
 //  SCENE REGISTRATION
 // ═══════════════════════════════════════════════════
 
-registerScene('landing', {
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'landing',
+
+  mount: function(container, params) {
     var emp = params.emp || {};
     var empRoles = emp.roles || [emp.role || 'server'];
     var isManager = empRoles.indexOf('manager') !== -1;
@@ -465,13 +470,14 @@ registerScene('landing', {
     setHeaderBack({
       x: true,
       onClose: function() {
-        clearSceneCache('order-entry');
-        replace('login');
+        SceneManager.closeAllTransactional();
+        SceneManager.unmountWorking('landing');
+        SceneManager.openGate('login');
       },
     });
 
     // Initialize landing state
-    landingEl = el;
+    landingEl = container;
     landingParams = params;
     landingSales = undefined;
     landingLabor = undefined;
@@ -480,7 +486,7 @@ registerScene('landing', {
     expandedPanel = null;
 
     // Render immediately (shows loading placeholders for cards)
-    buildCardLanding(el, params, undefined, undefined);
+    buildCardLanding(container, params, undefined, undefined);
 
     // Fetch report data, then re-render with cards populated
     var baseParams = { pin: emp.pin, employeeId: emp.id, employeeName: emp.name, role: landingRole, roles: empRoles };
@@ -490,7 +496,8 @@ registerScene('landing', {
       renderLanding();
     });
   },
-  onExit: function() {
+
+  unmount: function() {
     expandedCard = null;
     expandedPanel = null;
     landingEl = null;
@@ -498,5 +505,4 @@ registerScene('landing', {
     landingSales = null;
     landingLabor = null;
   },
-  timeoutMs: 0,
 });

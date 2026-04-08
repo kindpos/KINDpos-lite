@@ -74,36 +74,47 @@ html, body {
   gap: 8px;
 }
 
-#scene-container {
-  width: 100%;
-  height: calc(100% - 52px);
-  position: relative;
-}
-
-#overlay-container,
-#interrupt-container {
+/* ── Layer containers ────────────────────────────── */
+#layer-working,
+#layer-transactional,
+#layer-interrupt,
+#layer-gate {
   position: absolute;
   top: 52px;
   left: 0;
   width: 100%;
   height: calc(100% - 52px);
   pointer-events: none;
-  z-index: 50;
 }
 
-#overlay-container > *,
-#interrupt-container > * {
+#layer-working {
+  z-index: 10;
   pointer-events: auto;
 }
 
-#interrupt-container {
-  z-index: 200;
+#layer-transactional { z-index: 20; }
+#layer-interrupt     { z-index: 30; }
+#layer-gate          { z-index: 100; }
+
+/* Children inside active layers receive pointer events */
+#layer-transactional > *,
+#layer-interrupt > *,
+#layer-gate > * {
+  pointer-events: auto;
 }
 
-.overlay-dim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+/* ── Transactional overlay enter ─────────────────── */
+.layer-transactional-enter {
+  transform: translateY(8px);
+  opacity: 0;
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+}
+
+/* ── Interrupt enter ─────────────────────────────── */
+.layer-interrupt-enter {
+  transform: scale(0.97);
+  opacity: 0;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
 }
 
 * {

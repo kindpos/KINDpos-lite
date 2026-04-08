@@ -7,7 +7,7 @@
  */
 
 import { T, buildStyledButton } from './tokens.js';
-import { interrupt, resolveInterrupt, cancelInterrupt } from './scene-manager.js';
+import { SceneManager } from './scene-manager.js';
 
 /**
  * Show the half-placement overlay.
@@ -20,14 +20,24 @@ import { interrupt, resolveInterrupt, cancelInterrupt } from './scene-manager.js
  * @returns {Promise<{side: "Left"|"Right"}>}  resolves on pick, rejects on cancel
  */
 export function showHalfPlacementOverlay(itemName, modName, modPrice, halfPrice, currentMods) {
-  return interrupt('half-placement', {
-    onBuild: function(el) {
-      _buildOverlay(el, itemName, modName, modPrice, halfPrice, currentMods);
-    },
+  return new Promise(function(resolve, reject) {
+    SceneManager.interrupt('half-placement', {
+      onConfirm: function(result) { resolve(result); },
+      onCancel: function() { reject(new Error('Interrupt cancelled')); },
+      params: { itemName: itemName, modName: modName, modPrice: modPrice, halfPrice: halfPrice, currentMods: currentMods },
+    });
   });
 }
 
-function _buildOverlay(el, itemName, modName, modPrice, halfPrice, currentMods) {
+SceneManager.register({
+  name: 'half-placement',
+  mount: function(container, params) {
+    _buildOverlay(container, params.itemName, params.modName, params.modPrice, params.halfPrice, params.currentMods, params.onConfirm, params.onCancel);
+  },
+  unmount: function() {},
+});
+
+function _buildOverlay(el, itemName, modName, modPrice, halfPrice, currentMods, onConfirm, onCancel) {
   var panel = document.createElement('div');
   panel.style.cssText = [
     'width:90%;max-width:900px;',
@@ -61,7 +71,7 @@ function _buildOverlay(el, itemName, modName, modPrice, halfPrice, currentMods) 
   cancelPair.inner.style.fontSize = T.fsSmall;
   cancelPair.inner.style.fontFamily = T.fb;
   cancelPair.wrap.addEventListener('pointerup', function() {
-    cancelInterrupt();
+    onCancel();
   });
   header.appendChild(cancelPair.wrap);
   panel.appendChild(header);
@@ -81,7 +91,7 @@ function _buildOverlay(el, itemName, modName, modPrice, halfPrice, currentMods) 
 
   // Left column
   var leftCol = _buildColumn('LEFT', leftMods, wholeNames, function() {
-    resolveInterrupt({ side: 'Left' });
+    onConfirm({ side: 'Left' });
   });
   body.appendChild(leftCol);
 
@@ -96,7 +106,7 @@ function _buildOverlay(el, itemName, modName, modPrice, halfPrice, currentMods) 
 
   // Right column
   var rightCol = _buildColumn('RIGHT', rightMods, wholeNames, function() {
-    resolveInterrupt({ side: 'Right' });
+    onConfirm({ side: 'Right' });
   });
   body.appendChild(rightCol);
 

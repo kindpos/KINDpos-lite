@@ -6,7 +6,7 @@
 
 import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, push, pop, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt, clearSceneCache } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
@@ -280,54 +280,51 @@ var PREFIXES = [
   { id: 'sub',     label: 'Sub',     color: T.lavender, textColor: '#1a0030' },
 ];
 
-registerScene('order-entry', {
-  cache: true,
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'order-entry',
+
+  mount: function(container, params) {
+    params = params || {};
     setSceneName('NEW ORDER');
     setHeaderBack({ x: true, onClose: function() { handleClose(); } });
     activeTab      = 'items';
     activePrefix   = 'add';
     ticket         = [];
     ticketSeq      = 0;
-    sceneParams    = params || {};
+    sceneParams    = params;
     prefixCard     = null;
     saveBtn        = null;
-    currentOrderId = null;   // soft reset — ID assigned on first SEND
+    currentOrderId = null;
     isSending      = false;
     currentCheckNumber = null;
-    customerName   = '';     // reset tab name
-    modHistory     = [];     // reset undo stack
+    customerName   = '';
+    modHistory     = [];
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _bottomBar     = null;
     _mainArea      = null;
 
-    el.style.cssText = [
+    container.style.cssText = [
       'width:100%;height:100%;',
       'display:flex;gap:' + GAP + 'px;',
       'padding:' + PAD + 'px;',
       'box-sizing:border-box;',
     ].join('');
 
-    var ticketPanel = buildTicket(el);
-    var mainArea    = buildMain(el, params);
-    el.appendChild(ticketPanel);
-    el.appendChild(mainArea);
+    var ticketPanel = buildTicket(container);
+    var mainArea    = buildMain(container, params);
+    container.appendChild(ticketPanel);
+    container.appendChild(mainArea);
 
-    // Fetch dynamic menu from API (updates MENU_DATA + PIZZA_BUILDER_DATA)
     if (!_menuFetched) fetchMenuFromAPI();
 
-    if (params && params.recallOrderId) {
+    if (params.recallOrderId) {
       recallFromBackend(params.recallOrderId);
-    } else if (params && params.autoRecall) {
+    } else if (params.autoRecall) {
       setTimeout(function() { handleRecall(); }, 100);
     }
   },
 
-  onResume: function() {
-    var el = document.querySelector('[data-scene="order-entry"]');
-    if (el) el.style.display = 'flex';
-  },
-  onExit: function() {
+  unmount: function() {
     if (hexNav) { hexNav.destroy(); hexNav = null; }
   },
 });
@@ -1539,96 +1536,59 @@ function handleVoid() {
   if (voidingEntireOrder && ticket.length === 0) return;
 
   // VOID flow — PIN then reason
-  interrupt('void-pin', {
-    reason: 'void',
-    onBuild: function(el) { buildPinOverlay(el, function(manager) {
-      if (!manager) { cancelInterrupt(); return; }
-      resolveInterrupt();
-      // Defer to next microtask so activeInterrupt is fully cleared
-      var vTargets = voidingEntireOrder ? ticket : selected;
+  var vTargets = voidingEntireOrder ? ticket.slice() : selected;
+  SceneManager.interrupt('void-pin', {
+    onConfirm: function(manager) {
       var approvedBy = manager.id || manager.name || 'manager';
       setTimeout(function() { showVoidReasons(vTargets, voidingEntireOrder, approvedBy); }, 0);
-    }); },
-  }).catch(function() {});
+    },
+    onCancel: function() {},
+  });
 }
 
 function showVoidReasons(targets, isFullVoid, approvedBy) {
-  interrupt('void-reason', {
-    onBuild: function(el) {
-      var panel = document.createElement('div');
-      panel.style.cssText = [
-        'display:flex;flex-direction:column;align-items:center;',
-        'gap:10px;background:#1a1a1a;',
-        'border:4px solid ' + T.red + ';padding:20px;min-width:280px;',
-      ].join('');
+  SceneManager.interrupt('void-reason', {
+    onConfirm: function(reason) {
+      targets.forEach(function(inst) { inst.voided = true; inst.voidReason = reason; });
+      ticket = ticket.filter(function(i) { return !i.voided; });
 
-      var lbl = document.createElement('div');
-      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.red + ';letter-spacing:2px;margin-bottom:4px;';
-      lbl.textContent = isFullVoid ? '// VOID ENTIRE ORDER //' : '// VOID REASON //';
-      panel.appendChild(lbl);
-
-      VOID_REASONS.forEach(function(r) {
-        var btn = buildButton(r, {
-          fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
-          onTap: function() {
-            targets.forEach(function(inst) { inst.voided = true; inst.voidReason = r; });
-            ticket = ticket.filter(function(i) { return !i.voided; });
-            resolveInterrupt();
-
-            if (isFullVoid && currentOrderId) {
-              fetch(API + '/orders/' + currentOrderId + '/void', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason: r, approved_by: approvedBy }),
-              }).then(function(res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                // Send void ticket to kitchen
-                return fetch(API + '/print/ticket/' + currentOrderId + '?void=true', { method: 'POST' });
-              }).then(function() {
-                currentOrderId = null;
-                currentCheckNumber = null;
-                clearSceneCache('order-entry');
-                pop();
-              }).catch(function(err) {
-                console.error('[KINDpos] Void API error:', err);
-                showToast('Void failed — check connection');
-                // Re-add items to ticket so state isn't lost
-                targets.forEach(function(inst) { inst.voided = false; inst.voidReason = null; });
-                ticket = ticket.concat(targets);
-                renderTicket();
-                rebuildBottomBar();
-              });
-            } else if (isFullVoid) {
-              currentOrderId = null;
-              currentCheckNumber = null;
-              clearSceneCache('order-entry');
-              pop();
-            } else {
-              // Individual item void — send void ticket to kitchen if any were already sent
-              var hadSent = targets.some(function(t) { return t.sent; });
-              if (hadSent && currentOrderId) {
-                fetch(API + '/print/ticket/' + currentOrderId + '?void=true', { method: 'POST' })
-                  .catch(function(err) { console.warn('[KINDpos] Void kitchen print failed:', err); });
-              }
-              renderTicket();
-              rebuildBottomBar();
-            }
-          },
+      if (isFullVoid && currentOrderId) {
+        fetch(API + '/orders/' + currentOrderId + '/void', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reason, approved_by: approvedBy }),
+        }).then(function(res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return fetch(API + '/print/ticket/' + currentOrderId + '?void=true', { method: 'POST' });
+        }).then(function() {
+          currentOrderId = null;
+          currentCheckNumber = null;
+          SceneManager.mountWorking('landing', { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
+        }).catch(function(err) {
+          console.error('[KINDpos] Void API error:', err);
+          showToast('Void failed — check connection');
+          targets.forEach(function(inst) { inst.voided = false; inst.voidReason = null; });
+          ticket = ticket.concat(targets);
+          renderTicket();
+          rebuildBottomBar();
         });
-        btn.style.width = '240px';
-        panel.appendChild(btn);
-      });
-
-      var cancelBtn = buildButton('CANCEL', {
-        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
-        onTap: function() { cancelInterrupt(); },
-      });
-      cancelBtn.style.width = '240px';
-      panel.appendChild(cancelBtn);
-
-      el.appendChild(panel);
+      } else if (isFullVoid) {
+        currentOrderId = null;
+        currentCheckNumber = null;
+        SceneManager.mountWorking('landing', { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
+      } else {
+        var hadSent = targets.some(function(t) { return t.sent; });
+        if (hadSent && currentOrderId) {
+          fetch(API + '/print/ticket/' + currentOrderId + '?void=true', { method: 'POST' })
+            .catch(function(err) { console.warn('[KINDpos] Void kitchen print failed:', err); });
+        }
+        renderTicket();
+        rebuildBottomBar();
+      }
     },
-  }).catch(function() {});
+    onCancel: function() {},
+    params: { isFullVoid: isFullVoid },
+  });
 }
 
 // ── DISCOUNT OVERLAY ─────────────────────────────
@@ -1639,112 +1599,60 @@ function handleDiscount() {
   var selected = ticket.filter(function(i) { return i.selected; });
   if (selected.length === 0) {
     // Nothing selected — show hint via interrupt
-    interrupt('disc-hint', {
-      reason: 'no-selection',
-      onBuild: function(el) {
-        var panel = document.createElement('div');
-        panel.style.cssText = [
-          'display:flex;flex-direction:column;align-items:center;',
-          'gap:10px;background:#1a1a1a;',
-          'border:4px solid ' + T.gold + ';padding:20px;min-width:280px;',
-        ].join('');
-        var lbl = document.createElement('div');
-        lbl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';text-align:center;';
-        lbl.textContent = 'Select item(s) first, then tap DISC';
-        panel.appendChild(lbl);
-        var okBtn = buildButton('OK', {
-          fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
-          onTap: function() { resolveInterrupt(); },
-        });
-        okBtn.style.width = '200px';
-        panel.appendChild(okBtn);
-        el.appendChild(panel);
-      },
-    }).catch(function() {});
+    SceneManager.interrupt('disc-hint', {
+      onConfirm: function() {},
+      onCancel: function() {},
+    });
     return;
   }
 
   // Show discount options — requires manager PIN first
-  interrupt('disc-pin', {
-    reason: 'discount',
-    onBuild: function(el) { buildPinOverlay(el, function(manager) {
-      if (!manager) { cancelInterrupt(); return; }
-      resolveInterrupt();
+  SceneManager.interrupt('disc-pin', {
+    onConfirm: function(manager) {
       var approvedBy = manager.id || manager.name || 'manager';
-      showDiscountOptions(selected, approvedBy);
-    }); },
-  }).catch(function() {});
+      setTimeout(function() { showDiscountOptions(selected, approvedBy); }, 0);
+    },
+    onCancel: function() {},
+  });
 }
 
 function showDiscountOptions(targets, approvedBy) {
-  interrupt('disc-select', {
-    onBuild: function(el) {
-      var panel = document.createElement('div');
-      panel.style.cssText = [
-        'display:flex;flex-direction:column;align-items:center;',
-        'gap:10px;background:#1a1a1a;',
-        'border:4px solid ' + T.gold + ';padding:20px;min-width:280px;',
-      ].join('');
+  SceneManager.interrupt('disc-select', {
+    onConfirm: function(opt) {
+      var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
+      var discountAmt = 0;
+      targets.forEach(function(inst) {
+        var itemTotal = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
+        discountAmt += itemTotal * pct;
+        inst.discount = opt;
+      });
+      discountAmt = Math.round(discountAmt * 100) / 100;
 
-      var lbl = document.createElement('div');
-      lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
-      lbl.textContent = '// DISCOUNT //';
-      panel.appendChild(lbl);
-
-      DISCOUNT_OPTIONS.forEach(function(opt) {
-        var btn = buildButton(opt, {
-          fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
-          onTap: function() {
-            // Parse percentage from label
-            var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
-            var discountAmt = 0;
-            targets.forEach(function(inst) {
-              var itemTotal = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
-              discountAmt += itemTotal * pct;
-              inst.discount = opt;
-            });
-            discountAmt = Math.round(discountAmt * 100) / 100;
-
-            // Post discount event to backend
-            if (currentOrderId) {
-              var itemIds = targets.map(function(inst) { return inst.id; });
-              fetch(API + '/orders/' + currentOrderId + '/discount', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  discount_type: opt,
-                  amount: discountAmt,
-                  reason: 'Manager discount: ' + opt,
-                  approved_by: approvedBy,
-                  item_ids: itemIds,
-                }),
-              }).then(function(r) {
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-              }).catch(function(err) {
-                console.warn('[KINDpos] Discount event failed:', err);
-                showToast('Discount failed — check connection');
-              });
-            }
-
-            resolveInterrupt();
-            renderTicket();
-            rebuildBottomBar();
-          },
+      if (currentOrderId) {
+        var itemIds = targets.map(function(inst) { return inst.id; });
+        fetch(API + '/orders/' + currentOrderId + '/discount', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            discount_type: opt,
+            amount: discountAmt,
+            reason: 'Manager discount: ' + opt,
+            approved_by: approvedBy,
+            item_ids: itemIds,
+          }),
+        }).then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+        }).catch(function(err) {
+          console.warn('[KINDpos] Discount event failed:', err);
+          showToast('Discount failed — check connection');
         });
-        btn.style.width = '240px';
-        panel.appendChild(btn);
-      });
+      }
 
-      var cancelBtn = buildButton('CANCEL', {
-        fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
-        onTap: function() { cancelInterrupt(); },
-      });
-      cancelBtn.style.width = '240px';
-      panel.appendChild(cancelBtn);
-
-      el.appendChild(panel);
+      renderTicket();
+      rebuildBottomBar();
     },
-  }).catch(function() {});
+    onCancel: function() {},
+  });
 }
 
 // ── PIN OVERLAY ───────────────────────────────────
@@ -1953,8 +1861,7 @@ function handleClose() {
     });
     showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
   }
-  clearSceneCache('order-entry');
-  pop();
+  SceneManager.mountWorking('landing', { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
 }
 
 // ── SAVE ─────────────────────────────────────────
@@ -1990,151 +1897,49 @@ function handleSave() {
 
 // ── RECALL ───────────────────────────────────────
 function handleRecall() {
-  overlay('recall', {
-    onBuild: function(el) {
-      // el is the full-screen centered flex container from scene-manager
-      // build panel as a child — never override el's positioning styles
-      var panel = document.createElement('div');
-      panel.style.cssText = 'display:flex;flex-direction:column;width:600px;max-height:520px;background:#1a1a1a;border:4px solid ' + T.mint + ';padding:0;overflow:hidden;';
-
-      // Header
-      var hdr = document.createElement('div');
-      hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;';
-      var title = document.createElement('span');
-      title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
-      title.textContent = '// RECALL //';
-      var closeBtn = buildButton('\u2715', {
-        fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 30,
-        onTap: function() { dismissOverlay(); },
-      });
-      closeBtn.style.width = '30px';
-      hdr.appendChild(title);
-      hdr.appendChild(closeBtn);
-      panel.appendChild(hdr);
-
-      // Grid
-      var grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;overflow-y:auto;flex:1;';
-
-      if (savedTabs.length === 0) {
-        var empty = document.createElement('div');
-        empty.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:40px;text-align:center;padding:40px 0;';
-        empty.textContent = 'No saved tabs';
-        grid.appendChild(empty);
-      } else {
-        savedTabs.forEach(function(tab) {
-          var total = tab.ticket.reduce(function(s, i) {
-            return s + i.unitPrice + i.mods.reduce(function(ms, m) { return ms + m.price; }, 0);
-          }, 0);
-
-          var cardLabel = tab.label
-            ? tab.label + '\n' + tab.checkNum + '\n$' + total.toFixed(2)
-            : tab.checkNum + '\n$' + total.toFixed(2);
-          var card = buildButton(cardLabel, {
-            fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 90,
-            onTap: function() { recallTabInterrupt(tab, grid, panel); },
-          });
-          grid.appendChild(card);
-        });
-      }
-      panel.appendChild(grid);
-      el.appendChild(panel);
-    },
-  });
+  SceneManager.openTransactional('recall');
 }
 
-function recallTabInterrupt(tab, grid, overlayEl) {
+function recallTabInterrupt(tab) {
   var doLoad = function() {
-    resolveInterrupt();
-    ticket = deepCopyTicket(tab.ticket);  // deep copy — clean slate, selection reset
+    ticket = deepCopyTicket(tab.ticket);
     savedTabs = savedTabs.filter(function(t) { return t.id !== tab.id; });
     ticketSeq = ticket.reduce(function(mx, i) { return Math.max(mx, i.id); }, 0);
     currentOrderId = null;
     currentCheckNumber = null;
     customerName = tab.label || '';
-    dismissOverlay();
+    SceneManager.closeTransactional('recall');
     renderTicket();
     rebuildBottomBar();
     if (saveBtn) saveBtn.style.background = T.bgLight;
   };
 
   var doDelete = function() {
-    resolveInterrupt();
     savedTabs = savedTabs.filter(function(t) { return t.id !== tab.id; });
-    dismissOverlay();
+    SceneManager.closeTransactional('recall');
     handleRecall();
   };
 
-  interrupt('recall-action', {
-    onBuild: function(el) {
-      // Child panel — never override el positioning styles
-      var panel = document.createElement('div');
-      panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:360px;background:#1a1a1a;border:4px solid ' + T.mint + ';padding:20px;';
-
-      if (tab.label) {
-        var nameLbl = document.createElement('div');
-        nameLbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:1px;';
-        nameLbl.textContent = tab.label;
-        panel.appendChild(nameLbl);
+  SceneManager.interrupt('recall-action', {
+    onConfirm: function(action) {
+      if (action === 'recall') {
+        if (ticket.length > 0) {
+          setTimeout(function() {
+            SceneManager.interrupt('confirm-clear', {
+              onConfirm: function() { doLoad(); },
+              onCancel: function() {},
+            });
+          }, 0);
+        } else {
+          doLoad();
+        }
+      } else if (action === 'delete') {
+        doDelete();
       }
-      var checkLbl = document.createElement('div');
-      checkLbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + (tab.label ? '16px' : T.fsSmall) + ';color:' + (tab.label ? T.mutedText : T.mint) + ';letter-spacing:1px;margin-bottom:6px;';
-      checkLbl.textContent = tab.checkNum;
-      panel.appendChild(checkLbl);
-
-      var recallBtn = buildButton('RECALL', {
-        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 50,
-        onTap: function() {
-          if (ticket.length > 0) {
-            resolveInterrupt(); // close recall-action so confirm-clear can open
-            interrupt('confirm-clear', {
-              onBuild: function(cel) {
-                var cpanel = document.createElement('div');
-                cpanel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:320px;background:#1a1a1a;border:4px solid ' + T.gold + ';padding:20px;';
-                var clbl = document.createElement('div');
-                clbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:1px;text-align:center;';
-                clbl.textContent = 'Clear current ticket?';
-                cpanel.appendChild(clbl);
-                var yesBtn = buildButton('YES — CLEAR', {
-                  fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 46,
-                  onTap: function() { resolveInterrupt(); doLoad(); },
-                });
-                yesBtn.style.width = '240px';
-                var noBtn = buildButton('CANCEL', {
-                  fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 46,
-                  onTap: function() { cancelInterrupt(); },
-                });
-                noBtn.style.width = '240px';
-                cpanel.appendChild(yesBtn);
-                cpanel.appendChild(noBtn);
-                cel.appendChild(cpanel);
-              },
-            }).catch(function() {});
-          } else {
-            doLoad();
-          }
-        },
-      });
-      recallBtn.style.width = '280px';
-
-      var deleteBtn = buildButton('DELETE', {
-        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 50,
-        onTap: doDelete,
-      });
-      deleteBtn.style.width = '280px';
-
-      var cancelBtn = buildButton('CANCEL', {
-        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
-        onTap: function() { cancelInterrupt(); },
-      });
-      cancelBtn.style.width = '280px';
-
-      panel.appendChild(recallBtn);
-      panel.appendChild(deleteBtn);
-      panel.appendChild(cancelBtn);
-      el.appendChild(panel);
     },
-  }).catch(function() {});
+    onCancel: function() {},
+    params: { tab: tab },
+  });
 }
 // ── RECALL FROM BACKEND (open saved check) ──────
 function recallFromBackend(orderId) {
@@ -2204,7 +2009,7 @@ async function handlePay(params) {
     return { name: name, qty: totals.counts[name].qty, unitPrice: totals.counts[name].unitPrice };
   });
 
-  push('receipt-review', {
+  SceneManager.openTransactional('receipt-review', {
     orderId:     currentOrderId,
     checkId:     currentCheckNumber,
     items:       items,
@@ -2215,3 +2020,230 @@ async function handlePay(params) {
     returnScene: 'order-entry',
   });
 }
+
+// ═══════════════════════════════════════════════════
+//  INLINE INTERRUPT SCENE REGISTRATIONS
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'void-pin',
+  mount: function(container, params) {
+    buildPinOverlay(container, function(manager) {
+      if (!manager) { params.onCancel(); return; }
+      params.onConfirm(manager);
+    });
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'void-reason',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.red + ';padding:20px;min-width:280px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.red + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = params.isFullVoid ? '// VOID ENTIRE ORDER //' : '// VOID REASON //';
+    panel.appendChild(lbl);
+
+    VOID_REASONS.forEach(function(r) {
+      var btn = buildButton(r, {
+        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
+        onTap: function() { params.onConfirm(r); },
+      });
+      btn.style.width = '240px';
+      panel.appendChild(btn);
+    });
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'disc-hint',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:280px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';text-align:center;';
+    lbl.textContent = 'Select item(s) first, then tap DISC';
+    panel.appendChild(lbl);
+    var okBtn = buildButton('OK', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
+      onTap: function() { params.onConfirm(); },
+    });
+    okBtn.style.width = '200px';
+    panel.appendChild(okBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'disc-pin',
+  mount: function(container, params) {
+    buildPinOverlay(container, function(manager) {
+      if (!manager) { params.onCancel(); return; }
+      params.onConfirm(manager);
+    });
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'disc-select',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:280px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// DISCOUNT //';
+    panel.appendChild(lbl);
+
+    DISCOUNT_OPTIONS.forEach(function(opt) {
+      var btn = buildButton(opt, {
+        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
+        onTap: function() { params.onConfirm(opt); },
+      });
+      btn.style.width = '240px';
+      panel.appendChild(btn);
+    });
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'recall',
+  mount: function(container, params) {
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;width:600px;max-height:520px;background:' + T.bgDark + ';border:4px solid ' + T.mint + ';padding:0;overflow:hidden;';
+
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;';
+    var title = document.createElement('span');
+    title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:2px;';
+    title.textContent = '// RECALL //';
+    var closeBtn = buildButton('\u2715', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 30,
+      onTap: function() { SceneManager.closeTransactional('recall'); },
+    });
+    closeBtn.style.width = '30px';
+    hdr.appendChild(title);
+    hdr.appendChild(closeBtn);
+    panel.appendChild(hdr);
+
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;overflow-y:auto;flex:1;';
+
+    if (savedTabs.length === 0) {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'grid-column:1/-1;font-family:' + T.fb + ';color:' + T.mutedText + ';font-size:40px;text-align:center;padding:40px 0;';
+      empty.textContent = 'No saved tabs';
+      grid.appendChild(empty);
+    } else {
+      savedTabs.forEach(function(tab) {
+        var total = tab.ticket.reduce(function(s, i) {
+          return s + i.unitPrice + i.mods.reduce(function(ms, m) { return ms + m.price; }, 0);
+        }, 0);
+        var cardLabel = tab.label
+          ? tab.label + '\n' + tab.checkNum + '\n$' + total.toFixed(2)
+          : tab.checkNum + '\n$' + total.toFixed(2);
+        var card = buildButton(cardLabel, {
+          fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 90,
+          onTap: function() { recallTabInterrupt(tab); },
+        });
+        grid.appendChild(card);
+      });
+    }
+    panel.appendChild(grid);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'recall-action',
+  mount: function(container, params) {
+    var tab = params.tab;
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:360px;background:' + T.bgDark + ';border:4px solid ' + T.mint + ';padding:20px;';
+
+    if (tab.label) {
+      var nameLbl = document.createElement('div');
+      nameLbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.mint + ';letter-spacing:1px;';
+      nameLbl.textContent = tab.label;
+      panel.appendChild(nameLbl);
+    }
+    var checkLbl = document.createElement('div');
+    checkLbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + (tab.label ? '16px' : T.fsSmall) + ';color:' + (tab.label ? T.mutedText : T.mint) + ';letter-spacing:1px;margin-bottom:6px;';
+    checkLbl.textContent = tab.checkNum;
+    panel.appendChild(checkLbl);
+
+    var recallBtn = buildButton('RECALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 50,
+      onTap: function() { params.onConfirm('recall'); },
+    });
+    recallBtn.style.width = '280px';
+
+    var deleteBtn = buildButton('DELETE', {
+      fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 50,
+      onTap: function() { params.onConfirm('delete'); },
+    });
+    deleteBtn.style.width = '280px';
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.width = '280px';
+
+    panel.appendChild(recallBtn);
+    panel.appendChild(deleteBtn);
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'confirm-clear',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:320px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:1px;text-align:center;';
+    lbl.textContent = 'Clear current ticket?';
+    panel.appendChild(lbl);
+
+    var yesBtn = buildButton('YES \u2014 CLEAR', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 46,
+      onTap: function() { params.onConfirm(); },
+    });
+    yesBtn.style.width = '240px';
+    var noBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 46,
+      onTap: function() { params.onCancel(); },
+    });
+    noBtn.style.width = '240px';
+    panel.appendChild(yesBtn);
+    panel.appendChild(noBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});

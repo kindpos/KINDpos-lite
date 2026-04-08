@@ -6,7 +6,7 @@
 
 import { T, chamfer, buildStyledButton, applySunkenStyle, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, pop, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { showKeyboard } from '../keyboard.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
@@ -68,7 +68,8 @@ var TERM_NAVS = [
 //  REGISTRATION
 // ═══════════════════════════════════════════════════
 
-registerScene('settings', {
+SceneManager.register({
+  name: 'settings',
   cache: false,
   canExit: function() {
     if (state.editingDevice) {
@@ -83,8 +84,8 @@ registerScene('settings', {
     }
     return Promise.resolve(true);
   },
-  onEnter: function(el) {
-    rootEl = el;
+  mount: function(container) {
+    rootEl = container;
     state.expandedCard = null;
     state.activeTab   = 'hardware';
     state.activeNav   = 'printers';
@@ -95,16 +96,47 @@ registerScene('settings', {
     state.scanning    = false;
 
     setSceneName('Configuration');
-    setHeaderBack({ x: true });
+    setHeaderBack({ x: true, onBack: function() { SceneManager.closeTransactional('settings'); } });
 
-    el.style.cssText = 'width:100%;height:100%;position:relative;background:' + T.bg + ';';
+    container.style.cssText = 'width:100%;height:100%;position:relative;background:' + T.bg + ';';
 
     loadSavedDevices().then(function() { renderCurrentState(); });
   },
-  onExit: function() {
+  unmount: function() {
     if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
     rootEl = null;
   },
+});
+
+SceneManager.register({
+  name: 'confirm-delete-device',
+  mount: function(container, params) {
+    container.style.flexDirection = 'column';
+    container.style.gap = '16px';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.red + ';padding:24px 32px;text-align:center;max-width:400px;';
+    card.style.clipPath = chamfer(10);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';margin-bottom:20px;';
+    msg.textContent = 'Remove ' + params.deviceName + '?';
+    card.appendChild(msg);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+    btns.appendChild(buildButton('Remove', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 44,
+      onTap: function() { params.onConfirm(); },
+    }));
+    btns.appendChild(buildButton('Cancel', {
+      fill: BG, color: MINT, fontSize: T.fsBtn, width: 120, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    card.appendChild(btns);
+    container.appendChild(card);
+  },
+  unmount: function() {},
 });
 
 // ═══════════════════════════════════════════════════
@@ -1410,43 +1442,19 @@ function renderEditDevice(card) {
   footer.appendChild(buildButton('Remove', {
     fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, height: 44,
     onTap: function() {
-      interrupt('confirm-delete-device', {
-        reason: 'delete-device',
-        onBuild: function(el) {
-          el.style.flexDirection = 'column';
-          el.style.gap = '16px';
-
-          var card = document.createElement('div');
-          card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.red + ';padding:24px 32px;text-align:center;max-width:400px;';
-          card.style.clipPath = chamfer(10);
-
-          var msg = document.createElement('div');
-          msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + MINT + ';margin-bottom:20px;';
-          msg.textContent = 'Remove ' + (dev.name || dev.mac) + '?';
-          card.appendChild(msg);
-
-          var btns = document.createElement('div');
-          btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
-          btns.appendChild(buildButton('Remove', {
-            fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 44,
-            onTap: function() { resolveInterrupt(); },
-          }));
-          btns.appendChild(buildButton('Cancel', {
-            fill: BG, color: MINT, fontSize: T.fsBtn, width: 120, height: 44,
-            onTap: function() { cancelInterrupt(); },
-          }));
-          card.appendChild(btns);
-          el.appendChild(card);
+      SceneManager.interrupt('confirm-delete-device', {
+        onConfirm: async function() {
+          if (_savingDevice) return;
+          _savingDevice = true;
+          try {
+            await deleteDevice(dev.mac);
+            state.editingDevice = null;
+            renderCurrentState();
+          } finally { _savingDevice = false; }
         },
-      }).then(async function() {
-        if (_savingDevice) return;
-        _savingDevice = true;
-        try {
-          await deleteDevice(dev.mac);
-          state.editingDevice = null;
-          renderCurrentState();
-        } finally { _savingDevice = false; }
-      }).catch(function() {});
+        onCancel: function() {},
+        params: { deviceName: dev.name || dev.mac },
+      });
     },
   }));
 

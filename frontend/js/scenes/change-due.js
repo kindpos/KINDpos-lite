@@ -6,14 +6,17 @@
 
 import { T, chamfer, applySunkenStyle } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { registerScene, replace } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var returned = false;
 var sceneEl  = null;
 
-registerScene('change-due', {
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'change-due',
+
+  mount: function(el, params) {
+    params = params || {};
     sceneEl = el;
     setSceneName(null);
     setHeaderBack({});  // no back/X — must use buttons
@@ -142,7 +145,7 @@ registerScene('change-due', {
     }
   },
 
-  onExit: function() {
+  unmount: function() {
     if (sceneEl && sceneEl._countdownTimer) {
       clearInterval(sceneEl._countdownTimer);
       sceneEl._countdownTimer = null;
@@ -157,5 +160,11 @@ function doReturn(target) {
     clearInterval(sceneEl._countdownTimer);
     sceneEl._countdownTimer = null;
   }
-  replace(target || 'order-entry', {});
+  SceneManager.closeAllTransactional();
+  if (target === 'login') {
+    SceneManager.unmountWorking(SceneManager.getActiveWorking());
+    SceneManager.openGate('login');
+  } else {
+    SceneManager.mountWorking('order-entry', {});
+  }
 }

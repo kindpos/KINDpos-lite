@@ -8,7 +8,7 @@
 
 import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, buildGap, showToast } from '../components.js';
-import { registerScene, push, pop, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
@@ -241,7 +241,7 @@ function buildReceiptPanel(state) {
   panel.style.cssText = [
     'width:' + RECEIPT_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'background:#1a1a1a;',
+    'background:' + T.bgDark + ';',
     'overflow:hidden;',
   ].join('');
   applySunkenStyle(panel);
@@ -440,7 +440,7 @@ function buildShortcutRow(state) {
   uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
-    push('tip-adjustment', { filter: 'unadjusted' });
+    SceneManager.openTransactional('tip-adjustment', { filter: 'unadjusted' });
   });
   row.appendChild(uPair.wrap);
 
@@ -467,54 +467,19 @@ function doZeroAll(state) {
   var count = state.unadjustedTips || 0;
   if (count === 0) return;
 
-  interrupt('zero-confirm', {
-    reason: 'zero-all-tips',
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '16px';
-
-      var card = document.createElement('div');
-      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + RED + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
-
-      var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
-      msg.textContent = 'Zero out all ' + count + ' unadjusted tips?';
-      card.appendChild(msg);
-
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:20px;';
-      sub.textContent = 'This will set all unadjusted card tips to $0.00';
-      card.appendChild(sub);
-
-      var btns = document.createElement('div');
-      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
-
-      btns.appendChild(buildButton('CONFIRM', {
-        fill: T.darkBtn, color: T.mint, fontSize: '27px',
-        width: 140, height: 44,
-        onTap: function() {
-          resolveInterrupt(true);
-        },
-      }));
-
-      btns.appendChild(buildButton('CANCEL', {
-        fill: T.darkBtn, color: T.mint, fontSize: '27px',
-        width: 120, height: 44,
-        onTap: function() { cancelInterrupt(); },
-      }));
-
-      card.appendChild(btns);
-      el.appendChild(card);
+  SceneManager.interrupt('closeday-zero-confirm', {
+    onConfirm: function() {
+      fetch('/api/v1/payments/zero-unadjusted', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function() { refreshScene(); })
+        .catch(function(err) {
+          console.error('[KINDpos] Zero all failed:', err);
+          showToast('Zero-all failed — check connection');
+        });
     },
-  }).then(function() {
-    fetch('/api/v1/payments/zero-unadjusted', { method: 'POST' })
-      .then(function(r) { return r.json(); })
-      .then(function() { refreshScene(); })
-      .catch(function(err) {
-        console.error('[KINDpos] Zero all failed:', err);
-        showToast('Zero-all failed — check connection');
-      });
-  }).catch(function() {});
+    onCancel: function() {},
+    params: { count: count },
+  });
 }
 
 // ─────────────────────────────────────────────────
@@ -862,60 +827,13 @@ function buildActionBar(state) {
 // ─────────────────────────────────────────────────
 
 function openPinGate(onSuccess) {
-  interrupt('manager-pin', {
-    reason: 'manager-pin',
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '16px';
-      el.style.alignItems = 'center';
-
-      var card = document.createElement('div');
-      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:24px 32px;text-align:center;clip-path:' + chamfer(10) + ';';
-
-      var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:4px;';
-      msg.textContent = 'Manager PIN Required';
-      card.appendChild(msg);
-
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:16px;';
-      sub.textContent = 'Enter 4-digit manager PIN';
-      card.appendChild(sub);
-
-      var pad = buildNumpad({
-        maxDigits: 4,
-        masked: true,
-        onSubmit: function(pin) {
-          fetch('/api/v1/config/employees').then(function(r) { return r.json(); }).then(function(emps) {
-            var match = emps.some(function(e) {
-              var roles = e.role_ids || [e.role_id];
-              return e.pin === pin && roles.indexOf('manager') !== -1 && e.active !== false;
-            });
-            if (match) {
-              resolveInterrupt(true);
-            } else {
-              pad.setError('WRONG PIN');
-            }
-          }).catch(function() {
-            pad.setError('ERROR');
-          });
-        },
-      });
-      card.appendChild(pad);
-
-      var cancelBtn = buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
-        width: 120, height: 40,
-        onTap: function() { cancelInterrupt(); },
-      });
-      cancelBtn.style.marginTop = '12px';
-      card.appendChild(cancelBtn);
-
-      el.appendChild(card);
+  SceneManager.interrupt('closeday-manager-pin', {
+    onConfirm: function() {
+      if (onSuccess) onSuccess();
     },
-  }).then(function() {
-    if (onSuccess) onSuccess();
-  }).catch(function() {});
+    onCancel: function() {},
+    params: {},
+  });
 }
 
 // ─────────────────────────────────────────────────
@@ -935,7 +853,7 @@ function doCloseDay(state) {
     .then(function(data) {
       _closeDayRunning = false;
       console.log('[KINDpos] Day closed:', data);
-      pop();
+      SceneManager.closeTransactional('close-day');
     })
     .catch(function(err) {
       _closeDayRunning = false;
@@ -949,178 +867,10 @@ function doCloseDay(state) {
 // ─────────────────────────────────────────────────
 
 function openBatchOverlay(state, onSettled) {
-  overlay('batch-settlement', {
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-
-      var frame = document.createElement('div');
-      frame.style.cssText = 'background:' + T.gold + ';padding:7px;clip-path:' + chamfer(12) + ';filter:drop-shadow(4px 6px 0px rgba(0,0,0,0.7));';
-
-      var dialog = document.createElement('div');
-      dialog.style.cssText = 'background:' + T.bg + ';width:480px;border-top:2px solid ' + T.bgLight + ';border-left:2px solid ' + T.bgLight + ';border-bottom:2px solid ' + T.bgEdge + ';border-right:2px solid ' + T.bgEdge + ';font-family:' + T.fb + ';';
-
-      // Title bar
-      var titleBar = document.createElement('div');
-      titleBar.style.cssText = 'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');padding:5px 8px;display:flex;align-items:center;justify-content:space-between;';
-
-      var titleLeft = document.createElement('div');
-      titleLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
-      var icon = document.createElement('div');
-      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
-      icon.textContent = '$';
-      var titleText = document.createElement('span');
-      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
-      titleText.textContent = 'Batch Settlement — KINDpos/lite';
-      var closeBtn = document.createElement('div');
-      closeBtn.style.cssText = 'width:18px;height:16px;background:' + T.red + ';border-top:1px solid ' + T.redL + ';border-left:1px solid ' + T.redL + ';border-bottom:1px solid ' + T.redD + ';border-right:1px solid ' + T.redD + ';display:flex;align-items:center;justify-content:center;font-size:40px;color:' + T.mint + ';cursor:pointer;font-weight:bold;clip-path:' + chamfer(3) + ';';
-      closeBtn.textContent = '✕';
-
-      titleLeft.appendChild(icon);
-      titleLeft.appendChild(titleText);
-      titleBar.appendChild(titleLeft);
-      titleBar.appendChild(closeBtn);
-      dialog.appendChild(titleBar);
-
-      // Body
-      var body = document.createElement('div');
-      body.style.cssText = 'padding:16px 20px 14px;display:flex;flex-direction:column;gap:12px;';
-
-      var infoPanel = document.createElement('div');
-      infoPanel.style.cssText = 'background:' + T.bgDark + ';border-top:2px solid ' + T.bgEdge + ';border-left:2px solid ' + T.bgEdge + ';border-bottom:2px solid ' + T.bgLight + ';border-right:2px solid ' + T.bgLight + ';padding:10px 14px;display:flex;flex-direction:column;gap:6px;';
-
-      function infoRow(label, value) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;';
-        var l = document.createElement('span'); l.style.color = T.mint; l.textContent = label;
-        var v = document.createElement('span'); v.style.cssText = 'font-weight:bold;color:' + T.gold + ';'; v.textContent = value;
-        row.appendChild(l); row.appendChild(v);
-        return row;
-      }
-
-      infoPanel.appendChild(infoRow('Transactions:', String(state.batchTransactions)));
-      infoPanel.appendChild(infoRow('Batch Total:', fmt(state.batchTotal)));
-      infoPanel.appendChild(infoRow('Processor:', 'Dejavoo SPIN'));
-      body.appendChild(infoPanel);
-
-      var statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';min-height:20px;';
-      statusEl.textContent = 'Ready to submit batch to processor.';
-      body.appendChild(statusEl);
-
-      // Progress bar
-      var progContainer = document.createElement('div');
-      progContainer.style.cssText = 'border-top:2px solid ' + T.bgEdge + ';border-left:2px solid ' + T.bgEdge + ';border-bottom:2px solid ' + T.bgLight + ';border-right:2px solid ' + T.bgLight + ';height:26px;background:' + T.bgDark + ';padding:3px;overflow:hidden;';
-      var progFill = document.createElement('div');
-      progFill.style.cssText = 'height:100%;display:flex;gap:2px;align-items:stretch;';
-
-      var TOTAL_SEGS = 26;
-      var segments = [];
-      for (var i = 0; i < TOTAL_SEGS; i++) {
-        var seg = document.createElement('div');
-        seg.style.cssText = 'width:14px;flex-shrink:0;background:' + T.mint + ';opacity:0;transition:opacity 0.05s;';
-        progFill.appendChild(seg);
-        segments.push(seg);
-      }
-      progContainer.appendChild(progFill);
-
-      var pctEl = document.createElement('div');
-      pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:right;margin-top:2px;';
-      pctEl.textContent = '0%';
-
-      var progWrap = document.createElement('div');
-      progWrap.appendChild(progContainer);
-      progWrap.appendChild(pctEl);
-      body.appendChild(progWrap);
-
-      // Buttons
-      var btnRow = document.createElement('div');
-      btnRow.style.cssText = 'display:flex;justify-content:center;gap:8px;margin-top:4px;';
-
-      function makeDialogBtn(label, fill, textColor) {
-        var pair = buildStyledButton(fill);
-        pair.wrap.style.width = '100px';
-        pair.wrap.style.height = '36px';
-        pair.inner.style.fontFamily = T.fb;
-        pair.inner.style.fontSize = T.fsBtn;
-        pair.inner.style.color = textColor;
-        pair.inner.textContent = label;
-        return pair;
-      }
-
-      var submitPair = makeDialogBtn('Submit', T.bg, T.mint);
-      var cancelPair = makeDialogBtn('Cancel', T.bgDark, T.mint);
-      var okPair     = makeDialogBtn('OK', T.goGreen, '#fff');
-      okPair.wrap.style.display = 'none';
-
-      btnRow.appendChild(submitPair.wrap);
-      btnRow.appendChild(cancelPair.wrap);
-      btnRow.appendChild(okPair.wrap);
-      body.appendChild(btnRow);
-      dialog.appendChild(body);
-      frame.appendChild(dialog);
-      el.appendChild(frame);
-
-      var running = false;
-      var statusMessages = [
-        'Connecting to Dejavoo SPIN...',
-        'Authenticating with processor...',
-        'Sending transaction batch...',
-        'Processing ' + state.batchTransactions + ' transactions...',
-        'Verifying totals...',
-        'Awaiting processor confirmation...',
-        'Finalizing settlement...',
-        'Settlement complete.',
-      ];
-
-      submitPair.wrap.addEventListener('pointerup', function() {
-        if (running) return;
-        running = true;
-        var currentSeg = 0;
-        submitPair.wrap.style.display = 'none';
-        cancelPair.wrap.style.display = 'none';
-
-        var msgIdx = 0;
-        statusEl.textContent = statusMessages[0];
-
-        var animTimer = setInterval(function() {
-          currentSeg++;
-          for (var j = 0; j < TOTAL_SEGS; j++) {
-            segments[j].style.opacity = j < currentSeg ? '1' : '0';
-          }
-          pctEl.textContent = Math.round((currentSeg / TOTAL_SEGS) * 100) + '%';
-
-          var newMsgIdx = Math.floor((currentSeg / TOTAL_SEGS) * (statusMessages.length - 1));
-          if (newMsgIdx !== msgIdx) { msgIdx = newMsgIdx; statusEl.textContent = statusMessages[msgIdx]; }
-
-          if (currentSeg >= TOTAL_SEGS) {
-            clearInterval(animTimer);
-            fetch('/api/v1/orders/close-batch', { method: 'POST' })
-              .then(function(r) { return r.json(); })
-              .then(function(data) {
-                running = false;
-                _batchSettled = true;
-                statusEl.textContent = '✓  Batch settled. ' + fmt(data.batch_total || state.batchTotal || 0) + ' submitted.';
-                statusEl.style.color = T.mint;
-                pctEl.textContent = '100%';
-                titleBar.style.background = 'linear-gradient(to right,#1a3a1a,#2a5a2a)';
-                titleText.textContent = 'Batch Settlement — Complete';
-                okPair.wrap.style.display = '';
-              })
-              .catch(function(err) {
-                running = false;
-                statusEl.textContent = '✗  Settlement failed: ' + (err.message || 'unknown error');
-                statusEl.style.color = T.red;
-                submitPair.wrap.style.display = '';
-                cancelPair.wrap.style.display = '';
-              });
-          }
-        }, 80);
-      });
-
-      cancelPair.wrap.addEventListener('pointerup', function() { if (!running) dismissOverlay(); });
-      closeBtn.addEventListener('pointerup', function() { if (!running) dismissOverlay(); });
-      okPair.wrap.addEventListener('pointerup', function() { dismissOverlay(); if (onSettled) onSettled(); });
-    },
+  SceneManager.openTransactional('batch-settlement', {
+    batchTransactions: state.batchTransactions,
+    batchTotal: state.batchTotal,
+    onSettled: onSettled,
   });
 }
 
@@ -1194,13 +944,14 @@ function buildScene(el, params) {
 //  REGISTRATION
 // ─────────────────────────────────────────────────
 
-registerScene('close-day', {
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'close-day',
+  mount: function(container, params) {
     setSceneName('Close Day');
-    setHeaderBack({ back: true, x: true });
-    buildScene(el, params);
+    setHeaderBack({ back: true, x: true, onBack: function() { SceneManager.closeTransactional('close-day'); } });
+    buildScene(container, params);
   },
-  onExit: function() {
+  unmount: function() {
     _state         = null;
     _expandedIdx   = null;
     _gridContainer = null;
@@ -1212,4 +963,113 @@ registerScene('close-day', {
   },
   cache: false,
   timeoutMs: 0,
+});
+
+// ═══════════════════════════════════════════════════
+//  INLINE INTERRUPT / OVERLAY SCENE REGISTRATIONS
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'closeday-zero-confirm',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:20px;min-width:280px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + RED + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// ZERO ALL TIPS //';
+    panel.appendChild(lbl);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+    msg.textContent = 'Set ' + (params.count || 0) + ' unadjusted tip(s) to $0.00?';
+    panel.appendChild(msg);
+
+    var confirmBtn = buildButton('CONFIRM', {
+      fill: T.darkBtn, color: RED, fontSize: '26px', height: 44,
+      onTap: function() { params.onConfirm(); },
+    });
+    confirmBtn.style.width = '240px';
+    panel.appendChild(confirmBtn);
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'closeday-manager-pin',
+  mount: function(container, params) {
+    buildNumpad(container, {
+      title: 'MANAGER PIN',
+      onSubmit: function(pin) {
+        fetch('/api/v1/auth/verify-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: pin }),
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.valid) {
+              params.onConfirm(data);
+            } else {
+              showToast('Invalid PIN');
+            }
+          })
+          .catch(function() { showToast('PIN check failed'); });
+      },
+      onCancel: function() { params.onCancel(); },
+    });
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'batch-settlement',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:300px;';
+
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// SUBMIT BATCH //';
+    panel.appendChild(lbl);
+
+    var info = document.createElement('div');
+    info.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+    info.textContent = (params.batchTransactions || 0) + ' transactions — ' + fmt(params.batchTotal || 0);
+    panel.appendChild(info);
+
+    var submitBtn = buildButton('SETTLE', {
+      fill: T.darkBtn, color: T.gold, fontSize: '26px', height: 44,
+      onTap: function() {
+        fetch('/api/v1/payments/batch-settle', { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function() {
+            if (params.onSettled) params.onSettled();
+            SceneManager.closeTransactional('batch-settlement');
+          })
+          .catch(function(err) {
+            console.error('[KINDpos] Batch settle failed:', err);
+            showToast('Batch settle failed');
+          });
+      },
+    });
+    submitBtn.style.width = '240px';
+    panel.appendChild(submitBtn);
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { SceneManager.closeTransactional('batch-settlement'); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
 });

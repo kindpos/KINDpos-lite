@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════
 
 import { T, buildStyledButton, applySunkenStyle } from './tokens.js';
-import { interrupt, resolveInterrupt, cancelInterrupt } from './scene-manager.js';
+import { SceneManager } from './scene-manager.js';
 import { HexNav } from './hex-nav.js';
 import { PREFIXES as UNI_PREFIXES } from './data/universal-modifiers.js';
 
@@ -103,14 +103,24 @@ var PREFIXES = [
  */
 export function showPizzaBuilderOverlay(sizeItem, builderData) {
   var data = (builderData && builderData.length > 0) ? builderData : PIZZA_BUILDER_DATA;
-  return interrupt('pizza-builder', {
-    onBuild: function(el) {
-      _buildOverlay(el, sizeItem, data);
-    },
+  return new Promise(function(resolve, reject) {
+    SceneManager.interrupt('pizza-builder', {
+      onConfirm: function(result) { resolve(result); },
+      onCancel: function() { reject(new Error('Interrupt cancelled')); },
+      params: { sizeItem: sizeItem, builderData: data },
+    });
   });
 }
 
-function _buildOverlay(el, sizeItem, builderData) {
+SceneManager.register({
+  name: 'pizza-builder',
+  mount: function(container, params) {
+    _buildOverlay(container, params.sizeItem, params.builderData, params.onConfirm, params.onCancel);
+  },
+  unmount: function() {},
+});
+
+function _buildOverlay(el, sizeItem, builderData, onConfirm, onCancel) {
   // ── State ──
   var activePrefix = 'add';
   var activePlacement = 'whole';
@@ -231,7 +241,7 @@ function _buildOverlay(el, sizeItem, builderData) {
   cancelPair.inner.style.fontFamily = T.fb;
   cancelPair.wrap.addEventListener('pointerup', function() {
     if (builderNav) builderNav.destroy();
-    cancelInterrupt();
+    onCancel();
   });
   bottomBar.appendChild(cancelPair.wrap);
 
@@ -271,7 +281,7 @@ function _buildOverlay(el, sizeItem, builderData) {
         prefix: halfSide,
       };
     });
-    resolveInterrupt({
+    onConfirm({
       name: sizeItem.label,
       unitPrice: sizeItem.price,
       mods: mods,

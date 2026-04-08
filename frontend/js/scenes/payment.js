@@ -6,7 +6,7 @@
 
 import { T, chamfer, applySunkenStyle, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { registerScene, replace, overlay, dismissOverlay, interrupt, resolveInterrupt, clearSceneCache } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
@@ -24,12 +24,19 @@ var returnTimer = null;
 var dotTimer    = null;
 var confirmProcessing = false;
 
-registerScene('payment', {
-  onEnter: function(el, params) {
-    setSceneName(params.checkId || 'ORDER');
-    setHeaderBack({ back: true, x: true });
+SceneManager.register({
+  name: 'payment',
 
-    sceneEl          = el;
+  mount: function(container, params) {
+    params = params || {};
+    setSceneName(params.checkId || 'ORDER');
+    setHeaderBack({
+      back: true,
+      onBack: function() { SceneManager.closeTransactional('payment'); },
+      x: true,
+    });
+
+    sceneEl          = container;
     sceneData        = params;
     tendered         = 0;
     numpadStr        = '';
@@ -38,20 +45,21 @@ registerScene('payment', {
     returnTimer      = null;
     dotTimer         = null;
 
-    el.style.cssText = [
+    container.style.cssText = [
       'width:100%;height:100%;',
       'display:flex;gap:' + GAP + 'px;',
       'padding:' + PAD + 'px;',
       'box-sizing:border-box;overflow:hidden;',
     ].join('');
 
-    el.appendChild(buildReceiptPanel(params));
+    container.appendChild(buildReceiptPanel(params));
     rightCol = params.paymentMode === 'cash'
       ? buildCashPanel(params)
       : buildCardPanel(params);
-    el.appendChild(rightCol);
+    container.appendChild(rightCol);
   },
-  onExit: function() {
+
+  unmount: function() {
     if (returnTimer) { clearTimeout(returnTimer); returnTimer = null; }
     if (dotTimer)    { clearInterval(dotTimer); dotTimer = null; }
   },
@@ -399,143 +407,21 @@ function buildCardPanel(params) {
 // ═══════════════════════════════════════════════════
 
 function activateResult(params, change) {
-  var isCash    = params.paymentMode === 'cash';
-  var hasChange = isCash && change > 0;
-  var amount    = isCash ? params.cashPrice : params.cardTotal;
-  var postAction = (window.KINDpos && window.KINDpos.postPaymentAction) || 'quick-service';
-  var countdownTimer = null;
+  var isCash = params.paymentMode === 'cash';
+  var amount = isCash ? params.cashPrice : params.cardTotal;
 
-  interrupt('change-due', {
-    reason: 'payment-complete',
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '20px';
-
-      // ── Interrupt card ──
-      var card = document.createElement('div');
-      card.style.cssText = [
-        'display:flex;flex-direction:column;align-items:center;',
-        'padding:32px 64px 28px;',
-        'background:' + T.bgDark + ';',
-        'min-width:480px;',
-      ].join('');
-      applySunkenStyle(card);
-
-      // Top label
-      var topLabel = document.createElement('div');
-      topLabel.style.cssText = [
-        'font-family:' + T.fh + ';font-size:32px;letter-spacing:0.18em;',
-        'color:' + T.mint + ';margin-bottom:20px;',
-      ].join('');
-      topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
-      card.appendChild(topLabel);
-
-      if (hasChange) {
-        var changeLabel = document.createElement('div');
-        changeLabel.style.cssText = [
-          'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';letter-spacing:0.14em;',
-          'color:' + T.mint + ';margin-bottom:4px;',
-        ].join('');
-        changeLabel.textContent = 'CHANGE DUE';
-        card.appendChild(changeLabel);
-
-        var changeAmount = document.createElement('div');
-        changeAmount.style.cssText = [
-          'font-family:' + T.fb + ';font-size:96px;font-weight:bold;',
-          'color:' + T.gold + ';line-height:1;letter-spacing:0.02em;',
-        ].join('');
-        changeAmount.textContent = '$' + change.toFixed(2);
-        card.appendChild(changeAmount);
-      } else {
-        var paidLabel = document.createElement('div');
-        paidLabel.style.cssText = [
-          'font-family:' + T.fh + ';font-size:40px;font-weight:bold;letter-spacing:0.1em;',
-          'color:' + T.mint + ';margin-bottom:8px;',
-        ].join('');
-        paidLabel.textContent = isCash ? 'EXACT CHANGE' : 'PAYMENT APPROVED';
-        card.appendChild(paidLabel);
-      }
-
-      // Charged sub-line
-      var chargedLine = document.createElement('div');
-      chargedLine.style.cssText = [
-        'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
-        'margin-top:12px;letter-spacing:0.06em;',
-      ].join('');
-      chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + amount.toFixed(2);
-      card.appendChild(chargedLine);
-
-      // Receipt printing
-      var printLine = document.createElement('div');
-      printLine.style.cssText = [
-        'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
-        'letter-spacing:0.12em;margin-top:16px;',
-      ].join('');
-      printLine.textContent = 'RECEIPT PRINTING...';
-      card.appendChild(printLine);
-
-      el.appendChild(card);
-
-      // ── Button row ──
-      var btnRow = document.createElement('div');
-      btnRow.style.cssText = 'display:flex;gap:20px;';
-
-      var confirmBtn = buildButton('NEW ORDER', {
-        fill: T.darkBtn, color: T.mint, fontSize: '32px',
-        width: 220, height: 64,
-        onTap: function() {
-          if (countdownTimer) clearInterval(countdownTimer);
-          resolveInterrupt('order-entry');
-        },
-      });
-      btnRow.appendChild(confirmBtn);
-
-      var logoutBtn = buildButton('LOGOUT', {
-        fill: T.darkBtn, color: T.mint, fontSize: '32px',
-        width: 220, height: 64,
-        onTap: function() {
-          if (countdownTimer) clearInterval(countdownTimer);
-          resolveInterrupt('login');
-        },
-      });
-      btnRow.appendChild(logoutBtn);
-
-      el.appendChild(btnRow);
-
-      // Auto-logout countdown if configured
-      if (postAction === 'logout') {
-        var autoHint = document.createElement('div');
-        autoHint.style.cssText = [
-          'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';',
-          'letter-spacing:0.1em;',
-        ].join('');
-        autoHint.textContent = 'auto-logout in 8s...';
-        el.appendChild(autoHint);
-
-        var countdown = 8;
-        countdownTimer = setInterval(function() {
-          countdown--;
-          if (countdown <= 0) {
-            clearInterval(countdownTimer);
-            resolveInterrupt('login');
-          } else {
-            autoHint.textContent = 'auto-logout in ' + countdown + 's...';
-          }
-        }, 1000);
-      }
-    },
-  }).then(function(target) {
-    if (target === 'login') clearSceneCache('order-entry');
-    replace(target || 'order-entry', {});
-  }).catch(function() {
-    // Interrupt cancelled by navigation — no action needed
+  // Open change-due as transactional over payment
+  SceneManager.openTransactional('change-due', {
+    paymentMode: params.paymentMode,
+    change: change,
+    total: amount,
   });
 }
 
 function doReturn(returnScene) {
   if (returnTimer) { clearTimeout(returnTimer); returnTimer = null; }
   if (dotTimer)    { clearInterval(dotTimer); dotTimer = null; }
-  replace(returnScene || 'order-entry', {});
+  SceneManager.closeTransactional('payment');
 }
 
 function showErrorResult(params, message, errorType) {
@@ -659,104 +545,19 @@ function updateCashDisplay(params) {
 //  PROCESSING OVERLAY (Win98-style, like batch settlement)
 // ═══════════════════════════════════════════════════
 
-function showProcessingOverlay(amount, onDone) {
-  var TOTAL_SEGS = 22;
-  var segments = [];
-  var statusEl = null;
-  var segIdx = 0;
-  var animTimer = null;
+var _procStatusEl = null;
+var _procAnimTimer = null;
 
-  var statusMessages = [
-    'Connecting to terminal...',
-    'Waiting for card...',
-    'Reading card data...',
-    'Contacting processor...',
-    'Awaiting authorization...',
-  ];
-  var msgIdx = 0;
-
-  overlay('card-processing', {
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-
-      var frame = document.createElement('div');
-      frame.style.cssText = 'background:' + T.gold + ';padding:7px;clip-path:' + chamfer(12) + ';filter:drop-shadow(4px 6px 0px rgba(0,0,0,0.7));';
-
-      var dialog = document.createElement('div');
-      dialog.style.cssText = 'background:' + T.bg + ';width:420px;border-top:2px solid ' + T.bgLight + ';border-left:2px solid ' + T.bgLight + ';border-bottom:2px solid ' + T.bgEdge + ';border-right:2px solid ' + T.bgEdge + ';font-family:' + T.fb + ';';
-
-      // Title bar
-      var titleBar = document.createElement('div');
-      titleBar.style.cssText = 'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');padding:5px 8px;display:flex;align-items:center;gap:8px;';
-      var icon = document.createElement('div');
-      icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
-      icon.textContent = '◈';
-      var titleText = document.createElement('span');
-      titleText.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
-      titleText.textContent = 'Card Payment — $' + amount.toFixed(2);
-      titleBar.appendChild(icon);
-      titleBar.appendChild(titleText);
-      dialog.appendChild(titleBar);
-
-      // Body
-      var body = document.createElement('div');
-      body.style.cssText = 'padding:16px 20px 14px;display:flex;flex-direction:column;gap:10px;';
-
-      // Status text
-      statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';min-height:24px;';
-      statusEl.textContent = statusMessages[0];
-      body.appendChild(statusEl);
-
-      // Chunky progress bar
-      var progContainer = document.createElement('div');
-      progContainer.style.cssText = 'border-top:2px solid ' + T.bgEdge + ';border-left:2px solid ' + T.bgEdge + ';border-bottom:2px solid ' + T.bgLight + ';border-right:2px solid ' + T.bgLight + ';height:26px;background:' + T.bgDark + ';padding:3px;overflow:hidden;';
-      var progFill = document.createElement('div');
-      progFill.style.cssText = 'height:100%;display:flex;gap:2px;align-items:stretch;';
-
-      for (var i = 0; i < TOTAL_SEGS; i++) {
-        var seg = document.createElement('div');
-        seg.style.cssText = 'width:14px;flex-shrink:0;background:' + T.gold + ';opacity:0;transition:opacity 0.05s;';
-        progFill.appendChild(seg);
-        segments.push(seg);
-      }
-      progContainer.appendChild(progFill);
-      body.appendChild(progContainer);
-
-      var hint = document.createElement('div');
-      hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';text-align:center;';
-      hint.textContent = 'Present card on terminal...';
-      body.appendChild(hint);
-
-      dialog.appendChild(body);
-      frame.appendChild(dialog);
-      el.appendChild(frame);
-
-      // Animate progress segments
-      animTimer = setInterval(function() {
-        if (segIdx < TOTAL_SEGS) {
-          segments[segIdx].style.opacity = '1';
-          segIdx++;
-        }
-        // Cycle status messages
-        if (segIdx % 4 === 0 && msgIdx < statusMessages.length - 1) {
-          msgIdx++;
-          statusEl.textContent = statusMessages[msgIdx];
-        }
-        // Loop back at end
-        if (segIdx >= TOTAL_SEGS) {
-          segIdx = 0;
-          segments.forEach(function(s) { s.style.opacity = '0'; });
-        }
-      }, 200);
-    },
-  });
+function showProcessingOverlay(amount) {
+  SceneManager.openTransactional('card-processing', { amount: amount });
 
   return {
-    updateStatus: function(msg) { if (statusEl) statusEl.textContent = msg; },
+    updateStatus: function(msg) { if (_procStatusEl) _procStatusEl.textContent = msg; },
     dismiss: function() {
-      if (animTimer) clearInterval(animTimer);
-      dismissOverlay();
+      if (_procAnimTimer) clearInterval(_procAnimTimer);
+      _procAnimTimer = null;
+      _procStatusEl = null;
+      SceneManager.closeTransactional('card-processing');
     },
   };
 }
@@ -857,3 +658,100 @@ async function handleConfirm(params) {
   confirmProcessing = false;
   activateResult(params, change);
 }
+
+// ═══════════════════════════════════════════════════
+//  INLINE SCENE: Card Processing Overlay
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'card-processing',
+
+  mount: function(container, params) {
+    params = params || {};
+    var amount = params.amount || 0;
+    var TOTAL_SEGS = 22;
+    var segments = [];
+    var segIdx = 0;
+    var msgIdx = 0;
+
+    var statusMessages = [
+      'Connecting to terminal...',
+      'Waiting for card...',
+      'Reading card data...',
+      'Contacting processor...',
+      'Awaiting authorization...',
+    ];
+
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;';
+
+    var frame = document.createElement('div');
+    frame.style.cssText = 'background:' + T.gold + ';padding:7px;clip-path:' + chamfer(12) + ';filter:drop-shadow(4px 6px 0px rgba(0,0,0,0.7));';
+
+    var dialog = document.createElement('div');
+    dialog.style.cssText = 'background:' + T.bg + ';width:420px;border-top:2px solid ' + T.bgLight + ';border-left:2px solid ' + T.bgLight + ';border-bottom:2px solid ' + T.bgEdge + ';border-right:2px solid ' + T.bgEdge + ';font-family:' + T.fb + ';';
+
+    var titleBar = document.createElement('div');
+    titleBar.style.cssText = 'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');padding:5px 8px;display:flex;align-items:center;gap:8px;';
+    var icon = document.createElement('div');
+    icon.style.cssText = 'width:24px;height:24px;background:' + T.gold + ';display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:bold;color:' + T.bgDark + ';clip-path:' + chamfer(3) + ';';
+    icon.textContent = '\u25C8';
+    var titleText = document.createElement('span');
+    titleText.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;';
+    titleText.textContent = 'Card Payment \u2014 $' + amount.toFixed(2);
+    titleBar.appendChild(icon);
+    titleBar.appendChild(titleText);
+    dialog.appendChild(titleBar);
+
+    var body = document.createElement('div');
+    body.style.cssText = 'padding:16px 20px 14px;display:flex;flex-direction:column;gap:10px;';
+
+    _procStatusEl = document.createElement('div');
+    _procStatusEl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';min-height:24px;';
+    _procStatusEl.textContent = statusMessages[0];
+    body.appendChild(_procStatusEl);
+
+    var progContainer = document.createElement('div');
+    progContainer.style.cssText = 'border-top:2px solid ' + T.bgEdge + ';border-left:2px solid ' + T.bgEdge + ';border-bottom:2px solid ' + T.bgLight + ';border-right:2px solid ' + T.bgLight + ';height:26px;background:' + T.bgDark + ';padding:3px;overflow:hidden;';
+    var progFill = document.createElement('div');
+    progFill.style.cssText = 'height:100%;display:flex;gap:2px;align-items:stretch;';
+
+    for (var i = 0; i < TOTAL_SEGS; i++) {
+      var seg = document.createElement('div');
+      seg.style.cssText = 'width:14px;flex-shrink:0;background:' + T.gold + ';opacity:0;transition:opacity 0.05s;';
+      progFill.appendChild(seg);
+      segments.push(seg);
+    }
+    progContainer.appendChild(progFill);
+    body.appendChild(progContainer);
+
+    var hint = document.createElement('div');
+    hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';text-align:center;';
+    hint.textContent = 'Present card on terminal...';
+    body.appendChild(hint);
+
+    dialog.appendChild(body);
+    frame.appendChild(dialog);
+    container.appendChild(frame);
+
+    _procAnimTimer = setInterval(function() {
+      if (segIdx < TOTAL_SEGS) {
+        segments[segIdx].style.opacity = '1';
+        segIdx++;
+      }
+      if (segIdx % 4 === 0 && msgIdx < statusMessages.length - 1) {
+        msgIdx++;
+        if (_procStatusEl) _procStatusEl.textContent = statusMessages[msgIdx];
+      }
+      if (segIdx >= TOTAL_SEGS) {
+        segIdx = 0;
+        segments.forEach(function(s) { s.style.opacity = '0'; });
+      }
+    }, 200);
+  },
+
+  unmount: function() {
+    if (_procAnimTimer) clearInterval(_procAnimTimer);
+    _procAnimTimer = null;
+    _procStatusEl = null;
+  },
+});

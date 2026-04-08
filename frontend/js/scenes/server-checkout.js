@@ -7,7 +7,7 @@
 
 import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, buildGap, showToast } from '../components.js';
-import { registerScene, push, pop, overlay, dismissOverlay, interrupt, resolveInterrupt, cancelInterrupt } from '../scene-manager.js';
+import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
@@ -221,7 +221,7 @@ function buildReceiptPanel(state) {
   panel.style.cssText = [
     'width:' + RECEIPT_W + 'px;flex-shrink:0;',
     'display:flex;flex-direction:column;',
-    'background:#1a1a1a;',
+    'background:' + T.bgDark + ';',
     'overflow:hidden;',
   ].join('');
   applySunkenStyle(panel);
@@ -282,7 +282,7 @@ function buildShortcutRow(state) {
   uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
-    push('tip-adjustment', { filter: 'unadjusted', employeeId: state.employeeId, employeeName: state.employeeName });
+    SceneManager.openTransactional('tip-adjustment', { filter: 'unadjusted', employeeId: state.employeeId, employeeName: state.employeeName });
   });
   row.appendChild(uPair.wrap);
 
@@ -308,54 +308,21 @@ function doZeroAll(state) {
   var count = state.unadjustedTips || 0;
   if (count === 0) return;
 
-  interrupt('zero-confirm', {
-    reason: 'zero-all-tips',
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '16px';
-
-      var card = document.createElement('div');
-      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + RED + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
-
-      var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
-      msg.textContent = 'Zero out all ' + count + ' unadjusted tips?';
-      card.appendChild(msg);
-
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:20px;';
-      sub.textContent = 'This will set all unadjusted card tips to $0.00';
-      card.appendChild(sub);
-
-      var btns = document.createElement('div');
-      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
-
-      btns.appendChild(buildButton('CONFIRM', {
-        fill: T.darkBtn, color: T.mint, fontSize: '27px',
-        width: 140, height: 44,
-        onTap: function() { resolveInterrupt(true); },
-      }));
-
-      btns.appendChild(buildButton('CANCEL', {
-        fill: T.darkBtn, color: T.mint, fontSize: '27px',
-        width: 120, height: 44,
-        onTap: function() { cancelInterrupt(); },
-      }));
-
-      card.appendChild(btns);
-      el.appendChild(card);
+  SceneManager.interrupt('zero-confirm', {
+    onConfirm: function() {
+      var url = '/api/v1/payments/zero-unadjusted';
+      if (state.employeeId) url += '?server_id=' + encodeURIComponent(state.employeeId);
+      fetch(url, { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function() { refreshScene(); })
+        .catch(function(err) {
+          console.error('[KINDpos] Zero all failed:', err);
+          showToast('Zero-all failed — check connection');
+        });
     },
-  }).then(function() {
-    var url = '/api/v1/payments/zero-unadjusted';
-    if (state.employeeId) url += '?server_id=' + encodeURIComponent(state.employeeId);
-    fetch(url, { method: 'POST' })
-      .then(function(r) { return r.json(); })
-      .then(function() { refreshScene(); })
-      .catch(function(err) {
-        console.error('[KINDpos] Zero all failed:', err);
-        showToast('Zero-all failed — check connection');
-      });
-  }).catch(function() {});
+    onCancel: function() {},
+    params: { count: count },
+  });
 }
 
 // ─────────────────────────────────────────────────
@@ -747,60 +714,13 @@ function buildActionBar(state) {
 // ─────────────────────────────────────────────────
 
 function openPinGate(onSuccess) {
-  interrupt('manager-pin', {
-    reason: 'manager-pin',
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '16px';
-      el.style.alignItems = 'center';
-
-      var card = document.createElement('div');
-      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:24px 32px;text-align:center;clip-path:' + chamfer(10) + ';';
-
-      var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:4px;';
-      msg.textContent = 'Manager PIN Required';
-      card.appendChild(msg);
-
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:16px;';
-      sub.textContent = 'Enter 4-digit manager PIN';
-      card.appendChild(sub);
-
-      var pad = buildNumpad({
-        maxDigits: 4,
-        masked: true,
-        onSubmit: function(pin) {
-          fetch('/api/v1/config/employees').then(function(r) { return r.json(); }).then(function(emps) {
-            var match = emps.some(function(e) {
-              var roles = e.role_ids || [e.role_id];
-              return e.pin === pin && roles.indexOf('manager') !== -1 && e.active !== false;
-            });
-            if (match) {
-              resolveInterrupt(true);
-            } else {
-              pad.setError('WRONG PIN');
-            }
-          }).catch(function() {
-            pad.setError('ERROR');
-          });
-        },
-      });
-      card.appendChild(pad);
-
-      var cancelBtn = buildButton('Cancel', {
-        fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
-        width: 120, height: 40,
-        onTap: function() { cancelInterrupt(); },
-      });
-      cancelBtn.style.marginTop = '12px';
-      card.appendChild(cancelBtn);
-
-      el.appendChild(card);
+  SceneManager.interrupt('manager-pin', {
+    onConfirm: function() {
+      if (onSuccess) onSuccess();
     },
-  }).then(function() {
-    if (onSuccess) onSuccess();
-  }).catch(function() {});
+    onCancel: function() {},
+    params: {},
+  });
 }
 
 // ─────────────────────────────────────────────────
@@ -815,70 +735,12 @@ function openAdjustOverlay(state) {
     ? { label: state.oneTimeRole.label, percent: state.oneTimeRole.percent, basis: state.oneTimeRole.basis }
     : { label: 'One-Time', percent: 0, basis: 'Net Sales' };
 
-  overlay('adjust-pct', {
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '0';
-
-      var card = document.createElement('div');
-      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:0;width:520px;clip-path:' + chamfer(12) + ';display:flex;flex-direction:column;overflow:hidden;';
-
-      var ovHdr = document.createElement('div');
-      ovHdr.style.cssText = 'background:' + T.gold + ';padding:12px 20px;font-family:' + T.fb + ';font-size:40px;color:#1a1a1a;font-weight:bold;text-align:center;';
-      ovHdr.textContent = 'Adjust Tip-Out %';
-      card.appendChild(ovHdr);
-
-      var body = document.createElement('div');
-      body.style.cssText = 'padding:16px 20px;display:flex;flex-direction:column;gap:12px;';
-
-      workingRoles.forEach(function(r) { body.appendChild(buildAdjustRow(r)); });
-
-      var sep = document.createElement('div');
-      sep.style.cssText = 'border-top:1px solid ' + T.border + ';';
-      body.appendChild(sep);
-
-      var otLabel = document.createElement('div');
-      otLabel.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
-      otLabel.textContent = 'ONE-TIME (this checkout only)';
-      body.appendChild(otLabel);
-      body.appendChild(buildAdjustRow(workingOneTime));
-
-      card.appendChild(body);
-
-      var btnRow = document.createElement('div');
-      btnRow.style.cssText = 'display:flex;gap:0;border-top:2px solid ' + T.border + ';';
-
-      var cancelPair = buildStyledButton(T.bgDark);
-      cancelPair.wrap.style.flex = '1';
-      cancelPair.wrap.style.height = '52px';
-      cancelPair.inner.style.fontFamily = T.fb;
-      cancelPair.inner.style.fontSize = '16px';
-      cancelPair.inner.style.color = T.mint;
-      cancelPair.inner.textContent = 'CANCEL';
-      cancelPair.wrap.addEventListener('pointerup', function() { dismissOverlay(); });
-
-      var confirmPair = buildStyledButton(T.darkBtn);
-      confirmPair.wrap.style.flex = '1';
-      confirmPair.wrap.style.height = '52px';
-      confirmPair.inner.style.fontFamily = T.fb;
-      confirmPair.inner.style.fontSize = '16px';
-      confirmPair.inner.style.color = T.mint;
-      confirmPair.inner.textContent = 'CONFIRM';
-      confirmPair.wrap.addEventListener('pointerup', function() {
-        workingRoles.forEach(function(r, i) { state.tipOutRoles[i].percent = r.percent; });
-        state.oneTimeRole = workingOneTime.percent > 0 ? {
-          label: workingOneTime.label, percent: workingOneTime.percent,
-          basis: workingOneTime.basis, basisAmt: 0, amount: 0,
-        } : null;
-        recalcTipOut(state);
-        dismissOverlay();
-        refreshAfterAdjust(state);
-      });
-
-      btnRow.appendChild(cancelPair.wrap);
-      btnRow.appendChild(confirmPair.wrap);
-      card.appendChild(btnRow);
-      el.appendChild(card);
+  SceneManager.openTransactional('adjust-pct', {
+    workingRoles: workingRoles,
+    workingOneTime: workingOneTime,
+    state: state,
+    onDismiss: function() {
+      refreshAfterAdjust(state);
     },
   });
 }
@@ -955,7 +817,7 @@ function completeFinalizeAfterTips(state) {
     })
     .then(function(data) {
       console.log('[KINDpos] Server checkout finalized:', data);
-      pop();
+      SceneManager.closeTransactional('server-checkout');
     })
     .catch(function(err) {
       console.error('[KINDpos] Finalize failed:', err);
@@ -964,80 +826,23 @@ function completeFinalizeAfterTips(state) {
 }
 
 function showCashTipDeclaration(state) {
-  var tipValue = '';
-
-  interrupt('cash-tip-declare', {
-    reason: 'declare-cash-tips',
-    onBuild: function(el) {
-      el.style.flexDirection = 'column';
-      el.style.gap = '16px';
-      el.style.alignItems = 'center';
-
-      var card = document.createElement('div');
-      card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.gold + ';padding:28px 36px;text-align:center;max-width:420px;clip-path:' + chamfer(10) + ';';
-
-      var msg = document.createElement('div');
-      msg.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-bottom:4px;';
-      msg.textContent = 'Declare Cash Tips';
-      card.appendChild(msg);
-
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:16px;';
-      sub.textContent = 'Enter cash tips received (optional)';
-      card.appendChild(sub);
-
-      var display = document.createElement('div');
-      display.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';background:' + T.darkBtn + ';padding:12px 24px;margin-bottom:16px;clip-path:' + chamfer(6) + ';min-width:180px;';
-      display.textContent = '$0.00';
-      card.appendChild(display);
-
-      var padWrap = document.createElement('div');
-      padWrap.style.cssText = 'margin-bottom:16px;';
-      var pad = buildNumpad({
-        width: 240,
-        onInput: function(val) {
-          tipValue = val;
-          var cents = parseInt(val, 10) || 0;
-          display.textContent = '$' + (cents / 100).toFixed(2);
-        },
-      });
-      padWrap.appendChild(pad);
-      card.appendChild(padWrap);
-
-      var btns = document.createElement('div');
-      btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
-
-      btns.appendChild(buildButton('Submit', {
-        fill: T.darkBtn, color: T.mint, fontSize: '27px',
-        width: 130, height: 44,
-        onTap: function() {
-          var cents = parseInt(tipValue, 10) || 0;
-          resolveInterrupt(cents / 100);
-        },
-      }));
-
-      btns.appendChild(buildButton('Skip', {
-        fill: T.darkBtn, color: T.mint, fontSize: '27px',
-        width: 100, height: 44,
-        onTap: function() { resolveInterrupt(null); },
-      }));
-
-      card.appendChild(btns);
-      el.appendChild(card);
+  SceneManager.interrupt('cash-tip-declare', {
+    onConfirm: function(amount) {
+      if (amount != null && amount > 0) {
+        fetch('/api/v1/servers/declare-cash-tips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ server_id: state.employeeId, amount: amount }),
+        }).then(function() { completeFinalizeAfterTips(state); })
+          .catch(function() { completeFinalizeAfterTips(state); });
+      } else {
+        completeFinalizeAfterTips(state);
+      }
     },
-  }).then(function(amount) {
-    if (amount != null && amount > 0) {
-      fetch('/api/v1/servers/declare-cash-tips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ server_id: state.employeeId, amount: amount }),
-      }).then(function() { completeFinalizeAfterTips(state); })
-        .catch(function() { completeFinalizeAfterTips(state); });
-    } else {
+    onCancel: function() {
       completeFinalizeAfterTips(state);
-    }
-  }).catch(function() {
-    completeFinalizeAfterTips(state);
+    },
+    params: {},
   });
 }
 
@@ -1110,13 +915,14 @@ function buildScene(el, params) {
 //  REGISTRATION
 // ─────────────────────────────────────────────────
 
-registerScene('server-checkout', {
-  onEnter: function(el, params) {
+SceneManager.register({
+  name: 'server-checkout',
+  mount: function(container, params) {
     setSceneName('Checkout: ' + (params.employeeName || ''));
-    setHeaderBack({ back: true, x: true });
-    buildScene(el, params);
+    setHeaderBack({ back: true, x: true, onBack: function() { SceneManager.closeTransactional('server-checkout'); } });
+    buildScene(container, params);
   },
-  onExit: function() {
+  unmount: function() {
     _state         = null;
     _expandedIdx   = null;
     _gridContainer = null;
