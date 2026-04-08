@@ -12,6 +12,7 @@ import { setSceneName, setHeaderBack } from '../app.js';
 
 var employees = [];
 var _numpadRef = null;
+var _clockInMode = false;
 
 SceneManager.register({
   name: 'login',
@@ -20,6 +21,7 @@ SceneManager.register({
     setSceneName(null);
     setHeaderBack();
     _numpadRef = null;
+    _clockInMode = false;
 
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
       employees = data.servers || [];
@@ -63,9 +65,25 @@ SceneManager.register({
     configBtn.style.left = '12px';
     container.appendChild(configBtn);
 
-    // Version stamp — bottom-right
+    // CLOCK IN button — bottom-right
+    var clockInBtn = buildButton('CLOCK IN', {
+      fill: T.goGreen, color: T.bgDark, fontSize: T.fsBtnSm, fontFamily: T.fb,
+      width: 220, height: 48,
+      onTap: function() {
+        _clockInMode = !_clockInMode;
+        clockInBtn.style.outline = _clockInMode ? '2px solid ' + T.mint : 'none';
+        configBtn.style.outline = 'none';
+        if (_clockInMode && _numpadRef) _numpadRef.clear();
+      },
+    });
+    clockInBtn.style.position = 'absolute';
+    clockInBtn.style.bottom = '8px';
+    clockInBtn.style.right = '12px';
+    container.appendChild(clockInBtn);
+
+    // Version stamp — bottom-center
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;right:12px;';
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);';
     version.textContent = 'KINDpos/lite_Vz1.2';
     container.appendChild(version);
   },
@@ -82,8 +100,14 @@ function handlePinSubmit(pin) {
     return;
   }
 
-  // Valid PIN — close gate and mount landing as working layer
   var empRoles = emp.roles || [emp.role || 'server'];
+  var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
+
   SceneManager.closeGate('login');
-  SceneManager.mountWorking('landing', { emp: { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles } });
+  SceneManager.mountWorking('landing', { emp: empData });
+
+  if (_clockInMode) {
+    SceneManager.openTransactional('clock-in', { emp: empData });
+    _clockInMode = false;
+  }
 }
