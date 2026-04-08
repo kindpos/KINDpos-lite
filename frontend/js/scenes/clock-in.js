@@ -197,8 +197,8 @@ SceneManager.register({
     payCard.style.cssText = [
       'background:' + T.bgDark + ';',
       'border:3px solid ' + T.mint + ';',
-      'padding:16px 24px;',
-      'display:flex;flex-direction:column;gap:8px;',
+      'padding:20px 32px;',
+      'display:flex;flex-direction:column;gap:12px;',
     ].join('');
     payCard.style.clipPath = chamfer(8);
 
