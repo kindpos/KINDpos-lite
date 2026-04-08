@@ -33,7 +33,8 @@ export function buildNumpad(opts) {
   var keyGap   = o.keyGap   != null ? o.keyGap : PAD.keyGap;
   var cardPad  = o.cardPad  != null ? o.cardPad : PAD.cardPad;
   var width    = o.width    || PAD.width;
-  var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2 + T.bevel * 2;
+  var _bevel   = keyBevel != null ? keyBevel : T.bevel;
+  var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2 + _bevel * 2;
 
   var digitColor  = o.digitColor  || T.mint;
   var clearColor  = o.clearColor  || T.mint;
@@ -43,6 +44,8 @@ export function buildNumpad(opts) {
   var chassisColor = o.chassisColor || T.mint;
   var maskChar     = o.maskChar    || '\u25CF';
   var digitFont    = o.digitFont   || T.fh;
+  var keyChamfer   = o.chamfer     != null ? o.chamfer : null;  // null = use default
+  var keyBevel     = o.bevel       != null ? o.bevel   : null;  // null = use default
 
   var pin = '';
   var _submitCooldown = false;
@@ -73,12 +76,12 @@ export function buildNumpad(opts) {
   display.style.color = displayColor;
   display.style.letterSpacing = '8px';
   // Border color matches chassis — inset bevel with chassis color
-  var db = T.bevel;
+  var db = _bevel;
   display.style.borderTop    = db + 'px solid ' + chassisColor;
   display.style.borderLeft   = db + 'px solid ' + chassisColor;
   display.style.borderBottom = db + 'px solid ' + chassisColor;
   display.style.borderRight  = db + 'px solid ' + chassisColor;
-  display.style.clipPath = chamfer();
+  display.style.clipPath = keyChamfer != null ? chamfer(keyChamfer) : chamfer();
 
   displayShadow.appendChild(display);
   container.appendChild(displayShadow);
@@ -98,7 +101,18 @@ export function buildNumpad(opts) {
   card.style.gridTemplateRows = 'repeat(4, ' + keyH + 'px)';
   card.style.gap = keyGap + 'px';
   card.style.boxSizing = 'border-box';
-  applyRaisedStyle(card, chassisColor);
+  if (keyBevel != null || keyChamfer != null) {
+    // Use overridden bevel/chamfer for numpad-specific geometry
+    var _edges = { light: T.numpadChassisL, dark: T.numpadChassisD };
+    card.style.background = chassisColor;
+    card.style.borderTop    = _bevel + 'px solid ' + _edges.light;
+    card.style.borderLeft   = _bevel + 'px solid ' + _edges.light;
+    card.style.borderBottom = _bevel + 'px solid ' + _edges.dark;
+    card.style.borderRight  = _bevel + 'px solid ' + _edges.dark;
+    card.style.clipPath = chamfer(keyChamfer != null ? keyChamfer + 6 : 10);
+  } else {
+    applyRaisedStyle(card, chassisColor);
+  }
 
   cardWrap.appendChild(card);
   container.appendChild(cardWrap);
@@ -137,6 +151,19 @@ export function buildNumpad(opts) {
     pair.inner.style.color = textColor;
     pair.inner.style.lineHeight = '1';
     pair.inner.textContent = key.label;
+
+    // Apply numpad-specific bevel/chamfer overrides
+    if (keyBevel != null) {
+      var _kEdges = pair.wrap._edges;
+      pair.wrap._bevel = keyBevel;
+      pair.inner.style.borderTop    = keyBevel + 'px solid ' + _kEdges.light;
+      pair.inner.style.borderLeft   = keyBevel + 'px solid ' + _kEdges.light;
+      pair.inner.style.borderBottom = keyBevel + 'px solid ' + _kEdges.dark;
+      pair.inner.style.borderRight  = keyBevel + 'px solid ' + _kEdges.dark;
+    }
+    if (keyChamfer != null) {
+      pair.inner.style.clipPath = chamfer(keyChamfer);
+    }
 
     if (key.type === 'clear') {
       // CLR: normal tap clears last digit, long-press (500ms) clears all
