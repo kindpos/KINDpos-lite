@@ -12,6 +12,8 @@ import { setSceneName, setHeaderBack } from '../app.js';
 
 var employees = [];
 var _numpadRef = null;
+var _clockInMode = false;
+var _lastValidEmp = null;
 
 SceneManager.register({
   name: 'login',
@@ -20,12 +22,23 @@ SceneManager.register({
     setSceneName(null);
     setHeaderBack();
     _numpadRef = null;
+    _clockInMode = false;
+    _lastValidEmp = null;
 
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
       employees = data.servers || [];
     }).catch(function() { employees = []; });
 
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;background:' + T.bg + ';';
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';';
+
+    // LEFT — CONFIGURATION button
+    var configBtn = buildButton('CONFIGURATION', {
+      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
+      width: 200, height: 44,
+      onTap: function() { SceneManager.openTransactional('settings'); },
+    });
+    configBtn._inner.style.borderColor = T.gold;
+    container.appendChild(configBtn);
 
     // CENTER — numpad
     var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
@@ -52,16 +65,27 @@ SceneManager.register({
     });
     container.appendChild(_numpadRef);
 
-    // CONFIGURATION button — bottom-left
-    var configBtn = buildButton('CONFIGURATION', {
-      fill: T.gold, color: T.bgDark, fontSize: T.fsBtnSm, fontFamily: T.fb,
-      width: 220, height: 48,
-      onTap: function() { SceneManager.openTransactional('settings'); },
+    // RIGHT — CLOCK IN button
+    var clockInBtn = buildButton('CLOCK IN', {
+      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
+      width: 200, height: 44,
+      onTap: function() {
+        // If PIN already entered, go straight to clock-in
+        if (_lastValidEmp) {
+          SceneManager.closeGate('login');
+          SceneManager.mountWorking('landing', { emp: _lastValidEmp });
+          SceneManager.openTransactional('clock-in', { emp: _lastValidEmp });
+          _lastValidEmp = null;
+          return;
+        }
+        // Otherwise toggle mode for next PIN entry
+        _clockInMode = !_clockInMode;
+        clockInBtn._inner.style.borderColor = _clockInMode ? T.mint : T.goGreen;
+        if (_clockInMode && _numpadRef) _numpadRef.clear();
+      },
     });
-    configBtn.style.position = 'absolute';
-    configBtn.style.bottom = '8px';
-    configBtn.style.left = '12px';
-    container.appendChild(configBtn);
+    clockInBtn._inner.style.borderColor = T.goGreen;
+    container.appendChild(clockInBtn);
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
@@ -82,8 +106,20 @@ function handlePinSubmit(pin) {
     return;
   }
 
-  // Valid PIN — close gate and mount landing as working layer
   var empRoles = emp.roles || [emp.role || 'server'];
-  SceneManager.closeGate('login');
-  SceneManager.mountWorking('landing', { emp: { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles } });
+  var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
+
+  if (_clockInMode) {
+    // Clock-in mode active — go straight to clock-in
+    _clockInMode = false;
+    _lastValidEmp = null;
+    SceneManager.closeGate('login');
+    SceneManager.mountWorking('landing', { emp: empData });
+    SceneManager.openTransactional('clock-in', { emp: empData });
+  } else {
+    // Normal flow — store emp so CLOCK IN button can use it after
+    _lastValidEmp = empData;
+    SceneManager.closeGate('login');
+    SceneManager.mountWorking('landing', { emp: empData });
+  }
 }
