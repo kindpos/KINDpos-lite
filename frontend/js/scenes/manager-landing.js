@@ -298,7 +298,6 @@ function fmt(n) {
 function buildCardHeader(label) {
   var bar = document.createElement('div');
   bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
-  bar.style.clipPath = chamfer(4);
   var txt = document.createElement('div');
   txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:2px;white-space:nowrap;';
   txt.textContent = label;
@@ -1646,7 +1645,7 @@ function renderScene() {
   if (!_el || !_params) return;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 42% 36%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 38% 40%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
