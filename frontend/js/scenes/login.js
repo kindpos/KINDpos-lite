@@ -28,7 +28,7 @@ SceneManager.register({
       employees = data.servers || [];
     }).catch(function() { employees = []; });
 
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';';
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:space-evenly;position:relative;background:' + T.bg + ';';
 
     // LEFT — CONFIGURATION button
     var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'md', onClick: function() { SceneManager.openTransactional('settings'); } });
