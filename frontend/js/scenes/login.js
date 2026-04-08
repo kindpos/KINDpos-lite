@@ -72,8 +72,9 @@ SceneManager.register({
       onTap: function() {
         // If PIN already entered, go straight to clock-in
         if (_lastValidEmp) {
+          var roles = _lastValidEmp.roles || ['server'];
           SceneManager.closeGate('login');
-          SceneManager.mountWorking('landing', { emp: _lastValidEmp });
+          SceneManager.mountWorking(landingScene(roles), { emp: _lastValidEmp });
           SceneManager.openTransactional('clock-in', { emp: _lastValidEmp });
           _lastValidEmp = null;
           return;
@@ -99,6 +100,10 @@ SceneManager.register({
   },
 });
 
+function landingScene(empRoles) {
+  return empRoles.indexOf('manager') !== -1 ? 'landing' : 'server-landing';
+}
+
 function handlePinSubmit(pin) {
   var emp = employees.find(function(e) { return e.pin === pin; });
   if (!emp) {
@@ -114,12 +119,12 @@ function handlePinSubmit(pin) {
     _clockInMode = false;
     _lastValidEmp = null;
     SceneManager.closeGate('login');
-    SceneManager.mountWorking('landing', { emp: empData });
+    SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
     SceneManager.openTransactional('clock-in', { emp: empData });
   } else {
     // Normal flow — store emp so CLOCK IN button can use it after
     _lastValidEmp = empData;
     SceneManager.closeGate('login');
-    SceneManager.mountWorking('landing', { emp: empData });
+    SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
   }
 }
