@@ -163,7 +163,7 @@ SceneManager.register({
     panel.style.cssText = [
       'width:960px;height:500px;',
       'background:' + T.bg + ';',
-      'border:3px solid ' + T.mint + ';',
+      'border:4px solid ' + T.numpadChassis + ';',
       'display:flex;flex-direction:column;',
       'box-sizing:border-box;padding:20px;',
       'position:relative;',
@@ -196,7 +196,7 @@ SceneManager.register({
     var payCard = document.createElement('div');
     payCard.style.cssText = [
       'background:' + T.bg + ';',
-      'border:3px solid ' + T.mint + ';',
+      'border:4px solid ' + T.numpadChassis + ';',
       'padding:20px 32px;',
       'display:flex;flex-direction:column;gap:12px;',
     ].join('');
