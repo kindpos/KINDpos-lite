@@ -56,7 +56,7 @@ SceneManager.register({
 
     // CONFIGURATION button — bottom-left
     var configBtn = buildButton('CONFIGURATION', {
-      fill: T.gold, color: T.bgDark, fontSize: T.fsBtnSm, fontFamily: T.fb,
+      fill: T.gold, color: T.textPrimary, fontSize: T.fsBtnSm, fontFamily: T.fhr,
       width: 220, height: 48,
       onTap: function() { SceneManager.openTransactional('settings'); },
     });
@@ -67,7 +67,7 @@ SceneManager.register({
 
     // CLOCK IN button — bottom-right
     var clockInBtn = buildButton('CLOCK IN', {
-      fill: T.goGreen, color: T.bgDark, fontSize: T.fsBtnSm, fontFamily: T.fb,
+      fill: T.goGreen, color: T.textPrimary, fontSize: T.fsBtnSm, fontFamily: T.fhr,
       width: 220, height: 48,
       onTap: function() {
         _clockInMode = !_clockInMode;
