@@ -69,9 +69,9 @@ export function buildNumpad(opts) {
   display.style.alignItems = 'center';
   display.style.justifyContent = 'center';
   display.style.fontFamily = T.fb;
-  display.style.fontSize = '60px';
+  display.style.fontSize = '28px';
   display.style.color = displayColor;
-  display.style.letterSpacing = '5px';
+  display.style.letterSpacing = '8px';
   // Border color matches chassis — inset bevel with chassis color
   var db = T.bevel;
   display.style.borderTop    = db + 'px solid ' + chassisColor;
