@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton } from '../tokens.js';
+import { T, chamfer } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -15,7 +15,6 @@ import { PAT, GLOW, injectChartDefs } from '../chart-patterns.js';
 // ── Module State ──────────────────────────────────
 var _el = null;
 var _params = null;
-var _clockTimer = null;
 var _expandedCard = null;
 var _expandOrigin = null;
 var _drillEl = null;
@@ -45,11 +44,13 @@ var HEATMAP_MAX_TABLES = 5;
 var COB_WARNING = 30;
 var COB_CRITICAL = 35;
 
+// Chrome accent — matches login screen header green
+var CHROME = T.numpadChassis;
+
 // DOM refs for partial re-renders
 var _leftCol = null;
 var _centerCol = null;
 var _rightCol = null;
-var _headerLabel = null;
 var _heatmapEl = null;
 var _centerGrid = null;
 var _opsPanel = null;
@@ -72,63 +73,6 @@ var SERVER_PALETTE = [
   T.sage,             // #6bc987
 ];
 var _serverColorMap = {};
-
-// ── Helpers ───────────────────────────────────────
-
-function fmtDateTime() {
-  var now = new Date();
-  var mm = String(now.getMonth() + 1).padStart(2, '0');
-  var dd = String(now.getDate()).padStart(2, '0');
-  var yy = String(now.getFullYear()).slice(2);
-  var h = now.getHours();
-  var ampm = h >= 12 ? 'pm' : 'am';
-  h = h % 12 || 12;
-  var min = String(now.getMinutes()).padStart(2, '0');
-  return mm + '/' + dd + '/' + yy + ' // ' + h + ':' + min + ampm;
-}
-
-function managerName() {
-  if (!_params) return 'Manager';
-  var emp = _params.emp || _params;
-  return emp.name || emp.employeeName || 'Manager';
-}
-
-function updateHeaderLabel() {
-  if (_headerLabel) {
-    _headerLabel.textContent = fmtDateTime() + ' // ' + managerName();
-  }
-}
-
-// ── Scene Header Bar ─────────────────────────────
-
-function buildSceneHeader() {
-  var bar = document.createElement('div');
-  bar.style.cssText = 'height:34px;background:' + T.mint + ';display:flex;align-items:center;justify-content:space-between;padding:0 10px;flex-shrink:0;';
-  bar.style.clipPath = chamfer(4);
-
-  // Left: date // time // managerName
-  _headerLabel = document.createElement('div');
-  _headerLabel.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;';
-  updateHeaderLabel();
-  bar.appendChild(_headerLabel);
-
-  // Right: X button → returns to login
-  var xPair = buildStyledButton(T.darkBtn);
-  xPair.wrap.style.width = '36px';
-  xPair.wrap.style.height = '24px';
-  xPair.inner.style.fontFamily = T.fb;
-  xPair.inner.style.fontSize = '16px';
-  xPair.inner.style.color = T.mint;
-  xPair.inner.textContent = 'X';
-  xPair.wrap.addEventListener('pointerup', function() {
-    SceneManager.closeAllTransactional();
-    SceneManager.unmountWorking('manager-landing');
-    SceneManager.openGate('login');
-  });
-  bar.appendChild(xPair.wrap);
-
-  return bar;
-}
 
 // ── Stub Data ────────────────────────────────────
 
@@ -353,7 +297,7 @@ function fmt(n) {
 
 function buildCardHeader(label) {
   var bar = document.createElement('div');
-  bar.style.cssText = 'background:' + T.mint + ';padding:5px 10px;flex-shrink:0;';
+  bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
   bar.style.clipPath = chamfer(4);
   var txt = document.createElement('div');
   txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:2px;';
@@ -393,7 +337,7 @@ function cobColor(pct) {
 function cobFrameColor(pct) {
   if (pct >= COB_CRITICAL) return T.vermillion;
   if (pct >= COB_WARNING) return T.yellow;
-  return T.mint;
+  return CHROME;
 }
 
 // ═══════════════════════════════════════════════════
@@ -432,7 +376,7 @@ function buildSalesOverviewCard() {
   var frameColor = cobFrameColor(cob);
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
   card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('SALES OVERVIEW'));
 
@@ -469,7 +413,7 @@ function buildSalesBreakdownCard() {
   var cats = bd.categories || [];
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
   card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('SALES BREAKDOWN'));
 
@@ -762,7 +706,7 @@ function showDrillDown() {
   var parentRect = _el.getBoundingClientRect();
 
   _drillEl = document.createElement('div');
-  _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';border:2px solid ' + T.mint + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;';
+  _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';border:2px solid ' + CHROME + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;';
   _drillEl.style.clipPath = chamfer(8);
 
   // Start at card's position
@@ -896,12 +840,12 @@ function buildCenterColumn() {
 
   // ── Check grid container ──
   var checkWrap = document.createElement('div');
-  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;border:1px solid ' + T.mint + ';background:' + T.bgDark + ';';
+  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;border:7px solid ' + CHROME + ';background:' + T.bgDark + ';';
   checkWrap.style.clipPath = chamfer(6);
 
   // Header: "// ALL CHECKS //" or "// {SERVER NAME} //"
   _checkHeader = document.createElement('div');
-  _checkHeader.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mint + ';letter-spacing:2px;padding:6px 10px;flex-shrink:0;';
+  _checkHeader.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + CHROME + ';letter-spacing:2px;padding:6px 10px;flex-shrink:0;';
   updateCheckHeader();
   checkWrap.appendChild(_checkHeader);
 
@@ -991,10 +935,10 @@ function renderGrid() {
   // + NEW CHECK tile (OPEN tab only)
   if (_activeTab === 'open') {
     var newTile = document.createElement('div');
-    newTile.style.cssText = 'border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;min-height:90px;cursor:pointer;user-select:none;';
+    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:90px;cursor:pointer;user-select:none;';
     newTile.style.clipPath = chamfer(6);
     var plus = document.createElement('div');
-    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + CHROME + ';';
     plus.textContent = '+';
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
@@ -1137,7 +1081,7 @@ function renderOpsPanel() {
   if (!_opsPanel) return;
   _opsPanel.innerHTML = '';
   var header = document.createElement('div');
-  header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mint + ';letter-spacing:2px;padding:6px 10px;';
+  header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + CHROME + ';letter-spacing:2px;padding:6px 10px;';
   header.textContent = '// CHECK OPERATION //';
   _opsPanel.appendChild(header);
 
@@ -1320,7 +1264,7 @@ function buildHeatmapPanel() {
   if (active.length === 0) return document.createElement('div');
 
   var panel = document.createElement('div');
-  panel.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex-shrink:0;';
+  panel.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex-shrink:0;';
   panel.style.clipPath = chamfer(6);
   panel.appendChild(buildCardHeader('SERVER WORKLOAD'));
 
@@ -1354,7 +1298,7 @@ function buildHeatmapPanel() {
       var nameCell = document.createElement('div');
       nameCell.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.textPrimary + ';padding:3px 6px 3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;cursor:pointer;user-select:none;display:flex;align-items:center;';
       if (isFiltered) {
-        nameCell.style.borderLeft = '2px solid ' + T.mint;
+        nameCell.style.borderLeft = '2px solid ' + CHROME;
         nameCell.style.paddingLeft = '2px';
       }
       nameCell.textContent = srv.name;
@@ -1456,10 +1400,10 @@ function buildServerCheckoutsCard() {
     if (servers[i].status === 'pending') hasPending = true;
     if (servers[i].status === 'active' && servers[i].open_tables === 0) hasPastShift = true;
   }
-  var frameColor = hasPending ? T.vermillion : (hasPastShift ? T.yellow : T.mint);
+  var frameColor = hasPending ? T.vermillion : (hasPastShift ? T.yellow : CHROME);
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
   card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('SERVER CHECKOUTS'));
 
@@ -1518,7 +1462,7 @@ function buildTipPoolCard() {
   var servers = tp.servers || [];
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
   card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('TIP POOL'));
 
@@ -1566,7 +1510,7 @@ function buildTipAdjustmentCard() {
   var countColor, frameColor;
   if (count === 0) {
     countColor = T.green;
-    frameColor = T.mint;
+    frameColor = CHROME;
   } else if (count >= TIP_ADJ_THRESHOLD) {
     countColor = T.vermillion;
     frameColor = T.vermillion;
@@ -1576,7 +1520,7 @@ function buildTipAdjustmentCard() {
   }
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
   card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('TIP ADJUSTMENT'));
 
@@ -1608,7 +1552,7 @@ function buildCloseDayCard() {
   var cd = _closeDayData || {};
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
   card.style.clipPath = chamfer(6);
   card.appendChild(buildCardHeader('CLOSE DAY'));
 
@@ -1720,28 +1664,15 @@ function renderScene() {
   if (!_el || !_params) return;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;background:' + T.bgDark + ';';
-
-  // ── Scene header bar (34px, mint) ──
-  _el.appendChild(buildSceneHeader());
-
-  // ── 3-column grid ──
-  var grid = document.createElement('div');
-  grid.style.cssText = 'flex:1;display:grid;grid-template-columns:22% 50% 28%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 50% 28%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
-
   _rightCol = buildRightColumn();
 
-  grid.appendChild(_leftCol);
-  grid.appendChild(_centerCol);
-  grid.appendChild(_rightCol);
-  _el.appendChild(grid);
-
-  // Start clock updates
-  if (_clockTimer) clearInterval(_clockTimer);
-  _clockTimer = setInterval(updateHeaderLabel, 30000);
+  _el.appendChild(_leftCol);
+  _el.appendChild(_centerCol);
+  _el.appendChild(_rightCol);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1756,13 +1687,6 @@ SceneManager.register({
     _params = params;
 
     loadStubData(); // Initialize defaults
-
-    // Hide global app header — this scene has its own header bar
-    var appHeader = document.getElementById('header');
-    if (appHeader) appHeader.style.display = 'none';
-    // Expand working layer to fill full height
-    var layerWorking = document.getElementById('layer-working');
-    if (layerWorking) { layerWorking.style.top = '0'; layerWorking.style.height = '100%'; }
 
     var emp = params.emp || params;
     setSceneName(emp.name || emp.employeeName || 'Manager');
@@ -1786,13 +1710,6 @@ SceneManager.register({
   },
 
   unmount: function() {
-    // Restore global app header
-    var appHeader = document.getElementById('header');
-    if (appHeader) appHeader.style.display = '';
-    var layerWorking = document.getElementById('layer-working');
-    if (layerWorking) { layerWorking.style.top = ''; layerWorking.style.height = ''; }
-
-    if (_clockTimer) { clearInterval(_clockTimer); _clockTimer = null; }
     if (_drillEl) { _drillEl.remove(); _drillEl = null; }
     _el = null;
     _params = null;
@@ -1811,7 +1728,6 @@ SceneManager.register({
     _leftCol = null;
     _centerCol = null;
     _rightCol = null;
-    _headerLabel = null;
     _heatmapEl = null;
     _centerGrid = null;
     _opsPanel = null;
