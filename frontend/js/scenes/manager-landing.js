@@ -313,7 +313,7 @@ function buildCardHeader(label) {
   var bar = document.createElement('div');
   bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
   var txt = document.createElement('div');
-  txt.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.bgDark + ';letter-spacing:2px;white-space:nowrap;';
+  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
   txt.textContent = label;
   bar.appendChild(txt);
   return bar;
@@ -323,10 +323,10 @@ function statRow(label, value, color) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;min-width:0;';
   var l = document.createElement('span');
-  l.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
+  l.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
   l.textContent = label;
   var v = document.createElement('span');
-  v.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
+  v.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
@@ -1376,7 +1376,6 @@ function buildRightColumn() {
   col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;min-width:0;';
 
   col.appendChild(buildServerCheckoutsCard());
-  col.appendChild(buildTipPoolCard());
   col.appendChild(buildCloseDayCard());
 
   return col;
@@ -1430,7 +1429,14 @@ function buildServerCheckoutsCard() {
   body.appendChild(divider);
 
   var tipColor = unadjCount === 0 ? T.green : (unadjCount >= TIP_ADJ_THRESHOLD ? T.vermillion : T.yellow);
-  body.appendChild(statRow('Unadjusted Tips:', String(unadjCount), tipColor));
+  body.appendChild(statRow('Unadjusted:', String(unadjCount), tipColor));
+
+  // Tip pool section
+  var tp = _tipPoolData || {};
+  var divider2 = document.createElement('div');
+  divider2.style.cssText = 'height:1px;margin:4px 8px;border-top:1px solid ' + T.border + ';';
+  body.appendChild(divider2);
+  body.appendChild(statRow('Total Tips:', fmt(tp.total_tips), T.gold));
 
   card.appendChild(body);
 
@@ -1452,50 +1458,6 @@ function buildServerCheckoutsCard() {
     onTap: function() {
       _expandOrigin = card.getBoundingClientRect();
       _expandedCard = 'server-checkouts';
-      showDrillDown();
-    },
-  }));
-  card.appendChild(btnRow);
-
-  return card;
-}
-
-// ── TIP POOL Card ────────────────────────────────
-
-function buildTipPoolCard() {
-  var tp = _tipPoolData || {};
-  var servers = tp.servers || [];
-
-  var card = document.createElement('div');
-  applyCardStyle(card);
-  card.appendChild(buildCardHeader('TIP POOL'));
-
-  var body = document.createElement('div');
-  body.style.cssText = 'padding:6px 0;';
-
-  body.appendChild(statRow('Total Tips:', fmt(tp.total_tips), T.gold));
-  body.appendChild(statRow('Method:', tp.distribution_method || '--', T.lime));
-
-  // Divider
-  var divider = document.createElement('div');
-  divider.style.cssText = 'height:1px;margin:4px 8px;border-top:1px solid ' + T.border + ';';
-  body.appendChild(divider);
-
-  // Server shares
-  for (var i = 0; i < servers.length; i++) {
-    body.appendChild(statRow(servers[i].name + ':', fmt(servers[i].share), T.gold));
-  }
-  card.appendChild(body);
-
-  // >>> drill-down
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;justify-content:flex-end;padding:4px 8px 2px;';
-  btnRow.appendChild(buildButton('>>>', {
-    fill: T.darkBtn, color: T.mint, fontSize: '14px', fontFamily: T.fb,
-    width: 48, height: 24,
-    onTap: function() {
-      _expandOrigin = card.getBoundingClientRect();
-      _expandedCard = 'tip-pool';
       showDrillDown();
     },
   }));
@@ -1621,7 +1583,7 @@ function renderScene() {
   if (!_el || !_params) return;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:22% 46% 32%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:25% 50% 25%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
