@@ -300,8 +300,8 @@ function buildCardHeader(label) {
   bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
   bar.style.clipPath = chamfer(4);
   var txt = document.createElement('div');
-  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:2px;';
-  txt.textContent = '// ' + label + ' //';
+  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:2px;white-space:nowrap;';
+  txt.textContent = label;
   bar.appendChild(txt);
   return bar;
 }
@@ -907,9 +907,9 @@ function updateCheckHeader() {
   if (!_checkHeader) return;
   if (_filteredServerId && _heatmapData) {
     var srv = (_heatmapData.servers || []).find(function(s) { return s.id === _filteredServerId; });
-    _checkHeader.textContent = '// ' + (srv ? srv.name.toUpperCase() : 'SERVER') + ' //';
+    _checkHeader.textContent = (srv ? srv.name.toUpperCase() : 'SERVER');
   } else {
-    _checkHeader.textContent = '// ALL CHECKS //';
+    _checkHeader.textContent = 'ALL CHECKS';
   }
 }
 
@@ -1082,7 +1082,7 @@ function renderOpsPanel() {
   _opsPanel.innerHTML = '';
   var header = document.createElement('div');
   header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + CHROME + ';letter-spacing:2px;padding:6px 10px;';
-  header.textContent = '// CHECK OPERATION //';
+  header.textContent = 'CHECK OPERATION';
   _opsPanel.appendChild(header);
 
   if (_activeTab !== 'open') return;
@@ -1664,7 +1664,7 @@ function renderScene() {
   if (!_el || !_params) return;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 50% 28%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 42% 36%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
