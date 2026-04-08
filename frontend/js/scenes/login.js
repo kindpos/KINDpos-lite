@@ -33,6 +33,11 @@ SceneManager.register({
 
     // LEFT — CONFIGURATION button
     var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
+    configPair.wrap.style.width = '200px';
+    configPair.wrap.style.height = '50px';
+    configPair.inner.style.fontSize = '20px';
+    configPair.inner.style.fontFamily = T.fhr;
+    configPair.inner.style.letterSpacing = '3px';
     container.appendChild(configPair.wrap);
 
     // CENTER — numpad
@@ -63,7 +68,7 @@ SceneManager.register({
     // RIGHT — CLOCK IN button
     var clockInBtn = buildButton('CLOCK IN', {
       fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
-      width: 200, height: 44,
+      width: 200, height: 50,
       onTap: function() {
         // If PIN already entered, go straight to clock-in
         if (_lastValidEmp) {

@@ -280,6 +280,11 @@ SceneManager.register({
 
     var clockPair = buildStyledButton({ label: 'CLOCK IN', variant: 'gold', size: 'lg', disabled: true });
     var clockBtn = clockPair.wrap;
+    clockBtn.style.width = '200px';
+    clockBtn.style.height = '56px';
+    clockPair.inner.style.fontSize = '28px';
+    clockPair.inner.style.fontFamily = T.fhr;
+    clockPair.inner.style.letterSpacing = '3px';
 
     function _updateClockInBtn() {
       clockBtn.setDisabled(!_selectedRole);

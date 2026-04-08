@@ -229,6 +229,11 @@ function buildCardLanding(el, params, sales, labor) {
     configRow.style.cssText = 'grid-column:2;display:flex;justify-content:center;padding:6px 4px;';
 
     var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'md', onClick: function() { SceneManager.openTransactional('settings', { pin: emp.pin }); } });
+    configPair.wrap.style.width = '200px';
+    configPair.wrap.style.height = '42px';
+    configPair.inner.style.fontSize = '20px';
+    configPair.inner.style.fontFamily = T.fh;
+    configPair.inner.style.letterSpacing = '3px';
     configRow.appendChild(configPair.wrap);
     el.appendChild(configRow);
   }
