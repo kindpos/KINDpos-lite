@@ -811,15 +811,12 @@ function ordersByTab(tab) {
 }
 
 // ═══════════════════════════════════════════════════
-//  CENTER COLUMN — Heatmap + Check Grid
+//  CENTER COLUMN — Check Grid
 // ═══════════════════════════════════════════════════
 
 function buildCenterColumn() {
   var col = document.createElement('div');
   col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;gap:8px;';
-
-  _heatmapEl = buildHeatmapPanel();
-  col.appendChild(_heatmapEl);
 
   // ── Check grid container ──
   var checkWrap = document.createElement('div');

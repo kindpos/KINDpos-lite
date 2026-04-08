@@ -83,25 +83,31 @@ function fmtHours() {
 
 // ── Card UI Builders ──────────────────────────────
 
+var CHROME = T.numpadChassis;
+var CARD_SHADOW = 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 2px 0 0 rgba(255,255,255,0.04),inset -2px 0 0 rgba(0,0,0,0.25),inset 0 4px 8px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50)';
+
+function applyCardStyle(el) {
+  el.style.cssText = 'background:' + T.bgDark + ';border:5px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;box-shadow:' + CARD_SHADOW + ';';
+}
+
 function buildCardHeader(label) {
   var bar = document.createElement('div');
-  bar.style.cssText = 'background:' + T.mint + ';padding:5px 10px;flex-shrink:0;';
-  bar.style.clipPath = chamfer(4);
+  bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
   var txt = document.createElement('div');
-  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:2px;';
-  txt.textContent = '// ' + label + ' //';
+  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  txt.textContent = label;
   bar.appendChild(txt);
   return bar;
 }
 
 function statRow(label, value, color) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;';
+  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;min-width:0;';
   var l = document.createElement('span');
-  l.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+  l.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
   l.textContent = label;
   var v = document.createElement('span');
-  v.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + color + ';font-weight:bold;';
+  v.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
@@ -169,8 +175,7 @@ function buildLeftColumn(emp) {
 
   // ── SALES OVERVIEW card ──
   var salesCard = document.createElement('div');
-  salesCard.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  salesCard.style.clipPath = chamfer(6);
+  applyCardStyle(salesCard);
   salesCard.appendChild(buildCardHeader('SALES OVERVIEW'));
   var salesBody = document.createElement('div');
   salesBody.style.cssText = 'padding:6px 0;';
@@ -182,8 +187,7 @@ function buildLeftColumn(emp) {
 
   // ── TABLE STATISTICS card ──
   var tablesCard = document.createElement('div');
-  tablesCard.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  tablesCard.style.clipPath = chamfer(6);
+  applyCardStyle(tablesCard);
   tablesCard.appendChild(buildCardHeader('TABLE STATISTICS'));
   var tablesBody = document.createElement('div');
   tablesBody.style.cssText = 'padding:6px 0;';
@@ -238,13 +242,11 @@ function buildLeftColumn(emp) {
 
 function buildCenterColumn(emp) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;border:1px solid ' + T.mint + ';background:' + T.bgDark + ';';
-  col.style.clipPath = chamfer(6);
+  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';border:5px solid ' + CHROME + ';box-shadow:' + CARD_SHADOW + ';';
 
-  // ── Check Grid (with chamfered mint border frame) ──
+  // ── Check Grid ──
   var gridFrame = document.createElement('div');
-  gridFrame.style.cssText = 'flex:1;overflow:hidden;margin:8px;border:2px solid ' + T.mint + ';';
-  gridFrame.style.clipPath = chamfer(6);
+  gridFrame.style.cssText = 'flex:1;overflow:hidden;margin:8px;border:2px solid ' + CHROME + ';';
   _centerGrid = document.createElement('div');
   _centerGrid.style.cssText = 'width:100%;height:100%;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
   gridFrame.appendChild(_centerGrid);
@@ -319,10 +321,9 @@ function renderGrid(emp) {
   // + NEW CHECK tile (OPEN tab only)
   if (_activeTab === 'open') {
     var newTile = document.createElement('div');
-    newTile.style.cssText = 'border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
-    newTile.style.clipPath = chamfer(6);
+    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
     var plus = document.createElement('div');
-    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + CHROME + ';';
     plus.textContent = '+';
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
@@ -342,8 +343,7 @@ function buildCheckTile(order, emp) {
   var isVoid = _activeTab === 'void';
 
   var tile = document.createElement('div');
-  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
-  tile.style.clipPath = chamfer(6);
+  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + CHROME + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
   if (isClosed) tile.style.opacity = '0.7';
   if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
 
@@ -432,10 +432,7 @@ function applyTileSelected(tile, selected) {
 
 function renderOpsPanel(emp) {
   _opsPanel.innerHTML = '';
-  var header = document.createElement('div');
-  header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mint + ';letter-spacing:2px;padding:6px 10px;';
-  header.textContent = '// CHECK OPERATION //';
-  _opsPanel.appendChild(header);
+  _opsPanel.appendChild(buildCardHeader('CHECK OPERATION'));
 
   if (_activeTab !== 'open') return;
   var ids = Object.keys(_selected);
@@ -581,8 +578,8 @@ function buildRightColumn(emp) {
   var d = _salesData || {};
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:1;';
-  card.style.clipPath = chamfer(6);
+  applyCardStyle(card);
+  card.style.flex = '1';
   card.appendChild(buildCardHeader('SHIFT OVERVIEW'));
 
   var body = document.createElement('div');
@@ -661,8 +658,7 @@ function showDrillDown() {
   var parentRect = _el.getBoundingClientRect();
 
   _drillEl = document.createElement('div');
-  _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';border:2px solid ' + T.mint + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;';
-  _drillEl.style.clipPath = chamfer(8);
+  _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';border:5px solid ' + CHROME + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;box-shadow:' + CARD_SHADOW + ';';
 
   // Start at card's position
   if (rect) {
@@ -766,7 +762,7 @@ function renderScene() {
   var emp = _params.emp || _params;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;display:grid;grid-template-columns:22% 1fr 28%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;position:relative;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:25fr 50fr 25fr;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;position:relative;';
 
   _el.appendChild(buildLeftColumn(emp));
   _el.appendChild(buildCenterColumn(emp));
@@ -1055,11 +1051,11 @@ SceneManager.register({
     for (var i = 0; i < checks.length; i++) {
       var order = checks[i];
       var col = document.createElement('div');
-      col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;overflow-y:auto;';
+      col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';border:1px solid ' + CHROME + ';display:flex;flex-direction:column;overflow-y:auto;';
       col.style.clipPath = chamfer(6);
 
       var colHeader = document.createElement('div');
-      colHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.mint + ';padding:6px 8px;border-bottom:1px solid ' + T.border + ';';
+      colHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + CHROME + ';padding:6px 8px;border-bottom:1px solid ' + T.border + ';';
       colHeader.textContent = checkNum(order);
       col.appendChild(colHeader);
 
@@ -1075,10 +1071,10 @@ SceneManager.register({
 
     // + NEW CHECK destination column
     var newCol = document.createElement('div');
-    newCol.style.cssText = 'flex:1;min-width:180px;border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;';
+    newCol.style.cssText = 'flex:1;min-width:180px;border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;';
     newCol.style.clipPath = chamfer(6);
     var newLabel = document.createElement('div');
-    newLabel.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.mint + ';';
+    newLabel.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + CHROME + ';';
     newLabel.textContent = '+ NEW CHECK';
     newCol.appendChild(newLabel);
     body.appendChild(newCol);
