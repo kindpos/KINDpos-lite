@@ -238,9 +238,9 @@ var _EMB_VARIANTS = {
 };
 
 var _EMB_SIZES = {
-  sm: { h: '34px', w: '90px', fs: '10px', ls: '2px', pad: '4px 10px' },
-  md: { h: '44px', w: '120px', fs: '11px', ls: '3px', pad: '6px 14px' },
-  lg: { h: '54px', w: '180px', fs: '13px', ls: '4px', pad: '8px 18px' },
+  sm: { h: '36px', w: '100px', fs: '16px', ls: '2px', pad: '4px 12px' },
+  md: { h: '50px', w: '200px', fs: '20px', ls: '3px', pad: '6px 16px' },
+  lg: { h: '56px', w: '200px', fs: '28px', ls: '3px', pad: '8px 20px' },
 };
 
 function _fillToVariant(fill) {
@@ -297,7 +297,7 @@ export function buildStyledButton(arg) {
   var inner = document.createElement('div');
   inner.className = 'embossed-btn-inner';
   inner.style.color = v.label;
-  inner.style.fontFamily = T.fb;
+  inner.style.fontFamily = isNewApi ? T.fhr : T.fb;
   inner.style.whiteSpace = 'pre-line';
   inner.style.padding = sz ? sz.pad : '8px 12px';
   if (isNewApi) {

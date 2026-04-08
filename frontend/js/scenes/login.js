@@ -5,7 +5,6 @@
 // ═══════════════════════════════════════════════════
 
 import { T, buildStyledButton } from '../tokens.js';
-import { buildButton } from '../components.js';
 import { buildNumpad } from '../numpad.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -32,12 +31,7 @@ SceneManager.register({
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';';
 
     // LEFT — CONFIGURATION button
-    var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
-    configPair.wrap.style.width = '200px';
-    configPair.wrap.style.height = '50px';
-    configPair.inner.style.fontSize = '20px';
-    configPair.inner.style.fontFamily = T.fhr;
-    configPair.inner.style.letterSpacing = '3px';
+    var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'md', onClick: function() { SceneManager.openTransactional('settings'); } });
     container.appendChild(configPair.wrap);
 
     // CENTER — numpad
@@ -66,27 +60,21 @@ SceneManager.register({
     container.appendChild(_numpadRef);
 
     // RIGHT — CLOCK IN button
-    var clockInBtn = buildButton('CLOCK IN', {
-      fill: T.darkBtn, color: T.textPrimary, fontSize: '20px', fontFamily: T.fhr,
-      width: 200, height: 50,
-      onTap: function() {
-        // If PIN already entered, go straight to clock-in
-        if (_lastValidEmp) {
-          var roles = _lastValidEmp.roles || ['server'];
-          SceneManager.closeGate('login');
-          SceneManager.mountWorking(landingScene(roles), { emp: _lastValidEmp });
-          SceneManager.openTransactional('clock-in', { emp: _lastValidEmp });
-          _lastValidEmp = null;
-          return;
-        }
-        // Otherwise toggle mode for next PIN entry
-        _clockInMode = !_clockInMode;
-        clockInBtn._inner.style.borderColor = _clockInMode ? T.mint : T.goGreen;
-        if (_clockInMode && _numpadRef) _numpadRef.clear();
-      },
-    });
-    clockInBtn._inner.style.borderColor = T.goGreen;
-    container.appendChild(clockInBtn);
+    var clockInPair = buildStyledButton({ label: 'CLOCK IN', variant: 'dark', size: 'md', onClick: function() {
+      // If PIN already entered, go straight to clock-in
+      if (_lastValidEmp) {
+        var roles = _lastValidEmp.roles || ['server'];
+        SceneManager.closeGate('login');
+        SceneManager.mountWorking(landingScene(roles), { emp: _lastValidEmp });
+        SceneManager.openTransactional('clock-in', { emp: _lastValidEmp });
+        _lastValidEmp = null;
+        return;
+      }
+      // Otherwise toggle mode for next PIN entry
+      _clockInMode = !_clockInMode;
+      if (_clockInMode && _numpadRef) _numpadRef.clear();
+    } });
+    container.appendChild(clockInPair.wrap);
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
