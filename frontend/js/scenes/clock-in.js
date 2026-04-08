@@ -373,7 +373,7 @@ SceneManager.register({
 
     // ── Version stamp ───────────────────────
     var version = document.createElement('div');
-    version.style.cssText = 'position:absolute;bottom:4px;right:12px;font-family:' + T.fb + ';font-size:16px;color:' + T.numpadChassis + ';';
+    version.style.cssText = 'position:absolute;bottom:4px;right:12px;font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';';
     version.textContent = 'KINDpos/lite_Vz1.2';
     panel.appendChild(version);
   },
