@@ -211,7 +211,7 @@ export function shadowColor(fillColor) {
 
 var _EMB_VARIANTS = {
   dark: {
-    bg: T.embDarkBg, label: T.mint,
+    bg: T.embDarkBg, label: T.textPrimary,
     shadow: 'inset 0 2px 0 rgba(255,255,255,0.12),inset 0 -2px 0 rgba(0,0,0,0.60),inset 2px 0 0 rgba(255,255,255,0.05),inset -2px 0 0 rgba(0,0,0,0.30),inset 0 4px 8px rgba(0,0,0,0.50),0 2px 8px rgba(0,0,0,0.60),0 0 0 1px ' + T.embEdge,
     shadowActive: 'inset 0 2px 0 rgba(255,255,255,0.12),inset 0 -2px 0 rgba(0,0,0,0.60),inset 2px 0 0 rgba(255,255,255,0.05),inset -2px 0 0 rgba(0,0,0,0.30),inset 0 8px 16px rgba(0,0,0,0.50),0 2px 8px rgba(0,0,0,0.60),0 0 0 1px ' + T.embEdge,
   },
@@ -231,16 +231,16 @@ var _EMB_VARIANTS = {
     shadowActive: 'inset 0 2px 0 rgba(255,160,140,0.35),inset 0 -2px 0 rgba(0,0,0,0.50),inset 0 8px 16px rgba(100,0,0,0.40),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(255,68,34,0.15),0 0 0 1px ' + T.embVermEdge,
   },
   ghost: {
-    bg: T.embGhostBg, label: T.mint,
+    bg: T.embGhostBg, label: T.textPrimary,
     shadow: 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 0 4px 8px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50),0 0 0 1px rgba(135,247,156,0.20)',
     shadowActive: 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 0 8px 16px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50),0 0 0 1px rgba(135,247,156,0.20)',
   },
 };
 
 var _EMB_SIZES = {
-  sm: { h: '36px', w: '100px', fs: '16px', ls: '2px', pad: '4px 12px' },
-  md: { h: '50px', w: '200px', fs: '20px', ls: '3px', pad: '6px 16px' },
-  lg: { h: '56px', w: '200px', fs: '28px', ls: '3px', pad: '8px 20px' },
+  sm: { h: '40px', w: '110px', fs: '18px', ls: '2px', pad: '4px 14px' },
+  md: { h: '55px', w: '220px', fs: '22px', ls: '3px', pad: '6px 18px' },
+  lg: { h: '62px', w: '220px', fs: '31px', ls: '3px', pad: '8px 22px' },
 };
 
 function _fillToVariant(fill) {

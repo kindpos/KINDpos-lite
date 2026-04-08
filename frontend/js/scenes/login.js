@@ -32,6 +32,7 @@ SceneManager.register({
 
     // LEFT — CONFIGURATION button
     var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'md', onClick: function() { SceneManager.openTransactional('settings'); } });
+    configPair.wrap.style.alignSelf = 'center';
     container.appendChild(configPair.wrap);
 
     // CENTER — numpad
@@ -74,6 +75,7 @@ SceneManager.register({
       _clockInMode = !_clockInMode;
       if (_clockInMode && _numpadRef) _numpadRef.clear();
     } });
+    clockInPair.wrap.style.alignSelf = 'center';
     container.appendChild(clockInPair.wrap);
 
     // Version stamp — bottom-right
