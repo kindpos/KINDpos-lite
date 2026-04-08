@@ -1843,6 +1843,8 @@ async function handleSend() {
           order_type:  'quick_service',
           guest_count: 1,
           customer_name: customerName || null,
+          server_id:   sceneParams.employeeId || null,
+          server_name: sceneParams.employeeName || null,
         }),
       });
       if (!createRes.ok) throw new Error('Order create failed: ' + createRes.status);

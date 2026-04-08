@@ -94,10 +94,6 @@ function renderTable() {
     if (statusFilter === 'open' && checkStatus !== 'open') return;
     if (statusFilter === 'closed' && checkStatus !== 'closed') return;
     if (statusFilter === 'voided' && checkStatus !== 'voided') return;
-    // Hide voided checks from ALL/Open/Closed views
-    if (statusFilter !== 'voided' && checkStatus === 'voided') return;
-    // Cash checks only visible under Closed filter
-    if (c.method === 'cash' && statusFilter !== 'closed') return;
 
     var isOpen = checkStatus === 'open';
     var isVoided = checkStatus === 'voided';
