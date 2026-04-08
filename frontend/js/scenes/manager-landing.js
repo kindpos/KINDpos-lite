@@ -134,103 +134,213 @@ function buildSceneHeader() {
 
 function loadStubData() {
   _salesData = {
-    net_sales: 4872.50,
-    avg_check: 38.25,
-    active_checks: 7,
-    total_covers: 42,
-    labor_cob: 27.4,
+    net_sales: 0, avg_check: 0, active_checks: 0,
+    total_covers: 0, labor_cob: 0,
   };
-  _breakdownData = {
-    categories: [
-      { name: 'PIZZA', value: 1840.00 },
-      { name: 'APPS', value: 920.50 },
-      { name: 'SUBS', value: 685.00 },
-      { name: 'SIDES', value: 412.00 },
-      { name: 'DRINKS', value: 1015.00 },
-    ],
-    cash: 1462.50,
-    card: 3410.00,
-    hourly: [
-      { label: '11a', value: 320 },
-      { label: '12p', value: 780 },
-      { label: '1p', value: 920 },
-      { label: '2p', value: 640 },
-      { label: '3p', value: 410 },
-      { label: '4p', value: 520 },
-      { label: '5p', value: 690 },
-      { label: '6p', value: 592 },
-    ],
-  };
-  _heatmapData = {
-    hours: ['11a', '12p', '1p', '2p', '3p', '4p', '5p', '6p'],
-    current_hour: 5, // index into hours (4p)
-    servers: [
-      { id: 's1', name: 'Alex M.', live_tables: 3, cells: [0, 2, 3, 1, 0, 3, 2, 0] },
-      { id: 's2', name: 'Jordan K.', live_tables: 2, cells: [1, 1, 2, 4, 3, 2, 0, 0] },
-      { id: 's3', name: 'Sam R.', live_tables: 5, cells: [0, 3, 5, 4, 2, 5, 3, 1] },
-      { id: 's4', name: 'Casey T.', live_tables: 1, cells: [2, 1, 0, 0, 1, 1, 0, 0] },
-      { id: 's5', name: 'Riley W.', live_tables: 0, cells: [1, 2, 1, 0, 0, 0, 0, 0] },
-    ],
-  };
-
-  // Assign palette colors to servers
-  _serverColorMap = {};
-  var servers = _heatmapData.servers;
-  for (var i = 0; i < servers.length; i++) {
-    _serverColorMap[servers[i].id] = SERVER_PALETTE[i % SERVER_PALETTE.length];
-  }
-
-  _allOrders = [
-    { order_id: 'o1', check_number: 'C-001', server_id: 's1', server_name: 'Alex M.', customer_name: 'Table 4', status: 'open', items: [{name:'Margherita',quantity:2},{name:'Coke',quantity:1}], total: 42.50 },
-    { order_id: 'o2', check_number: 'C-002', server_id: 's1', server_name: 'Alex M.', customer_name: 'Table 7', status: 'open', items: [{name:'Pepperoni',quantity:1}], total: 18.00 },
-    { order_id: 'o3', check_number: 'C-003', server_id: 's2', server_name: 'Jordan K.', customer_name: 'Bar 1', status: 'open', items: [{name:'Wings',quantity:1},{name:'IPA',quantity:2}], total: 31.00 },
-    { order_id: 'o4', check_number: 'C-004', server_id: 's3', server_name: 'Sam R.', customer_name: 'Table 12', status: 'open', items: [{name:'Meatball Sub',quantity:1},{name:'Fries',quantity:1}], total: 22.50 },
-    { order_id: 'o5', check_number: 'C-005', server_id: 's3', server_name: 'Sam R.', customer_name: 'Table 9', status: 'open', items: [{name:'Caesar Salad',quantity:2}], total: 26.00 },
-    { order_id: 'o6', check_number: 'C-006', server_id: 's2', server_name: 'Jordan K.', customer_name: 'Table 3', status: 'closed', items: [{name:'BBQ Chicken',quantity:1},{name:'Lager',quantity:2}], total: 38.00 },
-    { order_id: 'o7', check_number: 'C-007', server_id: 's4', server_name: 'Casey T.', customer_name: 'Table 1', status: 'closed', items: [{name:'Hawaiian',quantity:1}], total: 16.50 },
-    { order_id: 'o8', check_number: 'C-008', server_id: 's1', server_name: 'Alex M.', customer_name: 'Table 5', status: 'voided', items: [{name:'Garlic Knots',quantity:1}], total: 8.00 },
-  ];
-
-  _staffData = {
-    servers: [
-      { id: 's1', name: 'Alex M.', status: 'active', shift_end: '10:00pm', open_tables: 3 },
-      { id: 's2', name: 'Jordan K.', status: 'pending', shift_end: '9:00pm', open_tables: 0 },
-      { id: 's3', name: 'Sam R.', status: 'active', shift_end: '11:00pm', open_tables: 5 },
-      { id: 's4', name: 'Casey T.', status: 'checked_out', shift_end: '8:00pm', open_tables: 0 },
-      { id: 's5', name: 'Riley W.', status: 'checked_out', shift_end: '6:00pm', open_tables: 0 },
-    ],
-  };
-
-  _tipPoolData = {
-    total_tips: 862.40,
-    distribution_method: 'Hours Worked',
-    servers: [
-      { id: 's1', name: 'Alex M.', share: 215.60 },
-      { id: 's2', name: 'Jordan K.', share: 172.48 },
-      { id: 's3', name: 'Sam R.', share: 258.72 },
-      { id: 's4', name: 'Casey T.', share: 129.36 },
-      { id: 's5', name: 'Riley W.', share: 86.24 },
-    ],
-  };
-
-  _tipAdjData = {
-    unadjusted_count: 3,
-  };
-
-  // Close day gate conditions derived from staff + tip data
-  var staffServers = _staffData.servers;
-  var pendingCount = 0;
-  for (var i = 0; i < staffServers.length; i++) {
-    if (staffServers[i].status !== 'checked_out') pendingCount++;
-  }
+  _breakdownData = { categories: [], cash: 0, card: 0, hourly: [] };
+  _heatmapData = { hours: [], current_hour: -1, servers: [] };
+  _allOrders = [];
+  _staffData = { servers: [] };
+  _tipPoolData = { total_tips: 0, distribution_method: '--', servers: [] };
+  _tipAdjData = { unadjusted_count: 0 };
   _closeDayData = {
-    all_checked_out: pendingCount === 0,
-    pending_count: pendingCount,
-    all_tips_adjusted: (_tipAdjData.unadjusted_count || 0) === 0,
-    unadjusted_count: _tipAdjData.unadjusted_count || 0,
-    batch_ready: false,
-    day_closed: false,
+    all_checked_out: false, pending_count: 0,
+    all_tips_adjusted: true, unadjusted_count: 0,
+    batch_ready: false, day_closed: false,
   };
+  _serverColorMap = {};
+}
+
+// ── API Fetching ─────────────────────────────────
+
+function fetchAllData() {
+  var today = new Date();
+  var dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+  return Promise.all([
+    // 0: Sales summary → SALES OVERVIEW + SALES BREAKDOWN + hourly + tips
+    fetch('/api/v1/orders/day-summary')
+      .then(function(r) { return r.json(); }).catch(function() { return {}; }),
+    // 1: All orders → Check grid
+    fetch('/api/v1/orders')
+      .then(function(r) { return r.json(); }).catch(function() { return []; }),
+    // 2: Clocked-in staff → SERVER CHECKOUTS
+    fetch('/api/v1/servers/clocked-in')
+      .then(function(r) { return r.json(); }).catch(function() { return { staff: [] }; }),
+    // 3: Labor summary → COB%
+    fetch('/api/v1/reports/labor-summary?date=' + dateStr)
+      .then(function(r) { return r.json(); }).catch(function() { return {}; }),
+    // 4: Heatmap (stub — endpoint doesn't exist yet)
+    fetchStubEndpoint('/api/v1/staff/heatmap', stubHeatmapData()),
+    // 5: Tip pool (stub — endpoint doesn't exist yet)
+    fetchStubEndpoint('/api/v1/tips/pool', stubTipPoolData()),
+  ]).then(function(results) {
+    var daySummary = results[0] || {};
+    var orders = Array.isArray(results[1]) ? results[1] : [];
+    var staffResult = results[2] || {};
+    var laborSummary = results[3] || {};
+    var heatmap = results[4] || {};
+    var tipPool = results[5] || {};
+
+    // ── Wire SALES OVERVIEW ──
+    var openOrders = orders.filter(function(o) { return o.status === 'open'; });
+    _salesData = {
+      net_sales: daySummary.net_sales || 0,
+      avg_check: daySummary.check_avg || daySummary.avg_check || 0,
+      active_checks: openOrders.length,
+      total_covers: daySummary.guest_count || daySummary.total_checks || 0,
+      labor_cob: laborSummary.cob_percent || 0,
+      // Expanded detail fields
+      gross_sales: daySummary.gross_sales || 0,
+      cash_total: daySummary.cash_total || 0,
+      card_total: daySummary.card_total || 0,
+      discount_total: daySummary.discount_total || 0,
+      void_total: daySummary.void_total || 0,
+      tax_total: daySummary.tax_total || 0,
+    };
+
+    // ── Wire SALES BREAKDOWN ──
+    var cats = daySummary.categories || [];
+    var catList = [];
+    for (var catName in cats) {
+      if (cats.hasOwnProperty(catName)) {
+        catList.push({ name: catName, value: cats[catName] });
+      }
+    }
+    // If categories is an array instead of object
+    if (Array.isArray(daySummary.categories)) {
+      catList = daySummary.categories.map(function(c) {
+        return { name: c.name || c.category, value: c.total || c.value || 0 };
+      });
+    }
+    var hourlyData = (daySummary.hourly_breakdown || daySummary.hourly_sales || []).map(function(h) {
+      return { label: h.hour || h.label || '', value: h.total || h.value || h.net_sales || 0 };
+    });
+    _breakdownData = {
+      categories: catList,
+      cash: daySummary.cash_total || 0,
+      card: daySummary.card_total || 0,
+      hourly: hourlyData,
+    };
+
+    // ── Wire CHECK GRID ──
+    _allOrders = orders.map(function(o) {
+      return {
+        order_id: o.order_id,
+        check_number: o.check_number || ('C-' + String(o.order_id).slice(0, 3).toUpperCase()),
+        server_id: o.server_id || '',
+        server_name: o.server_name || '',
+        customer_name: o.customer_name || o.table || '',
+        status: o.status,
+        items: o.items || [],
+        total: o.total || o.subtotal || 0,
+      };
+    });
+
+    // ── Wire SERVER CHECKOUTS ──
+    var staff = staffResult.staff || [];
+    _staffData = {
+      servers: staff.map(function(s) {
+        var serverOrders = orders.filter(function(o) {
+          return o.server_id === s.employee_id && o.status === 'open';
+        });
+        return {
+          id: s.employee_id,
+          name: s.employee_name || s.name || '',
+          status: serverOrders.length > 0 ? 'active' : 'pending',
+          shift_end: '--',
+          open_tables: serverOrders.length,
+        };
+      }),
+    };
+
+    // ── Wire HEATMAP ──
+    _heatmapData = heatmap;
+    // Assign palette colors
+    _serverColorMap = {};
+    var hmServers = (_heatmapData.servers || []);
+    for (var i = 0; i < hmServers.length; i++) {
+      _serverColorMap[hmServers[i].id] = SERVER_PALETTE[i % SERVER_PALETTE.length];
+    }
+    // Also assign colors for staff servers not in heatmap
+    for (var i = 0; i < staff.length; i++) {
+      if (!_serverColorMap[staff[i].employee_id]) {
+        _serverColorMap[staff[i].employee_id] = SERVER_PALETTE[Object.keys(_serverColorMap).length % SERVER_PALETTE.length];
+      }
+    }
+
+    // ── Wire TIP POOL ──
+    _tipPoolData = tipPool;
+
+    // ── Wire TIP ADJUSTMENT ──
+    var unadjCount = 0;
+    var tipChecklist = daySummary.tip_adjustment_checklist || [];
+    for (var i = 0; i < tipChecklist.length; i++) {
+      if (!tipChecklist[i].adjusted) unadjCount++;
+    }
+    if (unadjCount === 0 && daySummary.unadjusted_tips != null) {
+      unadjCount = daySummary.unadjusted_tips;
+    }
+    _tipAdjData = { unadjusted_count: unadjCount };
+
+    // ── Wire CLOSE DAY gates ──
+    var pendingCount = 0;
+    var srvList = _staffData.servers;
+    for (var i = 0; i < srvList.length; i++) {
+      if (srvList[i].status !== 'checked_out') pendingCount++;
+    }
+    _closeDayData = {
+      all_checked_out: pendingCount === 0,
+      pending_count: pendingCount,
+      all_tips_adjusted: unadjCount === 0,
+      unadjusted_count: unadjCount,
+      batch_ready: false,
+      day_closed: false,
+    };
+  });
+}
+
+function fetchStubEndpoint(url, fallback) {
+  return fetch(url)
+    .then(function(r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    })
+    .catch(function() {
+      console.warn('[KINDpos] Endpoint not available: ' + url + ' — using stub data');
+      return fallback;
+    });
+}
+
+function stubHeatmapData() {
+  // Generate heatmap from current hour context
+  var now = new Date();
+  var startHour = 11;
+  var curH = now.getHours();
+  var hours = [];
+  for (var h = startHour; h <= Math.max(curH, startHour + 1); h++) {
+    var ampm = h >= 12 ? 'p' : 'a';
+    var display = (h > 12 ? h - 12 : h) + ampm;
+    hours.push(display);
+  }
+  var curIdx = Math.max(0, curH - startHour);
+  return {
+    hours: hours,
+    current_hour: Math.min(curIdx, hours.length - 1),
+    servers: [],
+  };
+}
+
+function stubTipPoolData() {
+  return {
+    total_tips: 0,
+    distribution_method: '--',
+    servers: [],
+  };
+}
+
+function refreshData() {
+  fetchAllData().then(function() { if (_el) renderScene(); });
 }
 
 // ── Formatting ───────────────────────────────────
@@ -971,7 +1081,7 @@ function buildCheckTile(order) {
           writeAuditEvent('reopen', order.order_id, order.server_id);
           fetch('/api/v1/orders/' + order.order_id + '/reopen', { method: 'POST' })
             .then(function(r) {
-              if (r.ok) { showToast('Check reopened', { bg: T.goGreen }); renderGrid(); }
+              if (r.ok) { showToast('Check reopened', { bg: T.goGreen }); refreshData(); }
               else { showToast('Reopen failed', { bg: T.red }); }
             }).catch(function() { showToast('Reopen failed', { bg: T.red }); });
         },
@@ -1095,7 +1205,7 @@ function renderOpsPanel() {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ reason: 'Voided by manager', approved_by: emp.id || 'manager' }),
             }).then(function(r) {
-              if (r.ok) { showToast('Check voided', { bg: T.goGreen }); _selected = {}; renderGrid(); renderOpsPanel(); }
+              if (r.ok) { showToast('Check voided', { bg: T.goGreen }); _selected = {}; refreshData(); }
               else { showToast('Void failed', { bg: T.red }); }
             }).catch(function() { showToast('Void failed', { bg: T.red }); });
           },
@@ -1175,8 +1285,7 @@ function renderOpsPanel() {
                 })).then(function() {
                   showToast(ids.length + ' checks voided', { bg: T.goGreen });
                   _selected = {};
-                  renderGrid();
-                  renderOpsPanel();
+                  refreshData();
                 }).catch(function() { showToast('Void failed', { bg: T.red }); });
               },
               onCancel: function() {},
@@ -1551,8 +1660,8 @@ function buildCloseDayCard() {
             .then(function(r) {
               if (r.ok) {
                 showToast('Day closed', { bg: T.goGreen });
-                cd.day_closed = true;
-                cd.batch_ready = true;
+                _closeDayData.day_closed = true;
+                _closeDayData.batch_ready = true;
                 renderScene();
               } else { showToast('Close day failed', { bg: T.red }); }
             }).catch(function() { showToast('Close day failed', { bg: T.red }); });
@@ -1646,7 +1755,7 @@ SceneManager.register({
     _el = container;
     _params = params;
 
-    loadStubData();
+    loadStubData(); // Initialize defaults
 
     var emp = params.emp || params;
     setSceneName(emp.name || emp.employeeName || 'Manager');
@@ -1659,7 +1768,14 @@ SceneManager.register({
       },
     });
 
-    renderScene();
+    // Loading state
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:' + T.bgDark + ';';
+    var loading = document.createElement('div');
+    loading.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';';
+    loading.textContent = 'Loading...';
+    container.appendChild(loading);
+
+    fetchAllData().then(function() { renderScene(); });
   },
 
   unmount: function() {
