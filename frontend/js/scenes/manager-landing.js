@@ -114,17 +114,14 @@ function fetchAllData() {
     // 3: Labor summary → COB%
     fetch('/api/v1/reports/labor-summary?date=' + dateStr)
       .then(function(r) { return r.json(); }).catch(function() { return {}; }),
-    // 4: Heatmap (stub — endpoint doesn't exist yet)
-    fetchStubEndpoint('/api/v1/staff/heatmap', stubHeatmapData()),
-    // 5: Tip pool (stub — endpoint doesn't exist yet)
+    // 4: Tip pool (stub — endpoint doesn't exist yet)
     fetchStubEndpoint('/api/v1/tips/pool', stubTipPoolData()),
   ]).then(function(results) {
     var daySummary = results[0] || {};
     var orders = Array.isArray(results[1]) ? results[1] : [];
     var staffResult = results[2] || {};
     var laborSummary = results[3] || {};
-    var heatmap = results[4] || {};
-    var tipPool = results[5] || {};
+    var tipPool = results[4] || {};
 
     // ── Wire SALES OVERVIEW ──
     var openOrders = orders.filter(function(o) { return o.status === 'open'; });
@@ -199,22 +196,28 @@ function fetchAllData() {
     };
 
     // ── Wire HEATMAP ──
-    // If heatmap endpoint returned no servers, synthesize from staff + orders
-    if (!heatmap.servers || heatmap.servers.length === 0) {
-      heatmap.servers = staff.map(function(s) {
-        var sOrders = orders.filter(function(o) { return o.server_id === s.employee_id; });
-        var totalCount = sOrders.length;
-        var openCount = sOrders.filter(function(o) { return o.status === 'open'; }).length;
-        var cells = [];
-        for (var h = 0; h < heatmap.hours.length; h++) cells.push(0);
-        // Place total order count at current hour (includes open + closed + voided)
-        if (heatmap.current_hour >= 0 && heatmap.current_hour < cells.length) {
-          cells[heatmap.current_hour] = totalCount;
-        }
-        return { id: s.employee_id, name: s.employee_name || s.name || '', live_tables: openCount, cells: cells };
-      });
+    // Always synthesize heatmap from staff + orders (real endpoint not yet available)
+    var now = new Date();
+    var hmStartHour = 11;
+    var hmCurH = now.getHours();
+    var hmHours = [];
+    for (var hh = hmStartHour; hh <= Math.max(hmCurH, hmStartHour + 1); hh++) {
+      var hmAmpm = hh >= 12 ? 'p' : 'a';
+      hmHours.push((hh > 12 ? hh - 12 : hh) + hmAmpm);
     }
-    _heatmapData = heatmap;
+    var hmCurIdx = Math.min(Math.max(0, hmCurH - hmStartHour), hmHours.length - 1);
+    var hmServersBuilt = staff.map(function(s) {
+      var sOrders = orders.filter(function(o) { return o.server_id === s.employee_id; });
+      var totalCount = sOrders.length;
+      var openCount = sOrders.filter(function(o) { return o.status === 'open'; }).length;
+      var cells = [];
+      for (var h = 0; h < hmHours.length; h++) cells.push(0);
+      if (hmCurIdx >= 0 && hmCurIdx < cells.length) {
+        cells[hmCurIdx] = totalCount;
+      }
+      return { id: s.employee_id, name: s.employee_name || s.name || '', live_tables: openCount, cells: cells };
+    });
+    _heatmapData = { hours: hmHours, current_hour: hmCurIdx, servers: hmServersBuilt };
     // Assign palette colors
     _serverColorMap = {};
     var hmServers = (_heatmapData.servers || []);
@@ -271,25 +274,6 @@ function fetchStubEndpoint(url, fallback) {
     });
 }
 
-function stubHeatmapData() {
-  // Generate heatmap from current hour context
-  var now = new Date();
-  var startHour = 11;
-  var curH = now.getHours();
-  var hours = [];
-  for (var h = startHour; h <= Math.max(curH, startHour + 1); h++) {
-    var ampm = h >= 12 ? 'p' : 'a';
-    var display = (h > 12 ? h - 12 : h) + ampm;
-    hours.push(display);
-  }
-  var curIdx = Math.max(0, curH - startHour);
-  return {
-    hours: hours,
-    current_hour: Math.min(curIdx, hours.length - 1),
-    servers: [],
-  };
-}
-
 function stubTipPoolData() {
   return {
     total_tips: 0,
@@ -339,7 +323,7 @@ function statRow(label, value, color) {
 var CARD_SHADOW = 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 2px 0 0 rgba(255,255,255,0.04),inset -2px 0 0 rgba(0,0,0,0.25),inset 0 4px 8px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50)';
 
 function applyCardStyle(el) {
-  el.style.cssText = 'background:' + T.bgDark + ';border:3px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;box-shadow:' + CARD_SHADOW + ';';
+  el.style.cssText = 'background:' + T.bgDark + ';border:5px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;box-shadow:' + CARD_SHADOW + ';';
 }
 
 // ── Server Color Lookup ──────────────────────────
@@ -356,11 +340,6 @@ function cobColor(pct) {
   return T.lime;
 }
 
-function cobFrameColor(pct) {
-  if (pct >= COB_CRITICAL) return T.vermillion;
-  if (pct >= COB_WARNING) return T.yellow;
-  return CHROME;
-}
 
 // ═══════════════════════════════════════════════════
 //  LEFT COLUMN
@@ -381,11 +360,8 @@ function buildLeftColumn() {
 function buildSalesOverviewCard() {
   var d = _salesData || {};
   var cob = d.labor_cob || 0;
-  var frameColor = cobFrameColor(cob);
-
   var card = document.createElement('div');
   applyCardStyle(card);
-  if (frameColor !== CHROME) card.style.borderColor = frameColor;
   card.appendChild(buildCardHeader('SALES OVERVIEW'));
 
   var body = document.createElement('div');
@@ -847,7 +823,7 @@ function buildCenterColumn() {
 
   // ── Check grid container ──
   var checkWrap = document.createElement('div');
-  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';border:3px solid ' + CHROME + ';box-shadow:' + CARD_SHADOW + ';';
+  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';border:5px solid ' + CHROME + ';box-shadow:' + CARD_SHADOW + ';';
 
   // Header: "ALL CHECKS" or "{SERVER NAME}"
   _checkHeader = buildCardHeader('ALL CHECKS');
