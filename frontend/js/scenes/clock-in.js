@@ -159,17 +159,24 @@ SceneManager.register({
     el.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:' + T.bg + ';';
 
     // ── Main Panel ──────────────────────────
+    var panelWrap = document.createElement('div');
+    panelWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15))';
+
     var panel = document.createElement('div');
     panel.style.cssText = [
       'width:960px;height:500px;',
       'background:' + T.bg + ';',
-      'border:7px solid ' + T.numpadChassis + ';',
+      'border-top:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-left:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-bottom:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'border-right:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'display:flex;flex-direction:column;',
       'box-sizing:border-box;padding:20px;',
       'position:relative;',
     ].join('');
     panel.style.clipPath = chamfer(10);
-    el.appendChild(panel);
+    panelWrap.appendChild(panel);
+    el.appendChild(panelWrap);
 
     // ── TOP ROW ─────────────────────────────
     var topRow = document.createElement('div');
@@ -193,10 +200,16 @@ SceneManager.register({
     topRow.appendChild(greetWrap);
 
     // Right: Pay Period Card
+    var payWrap = document.createElement('div');
+    payWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.5))';
+
     var payCard = document.createElement('div');
     payCard.style.cssText = [
       'background:' + T.bg + ';',
-      'border:7px solid ' + T.numpadChassis + ';',
+      'border-top:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-left:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-bottom:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'border-right:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'padding:20px 32px;',
       'display:flex;flex-direction:column;gap:12px;',
     ].join('');
@@ -226,7 +239,8 @@ SceneManager.register({
     hoursLine.appendChild(hoursValue);
     payCard.appendChild(hoursLine);
 
-    topRow.appendChild(payCard);
+    payWrap.appendChild(payCard);
+    topRow.appendChild(payWrap);
 
     // ── MIDDLE — Role Buttons ───────────────
     var roleArea = document.createElement('div');
