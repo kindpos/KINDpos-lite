@@ -66,10 +66,8 @@ function _lightenHex(hex, pct) {
 // ── Role Button Builder ─────────────────────────
 
 function _buildRoleButton(roleName, roleColor, onSelect) {
-  var b = T.bevelBtn;
-  var bevelLight = _hexToRgba(roleColor, 0.7);
-  var bevelDark = _darkenHex(roleColor, 0.4);
-  var glowDefault = _hexToRgba(roleColor, 0.8);
+  var borderW = 3;
+  var glowDefault = _hexToRgba(roleColor, 0.5);
   var baseShadow = shadowColor(T.bg);
 
   var wrap = document.createElement('div');
@@ -82,10 +80,7 @@ function _buildRoleButton(roleName, roleColor, onSelect) {
 
   var inner = document.createElement('div');
   inner.style.background = T.bg;
-  inner.style.borderTop = b + 'px solid ' + bevelLight;
-  inner.style.borderLeft = b + 'px solid ' + bevelLight;
-  inner.style.borderBottom = b + 'px solid ' + bevelDark;
-  inner.style.borderRight = b + 'px solid ' + bevelDark;
+  inner.style.border = borderW + 'px solid ' + roleColor;
   inner.style.clipPath = chamfer();
   inner.style.width = '100%';
   inner.style.height = '100%';
@@ -93,13 +88,12 @@ function _buildRoleButton(roleName, roleColor, onSelect) {
   inner.style.alignItems = 'center';
   inner.style.justifyContent = 'center';
   inner.style.boxSizing = 'border-box';
-  inner.style.padding = '8px 12px';
-  inner.style.fontFamily = T.fb;
-  inner.style.fontSize = T.fsBtn;
-  inner.style.fontWeight = 'bold';
+  inner.style.padding = '8px 16px';
+  inner.style.fontFamily = T.fhr;
+  inner.style.fontSize = '40px';
   inner.style.color = T.textPrimary;
   inner.style.textTransform = 'uppercase';
-  inner.style.letterSpacing = '2px';
+  inner.style.letterSpacing = '3px';
   inner.textContent = roleName.toUpperCase();
 
   wrap.appendChild(inner);
@@ -109,25 +103,17 @@ function _buildRoleButton(roleName, roleColor, onSelect) {
   function _applyDefault() {
     inner.style.background = T.bg;
     inner.style.color = T.textPrimary;
-    inner.style.borderTop = b + 'px solid ' + bevelLight;
-    inner.style.borderLeft = b + 'px solid ' + bevelLight;
-    inner.style.borderBottom = b + 'px solid ' + bevelDark;
-    inner.style.borderRight = b + 'px solid ' + bevelDark;
+    inner.style.border = borderW + 'px solid ' + roleColor;
     wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 8px ' + glowDefault + ')';
     wrap.style.transform = 'translate(0,0)';
   }
 
   function _applySelected() {
-    var selBevelLight = _lightenHex(roleColor, 0.3);
-    var selBevelDark = _darkenHex(roleColor, 0.3);
     var glowFull = _hexToRgba(roleColor, 1.0);
     inner.style.background = roleColor;
-    inner.style.color = T.bg;
-    inner.style.borderTop = b + 'px solid ' + selBevelLight;
-    inner.style.borderLeft = b + 'px solid ' + selBevelLight;
-    inner.style.borderBottom = b + 'px solid ' + selBevelDark;
-    inner.style.borderRight = b + 'px solid ' + selBevelDark;
-    wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 8px ' + glowFull + ')';
+    inner.style.color = T.bgDark;
+    inner.style.border = borderW + 'px solid ' + _lightenHex(roleColor, 0.3);
+    wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 12px ' + glowFull + ')';
     wrap.style.transform = 'translate(0,0)';
   }
 
@@ -136,14 +122,7 @@ function _buildRoleButton(roleName, roleColor, onSelect) {
     else _applyDefault();
   };
 
-  // Press animation
   wrap.addEventListener('pointerdown', function() {
-    var curLight = wrap._selected ? _lightenHex(roleColor, 0.3) : bevelLight;
-    var curDark = wrap._selected ? _darkenHex(roleColor, 0.3) : bevelDark;
-    inner.style.borderTop = b + 'px solid ' + curDark;
-    inner.style.borderLeft = b + 'px solid ' + curDark;
-    inner.style.borderBottom = b + 'px solid ' + curLight;
-    inner.style.borderRight = b + 'px solid ' + curLight;
     wrap.style.filter = 'drop-shadow(0px 0px 0px transparent)';
     wrap.style.transform = 'translate(' + T.shadowX + 'px, ' + T.shadowY + 'px)';
   });
@@ -251,12 +230,12 @@ SceneManager.register({
 
     // ── MIDDLE — Role Buttons ───────────────
     var roleArea = document.createElement('div');
-    roleArea.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px;min-height:0;';
+    roleArea.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;min-height:0;';
     panel.appendChild(roleArea);
 
     var roles = emp.roles || ['server'];
     var roleBtns = [];
-    var offsets = [0, 220, 50, 270, 100, 320];
+    var offsets = [0, 260, 80, 340, 140, 400];
 
     roles.forEach(function(role, i) {
       var roleColor = T.roles[role] || T.mint;
@@ -268,28 +247,42 @@ SceneManager.register({
         });
         _updateClockInBtn();
       });
-      btn.style.width = '260px';
-      btn.style.height = '75px';
+      btn.style.width = '380px';
+      btn.style.height = '90px';
       btn.style.marginLeft = (offsets[i % offsets.length]) + 'px';
       btn.style.flexShrink = '0';
       roleBtns.push(btn);
       roleArea.appendChild(btn);
     });
 
-    // ── BOTTOM — CLOCK IN Button ────────────
+    // ── BOTTOM ROW — active checks + CLOCK IN ──
     var bottomRow = document.createElement('div');
-    bottomRow.style.cssText = 'display:flex;justify-content:flex-end;flex-shrink:0;margin-top:8px;';
+    bottomRow.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-end;flex-shrink:0;margin-top:8px;';
     panel.appendChild(bottomRow);
 
-    var clockPair = buildStyledButton(T.green);
+    // Active checks count (bottom-left)
+    var checksLabel = document.createElement('div');
+    checksLabel.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.mutedText + ';';
+    checksLabel.textContent = '0 active checks';
+    bottomRow.appendChild(checksLabel);
+
+    // Fetch active check count
+    fetch(API + '/orders/open')
+      .then(function(r) { return r.json(); })
+      .then(function(orders) {
+        var count = (orders || []).filter(function(o) { return (o.total || 0) > 0 || (o.items || []).length > 0; }).length;
+        checksLabel.textContent = count + ' active check' + (count !== 1 ? 's' : '');
+      })
+      .catch(function() {});
+
+    var clockPair = buildStyledButton(T.numpadChassis);
     var clockBtn = clockPair.wrap;
-    clockBtn.style.width = '180px';
+    clockBtn.style.width = '200px';
     clockBtn.style.height = '56px';
-    clockPair.inner.style.fontFamily = T.fb;
-    clockPair.inner.style.fontSize = T.fsBtn;
-    clockPair.inner.style.fontWeight = 'bold';
-    clockPair.inner.style.color = T.bg;
-    clockPair.inner.style.letterSpacing = '2px';
+    clockPair.inner.style.fontFamily = T.fhr;
+    clockPair.inner.style.fontSize = '28px';
+    clockPair.inner.style.color = T.bgDark;
+    clockPair.inner.style.letterSpacing = '3px';
     clockPair.inner.textContent = 'CLOCK IN';
 
     // Start disabled
