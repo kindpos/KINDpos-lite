@@ -24,6 +24,8 @@ var _drillEl = null;
 var _salesData = null;
 var _breakdownData = null;
 var _heatmapData = null;
+var _staffData = null;
+var _tipPoolData = null;
 
 // Heatmap filter state
 var _filteredServerId = null;
@@ -183,6 +185,28 @@ function loadStubData() {
     { order_id: 'o7', check_number: 'C-007', server_id: 's4', server_name: 'Casey T.', customer_name: 'Table 1', status: 'closed', items: [{name:'Hawaiian',quantity:1}], total: 16.50 },
     { order_id: 'o8', check_number: 'C-008', server_id: 's1', server_name: 'Alex M.', customer_name: 'Table 5', status: 'voided', items: [{name:'Garlic Knots',quantity:1}], total: 8.00 },
   ];
+
+  _staffData = {
+    servers: [
+      { id: 's1', name: 'Alex M.', status: 'active', shift_end: '10:00pm', open_tables: 3 },
+      { id: 's2', name: 'Jordan K.', status: 'pending', shift_end: '9:00pm', open_tables: 0 },
+      { id: 's3', name: 'Sam R.', status: 'active', shift_end: '11:00pm', open_tables: 5 },
+      { id: 's4', name: 'Casey T.', status: 'checked_out', shift_end: '8:00pm', open_tables: 0 },
+      { id: 's5', name: 'Riley W.', status: 'checked_out', shift_end: '6:00pm', open_tables: 0 },
+    ],
+  };
+
+  _tipPoolData = {
+    total_tips: 862.40,
+    distribution_method: 'Hours Worked',
+    servers: [
+      { id: 's1', name: 'Alex M.', share: 215.60 },
+      { id: 's2', name: 'Jordan K.', share: 172.48 },
+      { id: 's3', name: 'Sam R.', share: 258.72 },
+      { id: 's4', name: 'Casey T.', share: 129.36 },
+      { id: 's5', name: 'Riley W.', share: 86.24 },
+    ],
+  };
 }
 
 // ── Formatting ───────────────────────────────────
@@ -466,6 +490,80 @@ function buildBreakdownDrillContent(content) {
   content.appendChild(hourlyPanel);
 }
 
+function buildCheckoutsDrillContent(content) {
+  var sd = _staffData || {};
+  var servers = sd.servers || [];
+
+  for (var i = 0; i < servers.length; i++) {
+    var srv = servers[i];
+    var statusLabel, statusColor;
+    if (srv.status === 'checked_out') {
+      statusLabel = 'CHECKED OUT';
+      statusColor = T.green;
+    } else if (srv.status === 'pending') {
+      statusLabel = 'PENDING';
+      statusColor = T.yellow;
+    } else {
+      statusLabel = 'ACTIVE TABLES (' + srv.open_tables + ')';
+      statusColor = T.vermillion;
+    }
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:4px 8px;border-bottom:1px solid ' + T.border + ';';
+    var nameEl = document.createElement('span');
+    nameEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+    nameEl.textContent = srv.name;
+    var info = document.createElement('div');
+    info.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:2px;';
+    var statusEl = document.createElement('span');
+    statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + statusColor + ';font-weight:bold;';
+    statusEl.textContent = statusLabel;
+    var shiftEl = document.createElement('span');
+    shiftEl.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.mutedText + ';';
+    shiftEl.textContent = 'Shift end: ' + (srv.shift_end || '--');
+    info.appendChild(statusEl);
+    info.appendChild(shiftEl);
+    row.appendChild(nameEl);
+    row.appendChild(info);
+    content.appendChild(row);
+  }
+}
+
+function buildTipPoolDrillContent(content) {
+  var tp = _tipPoolData || {};
+  var servers = tp.servers || [];
+
+  content.appendChild(statRow('Total Tips:', fmt(tp.total_tips), T.gold));
+  content.appendChild(statRow('Method:', tp.distribution_method || '--', T.lime));
+
+  var divider = document.createElement('div');
+  divider.style.cssText = 'height:1px;margin:8px 0;border-top:1px solid ' + T.border + ';';
+  content.appendChild(divider);
+
+  // Detailed server breakdown
+  for (var i = 0; i < servers.length; i++) {
+    var pct = tp.total_tips > 0 ? ((servers[i].share / tp.total_tips) * 100).toFixed(1) : '0.0';
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:3px 8px;';
+    var nameEl = document.createElement('span');
+    nameEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+    nameEl.textContent = servers[i].name;
+    var valWrap = document.createElement('div');
+    valWrap.style.cssText = 'display:flex;gap:12px;';
+    var shareEl = document.createElement('span');
+    shareEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.gold + ';font-weight:bold;';
+    shareEl.textContent = fmt(servers[i].share);
+    var pctEl = document.createElement('span');
+    pctEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';';
+    pctEl.textContent = pct + '%';
+    valWrap.appendChild(shareEl);
+    valWrap.appendChild(pctEl);
+    row.appendChild(nameEl);
+    row.appendChild(valWrap);
+    content.appendChild(row);
+  }
+}
+
 // ── Category Bar Chart (custom per-category colors) ──
 
 function drawCategoryBars(svg, data, w, h) {
@@ -547,8 +645,13 @@ function showDrillDown() {
   }
 
   // Header
-  var headerLabel = _expandedCard === 'sales-overview' ? 'SALES OVERVIEW' : 'SALES BREAKDOWN';
-  _drillEl.appendChild(buildCardHeader(headerLabel));
+  var headerLabels = {
+    'sales-overview': 'SALES OVERVIEW',
+    'sales-breakdown': 'SALES BREAKDOWN',
+    'server-checkouts': 'SERVER CHECKOUTS',
+    'tip-pool': 'TIP POOL',
+  };
+  _drillEl.appendChild(buildCardHeader(headerLabels[_expandedCard] || 'DETAIL'));
 
   // Expanded content
   var content = document.createElement('div');
@@ -561,7 +664,6 @@ function showDrillDown() {
     content.appendChild(statRow('Active Checks:', String(d.active_checks || 0), T.lime));
     content.appendChild(statRow('Total Covers:', String(d.total_covers || 0), T.lime));
     content.appendChild(statRow('Labor COB%:', cob.toFixed(1) + '%', cobColor(cob)));
-    // Expanded detail rows
     content.appendChild(statRow('Gross Sales:', fmt(d.gross_sales || 0), T.gold));
     content.appendChild(statRow('Cash Sales:', fmt(d.cash_total || 0), T.gold));
     content.appendChild(statRow('Card Sales:', fmt(d.card_total || 0), T.gold));
@@ -570,6 +672,10 @@ function showDrillDown() {
     content.appendChild(statRow('Tax:', fmt(d.tax_total || 0), T.gold));
   } else if (_expandedCard === 'sales-breakdown') {
     buildBreakdownDrillContent(content);
+  } else if (_expandedCard === 'server-checkouts') {
+    buildCheckoutsDrillContent(content);
+  } else if (_expandedCard === 'tip-pool') {
+    buildTipPoolDrillContent(content);
   }
   _drillEl.appendChild(content);
 
@@ -1184,6 +1290,133 @@ function hexWithAlpha(hex, alpha) {
 }
 
 // ═══════════════════════════════════════════════════
+//  RIGHT COLUMN
+// ═══════════════════════════════════════════════════
+
+function buildRightColumn() {
+  var col = document.createElement('div');
+  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+
+  col.appendChild(buildServerCheckoutsCard());
+  col.appendChild(buildTipPoolCard());
+
+  return col;
+}
+
+// ── SERVER CHECKOUTS Card ────────────────────────
+
+function buildServerCheckoutsCard() {
+  var sd = _staffData || {};
+  var servers = sd.servers || [];
+
+  // Determine frame escalation
+  var hasPending = false;
+  var hasPastShift = false;
+  for (var i = 0; i < servers.length; i++) {
+    if (servers[i].status === 'pending') hasPending = true;
+    if (servers[i].status === 'active' && servers[i].open_tables === 0) hasPastShift = true;
+  }
+  var frameColor = hasPending ? T.vermillion : (hasPastShift ? T.yellow : T.mint);
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.clipPath = chamfer(6);
+  card.appendChild(buildCardHeader('SERVER CHECKOUTS'));
+
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:6px 0;';
+
+  for (var i = 0; i < servers.length; i++) {
+    var srv = servers[i];
+    var statusLabel, statusColor;
+    if (srv.status === 'checked_out') {
+      statusLabel = 'CHECKED OUT';
+      statusColor = T.green;
+    } else if (srv.status === 'pending') {
+      statusLabel = 'PENDING';
+      statusColor = T.yellow;
+    } else {
+      statusLabel = 'ACTIVE TABLES';
+      statusColor = T.vermillion;
+    }
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;';
+    var nameEl = document.createElement('span');
+    nameEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+    nameEl.textContent = srv.name;
+    var statusEl = document.createElement('span');
+    statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + statusColor + ';font-weight:bold;';
+    statusEl.textContent = statusLabel;
+    row.appendChild(nameEl);
+    row.appendChild(statusEl);
+    body.appendChild(row);
+  }
+  card.appendChild(body);
+
+  // >>> drill-down
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;justify-content:flex-end;padding:4px 8px 2px;';
+  btnRow.appendChild(buildButton('>>>', {
+    fill: T.darkBtn, color: T.mint, fontSize: '14px', fontFamily: T.fb,
+    width: 48, height: 24,
+    onTap: function() {
+      _expandOrigin = card.getBoundingClientRect();
+      _expandedCard = 'server-checkouts';
+      showDrillDown();
+    },
+  }));
+  card.appendChild(btnRow);
+
+  return card;
+}
+
+// ── TIP POOL Card ────────────────────────────────
+
+function buildTipPoolCard() {
+  var tp = _tipPoolData || {};
+  var servers = tp.servers || [];
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.clipPath = chamfer(6);
+  card.appendChild(buildCardHeader('TIP POOL'));
+
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:6px 0;';
+
+  body.appendChild(statRow('Total Tips:', fmt(tp.total_tips), T.gold));
+  body.appendChild(statRow('Method:', tp.distribution_method || '--', T.lime));
+
+  // Divider
+  var divider = document.createElement('div');
+  divider.style.cssText = 'height:1px;margin:4px 8px;border-top:1px solid ' + T.border + ';';
+  body.appendChild(divider);
+
+  // Server shares
+  for (var i = 0; i < servers.length; i++) {
+    body.appendChild(statRow(servers[i].name + ':', fmt(servers[i].share), T.gold));
+  }
+  card.appendChild(body);
+
+  // >>> drill-down
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;justify-content:flex-end;padding:4px 8px 2px;';
+  btnRow.appendChild(buildButton('>>>', {
+    fill: T.darkBtn, color: T.mint, fontSize: '14px', fontFamily: T.fb,
+    width: 48, height: 24,
+    onTap: function() {
+      _expandOrigin = card.getBoundingClientRect();
+      _expandedCard = 'tip-pool';
+      showDrillDown();
+    },
+  }));
+  card.appendChild(btnRow);
+
+  return card;
+}
+
+// ═══════════════════════════════════════════════════
 //  MAIN RENDER
 // ═══════════════════════════════════════════════════
 
@@ -1203,8 +1436,7 @@ function renderScene() {
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
 
-  _rightCol = document.createElement('div');
-  _rightCol.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+  _rightCol = buildRightColumn();
 
   grid.appendChild(_leftCol);
   grid.appendChild(_centerCol);
@@ -1251,6 +1483,8 @@ SceneManager.register({
     _salesData = null;
     _breakdownData = null;
     _heatmapData = null;
+    _staffData = null;
+    _tipPoolData = null;
     _filteredServerId = null;
     _serverColorMap = {};
     _activeTab = 'open';
