@@ -233,7 +233,7 @@ function buildLeftColumn(emp) {
 }
 
 // ═══════════════════════════════════════════════════
-//  CENTER COLUMN — placeholder for Chunk 2
+//  CENTER COLUMN — Tabs + Check Grid + Ops Panel
 // ═══════════════════════════════════════════════════
 
 function buildCenterColumn(emp) {
@@ -241,11 +241,330 @@ function buildCenterColumn(emp) {
   col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;border:1px solid ' + T.mint + ';background:' + T.bgDark + ';';
   col.style.clipPath = chamfer(6);
 
-  var placeholder = document.createElement('div');
-  placeholder.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';';
-  placeholder.textContent = 'Loading checks...';
-  col.appendChild(placeholder);
+  // ── Tab Bar ──
+  var tabKeys = ['open', 'closed', 'void'];
+  var tabLabels = ['OPEN', 'CLOSED', 'VOID'];
+  var tabEls = [];
+
+  var tabBar = document.createElement('div');
+  tabBar.style.cssText = 'display:flex;flex-shrink:0;border-bottom:1px solid ' + T.border + ';';
+
+  for (var t = 0; t < tabKeys.length; t++) {
+    (function(key, label) {
+      var tab = document.createElement('div');
+      tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:16px;letter-spacing:2px;user-select:none;';
+      applyTabStyle(tab, key === _activeTab);
+      tab.textContent = label;
+      tab.addEventListener('pointerup', function() {
+        if (key === _activeTab) return;
+        _activeTab = key;
+        _selected = {};
+        for (var i = 0; i < tabEls.length; i++) applyTabStyle(tabEls[i], tabKeys[i] === _activeTab);
+        renderGrid(emp);
+        renderOpsPanel(emp);
+      });
+      tabEls.push(tab);
+      tabBar.appendChild(tab);
+    })(tabKeys[t], tabLabels[t]);
+  }
+  col.appendChild(tabBar);
+
+  // ── Check Grid ──
+  _centerGrid = document.createElement('div');
+  _centerGrid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;';
+  col.appendChild(_centerGrid);
+
+  // ── CHECK OPERATION Panel ──
+  _opsPanel = document.createElement('div');
+  _opsPanel.style.cssText = 'flex-shrink:0;border-top:1px solid ' + T.border + ';background:' + T.bg + ';';
+  col.appendChild(_opsPanel);
+
+  renderGrid(emp);
+  renderOpsPanel(emp);
   return col;
+}
+
+function applyTabStyle(el, active) {
+  if (active) {
+    el.style.background = T.mint;
+    el.style.color = T.bgDark;
+  } else {
+    el.style.background = T.bgDark;
+    el.style.color = T.mutedText;
+  }
+}
+
+// ── Grid Rendering ────────────────────────────────
+
+function renderGrid(emp) {
+  _centerGrid.innerHTML = '';
+  var orders = ordersByTab(_activeTab);
+
+  if (orders.length === 0 && _activeTab !== 'open') {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'grid-column:1/-1;text-align:center;padding:40px 0;font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';';
+    empty.textContent = _activeTab === 'closed' ? 'No closed checks' : 'No voided checks';
+    _centerGrid.appendChild(empty);
+    return;
+  }
+
+  for (var i = 0; i < orders.length; i++) {
+    _centerGrid.appendChild(buildCheckTile(orders[i], emp));
+  }
+
+  // + NEW CHECK tile (OPEN tab only)
+  if (_activeTab === 'open') {
+    var newTile = document.createElement('div');
+    newTile.style.cssText = 'border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;min-height:90px;cursor:pointer;user-select:none;';
+    newTile.style.clipPath = chamfer(6);
+    var plus = document.createElement('div');
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
+    plus.textContent = '+';
+    newTile.appendChild(plus);
+    newTile.addEventListener('pointerup', function() {
+      SceneManager.mountWorking('order-entry', {
+        mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+      });
+    });
+    _centerGrid.appendChild(newTile);
+  }
+}
+
+// ── Check Tile ────────────────────────────────────
+
+function buildCheckTile(order, emp) {
+  var isOpen = _activeTab === 'open';
+  var isClosed = _activeTab === 'closed';
+  var isVoid = _activeTab === 'void';
+
+  var tile = document.createElement('div');
+  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
+  tile.style.clipPath = chamfer(6);
+  if (isClosed) tile.style.opacity = '0.7';
+  if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
+
+  // C-00# line
+  var numColor = isOpen ? T.mint : (isClosed ? T.electricPink : T.vermillion);
+  var num = document.createElement('div');
+  num.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + numColor + ';';
+  num.textContent = checkNum(order);
+  num.dataset.role = 'num';
+  tile.appendChild(num);
+
+  // Customer name (hide if absent)
+  if (order.customer_name) {
+    var name = document.createElement('div');
+    name.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';';
+    name.textContent = order.customer_name;
+    name.dataset.role = 'name';
+    tile.appendChild(name);
+  }
+
+  // Item count
+  var count = document.createElement('div');
+  count.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+  count.textContent = 'x' + itemCount(order);
+  count.dataset.role = 'count';
+  tile.appendChild(count);
+
+  // Total
+  var total = document.createElement('div');
+  total.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.gold + ';font-weight:bold;';
+  total.textContent = fmt(order.total || order.subtotal || 0);
+  total.dataset.role = 'total';
+  tile.appendChild(total);
+
+  // ── Interaction by tab ──
+  if (isOpen) {
+    if (_selected[order.order_id]) applyTileSelected(tile, true);
+    tile.addEventListener('pointerup', function() {
+      var id = order.order_id;
+      if (_selected[id]) {
+        delete _selected[id];
+        applyTileSelected(tile, false);
+      } else {
+        _selected[id] = order;
+        applyTileSelected(tile, true);
+      }
+      renderOpsPanel(emp);
+    });
+  } else if (isClosed) {
+    tile.addEventListener('pointerup', function() {
+      SceneManager.interrupt('sl-reopen-confirm', {
+        onConfirm: function() {
+          fetch('/api/v1/orders/' + order.order_id + '/reopen', { method: 'POST' })
+            .then(function(r) {
+              if (r.ok) { showToast('Check reopened', { bg: T.goGreen }); refreshData(emp); }
+              else { showToast('Reopen failed', { bg: T.red }); }
+            }).catch(function() { showToast('Reopen failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+        params: { checkLabel: checkNum(order) },
+      });
+    });
+  }
+  // Void tab: read-only — no listener
+  return tile;
+}
+
+function applyTileSelected(tile, selected) {
+  if (selected) {
+    tile.style.background = T.mint;
+    for (var i = 0; i < tile.children.length; i++) tile.children[i].style.color = T.bgDark;
+  } else {
+    tile.style.background = T.bgDark;
+    for (var i = 0; i < tile.children.length; i++) {
+      var child = tile.children[i];
+      var role = child.dataset.role;
+      if (role === 'num') child.style.color = T.mint;
+      else if (role === 'name') child.style.color = T.mutedText;
+      else if (role === 'count') child.style.color = T.textPrimary;
+      else if (role === 'total') child.style.color = T.gold;
+    }
+  }
+}
+
+// ── Operations Panel ──────────────────────────────
+
+function renderOpsPanel(emp) {
+  _opsPanel.innerHTML = '';
+  var header = document.createElement('div');
+  header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mint + ';letter-spacing:2px;padding:6px 10px;';
+  header.textContent = '// CHECK OPERATION //';
+  _opsPanel.appendChild(header);
+
+  if (_activeTab !== 'open') return;
+  var ids = Object.keys(_selected);
+  if (ids.length === 0) return;
+
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px 8px;';
+  var isSingle = ids.length === 1;
+
+  if (isSingle) {
+    var order = _selected[ids[0]];
+    grid.appendChild(buildButton('EDIT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.mountWorking('order-entry', {
+          mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+          recallOrderId: order.order_id,
+        });
+      },
+    }));
+    grid.appendChild(buildButton('PRINT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        fetch('/api/v1/print/receipt/' + order.order_id, { method: 'POST' })
+          .then(function() { showToast('Print sent', { bg: T.goGreen }); })
+          .catch(function() { showToast('Print failed', { bg: T.red }); });
+      },
+    }));
+    grid.appendChild(buildButton('TRANSFER', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.interrupt('sl-transfer-choice', {
+          onConfirm: function(choice) {
+            if (choice === 'internal') {
+              SceneManager.openTransactional('sl-internal-transfer', { checks: [order], emp: emp });
+            } else {
+              showToast('External transfer — not yet wired', { bg: T.gold });
+            }
+          },
+          onCancel: function() {},
+        });
+      },
+    }));
+    var voidBtn = buildButton('VOID', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.interrupt('sl-void-gate', {
+          onConfirm: function() {
+            SceneManager.interrupt('void-pin', {
+              onConfirm: function(mgr) {
+                fetch('/api/v1/orders/' + order.order_id + '/void', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ reason: 'Voided from server landing', approved_by: mgr.id || 'manager' }),
+                }).then(function(r) {
+                  if (r.ok) { showToast('Check voided', { bg: T.goGreen }); _selected = {}; refreshData(emp); }
+                  else { showToast('Void failed', { bg: T.red }); }
+                }).catch(function() { showToast('Void failed', { bg: T.red }); });
+              },
+              onCancel: function() {},
+            });
+          },
+          onCancel: function() {},
+          params: { message: 'Void ' + checkNum(order) + '? This is destructive.' },
+        });
+      },
+    });
+    voidBtn.style.border = '2px solid ' + T.vermillion;
+    grid.appendChild(voidBtn);
+  } else {
+    // Multi-select buttons
+    grid.appendChild(buildButton('MERGE', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.interrupt('sl-merge-choice', {
+          onConfirm: function(mode) {
+            showToast('Merge (' + mode + ') — not yet wired', { bg: T.gold });
+          },
+          onCancel: function() {},
+          params: { count: ids.length },
+        });
+      },
+    }));
+    grid.appendChild(buildButton('PRINT ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        ids.forEach(function(id) { fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function() {}); });
+        showToast('Print sent for ' + ids.length + ' checks', { bg: T.goGreen });
+      },
+    }));
+    grid.appendChild(buildButton('TRANSFER ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        var selectedOrders = ids.map(function(id) { return _selected[id]; });
+        SceneManager.interrupt('sl-transfer-choice', {
+          onConfirm: function(choice) {
+            if (choice === 'internal') {
+              SceneManager.openTransactional('sl-internal-transfer', { checks: selectedOrders, emp: emp });
+            } else {
+              showToast('External transfer — not yet wired', { bg: T.gold });
+            }
+          },
+          onCancel: function() {},
+        });
+      },
+    }));
+    var voidAllBtn = buildButton('VOID ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.interrupt('sl-void-gate', {
+          onConfirm: function() {
+            SceneManager.interrupt('void-pin', {
+              onConfirm: function(mgr) {
+                Promise.all(ids.map(function(id) {
+                  return fetch('/api/v1/orders/' + id + '/void', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: 'Batch voided', approved_by: mgr.id || 'manager' }),
+                  });
+                })).then(function() {
+                  showToast(ids.length + ' checks voided', { bg: T.goGreen }); _selected = {}; refreshData(emp);
+                }).catch(function() { showToast('Void failed', { bg: T.red }); });
+              },
+              onCancel: function() {},
+            });
+          },
+          onCancel: function() {},
+          params: { message: 'Void ' + ids.length + ' checks? This is destructive.' },
+        });
+      },
+    });
+    voidAllBtn.style.border = '2px solid ' + T.vermillion;
+    grid.appendChild(voidAllBtn);
+  }
+  _opsPanel.appendChild(grid);
 }
 
 // ═══════════════════════════════════════════════════
