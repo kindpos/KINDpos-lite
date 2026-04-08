@@ -836,8 +836,18 @@ function buildCheckTile(order) {
     });
   } else if (isClosed) {
     tile.addEventListener('pointerup', function() {
-      // Reopen interrupt — wired in Chunk 6
-      showToast('Reopen check — wired in Chunk 6', { bg: T.gold });
+      SceneManager.interrupt('sl-reopen-confirm', {
+        onConfirm: function() {
+          writeAuditEvent('reopen', order.order_id, order.server_id);
+          fetch('/api/v1/orders/' + order.order_id + '/reopen', { method: 'POST' })
+            .then(function(r) {
+              if (r.ok) { showToast('Check reopened', { bg: T.goGreen }); renderGrid(); }
+              else { showToast('Reopen failed', { bg: T.red }); }
+            }).catch(function() { showToast('Reopen failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+        params: { checkLabel: checkNum(order) },
+      });
     });
   }
   // Void tab: read-only — no listener
@@ -865,7 +875,23 @@ function applyMgrTileSelected(tile, sColor, selected) {
   }
 }
 
-// ── Operations Panel (stub — Chunk 6) ────────────
+// ── Manager Audit Event ──────────────────────────
+
+function writeAuditEvent(action, checkId, originalServerId) {
+  var emp = _params ? (_params.emp || _params) : {};
+  var evt = {
+    manager_id: emp.id || 'unknown',
+    action: action,
+    timestamp: new Date().toISOString(),
+    original_server_id: originalServerId || null,
+    check_id: checkId || null,
+  };
+  console.log('[MANAGER AUDIT]', evt);
+  // TODO (Chunk 9): POST to /api/v1/audit/manager
+  return evt;
+}
+
+// ── Operations Panel ─────────────────────────────
 
 function renderOpsPanel() {
   if (!_opsPanel) return;
@@ -874,6 +900,169 @@ function renderOpsPanel() {
   header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mint + ';letter-spacing:2px;padding:6px 10px;';
   header.textContent = '// CHECK OPERATION //';
   _opsPanel.appendChild(header);
+
+  if (_activeTab !== 'open') return;
+  var ids = Object.keys(_selected);
+  if (ids.length === 0) return;
+
+  var emp = _params ? (_params.emp || _params) : {};
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px 8px;';
+  var isSingle = ids.length === 1;
+
+  if (isSingle) {
+    var order = _selected[ids[0]];
+
+    // EDIT
+    grid.appendChild(buildButton('EDIT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        writeAuditEvent('edit', order.order_id, order.server_id);
+        SceneManager.mountWorking('order-entry', {
+          mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+          recallOrderId: order.order_id,
+        });
+      },
+    }));
+
+    // PRINT
+    grid.appendChild(buildButton('PRINT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        writeAuditEvent('print', order.order_id, order.server_id);
+        fetch('/api/v1/print/receipt/' + order.order_id, { method: 'POST' })
+          .then(function() { showToast('Print sent', { bg: T.goGreen }); })
+          .catch(function() { showToast('Print failed', { bg: T.red }); });
+      },
+    }));
+
+    // TRANSFER
+    grid.appendChild(buildButton('TRANSFER', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        writeAuditEvent('transfer', order.order_id, order.server_id);
+        SceneManager.interrupt('sl-transfer-choice', {
+          onConfirm: function(choice) {
+            if (choice === 'internal') {
+              SceneManager.openTransactional('sl-internal-transfer', { checks: [order], emp: emp });
+            } else {
+              showToast('External transfer — not yet wired', { bg: T.gold });
+            }
+          },
+          onCancel: function() {},
+        });
+      },
+    }));
+
+    // VOID — red outline gate
+    var voidBtn = buildButton('VOID', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.interrupt('sl-void-gate', {
+          onConfirm: function() {
+            writeAuditEvent('void', order.order_id, order.server_id);
+            fetch('/api/v1/orders/' + order.order_id + '/void', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: 'Voided by manager', approved_by: emp.id || 'manager' }),
+            }).then(function(r) {
+              if (r.ok) { showToast('Check voided', { bg: T.goGreen }); _selected = {}; renderGrid(); renderOpsPanel(); }
+              else { showToast('Void failed', { bg: T.red }); }
+            }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          },
+          onCancel: function() {},
+          params: { message: 'Void ' + checkNum(order) + '? This is destructive.' },
+        });
+      },
+    });
+    voidBtn.style.border = '2px solid ' + T.vermillion;
+    grid.appendChild(voidBtn);
+
+  } else {
+    // ── Multi-check selected ──
+
+    // MERGE
+    grid.appendChild(buildButton('MERGE', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        ids.forEach(function(id) { writeAuditEvent('merge', id, (_selected[id] || {}).server_id); });
+        SceneManager.interrupt('sl-merge-choice', {
+          onConfirm: function(mode) {
+            showToast('Merge (' + mode + ') — not yet wired', { bg: T.gold });
+          },
+          onCancel: function() {},
+          params: { count: ids.length },
+        });
+      },
+    }));
+
+    // PRINT ALL
+    grid.appendChild(buildButton('PRINT ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        ids.forEach(function(id) {
+          writeAuditEvent('print', id, (_selected[id] || {}).server_id);
+          fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function() {});
+        });
+        showToast('Print sent for ' + ids.length + ' checks', { bg: T.goGreen });
+      },
+    }));
+
+    // TRANSFER ALL
+    grid.appendChild(buildButton('TRANSFER ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        ids.forEach(function(id) { writeAuditEvent('transfer', id, (_selected[id] || {}).server_id); });
+        var selectedOrders = ids.map(function(id) { return _selected[id]; });
+        SceneManager.interrupt('sl-transfer-choice', {
+          onConfirm: function(choice) {
+            if (choice === 'internal') {
+              SceneManager.openTransactional('sl-internal-transfer', { checks: selectedOrders, emp: emp });
+            } else {
+              showToast('External transfer — not yet wired', { bg: T.gold });
+            }
+          },
+          onCancel: function() {},
+        });
+      },
+    }));
+
+    // VOID ALL — double-gated (void gate → confirmation)
+    var voidAllBtn = buildButton('VOID ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        // Gate 1: void gate confirmation
+        SceneManager.interrupt('sl-void-gate', {
+          onConfirm: function() {
+            // Gate 2: second confirmation for batch void
+            SceneManager.interrupt('sl-void-gate', {
+              onConfirm: function() {
+                ids.forEach(function(id) { writeAuditEvent('void', id, (_selected[id] || {}).server_id); });
+                Promise.all(ids.map(function(id) {
+                  return fetch('/api/v1/orders/' + id + '/void', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: emp.id || 'manager' }),
+                  });
+                })).then(function() {
+                  showToast(ids.length + ' checks voided', { bg: T.goGreen });
+                  _selected = {};
+                  renderGrid();
+                  renderOpsPanel();
+                }).catch(function() { showToast('Void failed', { bg: T.red }); });
+              },
+              onCancel: function() {},
+              params: { message: 'CONFIRM: Void ' + ids.length + ' checks? This cannot be undone.' },
+            });
+          },
+          onCancel: function() {},
+          params: { message: 'Void ' + ids.length + ' checks? This is destructive.' },
+        });
+      },
+    });
+    voidAllBtn.style.border = '2px solid ' + T.vermillion;
+    grid.appendChild(voidAllBtn);
+  }
+
+  _opsPanel.appendChild(grid);
 }
 
 // ── Server Workload Heatmap ──────────────────────
