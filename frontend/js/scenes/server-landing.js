@@ -241,13 +241,22 @@ function buildCenterColumn(emp) {
   col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;border:1px solid ' + T.mint + ';background:' + T.bgDark + ';';
   col.style.clipPath = chamfer(6);
 
-  // ── Tab Bar ──
+  // ── Check Grid (with chamfered mint border frame) ──
+  var gridFrame = document.createElement('div');
+  gridFrame.style.cssText = 'flex:1;overflow:hidden;margin:8px;border:2px solid ' + T.mint + ';';
+  gridFrame.style.clipPath = chamfer(6);
+  _centerGrid = document.createElement('div');
+  _centerGrid.style.cssText = 'width:100%;height:100%;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
+  gridFrame.appendChild(_centerGrid);
+  col.appendChild(gridFrame);
+
+  // ── Tab Bar (below grid) ──
   var tabKeys = ['open', 'closed', 'void'];
   var tabLabels = ['OPEN', 'CLOSED', 'VOID'];
   var tabEls = [];
 
   var tabBar = document.createElement('div');
-  tabBar.style.cssText = 'display:flex;flex-shrink:0;border-bottom:1px solid ' + T.border + ';';
+  tabBar.style.cssText = 'display:flex;flex-shrink:0;border-top:1px solid ' + T.border + ';';
 
   for (var t = 0; t < tabKeys.length; t++) {
     (function(key, label) {
@@ -268,11 +277,6 @@ function buildCenterColumn(emp) {
     })(tabKeys[t], tabLabels[t]);
   }
   col.appendChild(tabBar);
-
-  // ── Check Grid ──
-  _centerGrid = document.createElement('div');
-  _centerGrid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;';
-  col.appendChild(_centerGrid);
 
   // ── CHECK OPERATION Panel ──
   _opsPanel = document.createElement('div');
@@ -315,7 +319,7 @@ function renderGrid(emp) {
   // + NEW CHECK tile (OPEN tab only)
   if (_activeTab === 'open') {
     var newTile = document.createElement('div');
-    newTile.style.cssText = 'border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;min-height:90px;cursor:pointer;user-select:none;';
+    newTile.style.cssText = 'border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
     newTile.style.clipPath = chamfer(6);
     var plus = document.createElement('div');
     plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
@@ -635,6 +639,7 @@ function buildRightColumn(emp) {
     },
   });
   coBtn.style.border = '2px solid ' + T.vermillion;
+  coBtn.style.width = '100%';
   coRow.appendChild(coBtn);
   body.appendChild(coRow);
 
