@@ -313,7 +313,7 @@ function buildCardHeader(label) {
   var bar = document.createElement('div');
   bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
   var txt = document.createElement('div');
-  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:2px;white-space:nowrap;';
+  txt.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.bgDark + ';letter-spacing:2px;white-space:nowrap;';
   txt.textContent = label;
   bar.appendChild(txt);
   return bar;
@@ -323,14 +323,22 @@ function statRow(label, value, color) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;min-width:0;';
   var l = document.createElement('span');
-  l.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
+  l.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
   l.textContent = label;
   var v = document.createElement('span');
-  v.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
+  v.style.cssText = 'font-family:' + T.fb + ';font-size:28px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
   return row;
+}
+
+// ── Embossed Card Style ──────────────────────────
+
+var CARD_SHADOW = 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 2px 0 0 rgba(255,255,255,0.04),inset -2px 0 0 rgba(0,0,0,0.25),inset 0 4px 8px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50)';
+
+function applyCardStyle(el) {
+  el.style.cssText = 'background:' + T.bgDark + ';border:3px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;box-shadow:' + CARD_SHADOW + ';';
 }
 
 // ── Server Color Lookup ──────────────────────────
@@ -375,7 +383,8 @@ function buildSalesOverviewCard() {
   var frameColor = cobFrameColor(cob);
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  applyCardStyle(card);
+  if (frameColor !== CHROME) card.style.borderColor = frameColor;
   card.appendChild(buildCardHeader('SALES OVERVIEW'));
 
   var body = document.createElement('div');
@@ -411,7 +420,7 @@ function buildSalesBreakdownCard() {
   var cats = bd.categories || [];
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  applyCardStyle(card);
   card.appendChild(buildCardHeader('SALES BREAKDOWN'));
 
   var body = document.createElement('div');
@@ -837,7 +846,7 @@ function buildCenterColumn() {
 
   // ── Check grid container ──
   var checkWrap = document.createElement('div');
-  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;border:7px solid ' + CHROME + ';background:' + T.bgDark + ';';
+  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';border:3px solid ' + CHROME + ';box-shadow:' + CARD_SHADOW + ';';
 
   // Header: "ALL CHECKS" or "{SERVER NAME}"
   _checkHeader = buildCardHeader('ALL CHECKS');
@@ -1256,7 +1265,8 @@ function buildHeatmapPanel() {
   if (active.length === 0) return document.createElement('div');
 
   var panel = document.createElement('div');
-  panel.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex-shrink:0;';
+  applyCardStyle(panel);
+  panel.style.flexShrink = '0';
   panel.appendChild(buildCardHeader('SERVER WORKLOAD'));
 
   // Grid: server names (left) | hour columns | live count (right)
@@ -1367,7 +1377,6 @@ function buildRightColumn() {
 
   col.appendChild(buildServerCheckoutsCard());
   col.appendChild(buildTipPoolCard());
-  col.appendChild(buildTipAdjustmentCard());
   col.appendChild(buildCloseDayCard());
 
   return col;
@@ -1378,18 +1387,11 @@ function buildRightColumn() {
 function buildServerCheckoutsCard() {
   var sd = _staffData || {};
   var servers = sd.servers || [];
-
-  // Determine frame escalation
-  var hasPending = false;
-  var hasPastShift = false;
-  for (var i = 0; i < servers.length; i++) {
-    if (servers[i].status === 'pending') hasPending = true;
-    if (servers[i].status === 'active' && servers[i].open_tables === 0) hasPastShift = true;
-  }
-  var frameColor = hasPending ? T.vermillion : (hasPastShift ? T.yellow : CHROME);
+  var ta = _tipAdjData || {};
+  var unadjCount = ta.unadjusted_count || 0;
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  applyCardStyle(card);
   card.appendChild(buildCardHeader('SERVER CHECKOUTS'));
 
   var body = document.createElement('div');
@@ -1412,20 +1414,38 @@ function buildServerCheckoutsCard() {
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;';
     var nameEl = document.createElement('span');
-    nameEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+    nameEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
     nameEl.textContent = srv.name;
     var statusEl = document.createElement('span');
-    statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + statusColor + ';font-weight:bold;';
+    statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + statusColor + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
     statusEl.textContent = statusLabel;
     row.appendChild(nameEl);
     row.appendChild(statusEl);
     body.appendChild(row);
   }
+
+  // Divider + tip adjustment row
+  var divider = document.createElement('div');
+  divider.style.cssText = 'height:1px;margin:4px 8px;border-top:1px solid ' + T.border + ';';
+  body.appendChild(divider);
+
+  var tipColor = unadjCount === 0 ? T.green : (unadjCount >= TIP_ADJ_THRESHOLD ? T.vermillion : T.yellow);
+  body.appendChild(statRow('Unadjusted Tips:', String(unadjCount), tipColor));
+
   card.appendChild(body);
 
-  // >>> drill-down
+  // Bottom row: TIP ADJUSTMENT button + >>> drill-down
   var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;justify-content:flex-end;padding:4px 8px 2px;';
+  btnRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px 6px;gap:6px;';
+  btnRow.appendChild(buildButton('TIP ADJUSTMENT', {
+    fill: T.darkBtn, color: T.mint, fontSize: '14px', fontFamily: T.fh, height: 28,
+    onTap: function() {
+      var emp = _params.emp || _params;
+      SceneManager.openTransactional('tip-adjustment', {
+        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+      });
+    },
+  }));
   btnRow.appendChild(buildButton('>>>', {
     fill: T.darkBtn, color: T.mint, fontSize: '14px', fontFamily: T.fb,
     width: 48, height: 24,
@@ -1447,7 +1467,7 @@ function buildTipPoolCard() {
   var servers = tp.servers || [];
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  applyCardStyle(card);
   card.appendChild(buildCardHeader('TIP POOL'));
 
   var body = document.createElement('div');
@@ -1484,58 +1504,13 @@ function buildTipPoolCard() {
   return card;
 }
 
-// ── TIP ADJUSTMENT Card ──────────────────────────
-
-function buildTipAdjustmentCard() {
-  var ta = _tipAdjData || {};
-  var count = ta.unadjusted_count || 0;
-
-  // Frame/color escalation
-  var countColor, frameColor;
-  if (count === 0) {
-    countColor = T.green;
-    frameColor = CHROME;
-  } else if (count >= TIP_ADJ_THRESHOLD) {
-    countColor = T.vermillion;
-    frameColor = T.vermillion;
-  } else {
-    countColor = T.yellow;
-    frameColor = T.yellow;
-  }
-
-  var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + frameColor + ';display:flex;flex-direction:column;flex:0 0 auto;';
-  card.appendChild(buildCardHeader('TIP ADJUSTMENT'));
-
-  var body = document.createElement('div');
-  body.style.cssText = 'padding:6px 0;';
-  body.appendChild(statRow('Unadjusted:', String(count), countColor));
-  card.appendChild(body);
-
-  // TIP ADJUSTMENT button
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'padding:4px 8px 6px;';
-  btnRow.appendChild(buildButton('TIP ADJUSTMENT', {
-    fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 32,
-    onTap: function() {
-      var emp = _params.emp || _params;
-      SceneManager.openTransactional('tip-adjustment', {
-        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
-      });
-    },
-  }));
-  card.appendChild(btnRow);
-
-  return card;
-}
-
 // ── CLOSE DAY + BATCH SETTLEMENT Card ────────────
 
 function buildCloseDayCard() {
   var cd = _closeDayData || {};
 
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bgDark + ';border:7px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  applyCardStyle(card);
   card.appendChild(buildCardHeader('CLOSE DAY'));
 
   var body = document.createElement('div');
@@ -1628,10 +1603,10 @@ function gateRow(met, label) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:2px 8px;';
   var icon = document.createElement('span');
-  icon.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (met ? T.green : T.vermillion) + ';';
+  icon.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + (met ? T.green : T.vermillion) + ';';
   icon.textContent = met ? '\u2713' : '\u2717';
   var text = document.createElement('span');
-  text.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + (met ? T.green : T.vermillion) + ';';
+  text.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + (met ? T.green : T.vermillion) + ';';
   text.textContent = label;
   row.appendChild(icon);
   row.appendChild(text);
@@ -1646,7 +1621,7 @@ function renderScene() {
   if (!_el || !_params) return;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 46% 32%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:22% 46% 32%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
