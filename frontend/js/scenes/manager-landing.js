@@ -1368,11 +1368,6 @@ function buildRightColumn() {
   col.appendChild(buildServerCheckoutsCard());
   col.appendChild(buildTipPoolCard());
   col.appendChild(buildTipAdjustmentCard());
-
-  // CLOSE DAY pinned to bottom
-  var spacer = document.createElement('div');
-  spacer.style.cssText = 'flex:1;';
-  col.appendChild(spacer);
   col.appendChild(buildCloseDayCard());
 
   return col;
@@ -1651,7 +1646,7 @@ function renderScene() {
   if (!_el || !_params) return;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 38% 40%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bgDark + ';display:grid;grid-template-columns:22% 46% 32%;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   _leftCol = buildLeftColumn();
   _centerCol = buildCenterColumn();
