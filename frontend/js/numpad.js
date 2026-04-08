@@ -71,7 +71,13 @@ export function buildNumpad(opts) {
   display.style.fontSize = '60px';
   display.style.color = displayColor;
   display.style.letterSpacing = '5px';
-  applySunkenStyle(display);
+  // Border color matches chassis — inset bevel with chassis color
+  var db = T.bevel;
+  display.style.borderTop    = db + 'px solid ' + chassisColor;
+  display.style.borderLeft   = db + 'px solid ' + chassisColor;
+  display.style.borderBottom = db + 'px solid ' + chassisColor;
+  display.style.borderRight  = db + 'px solid ' + chassisColor;
+  display.style.clipPath = chamfer();
 
   displayShadow.appendChild(display);
   container.appendChild(displayShadow);
