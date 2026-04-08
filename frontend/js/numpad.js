@@ -35,6 +35,10 @@ export function buildNumpad(opts) {
   var width    = o.width    || PAD.width;
   var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2 + T.bevel * 2;
 
+  var digitColor  = o.digitColor  || T.mint;
+  var clearColor  = o.clearColor  || T.mint;
+  var submitColor = o.submitColor || T.mint;
+
   var pin = '';
   var _submitCooldown = false;
 
@@ -107,11 +111,11 @@ export function buildNumpad(opts) {
   layout.forEach(function(key) {
     var fill, textColor, fontSize, fontFamily;
     if (key.type === 'clear') {
-      fill = T.darkBtn; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
+      fill = T.darkBtn; textColor = clearColor; fontSize = T.fsClr; fontFamily = T.fb;
     } else if (key.type === 'submit') {
-      fill = T.darkBtn; textColor = T.mint; fontSize = T.fsClr; fontFamily = T.fb;
+      fill = T.darkBtn; textColor = submitColor; fontSize = T.fsClr; fontFamily = T.fb;
     } else {
-      fill = T.darkBtn; textColor = T.mint; fontSize = '72px'; fontFamily = T.fh;
+      fill = T.darkBtn; textColor = digitColor; fontSize = '72px'; fontFamily = T.fh;
     }
 
     var pair = buildStyledButton(fill);

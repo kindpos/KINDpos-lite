@@ -113,6 +113,6 @@ function updateClock() {
   const ampm = h >= 12 ? 'pm' : 'am';
   h = h % 12 || 12;
   const min = String(now.getMinutes()).padStart(2, '0');
-  const time = `${mm}/${dd}/${yy} <> ${h}:${min}${ampm}`;
+  const time = `${mm}/${dd}/${yy} || ${h}:${min}${ampm}`;
   el.textContent = _sceneName ? `${time} // ${_sceneName}` : time;
 }
