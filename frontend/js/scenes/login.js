@@ -43,6 +43,7 @@ registerScene('login', {
       displayBg: T.pinFieldBg,
       chassisColor: T.numpadChassis,
       maskChar: '\u25C6',
+      digitFont: T.fhr,
       onSubmit: function(pin) { handlePinSubmit(pin); },
     });
     el.appendChild(_numpadRef);

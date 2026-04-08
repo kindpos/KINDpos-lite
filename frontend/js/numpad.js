@@ -42,6 +42,7 @@ export function buildNumpad(opts) {
   var displayBg    = o.displayBg   || T.bg;
   var chassisColor = o.chassisColor || T.mint;
   var maskChar     = o.maskChar    || '\u25CF';
+  var digitFont    = o.digitFont   || T.fh;
 
   var pin = '';
   var _submitCooldown = false;
@@ -125,7 +126,7 @@ export function buildNumpad(opts) {
     } else if (key.type === 'submit') {
       fill = T.darkBtn; textColor = submitColor; fontSize = T.fsClr; fontFamily = T.fb;
     } else {
-      fill = T.darkBtn; textColor = digitColor; fontSize = '72px'; fontFamily = T.fh;
+      fill = T.darkBtn; textColor = digitColor; fontSize = '72px'; fontFamily = digitFont;
     }
 
     var pair = buildStyledButton(fill);

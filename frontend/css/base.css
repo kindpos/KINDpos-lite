@@ -11,6 +11,12 @@
   font-style: normal;
 }
 @font-face {
+  font-family: 'Alien Encounters Solid Regular';
+  src: url('../assets/fonts/ALIEN-ENCOUNTERS-SOLID-REGULAR.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
   font-family: 'Sevastopol Interface';
   src: url('../assets/fonts/Sevastopol-Interface.ttf') format('truetype');
   font-weight: normal;

@@ -72,6 +72,7 @@ export const T = {
   electricPink:'#ff66cc',
   vermillion:'#ff4422',
   fh:   'Alien Encounters Solid Bold, monospace',
+  fhr:  'Alien Encounters Solid Regular, monospace',
   fb:   'Sevastopol Interface, monospace',
   fsQuick:  '70px',
   fsMgmt:   '60px',
