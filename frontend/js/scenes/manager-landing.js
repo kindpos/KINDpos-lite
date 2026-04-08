@@ -27,6 +27,9 @@ var _heatmapData = null;
 
 // Heatmap filter state
 var _filteredServerId = null;
+var _activeTab = 'open';
+var _selected = {};
+var _allOrders = [];
 
 // Max tables threshold for full-intensity cell (configurable)
 var HEATMAP_MAX_TABLES = 5;
@@ -41,6 +44,9 @@ var _centerCol = null;
 var _rightCol = null;
 var _headerLabel = null;
 var _heatmapEl = null;
+var _centerGrid = null;
+var _opsPanel = null;
+var _checkHeader = null;
 
 // Server palette — distinct from semantic colors (mint, gold, lime, etc.)
 // Uses role colors + category colors that won't collide with UI semantics
@@ -166,6 +172,17 @@ function loadStubData() {
   for (var i = 0; i < servers.length; i++) {
     _serverColorMap[servers[i].id] = SERVER_PALETTE[i % SERVER_PALETTE.length];
   }
+
+  _allOrders = [
+    { order_id: 'o1', check_number: 'C-001', server_id: 's1', server_name: 'Alex M.', customer_name: 'Table 4', status: 'open', items: [{name:'Margherita',quantity:2},{name:'Coke',quantity:1}], total: 42.50 },
+    { order_id: 'o2', check_number: 'C-002', server_id: 's1', server_name: 'Alex M.', customer_name: 'Table 7', status: 'open', items: [{name:'Pepperoni',quantity:1}], total: 18.00 },
+    { order_id: 'o3', check_number: 'C-003', server_id: 's2', server_name: 'Jordan K.', customer_name: 'Bar 1', status: 'open', items: [{name:'Wings',quantity:1},{name:'IPA',quantity:2}], total: 31.00 },
+    { order_id: 'o4', check_number: 'C-004', server_id: 's3', server_name: 'Sam R.', customer_name: 'Table 12', status: 'open', items: [{name:'Meatball Sub',quantity:1},{name:'Fries',quantity:1}], total: 22.50 },
+    { order_id: 'o5', check_number: 'C-005', server_id: 's3', server_name: 'Sam R.', customer_name: 'Table 9', status: 'open', items: [{name:'Caesar Salad',quantity:2}], total: 26.00 },
+    { order_id: 'o6', check_number: 'C-006', server_id: 's2', server_name: 'Jordan K.', customer_name: 'Table 3', status: 'closed', items: [{name:'BBQ Chicken',quantity:1},{name:'Lager',quantity:2}], total: 38.00 },
+    { order_id: 'o7', check_number: 'C-007', server_id: 's4', server_name: 'Casey T.', customer_name: 'Table 1', status: 'closed', items: [{name:'Hawaiian',quantity:1}], total: 16.50 },
+    { order_id: 'o8', check_number: 'C-008', server_id: 's1', server_name: 'Alex M.', customer_name: 'Table 5', status: 'voided', items: [{name:'Garlic Knots',quantity:1}], total: 8.00 },
+  ];
 }
 
 // ── Formatting ───────────────────────────────────
@@ -599,8 +616,35 @@ function hideDrillDown() {
   _expandOrigin = null;
 }
 
+// ── Check Helpers ────────────────────────────────
+
+function checkNum(order) {
+  return order.check_number || ('C-' + String(order.order_id).slice(0, 3).toUpperCase());
+}
+
+function itemCount(order) {
+  var items = order.items || [];
+  var total = 0;
+  for (var i = 0; i < items.length; i++) total += (items[i].quantity || 1);
+  return total;
+}
+
+function ordersByTab(tab) {
+  var orders = _allOrders.filter(function(o) {
+    if (tab === 'open') return o.status === 'open';
+    if (tab === 'closed') return o.status === 'closed' || o.status === 'paid';
+    if (tab === 'void') return o.status === 'voided';
+    return false;
+  });
+  // Apply heatmap server filter
+  if (_filteredServerId && tab === 'open') {
+    orders = orders.filter(function(o) { return o.server_id === _filteredServerId; });
+  }
+  return orders;
+}
+
 // ═══════════════════════════════════════════════════
-//  CENTER COLUMN — Heatmap + (Check grid in Chunk 5)
+//  CENTER COLUMN — Heatmap + Check Grid
 // ═══════════════════════════════════════════════════
 
 function buildCenterColumn() {
@@ -610,7 +654,226 @@ function buildCenterColumn() {
   _heatmapEl = buildHeatmapPanel();
   col.appendChild(_heatmapEl);
 
+  // ── Check grid container ──
+  var checkWrap = document.createElement('div');
+  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;border:1px solid ' + T.mint + ';background:' + T.bgDark + ';';
+  checkWrap.style.clipPath = chamfer(6);
+
+  // Header: "// ALL CHECKS //" or "// {SERVER NAME} //"
+  _checkHeader = document.createElement('div');
+  _checkHeader.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mint + ';letter-spacing:2px;padding:6px 10px;flex-shrink:0;';
+  updateCheckHeader();
+  checkWrap.appendChild(_checkHeader);
+
+  // ── Tab Bar ──
+  var tabKeys = ['open', 'closed', 'void'];
+  var tabLabels = ['OPEN', 'CLOSED', 'VOID'];
+  var tabEls = [];
+  var tabBar = document.createElement('div');
+  tabBar.style.cssText = 'display:flex;flex-shrink:0;border-bottom:1px solid ' + T.border + ';';
+
+  for (var t = 0; t < tabKeys.length; t++) {
+    (function(key, label) {
+      var tab = document.createElement('div');
+      tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:16px;letter-spacing:2px;user-select:none;';
+      applyTabStyle(tab, key === _activeTab);
+      tab.textContent = label;
+      tab.addEventListener('pointerup', function() {
+        if (key === _activeTab) return;
+        _activeTab = key;
+        _selected = {};
+        for (var i = 0; i < tabEls.length; i++) applyTabStyle(tabEls[i], tabKeys[i] === _activeTab);
+        renderGrid();
+        renderOpsPanel();
+      });
+      tabEls.push(tab);
+      tabBar.appendChild(tab);
+    })(tabKeys[t], tabLabels[t]);
+  }
+  checkWrap.appendChild(tabBar);
+
+  // ── Check Grid ──
+  _centerGrid = document.createElement('div');
+  _centerGrid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;';
+  checkWrap.appendChild(_centerGrid);
+
+  // ── CHECK OPERATION Panel (placeholder for Chunk 6) ──
+  _opsPanel = document.createElement('div');
+  _opsPanel.style.cssText = 'flex-shrink:0;border-top:1px solid ' + T.border + ';background:' + T.bg + ';';
+  checkWrap.appendChild(_opsPanel);
+
+  col.appendChild(checkWrap);
+
+  renderGrid();
+  renderOpsPanel();
   return col;
+}
+
+function applyTabStyle(el, active) {
+  if (active) {
+    el.style.background = T.mint;
+    el.style.color = T.bgDark;
+  } else {
+    el.style.background = T.bgDark;
+    el.style.color = T.mutedText;
+  }
+}
+
+function updateCheckHeader() {
+  if (!_checkHeader) return;
+  if (_filteredServerId && _heatmapData) {
+    var srv = (_heatmapData.servers || []).find(function(s) { return s.id === _filteredServerId; });
+    _checkHeader.textContent = '// ' + (srv ? srv.name.toUpperCase() : 'SERVER') + ' //';
+  } else {
+    _checkHeader.textContent = '// ALL CHECKS //';
+  }
+}
+
+// ── Grid Rendering ───────────────────────────────
+
+function renderGrid() {
+  if (!_centerGrid) return;
+  _centerGrid.innerHTML = '';
+  var orders = ordersByTab(_activeTab);
+
+  if (orders.length === 0 && _activeTab !== 'open') {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'grid-column:1/-1;text-align:center;padding:40px 0;font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';';
+    empty.textContent = _activeTab === 'closed' ? 'No closed checks' : 'No voided checks';
+    _centerGrid.appendChild(empty);
+    return;
+  }
+
+  for (var i = 0; i < orders.length; i++) {
+    _centerGrid.appendChild(buildCheckTile(orders[i]));
+  }
+
+  // + NEW CHECK tile (OPEN tab only)
+  if (_activeTab === 'open') {
+    var newTile = document.createElement('div');
+    newTile.style.cssText = 'border:2px dashed ' + T.mint + ';display:flex;align-items:center;justify-content:center;min-height:90px;cursor:pointer;user-select:none;';
+    newTile.style.clipPath = chamfer(6);
+    var plus = document.createElement('div');
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
+    plus.textContent = '+';
+    newTile.appendChild(plus);
+    newTile.addEventListener('pointerup', function() {
+      var emp = _params.emp || _params;
+      SceneManager.mountWorking('order-entry', {
+        mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+      });
+    });
+    _centerGrid.appendChild(newTile);
+  }
+}
+
+// ── Check Tile — Manager Variant ─────────────────
+
+function buildCheckTile(order) {
+  var isOpen = _activeTab === 'open';
+  var isClosed = _activeTab === 'closed';
+  var isVoid = _activeTab === 'void';
+  var sColor = serverColor(order.server_id);
+
+  var tile = document.createElement('div');
+  // Border = server's heatmap palette color (not mint)
+  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + sColor + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
+  tile.style.clipPath = chamfer(6);
+  if (isClosed) tile.style.opacity = '0.7';
+  if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
+
+  // C-00# line — mint for open, electricPink for closed, vermillion for void
+  var numColor = isOpen ? T.mint : (isClosed ? T.electricPink : T.vermillion);
+  var num = document.createElement('div');
+  num.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + numColor + ';';
+  num.textContent = checkNum(order);
+  num.dataset.role = 'num';
+  tile.appendChild(num);
+
+  // Server name — always shown in manager view
+  var srvName = document.createElement('div');
+  srvName.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + sColor + ';';
+  srvName.textContent = order.server_name || '';
+  srvName.dataset.role = 'server';
+  tile.appendChild(srvName);
+
+  // Customer name
+  if (order.customer_name) {
+    var name = document.createElement('div');
+    name.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';';
+    name.textContent = order.customer_name;
+    name.dataset.role = 'name';
+    tile.appendChild(name);
+  }
+
+  // Item count
+  var count = document.createElement('div');
+  count.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.textPrimary + ';';
+  count.textContent = 'x' + itemCount(order);
+  count.dataset.role = 'count';
+  tile.appendChild(count);
+
+  // Total
+  var total = document.createElement('div');
+  total.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.gold + ';font-weight:bold;';
+  total.textContent = fmt(order.total || order.subtotal || 0);
+  total.dataset.role = 'total';
+  tile.appendChild(total);
+
+  // ── Interaction by tab ──
+  if (isOpen) {
+    if (_selected[order.order_id]) applyMgrTileSelected(tile, sColor, true);
+    tile.addEventListener('pointerup', function() {
+      var id = order.order_id;
+      if (_selected[id]) {
+        delete _selected[id];
+        applyMgrTileSelected(tile, sColor, false);
+      } else {
+        _selected[id] = order;
+        applyMgrTileSelected(tile, sColor, true);
+      }
+      renderOpsPanel();
+    });
+  } else if (isClosed) {
+    tile.addEventListener('pointerup', function() {
+      // Reopen interrupt — wired in Chunk 6
+      showToast('Reopen check — wired in Chunk 6', { bg: T.gold });
+    });
+  }
+  // Void tab: read-only — no listener
+  return tile;
+}
+
+function applyMgrTileSelected(tile, sColor, selected) {
+  if (selected) {
+    tile.style.background = T.mint;
+    // All text dark, border stays server palette color
+    tile.style.borderColor = sColor;
+    for (var i = 0; i < tile.children.length; i++) tile.children[i].style.color = T.bgDark;
+  } else {
+    tile.style.background = T.bgDark;
+    tile.style.borderColor = sColor;
+    for (var i = 0; i < tile.children.length; i++) {
+      var child = tile.children[i];
+      var role = child.dataset.role;
+      if (role === 'num') child.style.color = T.mint;
+      else if (role === 'server') child.style.color = sColor;
+      else if (role === 'name') child.style.color = T.mutedText;
+      else if (role === 'count') child.style.color = T.textPrimary;
+      else if (role === 'total') child.style.color = T.gold;
+    }
+  }
+}
+
+// ── Operations Panel (stub — Chunk 6) ────────────
+
+function renderOpsPanel() {
+  if (!_opsPanel) return;
+  _opsPanel.innerHTML = '';
+  var header = document.createElement('div');
+  header.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mint + ';letter-spacing:2px;padding:6px 10px;';
+  header.textContent = '// CHECK OPERATION //';
+  _opsPanel.appendChild(header);
 }
 
 // ── Server Workload Heatmap ──────────────────────
@@ -718,6 +981,8 @@ function rerenderHeatmap() {
   var newPanel = buildHeatmapPanel();
   _centerCol.replaceChild(newPanel, _heatmapEl);
   _heatmapEl = newPanel;
+  updateCheckHeader();
+  renderGrid();
 }
 
 // ── Hex to RGBA helper ───────────────────────────
@@ -799,6 +1064,9 @@ SceneManager.register({
     _heatmapData = null;
     _filteredServerId = null;
     _serverColorMap = {};
+    _activeTab = 'open';
+    _selected = {};
+    _allOrders = [];
     _expandedCard = null;
     _expandOrigin = null;
     _leftCol = null;
@@ -806,5 +1074,8 @@ SceneManager.register({
     _rightCol = null;
     _headerLabel = null;
     _heatmapEl = null;
+    _centerGrid = null;
+    _opsPanel = null;
+    _checkHeader = null;
   },
 });
