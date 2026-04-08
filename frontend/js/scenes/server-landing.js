@@ -644,11 +644,113 @@ function buildRightColumn(emp) {
 }
 
 // ═══════════════════════════════════════════════════
-//  DRILL-DOWN OVERLAY — placeholder for Chunk 3
+//  DRILL-DOWN OVERLAY (>>> / <<<)
+//  Pure CSS expand/collapse — not SceneManager overlay
 // ═══════════════════════════════════════════════════
 
-function showDrillDown() {}
-function hideDrillDown() {}
+function showDrillDown() {
+  if (_drillEl) _drillEl.remove();
+  if (!_el) return;
+  var d = _salesData || {};
+  var rect = _expandOrigin;
+  var parentRect = _el.getBoundingClientRect();
+
+  _drillEl = document.createElement('div');
+  _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';border:2px solid ' + T.mint + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;';
+  _drillEl.style.clipPath = chamfer(8);
+
+  // Start at card's position
+  if (rect) {
+    _drillEl.style.top = (rect.top - parentRect.top) + 'px';
+    _drillEl.style.left = (rect.left - parentRect.left) + 'px';
+    _drillEl.style.width = rect.width + 'px';
+    _drillEl.style.height = rect.height + 'px';
+  } else {
+    _drillEl.style.top = '0'; _drillEl.style.left = '0';
+    _drillEl.style.width = '100%'; _drillEl.style.height = '100%';
+  }
+
+  // Header
+  var headerLabel = _expandedCard === 'sales' ? 'SALES OVERVIEW'
+    : _expandedCard === 'tables' ? 'TABLE STATISTICS' : 'SHIFT OVERVIEW';
+  _drillEl.appendChild(buildCardHeader(headerLabel));
+
+  // Expanded content
+  var content = document.createElement('div');
+  content.style.cssText = 'flex:1;padding:12px;overflow-y:auto;';
+
+  if (_expandedCard === 'sales') {
+    content.appendChild(statRow('Net Sales:', fmt(d.net_sales || 0), T.gold));
+    content.appendChild(statRow('Gross Sales:', fmt(d.gross_sales || 0), T.gold));
+    content.appendChild(statRow('Check Avg:', fmt(d.avg_check || 0), T.gold));
+    content.appendChild(statRow('Cash Sales:', fmt(d.cash_total || 0), T.gold));
+    content.appendChild(statRow('Card Sales:', fmt(d.card_total || 0), T.gold));
+    content.appendChild(statRow('Discounts:', fmt(d.discount_total || 0), T.vermillion));
+    content.appendChild(statRow('Voids:', fmt(d.void_total || 0), T.vermillion));
+    content.appendChild(statRow('Tax:', fmt(d.tax_total || 0), T.gold));
+  } else if (_expandedCard === 'tables') {
+    var gc = d.guest_count || 0;
+    var tc = d.total_checks || 0;
+    content.appendChild(statRow('Guest Count:', String(gc), T.lime));
+    content.appendChild(statRow('Table Count:', String(tc), T.lime));
+    content.appendChild(statRow('Guest Avg:', gc > 0 ? fmt((d.net_sales || 0) / gc) : '--', T.gold));
+    content.appendChild(statRow('Top Seller:', computeTopSeller(), T.lime));
+    content.appendChild(statRow('Open Checks:', String(d.open_orders || 0), T.lime));
+    content.appendChild(statRow('Closed Checks:', String(d.closed_orders || 0), T.lime));
+    content.appendChild(statRow('Voided:', String(d.voided_orders || 0), T.vermillion));
+  } else {
+    content.appendChild(statRow('Time In:', fmtClockIn(), T.gold));
+    content.appendChild(statRow('Hours:', fmtHours(), T.lime));
+    content.appendChild(statRow('Total Tips:', fmt(d.total_tips || 0), T.gold));
+    content.appendChild(statRow('Card Tips:', fmt(d.card_tips || 0), T.gold));
+    content.appendChild(statRow('Cash Tips:', fmt(d.cash_tips || 0), T.gold));
+    content.appendChild(statRow('Unadjusted:', String(d.unadjusted_tips || 0),
+      (d.unadjusted_tips || 0) > 0 ? T.vermillion : T.lime));
+  }
+  _drillEl.appendChild(content);
+
+  // <<< close button
+  var closeRow = document.createElement('div');
+  closeRow.style.cssText = 'display:flex;justify-content:flex-end;padding:6px 10px;flex-shrink:0;';
+  closeRow.appendChild(buildButton('<<<', {
+    fill: T.darkBtn, color: T.mint, fontSize: '14px', fontFamily: T.fb,
+    width: 48, height: 24,
+    onTap: function() { hideDrillDown(); },
+  }));
+  _drillEl.appendChild(closeRow);
+
+  _el.appendChild(_drillEl);
+
+  // Animate to full viewport on next frame
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      _drillEl.style.top = '0';
+      _drillEl.style.left = '0';
+      _drillEl.style.width = '100%';
+      _drillEl.style.height = '100%';
+    });
+  });
+}
+
+function hideDrillDown() {
+  if (!_drillEl) return;
+  var el = _drillEl;
+
+  if (_expandOrigin && _el) {
+    var parentRect = _el.getBoundingClientRect();
+    el.style.transition = 'top 220ms ease-in,left 220ms ease-in,width 220ms ease-in,height 220ms ease-in';
+    el.style.top = (_expandOrigin.top - parentRect.top) + 'px';
+    el.style.left = (_expandOrigin.left - parentRect.left) + 'px';
+    el.style.width = _expandOrigin.width + 'px';
+    el.style.height = _expandOrigin.height + 'px';
+    el.addEventListener('transitionend', function() { el.remove(); }, { once: true });
+  } else {
+    el.remove();
+  }
+  _drillEl = null;
+  _expandedCard = null;
+  _expandOrigin = null;
+}
 
 // ═══════════════════════════════════════════════════
 //  MAIN RENDER
