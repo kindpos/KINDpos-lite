@@ -6,7 +6,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T } from '../tokens.js';
+import { T, buildStyledButton } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
@@ -228,12 +228,8 @@ function buildCardLanding(el, params, sales, labor) {
     var configRow = document.createElement('div');
     configRow.style.cssText = 'grid-column:2;display:flex;justify-content:center;padding:6px 4px;';
 
-    var configBtn = buildButton('CONFIGURATION', {
-      fill: T.darkBtn, color: T.mint, fontSize: '20px', fontFamily: T.fh,
-      width: 200, height: 42,
-      onTap: function() { SceneManager.openTransactional('settings', { pin: emp.pin }); },
-    });
-    configRow.appendChild(configBtn);
+    var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'md', onClick: function() { SceneManager.openTransactional('settings', { pin: emp.pin }); } });
+    configRow.appendChild(configPair.wrap);
     el.appendChild(configRow);
   }
 
@@ -311,26 +307,25 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
     btnRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
 
     var actions = [
-      { label: 'OPEN',  fill: T.darkBtn, color: T.mint,   min: 1, max: 1 },
-      { label: 'MERGE', fill: T.darkBtn, color: T.mint,   min: 2 },
-      { label: 'SPLIT', fill: T.darkBtn, color: T.mint,   min: 1, max: 1 },
-      { label: 'PRINT', fill: T.darkBtn, color: T.mint,   min: 1 },
-      { label: 'VOID',  fill: T.darkBtn, color: T.mint,   min: 1 },
+      { label: 'OPEN',  variant: 'dark',       min: 1, max: 1 },
+      { label: 'MERGE', variant: 'dark',       min: 2 },
+      { label: 'SPLIT', variant: 'dark',       min: 1, max: 1 },
+      { label: 'PRINT', variant: 'dark',       min: 1 },
+      { label: 'VOID',  variant: 'vermillion', min: 1 },
     ];
 
     actions.forEach(function(act) {
       var count = ids.length;
       var enabled = count >= (act.min || 1) && (!act.max || count <= act.max);
 
-      var btn = buildButton(act.label, {
-        fill: enabled ? act.fill : T.bg,
-        color: enabled ? act.color : T.mutedText,
-        fontSize: '16px', fontFamily: T.fh,
-        width: 100, height: 36,
-        onTap: enabled ? function() { handleEditAction(act.label, ids); } : null,
+      var pair = buildStyledButton({
+        label: act.label,
+        variant: enabled ? act.variant : 'ghost',
+        size: 'sm',
+        disabled: !enabled,
+        onClick: enabled ? function() { handleEditAction(act.label, ids); } : null,
       });
-      if (!enabled) btn.style.opacity = '0.4';
-      btnRow.appendChild(btn);
+      btnRow.appendChild(pair.wrap);
     });
 
     editBar.appendChild(btnRow);
