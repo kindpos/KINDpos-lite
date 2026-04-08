@@ -203,12 +203,13 @@ function fetchAllData() {
     if (!heatmap.servers || heatmap.servers.length === 0) {
       heatmap.servers = staff.map(function(s) {
         var sOrders = orders.filter(function(o) { return o.server_id === s.employee_id; });
+        var totalCount = sOrders.length;
         var openCount = sOrders.filter(function(o) { return o.status === 'open'; }).length;
         var cells = [];
         for (var h = 0; h < heatmap.hours.length; h++) cells.push(0);
-        // Place current open count at current hour
+        // Place total order count at current hour (includes open + closed + voided)
         if (heatmap.current_hour >= 0 && heatmap.current_hour < cells.length) {
-          cells[heatmap.current_hour] = openCount;
+          cells[heatmap.current_hour] = totalCount;
         }
         return { id: s.employee_id, name: s.employee_name || s.name || '', live_tables: openCount, cells: cells };
       });
