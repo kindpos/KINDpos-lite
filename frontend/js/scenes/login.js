@@ -58,10 +58,10 @@ registerScene('login', {
     configBtn.style.left = '12px';
     el.appendChild(configBtn);
 
-    // Version stamp — bottom-right, gold 9px, 35% opacity
+    // Version stamp — bottom-right
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:9px;color:' + T.gold + ';opacity:0.35;position:absolute;bottom:4px;right:12px;';
-    version.textContent = 'KINDpos/lite // Vz1.2';
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;right:12px;';
+    version.textContent = 'KINDpos/lite_Vz1.2';
     el.appendChild(version);
   },
   onExit: function() {
