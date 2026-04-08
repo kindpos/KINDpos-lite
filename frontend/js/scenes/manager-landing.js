@@ -8,6 +8,9 @@ import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { CHART, createSVG, svgEl, drawBarChart, drawTrendLine, buildChartPanel } from '../chart-helpers.js';
+import { DATA } from '../chart-colors.js';
+import { PAT, GLOW, injectChartDefs } from '../chart-patterns.js';
 
 // ── Module State ──────────────────────────────────
 var _el = null;
@@ -19,6 +22,7 @@ var _drillEl = null;
 
 // Stub data — replaced by API in Chunk 9
 var _salesData = null;
+var _breakdownData = null;
 
 // COB% escalation thresholds (configurable)
 var COB_WARNING = 30;
@@ -97,6 +101,27 @@ function loadStubData() {
     total_covers: 42,
     labor_cob: 27.4,
   };
+  _breakdownData = {
+    categories: [
+      { name: 'PIZZA', value: 1840.00 },
+      { name: 'APPS', value: 920.50 },
+      { name: 'SUBS', value: 685.00 },
+      { name: 'SIDES', value: 412.00 },
+      { name: 'DRINKS', value: 1015.00 },
+    ],
+    cash: 1462.50,
+    card: 3410.00,
+    hourly: [
+      { label: '11a', value: 320 },
+      { label: '12p', value: 780 },
+      { label: '1p', value: 920 },
+      { label: '2p', value: 640 },
+      { label: '3p', value: 410 },
+      { label: '4p', value: 520 },
+      { label: '5p', value: 690 },
+      { label: '6p', value: 592 },
+    ],
+  };
 }
 
 // ── Formatting ───────────────────────────────────
@@ -155,6 +180,21 @@ function buildLeftColumn() {
   col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
 
   col.appendChild(buildSalesOverviewCard());
+  col.appendChild(buildSalesBreakdownCard());
+
+  // ── Action Button ──
+  var actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:auto;';
+  actions.appendChild(buildButton('SALES DETAIL', {
+    fill: T.darkBtn, color: T.mint, fontSize: '18px', fontFamily: T.fh, height: 36,
+    onTap: function() {
+      var emp = _params.emp || _params;
+      SceneManager.openTransactional('reporting', {
+        pin: emp.pin, employeeId: emp.id, employeeName: emp.name, role: 'manager',
+      });
+    },
+  }));
+  col.appendChild(actions);
 
   return col;
 }
@@ -197,10 +237,223 @@ function buildSalesOverviewCard() {
   return card;
 }
 
+// ── SALES BREAKDOWN Card ─────────────────────────
+
+function buildSalesBreakdownCard() {
+  var bd = _breakdownData || {};
+  var cats = bd.categories || [];
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + T.mint + ';display:flex;flex-direction:column;flex:0 0 auto;';
+  card.style.clipPath = chamfer(6);
+  card.appendChild(buildCardHeader('SALES BREAKDOWN'));
+
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:6px 0;';
+
+  // Category rows — each in its assigned palette color
+  for (var i = 0; i < cats.length; i++) {
+    var catColor = T.catColor(cats[i].name);
+    body.appendChild(statRow(cats[i].name + ':', fmt(cats[i].value), catColor));
+  }
+
+  // Divider
+  var divider = document.createElement('div');
+  divider.style.cssText = 'height:1px;background:' + T.bgDark + ';margin:4px 8px;border-top:1px solid ' + T.border + ';';
+  body.appendChild(divider);
+
+  // Tender totals
+  body.appendChild(statRow('Cash:', fmt(bd.cash), T.gold));
+  body.appendChild(statRow('Card:', fmt(bd.card), T.gold));
+  card.appendChild(body);
+
+  // >>> drill-down button
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;justify-content:flex-end;padding:4px 8px 2px;';
+  btnRow.appendChild(buildButton('>>>', {
+    fill: T.darkBtn, color: T.mint, fontSize: '14px', fontFamily: T.fb,
+    width: 48, height: 24,
+    onTap: function() {
+      _expandOrigin = card.getBoundingClientRect();
+      _expandedCard = 'sales-breakdown';
+      showDrillDown();
+    },
+  }));
+  card.appendChild(btnRow);
+
+  return card;
+}
+
+// ── SVG Donut Chart (tender split) ───────────────
+
+function drawDonutChart(container, slices, size) {
+  var w = size || 160;
+  var svg = createSVG(w, w);
+  injectChartDefs(svg);
+  var cx = w / 2, cy = w / 2;
+  var outerR = w * 0.42, innerR = w * 0.24;
+  var total = 0;
+  for (var i = 0; i < slices.length; i++) total += slices[i].value;
+  if (total === 0) total = 1;
+
+  var startAngle = -Math.PI / 2;
+  for (var i = 0; i < slices.length; i++) {
+    var sweep = (slices[i].value / total) * Math.PI * 2;
+    var endAngle = startAngle + sweep;
+    var largeArc = sweep > Math.PI ? 1 : 0;
+
+    var x1o = cx + outerR * Math.cos(startAngle);
+    var y1o = cy + outerR * Math.sin(startAngle);
+    var x2o = cx + outerR * Math.cos(endAngle);
+    var y2o = cy + outerR * Math.sin(endAngle);
+    var x1i = cx + innerR * Math.cos(endAngle);
+    var y1i = cy + innerR * Math.sin(endAngle);
+    var x2i = cx + innerR * Math.cos(startAngle);
+    var y2i = cy + innerR * Math.sin(startAngle);
+
+    var d = 'M' + x1o + ',' + y1o +
+      ' A' + outerR + ',' + outerR + ' 0 ' + largeArc + ',1 ' + x2o + ',' + y2o +
+      ' L' + x1i + ',' + y1i +
+      ' A' + innerR + ',' + innerR + ' 0 ' + largeArc + ',0 ' + x2i + ',' + y2i +
+      ' Z';
+
+    svg.appendChild(svgEl('path', {
+      d: d,
+      fill: slices[i].color,
+      stroke: T.bgDark,
+      'stroke-width': '2',
+    }));
+
+    startAngle = endAngle;
+  }
+
+  container.appendChild(svg);
+}
+
 // ═══════════════════════════════════════════════════
 //  DRILL-DOWN OVERLAY (>>> / <<<)
 //  Pure CSS expand/collapse — not SceneManager overlay
 // ═══════════════════════════════════════════════════
+
+function buildBreakdownDrillContent(content) {
+  var bd = _breakdownData || {};
+  var cats = bd.categories || [];
+  var hourly = bd.hourly || [];
+
+  // ── Category Bar Chart ──
+  var barPanel = buildChartPanel('CATEGORY SALES', fmt((_salesData || {}).net_sales),
+    function(body) {
+      var chartW = 500, chartH = 180;
+      var svg = createSVG(chartW, chartH);
+      var barData = cats.map(function(c) {
+        return { label: c.name, value: c.value, color: T.catColor(c.name) };
+      });
+      // Draw bars with category colors, square data points, glow
+      injectChartDefs(svg);
+      drawCategoryBars(svg, barData, chartW, chartH);
+      body.appendChild(svg);
+    },
+    cats.map(function(c) { return { label: c.name, color: T.catColor(c.name) }; })
+  );
+  content.appendChild(barPanel);
+
+  // ── Tender Donut Chart ──
+  var donutPanel = buildChartPanel('TENDER SPLIT', '',
+    function(body) {
+      body.style.display = 'flex';
+      body.style.alignItems = 'center';
+      body.style.justifyContent = 'center';
+      body.style.gap = '16px';
+      var donutWrap = document.createElement('div');
+      drawDonutChart(donutWrap, [
+        { label: 'Cash', value: bd.cash || 0, color: T.gold },
+        { label: 'Card', value: bd.card || 0, color: T.lime },
+      ], 140);
+      body.appendChild(donutWrap);
+      var legend = document.createElement('div');
+      legend.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+      legend.appendChild(statRow('Cash:', fmt(bd.cash), T.gold));
+      legend.appendChild(statRow('Card:', fmt(bd.card), T.lime));
+      body.appendChild(legend);
+    },
+    [{ label: 'Cash', color: T.gold }, { label: 'Card', color: T.lime }]
+  );
+  content.appendChild(donutPanel);
+
+  // ── Hourly Revenue Line Chart ──
+  var hourlyPanel = buildChartPanel('HOURLY REVENUE', '',
+    function(body) {
+      var chartW = 500, chartH = 160;
+      var svg = createSVG(chartW, chartH);
+      drawTrendLine(svg, hourly, {
+        color: DATA.orange,
+        width: chartW,
+        height: chartH,
+        shaded: true,
+        areaPatternFill: PAT.coral,
+      });
+      body.appendChild(svg);
+    },
+    [{ label: 'Revenue', color: DATA.orange }]
+  );
+  content.appendChild(hourlyPanel);
+}
+
+// ── Category Bar Chart (custom per-category colors) ──
+
+function drawCategoryBars(svg, data, w, h) {
+  var padLeft = Math.round(70 * w / 500);
+  var padRight = 8;
+  var padTop = 10;
+  var padBottom = Math.round(32 * h / 180);
+  var chartW = w - padLeft - padRight;
+  var chartH = h - padTop - padBottom;
+  var ptSz = Math.round(8 * w / 500);
+
+  var maxVal = 0;
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].value > maxVal) maxVal = data[i].value;
+  }
+  if (maxVal === 0) maxVal = 1;
+
+  var n = data.length;
+  var groupW = chartW / n;
+  var barW = groupW * 0.6;
+
+  // Grid
+  for (var g = 0; g <= 4; g++) {
+    var gy = padTop + chartH - (g / 4) * chartH;
+    svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': Math.round(22 * w / 500) + '', 'font-family': CHART.font, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
+  }
+
+  // Bars
+  for (var i = 0; i < n; i++) {
+    var x = padLeft + i * groupW;
+    var barH = (data[i].value / maxVal) * chartH;
+    var barY = padTop + chartH - barH;
+    var color = data[i].color || DATA.orange;
+
+    svg.appendChild(svgEl('rect', {
+      x: x + (groupW - barW) / 2, y: barY, width: barW, height: barH,
+      fill: color, stroke: color, 'stroke-width': '1.5',
+    }));
+
+    // Square data point at top of bar with glow
+    svg.appendChild(svgEl('rect', {
+      x: x + groupW / 2 - ptSz / 2, y: barY - ptSz / 2,
+      width: ptSz, height: ptSz,
+      fill: color, filter: GLOW.orange,
+    }));
+
+    // Label
+    svg.appendChild(svgEl('text', {
+      x: x + groupW / 2, y: h - 3,
+      fill: color, 'font-size': Math.round(20 * w / 500) + '',
+      'font-family': CHART.font, 'text-anchor': 'middle',
+    })).textContent = data[i].label;
+  }
+}
 
 function showDrillDown() {
   if (_drillEl) _drillEl.remove();
@@ -227,7 +480,8 @@ function showDrillDown() {
   }
 
   // Header
-  _drillEl.appendChild(buildCardHeader('SALES OVERVIEW'));
+  var headerLabel = _expandedCard === 'sales-overview' ? 'SALES OVERVIEW' : 'SALES BREAKDOWN';
+  _drillEl.appendChild(buildCardHeader(headerLabel));
 
   // Expanded content
   var content = document.createElement('div');
@@ -247,6 +501,8 @@ function showDrillDown() {
     content.appendChild(statRow('Discounts:', fmt(d.discount_total || 0), T.vermillion));
     content.appendChild(statRow('Voids:', fmt(d.void_total || 0), T.vermillion));
     content.appendChild(statRow('Tax:', fmt(d.tax_total || 0), T.gold));
+  } else if (_expandedCard === 'sales-breakdown') {
+    buildBreakdownDrillContent(content);
   }
   _drillEl.appendChild(content);
 
@@ -361,6 +617,7 @@ SceneManager.register({
     _el = null;
     _params = null;
     _salesData = null;
+    _breakdownData = null;
     _expandedCard = null;
     _expandOrigin = null;
     _leftCol = null;
