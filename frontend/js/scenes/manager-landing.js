@@ -1757,6 +1757,13 @@ SceneManager.register({
 
     loadStubData(); // Initialize defaults
 
+    // Hide global app header — this scene has its own header bar
+    var appHeader = document.getElementById('header');
+    if (appHeader) appHeader.style.display = 'none';
+    // Expand working layer to fill full height
+    var layerWorking = document.getElementById('layer-working');
+    if (layerWorking) { layerWorking.style.top = '0'; layerWorking.style.height = '100%'; }
+
     var emp = params.emp || params;
     setSceneName(emp.name || emp.employeeName || 'Manager');
     setHeaderBack({
@@ -1779,6 +1786,12 @@ SceneManager.register({
   },
 
   unmount: function() {
+    // Restore global app header
+    var appHeader = document.getElementById('header');
+    if (appHeader) appHeader.style.display = '';
+    var layerWorking = document.getElementById('layer-working');
+    if (layerWorking) { layerWorking.style.top = ''; layerWorking.style.height = ''; }
+
     if (_clockTimer) { clearInterval(_clockTimer); _clockTimer = null; }
     if (_drillEl) { _drillEl.remove(); _drillEl = null; }
     _el = null;
