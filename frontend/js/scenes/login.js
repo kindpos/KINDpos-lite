@@ -28,14 +28,12 @@ SceneManager.register({
       employees = data.servers || [];
     }).catch(function() { employees = []; });
 
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:stretch;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';';
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';';
 
     // LEFT — CONFIGURATION button
-    var configCol = document.createElement('div');
-    configCol.style.cssText = 'display:flex;align-items:center;justify-content:center;';
     var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'md', onClick: function() { SceneManager.openTransactional('settings'); } });
-    configCol.appendChild(configPair.wrap);
-    container.appendChild(configCol);
+    configPair.wrap.style.alignSelf = 'center';
+    container.appendChild(configPair.wrap);
 
     // CENTER — numpad
     var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
@@ -77,10 +75,8 @@ SceneManager.register({
       _clockInMode = !_clockInMode;
       if (_clockInMode && _numpadRef) _numpadRef.clear();
     } });
-    var clockInCol = document.createElement('div');
-    clockInCol.style.cssText = 'display:flex;align-items:center;justify-content:center;';
-    clockInCol.appendChild(clockInPair.wrap);
-    container.appendChild(clockInCol);
+    clockInPair.wrap.style.alignSelf = 'center';
+    container.appendChild(clockInPair.wrap);
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
