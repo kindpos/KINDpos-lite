@@ -21,6 +21,7 @@ import './scenes/server-checkout.js?v=1';
 import './scenes/close-day.js?v=1';
 import './scenes/sales-summary.js?v=1';
 import './scenes/landing.js?v=1';
+import './scenes/clock-in.js?v=1';
 
 window._push = push;
 // ── Header state ──────────────────────────────────

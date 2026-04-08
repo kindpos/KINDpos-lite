@@ -108,6 +108,23 @@ T.categoryPalette = {
 
 T.catColor = (category) => T.categoryPalette[category] || T.mint;
 
+// Text hierarchy
+T.textPrimary = '#f5f0e8';
+T.textSecondary = '#b0a898';
+
+// Role colors (configurable per location)
+T.roles = {
+  manager:   '#ff8800',
+  server:    '#00aaff',
+  busser:    '#cc44ff',
+  bartender: '#00ddaa',
+  host:      '#ffee00',
+  cook:      '#ff4499',
+};
+
+// Confirm green
+T.green = '#39b54a';
+
 export function chamfer(s) {
   var c = s || T.chamfer;
   return 'polygon(' + c + 'px 0%, calc(100% - ' + c + 'px) 0%, 100% ' + c + 'px, 100% calc(100% - ' + c + 'px), calc(100% - ' + c + 'px) 100%, ' + c + 'px 100%, 0% calc(100% - ' + c + 'px), 0% ' + c + 'px)';
@@ -130,6 +147,7 @@ export function bevelEdges(fillColor) {
   if (fillColor === T.grayBtn) return { light: T.grayBtnL, dark: T.grayBtnD };
   if (fillColor === T.mintB)  return { light: '#aff4c4', dark: '#3a7a4d' };
   if (fillColor === T.redB)   return { light: '#ff7a87', dark: '#7a1f28' };
+  if (fillColor === T.green)  return { light: '#6adc8a', dark: '#246b34' };
   return { light: T.bgLight, dark: T.bgEdge };
 }
 
@@ -151,6 +169,7 @@ export function shadowColor(fillColor) {
   if (fillColor === T.grayBtn) return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.mintB)  return 'rgba(10, 10, 10, 0.8)';
   if (fillColor === T.redB)   return 'rgba(10, 10, 10, 0.8)';
+  if (fillColor === T.green)  return 'rgba(10, 10, 10, 0.8)';
   return 'rgba(10, 10, 10, 0.8)';
 }
 
