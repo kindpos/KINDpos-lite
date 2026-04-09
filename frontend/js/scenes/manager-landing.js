@@ -286,6 +286,10 @@ function refreshData() {
   fetchAllData().then(function() { if (_el) renderScene(); });
 }
 
+function _onTransactionalClosed(e) {
+  if (e && e.sceneName === 'tip-adjustment') refreshData();
+}
+
 // ── Formatting ───────────────────────────────────
 
 function fmt(n) {
@@ -1600,9 +1604,12 @@ SceneManager.register({
     container.appendChild(loading);
 
     fetchAllData().then(function() { renderScene(); });
+
+    SceneManager.on('transactional:closed', _onTransactionalClosed);
   },
 
   unmount: function() {
+    SceneManager.off('transactional:closed', _onTransactionalClosed);
     if (_drillEl) { _drillEl.remove(); _drillEl = null; }
     _el = null;
     _params = null;
