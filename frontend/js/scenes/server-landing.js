@@ -199,40 +199,6 @@ function buildLeftColumn(emp) {
   tablesCard.appendChild(expandBtn('tables', tablesCard));
   col.appendChild(tablesCard);
 
-  // ── Action Buttons ──
-  var actions = document.createElement('div');
-  actions.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:auto;';
-  actions.appendChild(buildButton('SALES DETAIL', {
-    fill: T.darkBtn, color: T.mint, fontSize: '18px', fontFamily: T.fh, height: 36,
-    onTap: function() {
-      SceneManager.openTransactional('reporting', {
-        pin: emp.pin, employeeId: emp.id, employeeName: emp.name, role: 'server',
-      });
-    },
-  }));
-  actions.appendChild(buildButton('CLOSE DAY', {
-    fill: T.darkBtn, color: T.mint, fontSize: '18px', fontFamily: T.fh, height: 36,
-    onTap: function() {
-      SceneManager.interrupt('sl-manager-gate', {
-        onConfirm: function() {
-          SceneManager.openTransactional('close-day', {
-            pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
-          });
-        },
-        onCancel: function() {},
-        params: { message: 'Close Day requires manager approval.' },
-      });
-    },
-  }));
-  actions.appendChild(buildButton('TIP ADJUSTMENT', {
-    fill: T.darkBtn, color: T.mint, fontSize: '18px', fontFamily: T.fh, height: 36,
-    onTap: function() {
-      SceneManager.openTransactional('tip-adjustment', {
-        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
-      });
-    },
-  }));
-  col.appendChild(actions);
   return col;
 }
 
