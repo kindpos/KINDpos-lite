@@ -83,7 +83,7 @@ function uniqueServers() {
 
 function fetchChecks(params) {
   var url = '/api/v1/orders/day-summary';
-  if (params.employeeId) url += '?server_id=' + encodeURIComponent(params.employeeId);
+  if (params.employeeId && _role !== 'manager') url += '?server_id=' + encodeURIComponent(params.employeeId);
   return fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
