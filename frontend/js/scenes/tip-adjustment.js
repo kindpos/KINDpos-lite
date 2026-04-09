@@ -407,6 +407,7 @@ function buildScene(container, params) {
   container.style.cssText = [
     'display:flex;flex-direction:column;',
     'width:100%;height:100%;',
+    'background:' + T.bg + ';',
     'padding:' + T.scenePad + 'px;',
     'box-sizing:border-box;',
     'position:relative;',
