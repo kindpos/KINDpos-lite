@@ -150,6 +150,12 @@ function renderContent() {
   if (!_contentEl) return;
   _contentEl.innerHTML = '';
 
+  // If a card is expanded (drill-down), render that instead
+  if (_expandedCard) {
+    renderDrillDown(_contentEl, _expandedCard);
+    return;
+  }
+
   if (_activeTab === 'terminal') {
     renderTerminalContent(_contentEl);
   } else {
@@ -157,18 +163,59 @@ function renderContent() {
   }
 }
 
-// Placeholder renderers — wired in Chunks 2 & 3
+// == TERMINAL Tab: 2-column category grid ==============
+
+var TERMINAL_CATEGORIES = [
+  { id: 'display',      label: 'DISPLAY' },
+  { id: 'network',      label: 'NETWORK' },
+  { id: 'store-info',   label: 'STORE INFO' },
+  { id: 'tax-pricing',  label: 'TAX & PRICING' },
+  { id: 'security',     label: 'SECURITY' },
+  { id: 'system',       label: 'SYSTEM' },
+];
+
 function renderTerminalContent(el) {
-  var placeholder = document.createElement('div');
-  placeholder.style.cssText = [
-    'display:flex;align-items:center;justify-content:center;',
-    'height:100%;width:100%;',
-    'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';',
-    'opacity:0.4;',
+  var grid = document.createElement('div');
+  grid.style.cssText = [
+    'display:grid;',
+    'grid-template-columns:1fr 1fr;',
+    'gap:12px;',
+    'height:100%;',
+    'overflow-y:auto;',
+    'scrollbar-width:none;',
+    '-webkit-overflow-scrolling:touch;',
+    'align-content:start;',
+    'padding-bottom:8px;',
   ].join('');
-  placeholder.textContent = 'TERMINAL content — Chunk 2';
-  el.appendChild(placeholder);
+
+  // Hide scrollbar for WebKit
+  if (!document.getElementById('cfg-grid-style')) {
+    var style = document.createElement('style');
+    style.id = 'cfg-grid-style';
+    style.textContent = '.cfg-grid::-webkit-scrollbar{display:none}';
+    document.head.appendChild(style);
+  }
+  grid.classList.add('cfg-grid');
+
+  _scrollPositions = _scrollPositions || {};
+
+  // Restore scroll position
+  var savedScroll = _scrollPositions[_activeTab] || 0;
+  requestAnimationFrame(function() { grid.scrollTop = savedScroll; });
+
+  // Save scroll on scroll
+  grid.addEventListener('scroll', function() {
+    _scrollPositions[_activeTab] = grid.scrollTop;
+  });
+
+  TERMINAL_CATEGORIES.forEach(function(cat) {
+    grid.appendChild(buildCategoryCard(cat, T.numpadChassis));
+  });
+
+  el.appendChild(grid);
 }
+
+// == HARDWARE Tab: placeholder for Chunk 3 =============
 
 function renderHardwareContent(el) {
   var placeholder = document.createElement('div');
@@ -180,6 +227,179 @@ function renderHardwareContent(el) {
   ].join('');
   placeholder.textContent = 'HARDWARE content — Chunk 3';
   el.appendChild(placeholder);
+}
+
+// == Category Card =====================================
+
+var _scrollPositions = {};
+
+function buildCategoryCard(cat, borderColor) {
+  var dc = buildDepthCard(borderColor, { chamfer: 10, glow: true });
+
+  dc.card.style.display = 'flex';
+  dc.card.style.alignItems = 'center';
+  dc.card.style.justifyContent = 'center';
+  dc.card.style.cursor = 'pointer';
+  dc.card.style.minHeight = '100px';
+  dc.card.style.userSelect = 'none';
+  dc.card.style.webkitUserSelect = 'none';
+
+  var lbl = document.createElement('div');
+  lbl.style.cssText = [
+    'font-family:' + T.fh + ';',
+    'font-size:32px;font-weight:bold;font-style:italic;',
+    'color:' + borderColor + ';',
+    'text-align:center;',
+    'pointer-events:none;',
+  ].join('');
+  lbl.textContent = cat.label;
+  dc.card.appendChild(lbl);
+
+  dc.wrap.dataset.catId = cat.id;
+
+  dc.wrap.addEventListener('pointerup', function() {
+    // Store origin rect for animation
+    var rect = dc.wrap.getBoundingClientRect();
+    _expandOrigin = {
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    };
+    _expandedCard = { id: cat.id, label: cat.label, tab: _activeTab, borderColor: borderColor };
+    renderContent();
+  });
+
+  return dc.wrap;
+}
+
+// == Drill-Down Expand/Collapse ========================
+
+var _expandOrigin = null;
+
+function renderDrillDown(el, catInfo) {
+  el.style.position = 'relative';
+
+  // Get content area bounds for animation target
+  var targetRect = el.getBoundingClientRect();
+
+  // Expanded container — animates from origin to full
+  var expanded = document.createElement('div');
+  expanded.style.cssText = [
+    'position:absolute;',
+    'background:' + T.bgDark + ';',
+    'border-top:7px solid ' + _lightenHex(catInfo.borderColor, 0.2) + ';',
+    'border-left:7px solid ' + _lightenHex(catInfo.borderColor, 0.2) + ';',
+    'border-bottom:7px solid ' + _darkenHex(catInfo.borderColor, 0.3) + ';',
+    'border-right:7px solid ' + _darkenHex(catInfo.borderColor, 0.3) + ';',
+    'clip-path:' + chamfer(10) + ';',
+    'box-sizing:border-box;',
+    'display:flex;flex-direction:column;',
+    'overflow:hidden;',
+    'z-index:5;',
+  ].join('');
+
+  // Start at origin bounds (relative to content area)
+  if (_expandOrigin) {
+    var oTop = _expandOrigin.top - targetRect.top;
+    var oLeft = _expandOrigin.left - targetRect.left;
+    expanded.style.top = oTop + 'px';
+    expanded.style.left = oLeft + 'px';
+    expanded.style.width = _expandOrigin.width + 'px';
+    expanded.style.height = _expandOrigin.height + 'px';
+    expanded.style.transition = 'top 220ms ease-out, left 220ms ease-out, width 220ms ease-out, height 220ms ease-out';
+
+    // Animate to full size on next frame
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        expanded.style.top = '0';
+        expanded.style.left = '0';
+        expanded.style.width = '100%';
+        expanded.style.height = '100%';
+      });
+    });
+  } else {
+    expanded.style.inset = '0';
+    expanded.style.width = '100%';
+    expanded.style.height = '100%';
+  }
+
+  // Header bar inside expanded
+  var hdr = document.createElement('div');
+  hdr.style.cssText = [
+    'display:flex;align-items:center;justify-content:space-between;',
+    'padding:12px 16px;flex-shrink:0;',
+  ].join('');
+
+  var title = document.createElement('div');
+  title.style.cssText = [
+    'font-family:' + T.fh + ';font-size:28px;font-weight:bold;font-style:italic;',
+    'color:' + catInfo.borderColor + ';',
+  ].join('');
+  title.textContent = catInfo.label;
+  hdr.appendChild(title);
+  expanded.appendChild(hdr);
+
+  // Content area inside expanded (placeholder — Chunk 4/5 will wire content)
+  var body = document.createElement('div');
+  body.style.cssText = [
+    'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;',
+    'padding:0 16px 16px;',
+  ].join('');
+
+  var ph = document.createElement('div');
+  ph.style.cssText = [
+    'display:flex;align-items:center;justify-content:center;',
+    'height:100%;',
+    'font-family:' + T.fb + ';font-size:14px;color:' + catInfo.borderColor + ';opacity:0.4;',
+  ].join('');
+  ph.textContent = catInfo.label + ' settings — wired in Chunk 4';
+  body.appendChild(ph);
+  expanded.appendChild(body);
+
+  // <<< back button — pinned bottom-right
+  var backWrap = document.createElement('div');
+  backWrap.style.cssText = [
+    'position:absolute;bottom:12px;right:12px;',
+  ].join('');
+
+  var backBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: '<<<' });
+  backBtn.inner.style.color = T.mint;
+  backBtn.inner.style.fontSize = '14px';
+  backBtn.wrap.style.height = '32px';
+  backBtn.wrap.style.minWidth = '60px';
+  backBtn.wrap.addEventListener('pointerup', function() {
+    collapseDrillDown(expanded, el);
+  });
+  backWrap.appendChild(backBtn.wrap);
+  expanded.appendChild(backWrap);
+
+  el.appendChild(expanded);
+}
+
+function collapseDrillDown(expandedEl, containerEl) {
+  if (_expandOrigin) {
+    var targetRect = containerEl.getBoundingClientRect();
+    var oTop = _expandOrigin.top - targetRect.top;
+    var oLeft = _expandOrigin.left - targetRect.left;
+
+    expandedEl.style.transition = 'top 220ms ease-in, left 220ms ease-in, width 220ms ease-in, height 220ms ease-in';
+    expandedEl.style.top = oTop + 'px';
+    expandedEl.style.left = oLeft + 'px';
+    expandedEl.style.width = _expandOrigin.width + 'px';
+    expandedEl.style.height = _expandOrigin.height + 'px';
+    expandedEl.style.overflow = 'hidden';
+
+    setTimeout(function() {
+      _expandedCard = null;
+      _expandOrigin = null;
+      renderContent();
+    }, 220);
+  } else {
+    _expandedCard = null;
+    _expandOrigin = null;
+    renderContent();
+  }
 }
 
 // == Scene Builder =====================================
