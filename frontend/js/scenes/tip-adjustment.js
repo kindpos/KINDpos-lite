@@ -34,7 +34,7 @@ function isUnadjusted(c) { return c.tip_amount == null; }
 function filteredChecks() {
   return checks.filter(function(c) {
     if (statusFilter === 'unadjusted' && !isUnadjusted(c)) return false;
-    if (cardFilter !== 'all' && c.card_type !== cardFilter.toUpperCase()) return false;
+    if (cardFilter !== 'all' && c.card_type && c.card_type !== cardFilter.toUpperCase()) return false;
     if (serverFilter !== 'all' && c.server_id !== serverFilter) return false;
     return true;
   });
@@ -43,7 +43,7 @@ function filteredChecks() {
 function getUnadjCount() {
   return checks.filter(function(c) {
     if (!isUnadjusted(c)) return false;
-    if (cardFilter !== 'all' && c.card_type !== cardFilter.toUpperCase()) return false;
+    if (cardFilter !== 'all' && c.card_type && c.card_type !== cardFilter.toUpperCase()) return false;
     if (serverFilter !== 'all' && c.server_id !== serverFilter) return false;
     return true;
   }).length;
@@ -52,7 +52,7 @@ function getUnadjCount() {
 function getTipTotal() {
   return checks.filter(function(c) {
     if (isUnadjusted(c)) return false;
-    if (cardFilter !== 'all' && c.card_type !== cardFilter.toUpperCase()) return false;
+    if (cardFilter !== 'all' && c.card_type && c.card_type !== cardFilter.toUpperCase()) return false;
     if (serverFilter !== 'all' && c.server_id !== serverFilter) return false;
     return true;
   }).reduce(function(s, c) { return s + c.tip_amount; }, 0);
@@ -61,7 +61,7 @@ function getTipTotal() {
 function getUnadjChecks() {
   return checks.filter(function(c) {
     if (!isUnadjusted(c)) return false;
-    if (cardFilter !== 'all' && c.card_type !== cardFilter.toUpperCase()) return false;
+    if (cardFilter !== 'all' && c.card_type && c.card_type !== cardFilter.toUpperCase()) return false;
     if (serverFilter !== 'all' && c.server_id !== serverFilter) return false;
     return true;
   });
@@ -82,14 +82,30 @@ function uniqueServers() {
 // == FETCH =============================================
 
 function fetchChecks(params) {
-  var url = '/api/v1/tips/checks';
-  var qs = [];
-  if (params.employeeId && _role !== 'manager') {
-    qs.push('server_id=' + encodeURIComponent(params.employeeId));
-  }
-  if (qs.length) url += '?' + qs.join('&');
+  var url = '/api/v1/orders/day-summary';
+  if (params.employeeId) url += '?server_id=' + encodeURIComponent(params.employeeId);
   return fetch(url)
     .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var raw = data.checks || [];
+      // Only closed card checks need tip adjustment
+      return raw.filter(function(c) {
+        return c.status === 'closed' && c.method === 'card';
+      }).map(function(c) {
+        return {
+          check_id: c.checkId,
+          check_num: c.checkLabel || c.checkId,
+          payment_id: c.paymentId,
+          amount: c.amount,
+          time: c.time,
+          card_type: c.cardType || null,
+          last_four: c.lastFour || null,
+          server_name: c.serverName || null,
+          server_id: c.serverId || null,
+          tip_amount: c.adjusted ? c.tip : null,
+        };
+      });
+    })
     .catch(function() { return []; });
 }
 
@@ -132,22 +148,26 @@ function buildCheckCard(c) {
   chk.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';';
   r1.appendChild(chk);
 
-  var badge = document.createElement('span');
-  badge.textContent = c.card_type;
-  badge.style.cssText = [
-    'font-family:' + T.fb + ';font-size:10px;color:' + T.mint + ';',
-    'border:1px solid ' + T.mint + ';',
-    'padding:1px 4px;',
-    'clip-path:' + chamfer(3) + ';',
-  ].join('');
-  r1.appendChild(badge);
+  if (c.card_type) {
+    var badge = document.createElement('span');
+    badge.textContent = c.card_type;
+    badge.style.cssText = [
+      'font-family:' + T.fb + ';font-size:10px;color:' + T.mint + ';',
+      'border:1px solid ' + T.mint + ';',
+      'padding:1px 4px;',
+      'clip-path:' + chamfer(3) + ';',
+    ].join('');
+    r1.appendChild(badge);
+  }
   inner.appendChild(r1);
 
-  // Row 2: Card network + last 4
-  var r2 = document.createElement('div');
-  r2.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.sage + ';';
-  r2.textContent = c.card_type + ' \u00B7\u00B7\u00B7\u00B7' + c.last_four;
-  inner.appendChild(r2);
+  // Row 2: Card network + last 4 (if available)
+  if (c.card_type || c.last_four) {
+    var r2 = document.createElement('div');
+    r2.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.sage + ';';
+    r2.textContent = (c.card_type || 'Card') + ' \u00B7\u00B7\u00B7\u00B7' + (c.last_four || '');
+    inner.appendChild(r2);
+  }
 
   // Row 3: Check amount
   var r3 = document.createElement('div');
@@ -471,10 +491,10 @@ function openTipEntry(c) {
   SceneManager.interrupt('tip-entry', {
     onConfirm: function(tipAmount) {
       // POST to API
-      fetch('/api/v1/tips/adjust', {
+      fetch('/api/v1/payments/tip-adjust', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ check_id: c.check_id, tip_amount: tipAmount }),
+        body: JSON.stringify({ order_id: c.check_id, payment_id: c.payment_id, tip_amount: tipAmount }),
       }).catch(function(err) {
         console.error('[KINDpos] Tip adjust failed:', err);
       });
@@ -501,6 +521,7 @@ function openTipEntry(c) {
     params: {
       check_id: c.check_id,
       check_num: c.check_num || c.check_id,
+      payment_id: c.payment_id,
       amount: c.amount,
       time: c.time,
       card_type: c.card_type,
@@ -515,14 +536,10 @@ function openSetAllZero() {
 
   SceneManager.interrupt('confirm-set-all-zero', {
     onConfirm: function() {
-      var ids = unadj.map(function(c) { return c.check_id; });
-
-      // POST batch
-      fetch('/api/v1/tips/adjust-batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ check_ids: ids, tip_amount: 0 }),
-      }).catch(function(err) {
+      // POST batch zero
+      var zeroUrl = '/api/v1/payments/zero-unadjusted';
+      if (_params.employeeId) zeroUrl += '?server_id=' + encodeURIComponent(_params.employeeId);
+      fetch(zeroUrl, { method: 'POST' }).catch(function(err) {
         console.error('[KINDpos] Batch tip adjust failed:', err);
       });
 
@@ -623,10 +640,12 @@ SceneManager.register({
     ctx.textContent = 'Check #' + params.check_num + '  \u00B7  ' + fmt(params.amount) + '  \u00B7  ' + params.time;
     card.appendChild(ctx);
 
-    var ctx2 = document.createElement('div');
-    ctx2.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.sage + ';margin-bottom:10px;';
-    ctx2.textContent = params.card_type + ' \u00B7\u00B7\u00B7\u00B7' + params.last_four;
-    card.appendChild(ctx2);
+    if (params.card_type || params.last_four) {
+      var ctx2 = document.createElement('div');
+      ctx2.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.sage + ';margin-bottom:10px;';
+      ctx2.textContent = (params.card_type || 'Card') + ' \u00B7\u00B7\u00B7\u00B7' + (params.last_four || '');
+      card.appendChild(ctx2);
+    }
 
     // Preset buttons
     var presetRow = document.createElement('div');
