@@ -375,18 +375,24 @@ function _buildOverlay(el, sizeItem, builderData, onConfirm, onCancel) {
     }
     appliedMods.forEach(function(entry, idx) {
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';line-height:1.2;cursor:pointer;';
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';line-height:1.2;cursor:pointer;';
       var placementTag = '';
       if (entry.placement === '1st-half') placementTag = ' [1st]';
       else if (entry.placement === '2nd-half') placementTag = ' [2nd]';
       var nameSpan = document.createElement('span');
+      nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
       nameSpan.textContent = entry.prefixLabel + ' ' + entry.modLabel + placementTag;
       row.appendChild(nameSpan);
       if (entry.price > 0) {
         var priceSpan = document.createElement('span');
+        priceSpan.style.cssText = 'flex-shrink:0;margin:0 4px;';
         priceSpan.textContent = '+$' + entry.price.toFixed(2);
         row.appendChild(priceSpan);
       }
+      var removeSpan = document.createElement('span');
+      removeSpan.textContent = '\u2715';
+      removeSpan.style.cssText = 'color:' + T.red + ';flex-shrink:0;font-size:24px;padding:0 2px;';
+      row.appendChild(removeSpan);
       row.addEventListener('pointerup', (function(i) {
         return function() {
           appliedMods.splice(i, 1);
@@ -395,6 +401,18 @@ function _buildOverlay(el, sizeItem, builderData, onConfirm, onCancel) {
       })(idx));
       logWrap.appendChild(row);
     });
+
+    // RESET button
+    if (appliedMods.length > 1) {
+      var resetRow = document.createElement('div');
+      resetRow.style.cssText = 'margin-top:4px;padding:3px 0;text-align:center;font-family:' + T.fh + ';font-size:22px;color:' + T.red + ';cursor:pointer;border:2px solid ' + T.red + ';background:' + T.darkBtn + ';';
+      resetRow.textContent = 'RESET ALL';
+      resetRow.addEventListener('pointerup', function() {
+        appliedMods.length = 0;
+        renderLog();
+      });
+      logWrap.appendChild(resetRow);
+    }
     logWrap.scrollTop = logWrap.scrollHeight;
   }
 }

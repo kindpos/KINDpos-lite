@@ -118,6 +118,7 @@ class PrintContextBuilder:
             "customer_name":              getattr(order, "customer_name", None),
             "items":                      items,
             "subtotal":                   float(order.subtotal or 0),
+            "discount_total":             float(order.discount_total or 0),
             "tax_lines":                  tax_lines,
             "total":                      float(order.total or 0),
             "tip_amount":                 tip_amount,

@@ -79,9 +79,32 @@ export function HexNav(container, opts) {
     return pts.join(' ');
   }
 
+  // ── Connector lines (from item to mod groups) ──
+  var connectorLines = [];
+
   // ── Render ─────────────────────────────────────
   function render() {
     svg.innerHTML = '';
+    // Draw connector lines first (behind hexes)
+    connectorLines.forEach(function(line) {
+      var pathEl = document.createElementNS(svgNS, 'line');
+      pathEl.setAttribute('x1', line.x1);
+      pathEl.setAttribute('y1', line.y1);
+      pathEl.setAttribute('x2', line.x2);
+      pathEl.setAttribute('y2', line.y2);
+      pathEl.setAttribute('stroke', line.color || T.mint);
+      pathEl.setAttribute('stroke-width', '3');
+      pathEl.setAttribute('stroke-opacity', '0.5');
+      pathEl.setAttribute('stroke-dasharray', '8,6');
+      // Animate dash to create flow effect
+      var animDash = document.createElementNS(svgNS, 'animate');
+      animDash.setAttribute('attributeName', 'stroke-dashoffset');
+      animDash.setAttribute('values', '0;-28');
+      animDash.setAttribute('dur', '1.5s');
+      animDash.setAttribute('repeatCount', 'indefinite');
+      pathEl.appendChild(animDash);
+      svg.appendChild(pathEl);
+    });
     state.hexes.forEach(drawHex);
   }
 
@@ -258,6 +281,7 @@ export function HexNav(container, opts) {
   // ── Navigation ─────────────────────────────────
   function showCats() {
     state.level = 0; state.cat = null; state.subcat = null;
+    connectorLines = [];
     resize();
     var positions = honeycombLayout(data, sCatR);
     state.hexes = data.map(function(cat, i) {
@@ -453,6 +477,7 @@ export function HexNav(container, opts) {
     modState.selectedMods = [];
     modState.satisfied = {};
     modState.currentGroup = null;
+    connectorLines = [];
   }
 
   function showModGroups(itemHex, fresh) {
@@ -477,11 +502,15 @@ export function HexNav(container, opts) {
 
     itemHex.locked = true;
     state.level = 3;
-    var locked = [itemHex];
-    if (state.cat && state.cat !== itemHex) {
-      state.cat.locked = true;
-      locked.unshift(state.cat);
-    }
+
+    // ── Position item hex in top-left corner ──
+    var itemR = sItemR;
+    itemHex.x = itemR + 20;
+    itemHex.y = itemR + 20;
+    itemHex.r = itemR;
+
+    var catColor = state.cat ? state.cat.color : itemHex.color;
+    var catText  = state.cat ? (state.cat.textColor || '#1a1a1a') : (itemHex.textColor || '#1a1a1a');
 
     // Build group items with label swap for satisfied groups
     var groupItems = modState.groups.map(function(g) {
@@ -497,23 +526,43 @@ export function HexNav(container, opts) {
     });
 
     var allSatisfied = modState.groups.every(function(g) { return modState.satisfied[g.id]; });
-    var catColor = state.cat ? state.cat.color : itemHex.color;
-    var catText  = state.cat ? (state.cat.textColor || '#1a1a1a') : (itemHex.textColor || '#1a1a1a');
 
     // Add DONE to the list if all satisfied
     if (allSatisfied) {
       groupItems.push({ id: '__done__', label: 'DONE', isDone: true });
     }
 
-    state.hexes = buildGrid(locked, groupItems, sItemR, 'modgroup');
-    // Style the mod-group hexes
-    state.hexes.forEach(function(h) {
-      if (h.type !== 'modgroup') return;
-      if (h.data.isDone) {
+    // ── Layout mod groups extending from item hex ──
+    // Fan out horizontally to the right, vertically spaced
+    var groupR = adaptiveR(sItemR, groupItems.length, svgW, svgH);
+    var startX = itemHex.x + itemR + groupR + 60;
+    var spacingY = groupR * 2.4;
+    var totalH = (groupItems.length - 1) * spacingY;
+    var startY = Math.max(groupR + 10, (svgH - totalH) / 2);
+
+    var hexes = [itemHex];
+    connectorLines = [];
+
+    groupItems.forEach(function(g, i) {
+      var gx = startX + (i % 2 === 1 ? groupR * 0.8 : 0);
+      var gy = startY + i * spacingY;
+      if (gy + groupR > svgH - 4) {
+        svgH = gy + groupR + 10;
+        svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+      }
+      var h = {
+        id: g.id, label: g.label,
+        x: gx, y: gy, r: groupR,
+        color: g.color || T.mint,
+        textColor: g.textColor || '#1a1a1a',
+        locked: false, type: 'modgroup', data: g,
+      };
+
+      if (g.isDone) {
         h.type = 'done';
         h.color = catColor;
         h.textColor = catText;
-      } else if (modState.satisfied[h.data.id]) {
+      } else if (modState.satisfied[g.id]) {
         h.locked = true;
         h.color = catColor;
         h.textColor = catText;
@@ -522,7 +571,20 @@ export function HexNav(container, opts) {
         h.color = T.mint;
         h.textColor = '#1a1a1a';
       }
+
+      hexes.push(h);
+
+      // Connector line from item hex to this group
+      connectorLines.push({
+        x1: itemHex.x + itemR * 0.8,
+        y1: itemHex.y + (i > 0 ? itemR * 0.3 : 0),
+        x2: gx - groupR * 0.8,
+        y2: gy,
+        color: h.color,
+      });
     });
+
+    state.hexes = hexes;
     render();
   }
 
@@ -532,22 +594,55 @@ export function HexNav(container, opts) {
     modGroupHex.locked = true;
     state.level = 4;
 
-    var locked = [modState.itemHex, modGroupHex];
-    if (state.cat && state.cat !== modState.itemHex) locked.unshift(state.cat);
-
+    var itemHex = modState.itemHex;
     var groupData = modGroupHex.data;
     var choiceItems = groupData.choices.map(function(c) {
       return { id: c.label, label: c.label, price: c.price, groupId: groupData.id };
     });
 
-    state.hexes = buildGrid(locked, choiceItems, sModR, 'mod');
-    // Style mod choices
-    state.hexes.forEach(function(h) {
-      if (h.type !== 'mod') return;
-      h.color = T.mint;
-      h.textColor = '#1a1a1a';
-      h.pulse = true;
+    // Keep item hex in top-left, group hex stays, choices fan out from group
+    var choiceR = adaptiveR(sModR, choiceItems.length, svgW - modGroupHex.x, svgH);
+    var startX = modGroupHex.x + modGroupHex.r + choiceR + 40;
+    var spacingY = choiceR * 2.2;
+    var totalH = (choiceItems.length - 1) * spacingY;
+    var startY = Math.max(choiceR + 10, modGroupHex.y - totalH / 2);
+
+    var hexes = [itemHex, modGroupHex];
+    connectorLines = [{
+      x1: itemHex.x + itemHex.r * 0.8,
+      y1: itemHex.y,
+      x2: modGroupHex.x - modGroupHex.r * 0.8,
+      y2: modGroupHex.y,
+      color: modGroupHex.color,
+    }];
+
+    choiceItems.forEach(function(c, i) {
+      var cx = startX + (i % 2 === 1 ? choiceR * 0.6 : 0);
+      var cy = startY + i * spacingY;
+      if (cy + choiceR > svgH - 4) {
+        svgH = cy + choiceR + 10;
+        svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+      }
+      var h = {
+        id: c.id, label: c.label,
+        x: cx, y: cy, r: choiceR,
+        color: T.mint, textColor: '#1a1a1a',
+        locked: false, type: 'mod', data: c,
+        pulse: true,
+      };
+      hexes.push(h);
+
+      // Connector line from group to choice
+      connectorLines.push({
+        x1: modGroupHex.x + modGroupHex.r * 0.8,
+        y1: modGroupHex.y,
+        x2: cx - choiceR * 0.8,
+        y2: cy,
+        color: T.mint,
+      });
     });
+
+    state.hexes = hexes;
     render();
   }
 

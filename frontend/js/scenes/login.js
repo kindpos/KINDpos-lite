@@ -98,8 +98,21 @@ SceneManager.register({
   },
 });
 
+// Role → landing scene mapping. Checked in priority order.
+var ROLE_LANDING_MAP = [
+  { role: 'manager',    scene: 'manager-landing' },
+  { role: 'bartender',  scene: 'server-landing'  },
+  { role: 'host',       scene: 'server-landing'  },
+  { role: 'server',     scene: 'server-landing'  },
+];
+
 function landingScene(empRoles) {
-  return empRoles.indexOf('manager') !== -1 ? 'manager-landing' : 'server-landing';
+  for (var i = 0; i < ROLE_LANDING_MAP.length; i++) {
+    if (empRoles.indexOf(ROLE_LANDING_MAP[i].role) !== -1) {
+      return ROLE_LANDING_MAP[i].scene;
+    }
+  }
+  return 'server-landing'; // default fallback
 }
 
 function handlePinSubmit(pin) {

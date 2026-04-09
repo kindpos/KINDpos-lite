@@ -289,24 +289,28 @@ async def process_cash_payment(
     if order.is_fully_paid:
         raise HTTPException(status_code=400, detail="Order is already fully paid")
 
-    # Apply cash dual-pricing discount if paying less than order total
-    cash_discount = money_round(order.total - request.amount)
-    if cash_discount > 0 and request.payment_method == "cash":
-        discount_evt = create_event(
-            event_type=EventType.DISCOUNT_APPROVED,
-            terminal_id=settings.terminal_id,
-            payload={
-                "order_id": request.order_id,
-                "discount_type": "cash_dual_pricing",
-                "amount": cash_discount,
-                "reason": "Cash dual-pricing discount",
-            },
-            correlation_id=request.order_id,
-        )
-        await ledger.append(discount_evt)
-        # Re-project so order.total reflects the discount
-        events = await ledger.get_events_by_correlation(request.order_id)
-        order = project_order(events)
+    # Apply cash dual-pricing discount only on the FIRST cash payment
+    # (no prior confirmed payments). Applying on every partial payment
+    # would incorrectly reduce order.total and break split-tender flows.
+    existing_confirmed = [p for p in order.payments if p.status == "confirmed"]
+    if not existing_confirmed and request.payment_method == "cash":
+        cash_discount = money_round(order.total - request.amount)
+        if cash_discount > 0:
+            discount_evt = create_event(
+                event_type=EventType.DISCOUNT_APPROVED,
+                terminal_id=settings.terminal_id,
+                payload={
+                    "order_id": request.order_id,
+                    "discount_type": "cash_dual_pricing",
+                    "amount": cash_discount,
+                    "reason": "Cash dual-pricing discount",
+                },
+                correlation_id=request.order_id,
+            )
+            await ledger.append(discount_evt)
+            # Re-project so order.total reflects the discount
+            events = await ledger.get_events_by_correlation(request.order_id)
+            order = project_order(events)
 
     payment_id = f"pay_{uuid.uuid4().hex[:8]}"
     sale_amount = money_round(request.amount)

@@ -188,7 +188,7 @@ function buildMethodPanel(params) {
   prompt.appendChild(pText);
   panel.appendChild(prompt);
 
-  // Two cards side by side
+  // Payment method cards
   var cardRow = document.createElement('div');
   cardRow.style.cssText = 'flex:1;display:flex;gap:' + GAP + 'px;';
 
@@ -216,6 +216,23 @@ function buildMethodPanel(params) {
   }));
 
   panel.appendChild(cardRow);
+
+  // Second row: Gift Card
+  var giftRow = document.createElement('div');
+  giftRow.style.cssText = 'flex-shrink:0;display:flex;gap:' + GAP + 'px;height:80px;';
+
+  giftRow.appendChild(buildMethodCard({
+    label: '\u2605  GIFT CARD',
+    amount: '$' + (params.cardTotal || 0).toFixed(2),
+    subtitle: null,
+    fill: T.darkBtn,
+    textColor: T.mint,
+    onTap: function() {
+      SceneManager.openTransactional('payment', makePaymentParams(params, 'gift_card'));
+    },
+  }));
+
+  panel.appendChild(giftRow);
 
   // Back button
   var back = buildButton('\u2190 BACK', {
