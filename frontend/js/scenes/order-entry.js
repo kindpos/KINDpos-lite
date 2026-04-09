@@ -882,30 +882,52 @@ function buildModifierPanel(catIds) {
     panel.appendChild(placeBar.wrap);
   }
 
-  // ── MODIFIER HEXNAV ──
-  var hexCanvas = document.createElement('div');
-  hexCanvas.style.cssText = 'flex:1;position:relative;overflow:hidden;';
-  panel._hexCanvas = hexCanvas;
-  panel.appendChild(hexCanvas);
-
-  // Build HexNav data filtered by categories
-  // Double-rAF ensures the flex container has laid out before HexNav reads dimensions
+  // ── MODIFIER BUTTON GRID (replaces HexNav) ──
   var modData = getModHexData(catIds || []);
   panel._modData = modData;
-  panel._hexCanvasRef = hexCanvas;
-  panel._initHexNav = function() {
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        if (!modifierSession.active) return;
-        var nav = new HexNav(hexCanvas, {
-          data: modData,
-          scale: 0.7,
-          onSelect: function(item) { applyModifier(item); },
-          onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
-        });
-        modifierSession.hexNav = nav;
-      });
+
+  // Category tab bar
+  var catTabBar = document.createElement('div');
+  catTabBar.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
+  panel._catTabBtns = {};
+  var activeCatId = modData.length > 0 ? modData[0].id : null;
+  panel._activeCatId = activeCatId;
+
+  modData.forEach(function(cat) {
+    var isActive = cat.id === activeCatId;
+    var catBtn = document.createElement('div');
+    catBtn.style.cssText = [
+      'flex:1;height:34px;display:flex;align-items:center;justify-content:center;',
+      'font-family:' + T.fh + ';font-size:20px;cursor:pointer;',
+      'border:2px solid ' + cat.color + ';',
+      'background:' + (isActive ? cat.color : T.darkBtn) + ';',
+      'color:' + (isActive ? cat.textColor : cat.color) + ';',
+      'transition:background 80ms,color 80ms;',
+    ].join('');
+    catBtn.textContent = cat.label;
+    catBtn.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      panel._activeCatId = cat.id;
+      refreshModCatTabs(panel);
+      renderModButtonGrid(panel);
     });
+    panel._catTabBtns[cat.id] = catBtn;
+    catTabBar.appendChild(catBtn);
+  });
+  panel.appendChild(catTabBar);
+
+  // Scrollable button grid
+  var gridWrap = document.createElement('div');
+  gridWrap.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;';
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px;';
+  gridWrap.appendChild(grid);
+  panel._modGrid = grid;
+  panel.appendChild(gridWrap);
+
+  // Init: no deferred HexNav needed
+  panel._initHexNav = function() {
+    renderModButtonGrid(panel);
   };
 
   // ── APPLIED MODS LOG ──
@@ -989,6 +1011,66 @@ function refreshModifierPanel() {
 
   // Refresh applied mods log
   renderAppliedModsLog(panel);
+}
+
+function refreshModCatTabs(panel) {
+  if (!panel || !panel._catTabBtns || !panel._modData) return;
+  panel._modData.forEach(function(cat) {
+    var btn = panel._catTabBtns[cat.id];
+    if (!btn) return;
+    var isActive = panel._activeCatId === cat.id;
+    btn.style.background = isActive ? cat.color : T.darkBtn;
+    btn.style.color = isActive ? cat.textColor : cat.color;
+  });
+}
+
+function renderModButtonGrid(panel) {
+  var grid = panel._modGrid;
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  var activeCat = null;
+  (panel._modData || []).forEach(function(cat) {
+    if (cat.id === panel._activeCatId) activeCat = cat;
+  });
+  if (!activeCat) return;
+
+  var catColor = activeCat.color;
+  var catText = activeCat.textColor;
+
+  // Flatten all items from all subcats
+  (activeCat.subcats || []).forEach(function(sub) {
+    (sub.items || []).forEach(function(item) {
+      var btn = document.createElement('div');
+      btn.style.cssText = [
+        'display:flex;align-items:center;justify-content:center;',
+        'height:52px;cursor:pointer;',
+        'font-family:' + T.fb + ';font-size:22px;font-weight:bold;',
+        'text-align:center;word-break:break-word;',
+        'background:' + T.darkBtn + ';',
+        'color:' + catText + ';',
+        'border:2px solid ' + catColor + ';',
+        'transition:background 80ms;',
+      ].join('');
+      btn.textContent = item.label;
+
+      btn.addEventListener('pointerdown', function() {
+        btn.style.background = catColor;
+        btn.style.color = activeCat.textColor === catText ? '#fff' : catText;
+      });
+      btn.addEventListener('pointerup', function() {
+        btn.style.background = T.darkBtn;
+        btn.style.color = catText;
+        applyModifier(item);
+      });
+      btn.addEventListener('pointerleave', function() {
+        btn.style.background = T.darkBtn;
+        btn.style.color = catText;
+      });
+
+      grid.appendChild(btn);
+    });
+  });
 }
 
 function renderAppliedModsLog(panel) {
