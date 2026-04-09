@@ -1,11 +1,11 @@
 """
-Generate 3 months of realistic sample data for a mom & pop pizza shop.
+Generate 1 month of realistic sample data for a mom & pop pizza shop.
 
 Creates a fresh event_ledger.db with:
   - Pizza shop menu (categories, items, modifiers)
   - Golden Girls employee roster
   - Store configuration
-  - ~90 days of orders, payments, tips, and shift data
+  - ~30 days of orders, payments, tips, and shift data
   - DAY_CLOSED events separating each business day
   - "Today" data (no DAY_CLOSED) so the dashboard shows live charts
 
@@ -33,7 +33,7 @@ DB_PATH = "data/event_ledger.db"
 TERMINAL_ID = "terminal_01"
 TAX_RATE = 0.07
 CASH_DISCOUNT_RATE = 0.04  # 4% dual-pricing cash discount
-DAYS_OF_HISTORY = 90
+DAYS_OF_HISTORY = 30
 SEED = 42  # reproducible data
 
 random.seed(SEED)
@@ -115,11 +115,11 @@ MODIFIER_GROUPS = [
 # ─── Employee Data ────────────────────────────────────────────────────────────
 
 STAFF = [
-    {"employee_id": "rose",    "first_name": "Rose",    "last_name": "N.",  "display_name": "Rose N.",    "role_ids": ["manager", "server"],  "pin": "1234", "hourly_rate": 18.00},
-    {"employee_id": "blanch",  "first_name": "Blanch",  "last_name": "D.",  "display_name": "Blanch D.",  "role_ids": ["server", "host"],     "pin": "5678", "hourly_rate": 14.00},
-    {"employee_id": "dorothy", "first_name": "Dorothy", "last_name": "S.",  "display_name": "Dorothy S.", "role_ids": ["server"],              "pin": "1111", "hourly_rate": 14.00},
-    {"employee_id": "sophia",  "first_name": "Sophia",  "last_name": "P.",  "display_name": "Sophia P.",  "role_ids": ["cook", "server"],     "pin": "2222", "hourly_rate": 16.00},
-    {"employee_id": "stan",    "first_name": "Stan",    "last_name": "Z.",  "display_name": "Stan Z.",    "role_ids": ["cook", "busser"],     "pin": "3456", "hourly_rate": 12.00},
+    {"employee_id": "rose",     "first_name": "Rose",     "last_name": "Nylund",    "display_name": "Rose Nylund",     "role_ids": ["manager", "server"],  "pin": "1234", "hourly_rate": 18.00},
+    {"employee_id": "blanche",  "first_name": "Blanche",  "last_name": "Devereaux", "display_name": "Blanche Devereaux", "role_ids": ["server", "host"],   "pin": "5678", "hourly_rate": 14.00},
+    {"employee_id": "dorothy",  "first_name": "Dorothy",  "last_name": "Zbornak",   "display_name": "Dorothy Zbornak",  "role_ids": ["server"],             "pin": "1111", "hourly_rate": 14.00},
+    {"employee_id": "sophia",   "first_name": "Sophia",   "last_name": "Petrillo",  "display_name": "Sophia Petrillo",  "role_ids": ["cook", "server"],     "pin": "2222", "hourly_rate": 16.00},
+    {"employee_id": "stan",     "first_name": "Stan",     "last_name": "Zbornak",   "display_name": "Stan Zbornak",     "role_ids": ["cook", "busser"],     "pin": "3456", "hourly_rate": 12.00},
 ]
 
 # Servers (those who take orders and receive tips)
