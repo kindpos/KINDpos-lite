@@ -197,6 +197,25 @@ function buildLeftColumn(emp) {
   tablesBody.appendChild(statRow('Table Count:', String(tableCount), T.lime));
   tablesBody.appendChild(statRow('Guest Avg:', fmt(guestAvg), T.gold));
   tablesBody.appendChild(statRow('Top Seller:', computeTopSeller(), T.lime));
+
+  // Fetch seat capacity from floorplan and display
+  var seatRow = statRow('Total Seats:', '...', T.lime);
+  tablesBody.appendChild(seatRow);
+  fetch('/api/v1/config/floorplan')
+    .then(function(r) { return r.json(); })
+    .then(function(layout) {
+      var tables = layout.tables || [];
+      var totalSeats = tables.reduce(function(s, t) { return s + (t.seats || 0); }, 0);
+      var valEl = seatRow.querySelector('[data-stat-val]');
+      if (valEl) valEl.textContent = String(totalSeats);
+      else seatRow.lastChild.textContent = String(totalSeats);
+    })
+    .catch(function() {
+      var valEl = seatRow.querySelector('[data-stat-val]');
+      if (valEl) valEl.textContent = 'N/A';
+      else seatRow.lastChild.textContent = 'N/A';
+    });
+
   tablesCard.appendChild(tablesBody);
   tablesCard.appendChild(expandBtn('tables', tablesCard));
   col.appendChild(tablesCard);

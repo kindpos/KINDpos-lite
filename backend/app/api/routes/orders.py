@@ -1398,3 +1398,137 @@ async def close_day(
     return {"success": True, "summary": summary}
 
 
+# =============================================================================
+# SPLIT BY SEAT
+# =============================================================================
+
+class SplitBySeatRequest(BaseModel):
+    seats: Optional[list[int]] = None  # specific seats, or None for all
+
+
+@router.post("/{order_id}/split-by-seat")
+async def split_by_seat(
+    order_id: str,
+    request: SplitBySeatRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Split an order into separate child orders by seat number.
+
+    Each distinct seat_number gets its own new order. Items without a
+    seat stay on the original order.  Returns the list of child orders.
+    """
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status not in ("open", "printed"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot split a {order.status} order",
+        )
+
+    # Group items by seat
+    seat_items: dict[int, list] = {}
+    for item in order.items:
+        seat = getattr(item, "seat_number", None)
+        if seat is None:
+            continue
+        if request.seats and seat not in request.seats:
+            continue
+        seat_items.setdefault(seat, []).append(item)
+
+    if not seat_items:
+        raise HTTPException(
+            status_code=400,
+            detail="No items with seat numbers found to split",
+        )
+
+    child_orders = []
+    for seat_num, items in sorted(seat_items.items()):
+        child_id = f"order_{uuid.uuid4().hex[:8]}"
+        # Create child order
+        create_evt = order_created(
+            terminal_id=settings.terminal_id,
+            order_id=child_id,
+            order_type=order.order_type,
+            guest_count=1,
+            table=order.table,
+            server_id=order.server_id,
+            server_name=order.server_name,
+        )
+        await ledger.append(create_evt)
+
+        # Add items to child order
+        for item in items:
+            add_evt = item_added(
+                terminal_id=settings.terminal_id,
+                order_id=child_id,
+                item_id=f"item_{uuid.uuid4().hex[:8]}",
+                menu_item_id=getattr(item, "menu_item_id", ""),
+                name=item.name,
+                price=float(item.price),
+                quantity=item.quantity,
+                category=getattr(item, "category", None),
+                seat_number=seat_num,
+                modifiers=item.modifiers if hasattr(item, "modifiers") else [],
+            )
+            await ledger.append(add_evt)
+
+            # Remove from parent order
+            remove_evt = item_removed(
+                terminal_id=settings.terminal_id,
+                order_id=order_id,
+                item_id=item.item_id,
+                reason=f"Split to seat {seat_num} check",
+            )
+            await ledger.append(remove_evt)
+
+        child_orders.append({
+            "order_id": child_id,
+            "seat": seat_num,
+            "item_count": len(items),
+        })
+
+    return {
+        "success": True,
+        "parent_order_id": order_id,
+        "child_orders": child_orders,
+    }
+
+
+class SplitEvenlyRequest(BaseModel):
+    num_ways: int = Field(ge=2, le=20)
+
+
+@router.post("/{order_id}/split-evenly")
+async def split_evenly(
+    order_id: str,
+    request: SplitEvenlyRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Calculate an even split of the order total.
+
+    Does NOT create child orders — returns the per-person amount so the
+    frontend can process N individual payments on the same order.
+    """
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status not in ("open", "printed", "closed"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot split a {order.status} order",
+        )
+
+    total = float(order.total)
+    per_person = money_round(total / request.num_ways)
+    # Last person pays remainder to avoid rounding loss
+    last_person = money_round(total - per_person * (request.num_ways - 1))
+
+    return {
+        "success": True,
+        "order_id": order_id,
+        "total": total,
+        "num_ways": request.num_ways,
+        "per_person": per_person,
+        "last_person": last_person,
+    }
+
+

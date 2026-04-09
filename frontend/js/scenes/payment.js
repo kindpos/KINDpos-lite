@@ -53,9 +53,13 @@ SceneManager.register({
     ].join('');
 
     container.appendChild(buildReceiptPanel(params));
-    rightCol = params.paymentMode === 'cash'
-      ? buildCashPanel(params)
-      : buildCardPanel(params);
+    if (params.paymentMode === 'cash') {
+      rightCol = buildCashPanel(params);
+    } else if (params.paymentMode === 'gift_card') {
+      rightCol = buildGiftCardPanel(params);
+    } else {
+      rightCol = buildCardPanel(params);
+    }
     container.appendChild(rightCol);
   },
 
@@ -394,6 +398,103 @@ function buildCardPanel(params) {
     fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
     height: 56,
     onTap: function() { handleConfirm(params); },
+  });
+  chargeBtn.style.flexShrink = '0';
+  col.appendChild(chargeBtn);
+
+  return col;
+}
+
+
+// ═══════════════════════════════════════════════════
+//  RIGHT COLUMN — Gift Card Mode
+// ═══════════════════════════════════════════════════
+
+function buildGiftCardPanel(params) {
+  var col = document.createElement('div');
+  col.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:' + GAP + 'px;';
+
+  var panel = document.createElement('div');
+  panel.style.cssText = [
+    'flex:1;background:' + T.bgDark + ';',
+    'display:flex;flex-direction:column;',
+    'align-items:center;justify-content:center;gap:16px;',
+    'padding:24px;',
+  ].join('');
+  applySunkenStyle(panel);
+  panel.style.borderColor = T.gold;
+
+  // Icon
+  var icon = document.createElement('div');
+  icon.style.cssText = [
+    'font-size:60px;color:' + T.gold + ';',
+  ].join('');
+  icon.textContent = '\u2605';
+  panel.appendChild(icon);
+
+  // Title
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:40px;color:' + T.gold + ';letter-spacing:0.1em;';
+  title.textContent = 'GIFT CARD';
+  panel.appendChild(title);
+
+  // Instructions
+  var instr = document.createElement('div');
+  instr.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mutedText + ';text-align:center;';
+  instr.textContent = 'Swipe or enter gift card number';
+  panel.appendChild(instr);
+
+  // Amount display
+  var amtBox = document.createElement('div');
+  amtBox.style.cssText = [
+    'margin-top:6px;padding:8px 32px;',
+    'background:' + T.bg4 + ';',
+    'clip-path:' + chamfer(6) + ';',
+    'border:2px solid ' + T.gold + ';',
+    'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.gold + ';',
+    'text-align:center;letter-spacing:0.08em;',
+  ].join('');
+  amtBox.textContent = '$' + params.cardTotal.toFixed(2);
+  panel.appendChild(amtBox);
+
+  // Card number input via numpad
+  var numpadWrap = document.createElement('div');
+  numpadWrap.style.cssText = 'margin-top:8px;';
+  var gcNumpad = buildNumpad({
+    masked:        false,
+    maxDigits:     16,
+    displayH:      50,
+    cardPad:       14,
+    keyH:          60,
+    keyGap:        8,
+    gap:           12,
+    displayFormat: function(digits) {
+      if (!digits) return 'Enter card #';
+      return digits.replace(/(.{4})/g, '$1 ').trim();
+    },
+    onSubmit: function(digits) {
+      if (digits.length < 4) return;
+      // Process as a card payment with gift_card method
+      handleConfirm(Object.assign({}, params, { paymentMode: 'card', giftCardNumber: digits }));
+    },
+  });
+  numpadWrap.appendChild(gcNumpad);
+  panel.appendChild(numpadWrap);
+
+  col.appendChild(panel);
+
+  // Charge button
+  var chargeBtn = buildButton('REDEEM  $' + params.cardTotal.toFixed(2), {
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall,
+    height: 56,
+    onTap: function() {
+      var digits = gcNumpad.getPin ? gcNumpad.getPin() : '';
+      if (digits.length < 4) {
+        if (gcNumpad.setError) gcNumpad.setError('Enter card #');
+        return;
+      }
+      handleConfirm(Object.assign({}, params, { paymentMode: 'card', giftCardNumber: digits }));
+    },
   });
   chargeBtn.style.flexShrink = '0';
   col.appendChild(chargeBtn);

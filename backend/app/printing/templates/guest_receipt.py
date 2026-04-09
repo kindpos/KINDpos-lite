@@ -62,12 +62,17 @@ class GuestReceiptTemplate(BaseTemplate):
         # 4. Totals
         subtotal = context.get('subtotal', 0.0)
         commands.append({'type': 'text', 'content': f"{'SUBTOTAL:':<{self.chars_per_line-10}} ${subtotal:>8.2f}"})
-        
+
+        # Discount line (if any discounts applied)
+        discount_total = context.get('discount_total', 0.0)
+        if discount_total > 0:
+            commands.append({'type': 'text', 'content': f"{'DISCOUNT:':<{self.chars_per_line-10}} -${discount_total:>7.2f}"})
+
         for tax in context.get('tax_lines', []):
             label = tax.get('label', 'Tax')
             amt = tax.get('amount', 0.0)
             commands.append({'type': 'text', 'content': f"{label + ':':<{self.chars_per_line-10}} ${amt:>8.2f}"})
-            
+
         total = context.get('total', 0.0)
         commands.append({'type': 'text', 'content': f"{'TOTAL:':<{self.chars_per_line-10}} ${total:>8.2f}", 'bold': True})
         

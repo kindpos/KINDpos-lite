@@ -655,16 +655,30 @@ function rebuildBottomBar(params) {
     _bottomBar.appendChild(addBtn);
     _bottomBar.appendChild(modifyBtn);
   } else {
-    // State A: Idle — ADD ITEMS only (no MODIFY ITEMS tab)
+    // State A: Idle — ADD ITEMS + DONE
     var tabItems = buildButton('ADD ITEMS', {
       fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
     });
-    tabItems.style.gridColumn = '1 / 5';
+    tabItems.style.gridColumn = '1 / 4';
     tabItems.style.gridRow    = '1';
     tabItems.style.height = '100%';
     _tabItemsBtn = tabItems;
 
     _bottomBar.appendChild(tabItems);
+
+    if (ticket.length > 0) {
+      var doneBtn = buildButton('DONE', {
+        fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
+        onTap: function() {
+          clearModifierSelection();
+          showToast('Items confirmed', { bg: T.goGreen, duration: 1200 });
+        },
+      });
+      doneBtn.style.gridColumn = '4 / 6';
+      doneBtn.style.gridRow    = '1';
+      doneBtn.style.height = '100%';
+      _bottomBar.appendChild(doneBtn);
+    }
   }
 
   // ── Row 2: Action buttons (always present when not in session) ──
@@ -990,12 +1004,41 @@ function renderAppliedModsLog(panel) {
     return;
   }
 
-  modifierSession.appliedMods.forEach(function(entry) {
+  modifierSession.appliedMods.forEach(function(entry, idx) {
     var row = document.createElement('div');
-    row.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + T.gold + ';line-height:1.2;';
-    row.textContent = entry.logLabel || (entry.prefixLabel + ' \u2192 ' + entry.modLabel);
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-family:' + T.fb + ';font-size:30px;color:' + T.gold + ';line-height:1.2;';
+    var label = document.createElement('span');
+    label.textContent = entry.logLabel || (entry.prefixLabel + ' \u2192 ' + entry.modLabel);
+    row.appendChild(label);
+    var removeBtn = document.createElement('span');
+    removeBtn.textContent = '\u2715';
+    removeBtn.style.cssText = 'color:' + T.red + ';cursor:pointer;padding:0 4px;font-size:28px;flex-shrink:0;';
+    removeBtn.addEventListener('pointerup', (function(i) {
+      return function(e) {
+        e.stopPropagation();
+        var removed = modifierSession.appliedMods.splice(i, 1)[0];
+        removed.modRefs.forEach(function(ref) {
+          var mIdx = ref.inst.mods.indexOf(ref.mod);
+          if (mIdx !== -1) ref.inst.mods.splice(mIdx, 1);
+        });
+        renderTicket();
+        refreshModifierPanel();
+      };
+    })(idx));
+    row.appendChild(removeBtn);
     log.appendChild(row);
   });
+
+  // RESET button to clear all applied modifiers
+  if (modifierSession.appliedMods.length > 0) {
+    var resetBtn = document.createElement('div');
+    resetBtn.style.cssText = 'margin-top:6px;padding:4px 0;text-align:center;font-family:' + T.fh + ';font-size:26px;color:' + T.red + ';cursor:pointer;border:2px solid ' + T.red + ';background:' + T.darkBtn + ';';
+    resetBtn.textContent = 'RESET ALL';
+    resetBtn.addEventListener('pointerup', function() {
+      cancelSession();
+    });
+    log.appendChild(resetBtn);
+  }
 
   log.scrollTop = log.scrollHeight;
 }
@@ -1312,8 +1355,27 @@ function renderTicket() {
         });
       }
 
+      // Short tap = select; long-press = edit quantity
+      var _qtyHoldTimer = null;
+      var _qtyDidHold = false;
+      gc.addEventListener('pointerdown', function() {
+        if (modifierSession.active) return;
+        _qtyDidHold = false;
+        _qtyHoldTimer = setTimeout(function() {
+          _qtyDidHold = true;
+          // Only allow qty edit on unsent items
+          var allUnsent = instances.every(function(i) { return !i.sent; });
+          if (!allUnsent) {
+            showToast('Cannot edit qty on sent items', { duration: 1500 });
+            return;
+          }
+          showQtyEditor(name, instances);
+        }, 500);
+      });
       gc.addEventListener('pointerup', function() {
-        if (modifierSession.active) return; // locked during session
+        clearTimeout(_qtyHoldTimer);
+        if (_qtyDidHold) return;
+        if (modifierSession.active) return;
         // Toggle select all instances into modifierSession
         instances.forEach(function(i) {
           i.selected = true;
@@ -1323,6 +1385,9 @@ function renderTicket() {
         });
         renderTicket();
         rebuildBottomBar();
+      });
+      gc.addEventListener('pointerleave', function() {
+        clearTimeout(_qtyHoldTimer);
       });
 
       list.appendChild(gc);
@@ -1523,6 +1588,43 @@ function stripPlacementPrefix(name) {
   return name;
 }
 
+// ── QUANTITY EDITOR ─────────────────────────────
+function showQtyEditor(itemName, instances) {
+  SceneManager.interrupt('qty-edit', {
+    onConfirm: function(newQty) {
+      var currentQty = instances.length;
+      if (newQty === currentQty || newQty < 1) return;
+      if (newQty > currentQty) {
+        // Add more instances (clone from first)
+        var template = instances[0];
+        for (var i = 0; i < newQty - currentQty; i++) {
+          ticket.push({
+            id:        ++ticketSeq,
+            idemKey:   _idemKey(),
+            name:      template.name,
+            unitPrice: template.unitPrice,
+            mods:      template.mods.map(function(m) { return { name: m.name, price: m.price, charged: m.charged, prefix: m.prefix }; }),
+            selected:  false,
+            sent:      false,
+            category:  template.category,
+          });
+        }
+      } else {
+        // Remove from the end (unsent only)
+        var toRemove = currentQty - newQty;
+        for (var j = instances.length - 1; j >= 0 && toRemove > 0; j--) {
+          var idx = ticket.indexOf(instances[j]);
+          if (idx !== -1) { ticket.splice(idx, 1); toRemove--; }
+        }
+      }
+      renderTicket();
+      rebuildBottomBar();
+    },
+    onCancel: function() {},
+    params: { itemName: itemName, currentQty: instances.length },
+  });
+}
+
 function handleVoid() {
   var selected = ticket.filter(function(i) { return i.selected; });
   var hasSelected = selected.length > 0;
@@ -1546,7 +1648,9 @@ function handleVoid() {
       var approvedBy = manager.id || manager.name || 'manager';
       setTimeout(function() { showVoidReasons(vTargets, voidingEntireOrder, approvedBy); }, 0);
     },
-    onCancel: function() {},
+    onCancel: function() {
+      showToast('Void cancelled', { duration: 1500 });
+    },
   });
 }
 
@@ -1590,7 +1694,9 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
         rebuildBottomBar();
       }
     },
-    onCancel: function() {},
+    onCancel: function() {
+      showToast('Void cancelled', { duration: 1500 });
+    },
     params: { isFullVoid: isFullVoid },
   });
 }
@@ -1601,26 +1707,21 @@ var DISCOUNT_OPTIONS = ['10%', '15%', '20%', '25%', '50%', 'Comp (100%)'];
 function handleDiscount() {
   if (ticket.length === 0) return;
   var selected = ticket.filter(function(i) { return i.selected; });
-  if (selected.length === 0) {
-    // Nothing selected — show hint via interrupt
-    SceneManager.interrupt('disc-hint', {
-      onConfirm: function() {},
-      onCancel: function() {},
-    });
-    return;
-  }
+  // If nothing selected, apply discount to entire check
+  var targets = selected.length > 0 ? selected : ticket.slice();
+  var isCheckLevel = selected.length === 0;
 
   // Show discount options — requires manager PIN first
   SceneManager.interrupt('disc-pin', {
     onConfirm: function(manager) {
       var approvedBy = manager.id || manager.name || 'manager';
-      setTimeout(function() { showDiscountOptions(selected, approvedBy); }, 0);
+      setTimeout(function() { showDiscountOptions(targets, approvedBy, isCheckLevel); }, 0);
     },
     onCancel: function() {},
   });
 }
 
-function showDiscountOptions(targets, approvedBy) {
+function showDiscountOptions(targets, approvedBy, isCheckLevel) {
   SceneManager.interrupt('disc-select', {
     onConfirm: function(opt) {
       var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
@@ -1633,19 +1734,20 @@ function showDiscountOptions(targets, approvedBy) {
       discountAmt = Math.round(discountAmt * 100) / 100;
 
       if (currentOrderId) {
-        var itemIds = targets.map(function(inst) { return inst.id; });
+        var itemIds = isCheckLevel ? null : targets.map(function(inst) { return inst.id; });
         fetch(API + '/orders/' + currentOrderId + '/discount', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             discount_type: opt,
             amount: discountAmt,
-            reason: 'Manager discount: ' + opt,
+            reason: isCheckLevel ? 'Check-level discount: ' + opt : 'Manager discount: ' + opt,
             approved_by: approvedBy,
             item_ids: itemIds,
           }),
         }).then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
+          showToast(isCheckLevel ? 'Check discount applied' : 'Discount applied', { bg: T.goGreen, duration: 1500 });
         }).catch(function(err) {
           console.warn('[KINDpos] Discount event failed:', err);
           showToast('Discount failed — check connection');
@@ -2247,6 +2349,65 @@ SceneManager.register({
     noBtn.style.width = '240px';
     panel.appendChild(yesBtn);
     panel.appendChild(noBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'qty-edit',
+  mount: function(container, params) {
+    var qty = params.currentQty || 1;
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.cyan + ';padding:20px;min-width:280px;';
+
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.cyan + ';letter-spacing:1px;text-align:center;';
+    lbl.textContent = params.itemName;
+    panel.appendChild(lbl);
+
+    var qtyDisplay = document.createElement('div');
+    qtyDisplay.style.cssText = 'font-family:' + T.fh + ';font-size:60px;color:' + T.mint + ';text-align:center;min-width:100px;';
+    qtyDisplay.textContent = qty;
+    panel.appendChild(qtyDisplay);
+
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;';
+
+    var minusBtn = buildButton('\u2212', {
+      fill: T.darkBtn, color: T.red, fontSize: '40px', height: 52,
+      onTap: function() {
+        if (qty > 1) { qty--; qtyDisplay.textContent = qty; }
+      },
+    });
+    minusBtn.style.width = '70px';
+
+    var plusBtn = buildButton('+', {
+      fill: T.darkBtn, color: T.goGreen, fontSize: '40px', height: 52,
+      onTap: function() {
+        if (qty < 99) { qty++; qtyDisplay.textContent = qty; }
+      },
+    });
+    plusBtn.style.width = '70px';
+
+    btnRow.appendChild(minusBtn);
+    btnRow.appendChild(plusBtn);
+    panel.appendChild(btnRow);
+
+    var confirmBtn = buildButton('CONFIRM', {
+      fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
+      onTap: function() { params.onConfirm(qty); },
+    });
+    confirmBtn.style.width = '200px';
+    panel.appendChild(confirmBtn);
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.width = '200px';
+    panel.appendChild(cancelBtn);
+
     container.appendChild(panel);
   },
   unmount: function() {},
