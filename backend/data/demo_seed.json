@@ -7,14 +7,14 @@
       "pin": "1234"
     },
     {
-      "employee_id": "blanch",
-      "name": "Blanch D.",
+      "employee_id": "blanche",
+      "name": "Blanche D.",
       "role": "server",
       "pin": "5678"
     },
     {
       "employee_id": "dorothy",
-      "name": "Dorothy S.",
+      "name": "Dorothy Z.",
       "role": "server",
       "pin": "1111"
     },
@@ -25,8 +25,8 @@
       "pin": "2222"
     },
     {
-      "employee_id": "stan",
-      "name": "Stan Z.",
+      "employee_id": "miles",
+      "name": "Miles W.",
       "role": "cook",
       "pin": "3456"
     }

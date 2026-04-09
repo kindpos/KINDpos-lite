@@ -16,10 +16,10 @@ from app.core.events import create_event, EventType
 
 STAFF = [
     {"employee_id": "rose",    "first_name": "Rose",    "last_name": "N.",  "display_name": "Rose N.",    "role_ids": ["manager", "server"],          "pin": "1234", "hourly_rate": 18.00},
-    {"employee_id": "blanch",  "first_name": "Blanch",  "last_name": "D.",  "display_name": "Blanch D.",  "role_ids": ["server", "host"],             "pin": "5678", "hourly_rate": 14.00},
-    {"employee_id": "dorothy", "first_name": "Dorothy", "last_name": "S.",  "display_name": "Dorothy S.", "role_ids": ["server"],                     "pin": "1111", "hourly_rate": 14.00},
+    {"employee_id": "blanche", "first_name": "Blanche", "last_name": "D.",  "display_name": "Blanche D.", "role_ids": ["server", "host"],             "pin": "5678", "hourly_rate": 14.00},
+    {"employee_id": "dorothy", "first_name": "Dorothy", "last_name": "Z.",  "display_name": "Dorothy Z.", "role_ids": ["server"],                     "pin": "1111", "hourly_rate": 14.00},
     {"employee_id": "sophia",  "first_name": "Sophia",  "last_name": "P.",  "display_name": "Sophia P.",  "role_ids": ["cook", "server"],             "pin": "2222", "hourly_rate": 16.00},
-    {"employee_id": "stan",    "first_name": "Stan",    "last_name": "Z.",  "display_name": "Stan Z.",    "role_ids": ["cook", "busser"],             "pin": "3456", "hourly_rate": 12.00},
+    {"employee_id": "miles",   "first_name": "Miles",   "last_name": "W.",  "display_name": "Miles W.",   "role_ids": ["cook", "busser"],             "pin": "3456", "hourly_rate": 12.00},
 ]
 
 async def main():
