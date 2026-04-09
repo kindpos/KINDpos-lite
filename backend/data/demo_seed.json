@@ -2,31 +2,31 @@
   "employees": [
     {
       "employee_id": "rose",
-      "name": "Rose Nylund",
+      "name": "Rose N.",
       "role": "manager",
       "pin": "1234"
     },
     {
-      "employee_id": "blanche",
-      "name": "Blanche Devereaux",
+      "employee_id": "blanch",
+      "name": "Blanch D.",
       "role": "server",
       "pin": "5678"
     },
     {
       "employee_id": "dorothy",
-      "name": "Dorothy Zbornak",
+      "name": "Dorothy S.",
       "role": "server",
       "pin": "1111"
     },
     {
       "employee_id": "sophia",
-      "name": "Sophia Petrillo",
+      "name": "Sophia P.",
       "role": "cook",
       "pin": "2222"
     },
     {
       "employee_id": "stan",
-      "name": "Stan Zbornak",
+      "name": "Stan Z.",
       "role": "cook",
       "pin": "3456"
     }
