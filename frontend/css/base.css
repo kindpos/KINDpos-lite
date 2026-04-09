@@ -5,21 +5,15 @@
    ═══════════════════════════════════════════════════ */
 
 @font-face {
-  font-family: 'Alien Encounters Solid Bold';
-  src: url('../assets/fonts/Alien-Encounters-Solid-Bold.ttf') format('truetype');
-  font-weight: normal;
+  font-family: 'Chakra Petch';
+  src: url('../assets/fonts/ChakraPetch-Bold.ttf') format('truetype');
+  font-weight: 700;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Alien Encounters Solid Regular';
-  src: url('../assets/fonts/ALIEN-ENCOUNTERS-SOLID-REGULAR.TTF') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'Sevastopol Interface';
-  src: url('../assets/fonts/Sevastopol-Interface.ttf') format('truetype');
-  font-weight: normal;
+  font-family: 'B612 Mono';
+  src: url('../assets/fonts/B612Mono-Bold.ttf') format('truetype');
+  font-weight: 700;
   font-style: normal;
 }
 
@@ -35,7 +29,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #1a1a1a;
-  font-family: 'Sevastopol Interface', monospace;
+  font-family: 'B612 Mono', monospace;
 }
 
 #terminal {
@@ -55,7 +49,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  font-family: 'Sevastopol Interface', monospace;
+  font-family: 'B612 Mono', monospace;
   font-size: 40px;
   color: #333333;
   position: relative;
