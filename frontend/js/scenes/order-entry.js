@@ -15,6 +15,10 @@ import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
 import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
 
+function _landingScene(roles) {
+  return (roles || []).indexOf('manager') !== -1 ? 'manager-landing' : 'server-landing';
+}
+
 var PAD      = 16;
 var GAP      = 16;
 var TICKET_W = 280;
@@ -1563,7 +1567,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
         }).then(function() {
           currentOrderId = null;
           currentCheckNumber = null;
-          SceneManager.mountWorking('landing', { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
+          SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
         }).catch(function(err) {
           console.error('[KINDpos] Void API error:', err);
           showToast('Void failed — check connection');
@@ -1575,7 +1579,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
       } else if (isFullVoid) {
         currentOrderId = null;
         currentCheckNumber = null;
-        SceneManager.mountWorking('landing', { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
+        SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
       } else {
         var hadSent = targets.some(function(t) { return t.sent; });
         if (hadSent && currentOrderId) {
@@ -1861,7 +1865,7 @@ function handleClose() {
     });
     showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
   }
-  SceneManager.mountWorking('landing', { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
+  SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
 }
 
 // ── SAVE ─────────────────────────────────────────
