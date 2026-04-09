@@ -80,7 +80,8 @@ var _clockIv = null;
 var _savedDevices = [];
 var _scanResults = [];
 var _scanning = false;
-var _expandedCard = null;     // for drill-down (Chunk 2+)
+var _expandedCard = null;     // for drill-down
+var _scrollPositions = {};    // scroll position per tab
 var _terminalConfig = {
   terminalName: 'KIND BBQ',
   ipAddress: '—',
@@ -475,8 +476,6 @@ function loadDevices() {
 }
 
 // == Category Card =====================================
-
-var _scrollPositions = {};
 
 function buildCategoryCard(cat, borderColor) {
   var dc = buildDepthCard(borderColor, { chamfer: 10, glow: true });
@@ -1452,6 +1451,8 @@ SceneManager.register({
     _scanResults = [];
     _scanning = false;
     _scanGen++;
+    _scrollPositions = {};
+    _selectedDeviceMac = null;
   },
 });
 
