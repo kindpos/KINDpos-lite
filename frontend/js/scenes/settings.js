@@ -585,21 +585,14 @@ function renderDrillDown(el, catInfo) {
   hdr.appendChild(title);
   expanded.appendChild(hdr);
 
-  // Content area inside expanded (placeholder — Chunk 4/5 will wire content)
+  // Content area inside expanded — dispatch to category renderer
   var body = document.createElement('div');
   body.style.cssText = [
     'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;',
     'padding:0 16px 16px;',
   ].join('');
 
-  var ph = document.createElement('div');
-  ph.style.cssText = [
-    'display:flex;align-items:center;justify-content:center;',
-    'height:100%;',
-    'font-family:' + T.fb + ';font-size:14px;color:' + catInfo.borderColor + ';opacity:0.4;',
-  ].join('');
-  ph.textContent = catInfo.label + ' settings — wired in Chunk 4';
-  body.appendChild(ph);
+  renderDrillDownContent(body, catInfo);
   expanded.appendChild(body);
 
   // <<< back button — pinned bottom-right
@@ -645,6 +638,369 @@ function collapseDrillDown(expandedEl, containerEl) {
     _expandOrigin = null;
     renderContent();
   }
+}
+
+// == Drill-Down Content Dispatcher =====================
+
+var _drillDownRenderers = {
+  'display':     renderDisplaySettings,
+  'network':     renderNetworkSettings,
+  'store-info':  renderStoreInfoSettings,
+  'tax-pricing': renderTaxPricingSettings,
+  'security':    renderSecuritySettings,
+  'system':      renderSystemSettings,
+  // Hardware categories wired in Chunk 5
+  'printers':    renderPlaceholder,
+  'readers':     renderPlaceholder,
+  'peripherals': renderPlaceholder,
+};
+
+function renderDrillDownContent(body, catInfo) {
+  var renderer = _drillDownRenderers[catInfo.id] || renderPlaceholder;
+  renderer(body, catInfo);
+}
+
+function renderPlaceholder(body, catInfo) {
+  var ph = document.createElement('div');
+  ph.style.cssText = [
+    'display:flex;align-items:center;justify-content:center;height:100%;',
+    'font-family:' + T.fb + ';font-size:14px;color:' + (catInfo.borderColor || T.mint) + ';opacity:0.4;',
+  ].join('');
+  ph.textContent = catInfo.label + ' — content pending';
+  body.appendChild(ph);
+}
+
+// == Setting Row Helpers ===============================
+
+function buildSettingRow(label, rightEl) {
+  var row = document.createElement('div');
+  row.style.cssText = [
+    'display:flex;align-items:center;justify-content:space-between;',
+    'padding:10px 12px;',
+    'background:' + T.bg + ';',
+    'clip-path:' + chamfer(4) + ';',
+  ].join('');
+
+  var lbl = document.createElement('div');
+  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mint + ';';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+
+  if (rightEl) row.appendChild(rightEl);
+  return row;
+}
+
+function buildValueLabel(text, color) {
+  var el = document.createElement('div');
+  el.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (color || T.gold) + ';text-align:right;';
+  el.textContent = text;
+  return el;
+}
+
+function buildToggleBtn(isOn, onToggle) {
+  var pair = buildStyledButton({ variant: isOn ? 'mint' : 'dark', size: 'sm', label: isOn ? 'ON' : 'OFF' });
+  pair.wrap.style.height = '28px';
+  pair.wrap.style.minWidth = '60px';
+  pair.inner.style.fontSize = '11px';
+  if (!isOn) pair.inner.style.color = T.textPrimary;
+
+  pair.wrap.addEventListener('pointerup', function() {
+    if (onToggle) onToggle(!isOn);
+  });
+  return pair.wrap;
+}
+
+function buildPresetButtons(options, current, onSelect) {
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
+  options.forEach(function(opt) {
+    var active = current === opt.value;
+    var pair = buildStyledButton({ variant: active ? 'mint' : 'dark', size: 'sm', label: opt.label });
+    pair.wrap.style.height = '28px';
+    pair.wrap.style.minWidth = '60px';
+    pair.inner.style.fontSize = '10px';
+    if (!active) pair.inner.style.color = T.textPrimary;
+    pair.wrap.addEventListener('pointerup', function() {
+      if (onSelect) onSelect(opt.value);
+    });
+    row.appendChild(pair.wrap);
+  });
+  return row;
+}
+
+function buildTextInput(value, placeholder, onChange) {
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = value || '';
+  input.placeholder = placeholder || '';
+  input.style.cssText = [
+    'background:' + T.bgDark + ';color:' + T.gold + ';',
+    'border:2px solid ' + T.border + ';',
+    'font-family:' + T.fb + ';font-size:14px;',
+    'padding:6px 10px;',
+    'clip-path:' + chamfer(4) + ';',
+    'outline:none;width:180px;',
+  ].join('');
+  input.addEventListener('change', function() {
+    if (onChange) onChange(input.value);
+  });
+  return input;
+}
+
+function buildSettingsGrid(rows) {
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+  rows.forEach(function(r) { grid.appendChild(r); });
+  return grid;
+}
+
+// == TERMINAL: DISPLAY =================================
+
+function renderDisplaySettings(body) {
+  var brightness = 100;
+  var resolution = '1024x600';
+  var orientation = 'landscape';
+
+  var grid = buildSettingsGrid([
+    buildSettingRow('Brightness', buildValueLabel(brightness + '%')),
+    buildSettingRow('Resolution', buildPresetButtons([
+      { label: '1024×600', value: '1024x600' },
+      { label: '800×480', value: '800x480' },
+    ], resolution, function(v) {
+      resolution = v;
+      renderDisplaySettings(body);
+    })),
+    buildSettingRow('Orientation', buildPresetButtons([
+      { label: 'Landscape', value: 'landscape' },
+      { label: 'Portrait', value: 'portrait' },
+    ], orientation, function(v) {
+      orientation = v;
+      renderDisplaySettings(body);
+    })),
+  ]);
+
+  body.innerHTML = '';
+  body.appendChild(grid);
+}
+
+// == TERMINAL: NETWORK =================================
+
+function renderNetworkSettings(body) {
+  // Load current values
+  fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).catch(function() { return {}; }).then(function() {
+    var connected = true; // placeholder — no endpoint for connection status
+
+    var connEl = document.createElement('div');
+    connEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (connected ? T.lime : T.vermillion) + ';';
+    connEl.textContent = connected ? '● CONNECTED' : '● DISCONNECTED';
+
+    var grid = buildSettingsGrid([
+      buildSettingRow('WiFi SSID', buildTextInput(_terminalConfig.wifiSSID, 'SSID', function(v) {
+        _terminalConfig.wifiSSID = v;
+      })),
+      buildSettingRow('Static IP', buildValueLabel(_terminalConfig.ipAddress)),
+      buildSettingRow('Hostname', buildTextInput('kindpos-terminal', 'hostname')),
+      buildSettingRow('Status', connEl),
+    ]);
+
+    body.innerHTML = '';
+    body.appendChild(grid);
+  });
+}
+
+// == TERMINAL: STORE INFO ==============================
+
+var _storeInfo = {
+  business_name: '',
+  address: '',
+  phone: '',
+  receipt_header: '',
+  receipt_footer: '',
+};
+
+function renderStoreInfoSettings(body) {
+  // Load store config
+  fetch('/api/v1/config/store').then(function(r) {
+    return r.ok ? r.json() : {};
+  }).catch(function() { return {}; }).then(function(data) {
+    if (data.store) {
+      _storeInfo.business_name = data.store.business_name || '';
+      _storeInfo.address = data.store.address || '';
+      _storeInfo.phone = data.store.phone || '';
+      _storeInfo.receipt_header = data.store.receipt_header || '';
+      _storeInfo.receipt_footer = data.store.receipt_footer || '';
+    }
+
+    var grid = buildSettingsGrid([
+      buildSettingRow('Business Name', buildTextInput(_storeInfo.business_name, 'Business name', function(v) { _storeInfo.business_name = v; })),
+      buildSettingRow('Address', buildTextInput(_storeInfo.address, 'Address', function(v) { _storeInfo.address = v; })),
+      buildSettingRow('Phone', buildTextInput(_storeInfo.phone, 'Phone', function(v) { _storeInfo.phone = v; })),
+      buildSettingRow('Receipt Header', buildTextInput(_storeInfo.receipt_header, 'Header text', function(v) { _storeInfo.receipt_header = v; })),
+      buildSettingRow('Receipt Footer', buildTextInput(_storeInfo.receipt_footer, 'Footer text', function(v) { _storeInfo.receipt_footer = v; })),
+    ]);
+
+    // Save button
+    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
+    saveBtn.wrap.style.marginTop = '12px';
+    saveBtn.wrap.style.alignSelf = 'flex-start';
+    saveBtn.wrap.addEventListener('pointerup', function() {
+      fetch('/api/v1/config/store/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(_storeInfo),
+      }).then(function(r) {
+        if (r.ok) saveBtn.inner.textContent = 'SAVED';
+        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
+      }).catch(function() {
+        console.warn('[KINDpos] Store info save failed');
+      });
+    });
+
+    body.innerHTML = '';
+    body.appendChild(grid);
+    body.appendChild(saveBtn.wrap);
+  });
+}
+
+// == TERMINAL: TAX & PRICING ===========================
+
+function renderTaxPricingSettings(body) {
+  fetch('/api/v1/config/pricing').then(function(r) {
+    return r.ok ? r.json() : {};
+  }).catch(function() { return {}; }).then(function(data) {
+    var taxRate = data.tax_rate != null ? String(data.tax_rate) : _terminalConfig.taxRate;
+    var cashDiscount = data.cash_discount_rate != null ? String(data.cash_discount_rate) : _terminalConfig.cashDiscount;
+    var dualPricing = parseFloat(cashDiscount) > 0;
+    var rounding = 'standard';
+    var currency = 'USD';
+
+    var grid = buildSettingsGrid([
+      buildSettingRow('Tax Rate %', buildValueLabel(taxRate + '%')),
+      buildSettingRow('Dual Pricing', buildToggleBtn(dualPricing, function(v) {
+        dualPricing = v;
+        renderTaxPricingSettings(body);
+      })),
+      buildSettingRow('Cash Discount %', buildValueLabel(cashDiscount + '%')),
+      buildSettingRow('Rounding', buildPresetButtons([
+        { label: 'Standard', value: 'standard' },
+        { label: 'Up', value: 'up' },
+        { label: 'Down', value: 'down' },
+      ], rounding, function(v) { rounding = v; })),
+      buildSettingRow('Currency', buildPresetButtons([
+        { label: 'USD', value: 'USD' },
+        { label: 'CAD', value: 'CAD' },
+        { label: 'EUR', value: 'EUR' },
+      ], currency, function(v) { currency = v; })),
+    ]);
+
+    // Save button
+    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
+    saveBtn.wrap.style.marginTop = '12px';
+    saveBtn.wrap.addEventListener('pointerup', function() {
+      fetch('/api/v1/config/store/cc-rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cc_processing_rate: parseFloat(taxRate) || 0 }),
+      }).then(function(r) {
+        if (r.ok) saveBtn.inner.textContent = 'SAVED';
+        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
+      }).catch(function() {
+        console.warn('[KINDpos] Pricing save failed');
+      });
+    });
+
+    body.innerHTML = '';
+    body.appendChild(grid);
+    body.appendChild(saveBtn.wrap);
+  });
+}
+
+// == TERMINAL: SECURITY ================================
+
+function renderSecuritySettings(body) {
+  fetch('/api/v1/config/roles').then(function(r) {
+    return r.ok ? r.json() : [];
+  }).catch(function() { return []; }).then(function(roles) {
+    var sessionTimeout = 30;
+
+    var grid = buildSettingsGrid([
+      buildSettingRow('Manager PIN', buildValueLabel('••••')),
+      buildSettingRow('Session Timeout', buildValueLabel(sessionTimeout + ' min')),
+    ]);
+
+    // Role permissions grid
+    if (roles.length > 0) {
+      var roleHeader = document.createElement('div');
+      roleHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.mint + ';margin-top:12px;margin-bottom:6px;';
+      roleHeader.textContent = 'ROLE PERMISSIONS';
+      grid.appendChild(roleHeader);
+
+      roles.forEach(function(role) {
+        var roleName = role.name || role.role_id || 'Unknown';
+        var perms = role.permissions || [];
+        var permStr = perms.length > 0 ? perms.join(', ') : 'none';
+        grid.appendChild(buildSettingRow(roleName, buildValueLabel(permStr, T.textPrimary)));
+      });
+    }
+
+    // Save button
+    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
+    saveBtn.wrap.style.marginTop = '12px';
+    saveBtn.wrap.addEventListener('pointerup', function() {
+      fetch('/api/v1/config/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([]),
+      }).then(function(r) {
+        if (r.ok) saveBtn.inner.textContent = 'SAVED';
+        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
+      }).catch(function() {
+        console.warn('[KINDpos] Security save failed');
+      });
+    });
+
+    body.innerHTML = '';
+    body.appendChild(grid);
+    body.appendChild(saveBtn.wrap);
+  });
+}
+
+// == TERMINAL: SYSTEM ==================================
+
+function renderSystemSettings(body) {
+  var language = 'en';
+  var updateChannel = 'stable';
+
+  var versionEl = document.createElement('div');
+  versionEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.lime + ';';
+  versionEl.textContent = 'KINDpos/lite Vz1.2';
+
+  var grid = buildSettingsGrid([
+    buildSettingRow('Version', versionEl),
+    buildSettingRow('Language', buildPresetButtons([
+      { label: 'English', value: 'en' },
+      { label: 'Español', value: 'es' },
+    ], language, function(v) { language = v; })),
+    buildSettingRow('Update Channel', buildPresetButtons([
+      { label: 'Stable', value: 'stable' },
+      { label: 'Beta', value: 'beta' },
+    ], updateChannel, function(v) { updateChannel = v; })),
+    buildSettingRow('Date', buildValueLabel(new Date().toLocaleDateString())),
+    buildSettingRow('Time', buildValueLabel(new Date().toLocaleTimeString())),
+  ]);
+
+  // Save button
+  var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
+  saveBtn.wrap.style.marginTop = '12px';
+  saveBtn.wrap.addEventListener('pointerup', function() {
+    console.warn('[KINDpos] PUT /api/v1/config/system not implemented yet');
+    saveBtn.inner.textContent = 'SAVED';
+    setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
+  });
+
+  body.innerHTML = '';
+  body.appendChild(grid);
+  body.appendChild(saveBtn.wrap);
 }
 
 // == Scene Builder =====================================
