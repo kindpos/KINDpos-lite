@@ -339,7 +339,7 @@ function buildTerminalCard() {
 
 function buildCollapsedView(el) {
   el.innerHTML = '';
-  el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;box-sizing:border-box;padding:20px;gap:20px;';
+  el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;box-sizing:border-box;padding:20px;gap:20px;background:' + T.bg + ';';
 
   var leftCard = buildHardwareCard();
   var rightCard = buildTerminalCard();
@@ -357,7 +357,7 @@ function buildCollapsedView(el) {
 
 function buildExpandedView(el) {
   el.innerHTML = '';
-  el.style.cssText = 'display:flex;flex-direction:column;height:100%;box-sizing:border-box;padding:' + PAD + 'px;';
+  el.style.cssText = 'display:flex;flex-direction:column;height:100%;box-sizing:border-box;padding:' + PAD + 'px;background:' + T.bg + ';';
 
   var isHW = state.expandedCard === 'hardware';
 
