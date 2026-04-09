@@ -649,10 +649,9 @@ var _drillDownRenderers = {
   'tax-pricing': renderTaxPricingSettings,
   'security':    renderSecuritySettings,
   'system':      renderSystemSettings,
-  // Hardware categories wired in Chunk 5
-  'printers':    renderPlaceholder,
-  'readers':     renderPlaceholder,
-  'peripherals': renderPlaceholder,
+  'printers':    renderDeviceGrid,
+  'readers':     renderDeviceGrid,
+  'peripherals': renderDeviceGrid,
 };
 
 function renderDrillDownContent(body, catInfo) {
@@ -1001,6 +1000,328 @@ function renderSystemSettings(body) {
   body.innerHTML = '';
   body.appendChild(grid);
   body.appendChild(saveBtn.wrap);
+}
+
+// == HARDWARE: Device Grid =============================
+
+var _selectedDeviceMac = null;
+
+var _deviceTypeMap = {
+  'printers':    ['kitchen', 'receipt'],
+  'readers':     ['card_reader'],
+  'peripherals': [],  // everything else
+};
+
+function _devicesForCategory(catId) {
+  var types = _deviceTypeMap[catId];
+  if (!types || types.length === 0) {
+    // Peripherals: everything not printer or reader
+    var knownTypes = ['kitchen', 'receipt', 'card_reader'];
+    return _savedDevices.filter(function(d) { return knownTypes.indexOf(d.type) < 0; });
+  }
+  return _savedDevices.filter(function(d) { return types.indexOf(d.type) >= 0; });
+}
+
+function _typeLabel(type) {
+  if (type === 'kitchen') return 'Kitchen Printer';
+  if (type === 'receipt') return 'Receipt Printer';
+  if (type === 'card_reader') return 'Card Reader';
+  return type || 'Unknown';
+}
+
+function _shortenMac(mac) {
+  if (!mac) return '—';
+  var parts = mac.split(':');
+  if (parts.length <= 3) return mac;
+  return '••:••:••:' + parts.slice(3).join(':');
+}
+
+function renderDeviceGrid(body, catInfo) {
+  // Reload devices then render
+  loadDevices().then(function() {
+    _renderDeviceGridInner(body, catInfo);
+  });
+}
+
+function _renderDeviceGridInner(body, catInfo) {
+  body.innerHTML = '';
+
+  var devices = _devicesForCategory(catInfo.id);
+
+  if (devices.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = [
+      'display:flex;align-items:center;justify-content:center;height:120px;',
+      'font-family:' + T.fb + ';font-size:14px;color:' + T.gold + ';opacity:0.4;',
+    ].join('');
+    empty.textContent = 'No ' + catInfo.label.toLowerCase() + ' configured';
+    body.appendChild(empty);
+    return;
+  }
+
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;';
+
+  devices.forEach(function(dev) {
+    grid.appendChild(buildDeviceCard(dev, body, catInfo));
+  });
+
+  body.appendChild(grid);
+
+  // Operations accordion — renders below grid when a device is selected
+  var opsEl = document.createElement('div');
+  opsEl.id = 'cfg-device-ops';
+  opsEl.style.cssText = 'margin-top:10px;';
+  body.appendChild(opsEl);
+
+  if (_selectedDeviceMac) {
+    var selectedDev = devices.filter(function(d) { return d.mac === _selectedDeviceMac; })[0];
+    if (selectedDev) renderDeviceOps(opsEl, selectedDev, body, catInfo);
+  }
+}
+
+// == Device Card =======================================
+
+function buildDeviceCard(dev, parentBody, catInfo) {
+  var isSelected = _selectedDeviceMac === dev.mac;
+  var borderColor = catInfo.borderColor || T.mint;
+
+  var dc = buildDepthCard(borderColor, { chamfer: 8, glow: isSelected });
+
+  dc.card.style.cssText += [
+    'padding:10px 12px;',
+    'display:flex;flex-direction:column;gap:3px;',
+    'cursor:pointer;',
+    'user-select:none;-webkit-user-select:none;',
+    'min-height:80px;',
+  ].join('');
+
+  if (isSelected) {
+    dc.card.style.background = borderColor;
+  }
+
+  var textColor = isSelected ? T.bgDark : T.mint;
+  var subColor = isSelected ? T.bgDark : T.textPrimary;
+  var mutedColor = isSelected ? T.bgDark : T.subtleText;
+
+  // Device name
+  var nameEl = document.createElement('div');
+  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + textColor + ';';
+  nameEl.textContent = dev.name || 'Unnamed';
+  dc.card.appendChild(nameEl);
+
+  // IP
+  var ipEl = document.createElement('div');
+  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + subColor + ';';
+  ipEl.textContent = dev.ip || '—';
+  dc.card.appendChild(ipEl);
+
+  // MAC
+  var macEl = document.createElement('div');
+  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + mutedColor + ';';
+  macEl.textContent = 'MAC: ' + _shortenMac(dev.mac);
+  dc.card.appendChild(macEl);
+
+  // Status indicator
+  var statusEl = document.createElement('div');
+  statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + (isSelected ? T.bgDark : T.lime) + ';margin-top:2px;';
+  statusEl.textContent = '\u25CF ONLINE';
+  dc.card.appendChild(statusEl);
+
+  dc.card.addEventListener('pointerup', function() {
+    if (_selectedDeviceMac === dev.mac) {
+      _selectedDeviceMac = null;
+    } else {
+      _selectedDeviceMac = dev.mac;
+    }
+    _renderDeviceGridInner(parentBody, catInfo);
+  });
+
+  return dc.wrap;
+}
+
+// == Device Operations Accordion =======================
+
+function renderDeviceOps(opsEl, dev, parentBody, catInfo) {
+  opsEl.innerHTML = '';
+
+  var bar = document.createElement('div');
+  bar.style.cssText = [
+    'display:flex;gap:8px;padding:8px 0;',
+  ].join('');
+
+  // EDIT button
+  var editBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'EDIT' });
+  editBtn.inner.style.color = T.textPrimary;
+  editBtn.inner.style.fontSize = '11px';
+  editBtn.wrap.style.height = '30px';
+  editBtn.wrap.addEventListener('pointerup', function() {
+    renderDeviceEditForm(opsEl, dev, parentBody, catInfo);
+  });
+  bar.appendChild(editBtn.wrap);
+
+  // DELETE button
+  var delBtn = buildStyledButton({ variant: 'vermillion', size: 'sm', label: 'DELETE' });
+  delBtn.inner.style.fontSize = '11px';
+  delBtn.wrap.style.height = '30px';
+  delBtn.wrap.addEventListener('pointerup', function() {
+    SceneManager.interrupt('confirm-delete-device', {
+      onConfirm: function() {
+        fetch('/api/v1/hardware/devices/' + encodeURIComponent(dev.mac), { method: 'DELETE' })
+          .then(function(r) {
+            if (r.ok) {
+              _savedDevices = _savedDevices.filter(function(d) { return d.mac !== dev.mac; });
+              _selectedDeviceMac = null;
+              _renderDeviceGridInner(parentBody, catInfo);
+            }
+          }).catch(function() {
+            console.warn('[KINDpos] Delete device failed');
+          });
+      },
+      onCancel: function() {},
+      params: { deviceName: dev.name || dev.mac },
+    });
+  });
+  bar.appendChild(delBtn.wrap);
+
+  // TEST button
+  var testBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'TEST' });
+  testBtn.inner.style.color = T.lime;
+  testBtn.inner.style.fontSize = '11px';
+  testBtn.wrap.style.height = '30px';
+  var testResult = document.createElement('span');
+  testResult.style.cssText = 'font-family:' + T.fb + ';font-size:11px;margin-left:8px;';
+  testBtn.wrap.addEventListener('pointerup', function() {
+    testBtn.inner.textContent = '...';
+    var url, payload;
+    if (dev.type === 'kitchen' || dev.type === 'receipt') {
+      url = '/api/v1/hardware/test-print';
+      payload = { ip: dev.ip, port: dev.port || 9100 };
+    } else {
+      url = '/api/v1/hardware/test-connection';
+      payload = { ip: dev.ip, port: dev.port || 8443 };
+    }
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      testBtn.inner.textContent = 'TEST';
+      testResult.style.color = d.success ? T.lime : T.vermillion;
+      testResult.textContent = d.success ? 'OK' : (d.message || 'FAIL');
+    }).catch(function() {
+      testBtn.inner.textContent = 'TEST';
+      testResult.style.color = T.vermillion;
+      testResult.textContent = 'ERROR';
+    });
+  });
+  bar.appendChild(testBtn.wrap);
+  bar.appendChild(testResult);
+
+  opsEl.appendChild(bar);
+}
+
+// == Device Edit Form ==================================
+
+function renderDeviceEditForm(opsEl, dev, parentBody, catInfo) {
+  opsEl.innerHTML = '';
+
+  var form = document.createElement('div');
+  form.style.cssText = [
+    'background:' + T.bg + ';clip-path:' + chamfer(6) + ';',
+    'padding:12px;display:flex;flex-direction:column;gap:8px;',
+  ].join('');
+
+  var editName = dev.name || '';
+  var editType = dev.type || 'receipt';
+  var editPort = String(dev.port || 9100);
+  var editRegisterId = dev.register_id || '';
+  var editTpn = dev.tpn || '';
+  var editAuthKey = dev.auth_key || '';
+  var editCategories = dev.categories || '';
+
+  // Common fields
+  form.appendChild(buildSettingRow('Name', buildTextInput(editName, 'Device name', function(v) { editName = v; })));
+  form.appendChild(buildSettingRow('Type', buildPresetButtons([
+    { label: 'Kitchen', value: 'kitchen' },
+    { label: 'Receipt', value: 'receipt' },
+    { label: 'Card Reader', value: 'card_reader' },
+  ], editType, function(v) {
+    editType = v;
+  })));
+  form.appendChild(buildSettingRow('Port', buildTextInput(editPort, 'Port', function(v) { editPort = v; })));
+
+  // Card reader fields
+  if (editType === 'card_reader') {
+    form.appendChild(buildSettingRow('Register ID', buildTextInput(editRegisterId, 'SPIn Register ID', function(v) { editRegisterId = v; })));
+    form.appendChild(buildSettingRow('TPN', buildTextInput(editTpn, 'Terminal Processing #', function(v) { editTpn = v; })));
+    form.appendChild(buildSettingRow('Auth Key', buildTextInput(editAuthKey, 'Auth key', function(v) { editAuthKey = v; })));
+  }
+
+  // Printer-specific: receipt settings
+  if (editType === 'kitchen' || editType === 'receipt') {
+    if (editType === 'kitchen') {
+      form.appendChild(buildSettingRow('Categories', buildTextInput(editCategories, 'e.g. pizza,apps,subs', function(v) { editCategories = v; })));
+    }
+    if (editType === 'receipt') {
+      form.appendChild(buildSettingRow('Chars/Line', buildValueLabel('42')));
+      form.appendChild(buildSettingRow('Paper Width', buildPresetButtons([
+        { label: '80mm', value: '80' },
+        { label: '58mm', value: '58' },
+      ], '80', function() {})));
+    }
+  }
+
+  // Save / Cancel
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;margin-top:4px;';
+
+  var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
+  saveBtn.wrap.style.height = '30px';
+  saveBtn.inner.style.fontSize = '11px';
+  saveBtn.wrap.addEventListener('pointerup', function() {
+    var updated = {
+      mac: dev.mac,
+      ip: dev.ip,
+      type: editType,
+      name: editName,
+      port: parseInt(editPort) || 9100,
+      register_id: editRegisterId,
+      tpn: editTpn,
+      auth_key: editAuthKey,
+      categories: editCategories,
+    };
+    fetch('/api/v1/hardware/devices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    }).then(function(r) {
+      if (r.ok) {
+        return r.json().then(function(saved) {
+          var idx = _savedDevices.findIndex(function(d) { return d.mac === dev.mac; });
+          if (idx >= 0) _savedDevices[idx] = saved;
+          fetch('/api/v1/payments/reload-devices', { method: 'POST' }).catch(function() {});
+          _selectedDeviceMac = null;
+          _renderDeviceGridInner(parentBody, catInfo);
+        });
+      }
+    }).catch(function() {
+      console.warn('[KINDpos] Device save failed');
+    });
+  });
+  btnRow.appendChild(saveBtn.wrap);
+
+  var cancelBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'CANCEL' });
+  cancelBtn.inner.style.color = T.textPrimary;
+  cancelBtn.inner.style.fontSize = '11px';
+  cancelBtn.wrap.style.height = '30px';
+  cancelBtn.wrap.addEventListener('pointerup', function() {
+    renderDeviceOps(opsEl, dev, parentBody, catInfo);
+  });
+  btnRow.appendChild(cancelBtn.wrap);
+
+  form.appendChild(btnRow);
+  opsEl.appendChild(form);
 }
 
 // == Scene Builder =====================================

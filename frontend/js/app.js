@@ -10,7 +10,7 @@ import { showToast } from './components.js';
 
 // Import scenes (self-registering)
 import './scenes/login.js?v=2';
-import './scenes/settings.js?v=7';
+import './scenes/settings.js?v=8';
 import './scenes/order-entry.js?v=7';
 import './scenes/receipt-review.js?v=2';
 import './scenes/payment.js?v=2';
