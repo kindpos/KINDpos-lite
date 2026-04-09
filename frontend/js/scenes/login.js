@@ -62,16 +62,24 @@ SceneManager.register({
 
     // RIGHT — CLOCK IN button
     var clockInPair = buildStyledButton({ label: 'CLOCK IN', variant: 'dark', size: 'md', onClick: function() {
-      // If PIN already entered, go straight to clock-in
-      if (_lastValidEmp) {
-        var roles = _lastValidEmp.roles || ['server'];
-        SceneManager.closeGate('login');
-        SceneManager.mountWorking(landingScene(roles), { emp: _lastValidEmp });
-        SceneManager.openTransactional('clock-in', { emp: _lastValidEmp });
+      // If PIN already typed in the numpad, validate and clock in directly
+      var currentPin = _numpadRef ? _numpadRef.getPin() : '';
+      if (currentPin.length > 0) {
+        var emp = employees.find(function(e) { return e.pin === currentPin; });
+        if (!emp) {
+          if (_numpadRef) _numpadRef.setError('Invalid PIN');
+          return;
+        }
+        var empRoles = emp.roles || [emp.role || 'server'];
+        var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
+        _clockInMode = false;
         _lastValidEmp = null;
+        SceneManager.closeGate('login');
+        SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+        SceneManager.openTransactional('clock-in', { emp: empData });
         return;
       }
-      // Otherwise toggle mode for next PIN entry
+      // No PIN yet — toggle clock-in mode so next >>> submit routes to clock-in
       _clockInMode = !_clockInMode;
       if (_clockInMode && _numpadRef) _numpadRef.clear();
     } });
