@@ -70,7 +70,16 @@ var MENU_DATA = [
       { id: 'apps-items', label: 'Appetizers', items: [
         { label: 'Garlic Knots', price: 6.00 },
         { label: 'Mozz Sticks', price: 8.00 },
-        { label: 'Buffalo Wings', price: 10.00 },
+        { label: 'Buffalo Wings', price: 10.00, requiredMods: [
+          { id: 'wing-sauce', label: 'SAUCE', color: '#7a2832', textColor: '#ffb3b8', choices: [
+            { label: 'Buffalo', price: 0 }, { label: 'BBQ', price: 0 },
+            { label: 'Garlic Parm', price: 0 }, { label: 'Plain', price: 0 },
+          ] },
+          { id: 'wing-temp', label: 'HEAT', color: '#7a5201', textColor: '#ffd480', choices: [
+            { label: 'Mild', price: 0 }, { label: 'Medium', price: 0 },
+            { label: 'Hot', price: 0 }, { label: 'Xtra Hot', price: 0 },
+          ] },
+        ] },
         { label: 'Garlic Bread', price: 5.00 },
       ] },
     ]
