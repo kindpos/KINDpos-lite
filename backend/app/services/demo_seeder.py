@@ -11,6 +11,7 @@ import os
 
 from app.core.event_ledger import EventLedger
 from app.core.events import create_event, EventType
+from app.services.sample_order_seeder import seed_sample_orders_if_empty
 
 
 _SEED_PATH = os.path.join(
@@ -21,8 +22,9 @@ _SEED_PATH = os.path.join(
 async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
     existing = await ledger.get_events_by_type(EventType.EMPLOYEE_CREATED, limit=1)
     if existing:
-        # Employees exist — but check if menu needs seeding
+        # Employees exist — but check if menu or sample orders need seeding
         await seed_menu_if_empty(ledger)
+        await seed_sample_orders_if_empty(ledger)
         return
 
     seed_path = os.path.normpath(_SEED_PATH)
@@ -99,6 +101,9 @@ async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
         print(f"  seeded {mod_count} modifier groups")
 
     print(f"Demo seed complete — {len(seed_data.get('employees', []))} employees loaded")
+
+    # Seed sample orders so dashboard graphs are populated
+    await seed_sample_orders_if_empty(ledger)
 
 
 async def seed_menu_if_empty(ledger: EventLedger) -> None:
