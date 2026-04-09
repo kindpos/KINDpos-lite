@@ -215,18 +215,263 @@ function renderTerminalContent(el) {
   el.appendChild(grid);
 }
 
-// == HARDWARE Tab: placeholder for Chunk 3 =============
+// == HARDWARE Tab: 2x2 category grid ==================
+
+var HARDWARE_CATEGORIES = [
+  { id: 'printers',    label: 'PRINTERS' },
+  { id: 'readers',     label: 'CARD READERS' },
+  { id: 'peripherals', label: 'PERIPHERAL DEVICES' },
+];
+
+var _scanEventSource = null;
+var _scanGen = 0;
 
 function renderHardwareContent(el) {
-  var placeholder = document.createElement('div');
-  placeholder.style.cssText = [
-    'display:flex;align-items:center;justify-content:center;',
-    'height:100%;width:100%;',
-    'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';',
-    'opacity:0.4;',
+  var grid = document.createElement('div');
+  grid.style.cssText = [
+    'display:grid;',
+    'grid-template-columns:1fr 1fr;',
+    'gap:12px;',
+    'height:100%;',
+    'align-content:start;',
+    'box-sizing:border-box;',
   ].join('');
-  placeholder.textContent = 'HARDWARE content — Chunk 3';
-  el.appendChild(placeholder);
+
+  // Device category cards (PRINTERS, CARD READERS, PERIPHERAL DEVICES)
+  HARDWARE_CATEGORIES.forEach(function(cat) {
+    grid.appendChild(buildCategoryCard(cat, T.gold));
+  });
+
+  // SCAN NETWORK card
+  grid.appendChild(buildScanNetworkCard());
+
+  el.appendChild(grid);
+}
+
+// == SCAN NETWORK Card (3 states) ======================
+
+function buildScanNetworkCard() {
+  var dc = buildDepthCard(T.gold, { chamfer: 10, glow: true });
+  dc.card.style.minHeight = '100px';
+  dc.card.style.display = 'flex';
+  dc.card.style.flexDirection = 'column';
+  dc.card.style.alignItems = 'center';
+  dc.card.style.justifyContent = 'center';
+  dc.card.style.padding = '12px';
+  dc.card.style.gap = '8px';
+  dc.card.style.overflow = 'hidden';
+  dc.card.style.position = 'relative';
+
+  // Inject pulse animation style once
+  if (!document.getElementById('cfg-scan-pulse')) {
+    var style = document.createElement('style');
+    style.id = 'cfg-scan-pulse';
+    style.textContent = [
+      '@keyframes cfg-pulse{0%{opacity:0.4}50%{opacity:1}100%{opacity:0.4}}',
+      '.cfg-scanning-dots::after{content:"";animation:cfg-dots 1.5s steps(4,end) infinite}',
+      '@keyframes cfg-dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}',
+    ].join('');
+    document.head.appendChild(style);
+  }
+
+  var _scanCard = dc.card;
+  var _scanWrap = dc.wrap;
+
+  renderScanInitial(_scanCard, _scanWrap);
+
+  return dc.wrap;
+}
+
+function renderScanInitial(card, wrap) {
+  card.innerHTML = '';
+
+  var scanBtn = buildStyledButton({ variant: 'gold', size: 'md', label: 'SCAN NETWORK' });
+  scanBtn.wrap.addEventListener('pointerup', function() {
+    startNetworkScan(card, wrap);
+  });
+  card.appendChild(scanBtn.wrap);
+}
+
+function startNetworkScan(card, wrap) {
+  // Close any existing scan
+  if (_scanEventSource) {
+    _scanEventSource.close();
+    _scanEventSource = null;
+  }
+
+  _scanning = true;
+  _scanResults = [];
+  _scanGen++;
+  var gen = _scanGen;
+
+  // Scanning state UI
+  card.innerHTML = '';
+  card.style.animation = 'cfg-pulse 1.2s ease-in-out infinite';
+
+  var scanLabel = document.createElement('div');
+  scanLabel.style.cssText = [
+    'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';',
+    'text-align:center;',
+  ].join('');
+  scanLabel.textContent = '......scanning network....';
+  card.appendChild(scanLabel);
+
+  // Discovery area (devices appear here as found)
+  var discoveryArea = document.createElement('div');
+  discoveryArea.style.cssText = [
+    'display:flex;flex-direction:column;gap:6px;',
+    'width:100%;overflow-y:auto;scrollbar-width:none;',
+    'max-height:calc(100% - 60px);',
+  ].join('');
+  card.appendChild(discoveryArea);
+
+  // SSE stream
+  _scanEventSource = new EventSource('/api/v1/hardware/scan/stream');
+
+  _scanEventSource.onmessage = function(e) {
+    if (gen !== _scanGen) return; // stale
+    try {
+      var data = JSON.parse(e.data);
+      if (data.type === 'device') {
+        _scanResults.push(data);
+        discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
+      } else if (data.type === 'complete') {
+        _scanning = false;
+        card.style.animation = '';
+        scanLabel.textContent = _scanResults.length + ' device' + (_scanResults.length !== 1 ? 's' : '') + ' found';
+        if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
+
+        // Add re-scan button at bottom
+        var rescanBtn = buildStyledButton({ variant: 'gold', size: 'sm', label: 'SCAN AGAIN' });
+        rescanBtn.wrap.style.marginTop = '6px';
+        rescanBtn.wrap.addEventListener('pointerup', function() {
+          startNetworkScan(card, wrap);
+        });
+        card.appendChild(rescanBtn.wrap);
+      }
+    } catch (err) {
+      console.warn('[KINDpos] Scan parse error:', err);
+    }
+  };
+
+  _scanEventSource.onerror = function() {
+    if (gen !== _scanGen) return;
+    _scanning = false;
+    card.style.animation = '';
+    scanLabel.textContent = 'Scan failed — tap to retry';
+    if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
+
+    var retryBtn = buildStyledButton({ variant: 'gold', size: 'sm', label: 'RETRY' });
+    retryBtn.wrap.addEventListener('pointerup', function() {
+      startNetworkScan(card, wrap);
+    });
+    card.appendChild(retryBtn.wrap);
+  };
+}
+
+// == Discovery Card (inside SCAN NETWORK) ==============
+
+function buildDiscoveryCard(dev, scanCard, scanWrap) {
+  var row = document.createElement('div');
+  row.style.cssText = [
+    'background:' + T.bg + ';',
+    'padding:6px 10px;',
+    'clip-path:' + chamfer(4) + ';',
+    'display:flex;align-items:center;justify-content:space-between;gap:8px;',
+  ].join('');
+
+  var info = document.createElement('div');
+  info.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;';
+
+  var typeName = dev.name || dev.type || 'Unknown Device';
+  var typeEl = document.createElement('div');
+  typeEl.style.cssText = 'font-family:' + T.fh + ';font-size:12px;color:' + T.gold + ';';
+  typeEl.textContent = typeName;
+  info.appendChild(typeEl);
+
+  var addrEl = document.createElement('div');
+  addrEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.mint + ';';
+  addrEl.textContent = 'IP: ' + dev.ip + '   MAC: ' + (dev.mac || '—');
+  info.appendChild(addrEl);
+
+  row.appendChild(info);
+
+  // Already saved?
+  if (dev.saved_name) {
+    var confLabel = document.createElement('div');
+    confLabel.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.lime + ';white-space:nowrap;';
+    confLabel.textContent = 'CONFIGURED';
+    row.appendChild(confLabel);
+  } else {
+    var btnArea = document.createElement('div');
+    btnArea.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
+
+    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
+    saveBtn.wrap.style.height = '24px';
+    saveBtn.wrap.style.minWidth = '50px';
+    saveBtn.inner.style.fontSize = '10px';
+    saveBtn.wrap.addEventListener('pointerup', function() {
+      saveDiscoveredDevice(dev).then(function(ok) {
+        if (ok) {
+          btnArea.innerHTML = '';
+          var done = document.createElement('span');
+          done.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.lime + ';';
+          done.textContent = 'SAVED';
+          btnArea.appendChild(done);
+        }
+      });
+    });
+    btnArea.appendChild(saveBtn.wrap);
+
+    var editBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'EDIT' });
+    editBtn.wrap.style.height = '24px';
+    editBtn.wrap.style.minWidth = '50px';
+    editBtn.inner.style.fontSize = '10px';
+    editBtn.inner.style.color = T.textPrimary;
+    editBtn.wrap.addEventListener('pointerup', function() {
+      // TODO: Chunk 5 — open device edit form
+      console.log('[KINDpos] Edit device:', dev);
+    });
+    btnArea.appendChild(editBtn.wrap);
+
+    row.appendChild(btnArea);
+  }
+
+  return row;
+}
+
+// == Hardware API ======================================
+
+function saveDiscoveredDevice(dev) {
+  var device = {
+    mac: dev.mac,
+    ip: dev.ip,
+    type: dev.type || 'receipt',
+    name: dev.name || 'Device ' + dev.ip,
+    port: dev.port || 9100,
+  };
+  return fetch('/api/v1/hardware/devices', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(device),
+  }).then(function(r) {
+    if (r.ok) {
+      return r.json().then(function(saved) {
+        _savedDevices.push(saved);
+        // Hot-reload
+        fetch('/api/v1/payments/reload-devices', { method: 'POST' }).catch(function() {});
+        return true;
+      });
+    }
+    return false;
+  }).catch(function() { return false; });
+}
+
+function loadDevices() {
+  return fetch('/api/v1/hardware/devices')
+    .then(function(r) { return r.ok ? r.json() : []; })
+    .then(function(data) { _savedDevices = data; return data; })
+    .catch(function() { _savedDevices = []; return []; });
 }
 
 // == Category Card =====================================
@@ -513,10 +758,14 @@ SceneManager.register({
     });
 
     buildScene(container);
+
+    // Load saved devices for hardware tab
+    loadDevices();
   },
 
   unmount: function() {
     if (_clockIv) { clearInterval(_clockIv); _clockIv = null; }
+    if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
     _rootEl = null;
     _contentEl = null;
     _tabBtns = {};
@@ -525,6 +774,7 @@ SceneManager.register({
     _savedDevices = [];
     _scanResults = [];
     _scanning = false;
+    _scanGen++;
   },
 });
 
