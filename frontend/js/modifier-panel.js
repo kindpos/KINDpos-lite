@@ -6,7 +6,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, applySunkenStyle, chamfer } from './tokens.js';
+import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
 
 // ── Standard allergen list ──
 var ALLERGENS = [
@@ -110,28 +110,62 @@ export function ModifierPanel(container, opts) {
   var pickerEl = null;
   var _allergenNoteInput = null;
 
+  // ── Bevel helpers (match clock-in card pattern) ──
+  function _lightenHex(hex, pct) {
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    return '#' + [
+      Math.min(255, Math.round(r + (255 - r) * pct)),
+      Math.min(255, Math.round(g + (255 - g) * pct)),
+      Math.min(255, Math.round(b + (255 - b) * pct)),
+    ].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+  }
+  function _darkenHex(hex, pct) {
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    var f = 1 - pct;
+    return '#' + [Math.round(r * f), Math.round(g * f), Math.round(b * f)]
+      .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+  }
+
   // ── Build the panel ──
   function build() {
+    // Outer wrapper: drop-shadow (matches clock-in depth pattern)
     rootEl = document.createElement('div');
     rootEl.style.cssText = [
       'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;',
-      'display:flex;flex-direction:column;',
-      'background:' + T.bgDark + ';',
-      'border-radius:5px;',
+      'filter:drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));',
     ].join('');
+
+    // Inner card: beveled border (light top-left, dark bottom-right)
+    var card = document.createElement('div');
+    card.style.cssText = [
+      'width:100%;height:100%;',
+      'background:' + T.bg + ';',
+      'border-top:7px solid ' + _lightenHex(T.mint, 0.2) + ';',
+      'border-left:7px solid ' + _lightenHex(T.mint, 0.2) + ';',
+      'border-bottom:7px solid ' + _darkenHex(T.mint, 0.3) + ';',
+      'border-right:7px solid ' + _darkenHex(T.mint, 0.3) + ';',
+      'display:flex;flex-direction:column;',
+      'box-sizing:border-box;overflow:hidden;',
+    ].join('');
+    card.style.clipPath = chamfer(10);
+    rootEl.appendChild(card);
 
     // ── Main body: vertical tabs left | content right ──
     var body = document.createElement('div');
     body.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
 
-    // Vertical tab bar (left side)
+    // Vertical tab bar (left side) — wider
     tabBarEl = document.createElement('div');
     tabBarEl.style.cssText = [
-      'width:80px;flex-shrink:0;display:flex;flex-direction:column;',
-      'gap:3px;padding:4px;',
+      'width:120px;flex-shrink:0;display:flex;flex-direction:column;',
+      'gap:4px;padding:6px;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      'background:' + T.bg + ';',
-      'border-right:2px solid ' + T.border + ';',
+      'background:' + T.bgDark + ';',
+      'border-right:3px solid ' + _darkenHex(T.mint, 0.3) + ';',
     ].join('');
     body.appendChild(tabBarEl);
 
@@ -142,10 +176,10 @@ export function ModifierPanel(container, opts) {
     // Top bar (prefixes + placement)
     topBarEl = document.createElement('div');
     topBarEl.style.cssText = [
-      'flex-shrink:0;padding:4px;',
+      'flex-shrink:0;padding:6px;',
       'display:flex;flex-direction:column;gap:4px;',
-      'background:' + T.bg + ';',
-      'border-bottom:2px solid ' + T.border + ';',
+      'background:' + T.bgDark + ';',
+      'border-bottom:3px solid ' + _darkenHex(T.mint, 0.3) + ';',
     ].join('');
     rightArea.appendChild(topBarEl);
 
@@ -154,30 +188,30 @@ export function ModifierPanel(container, opts) {
     pickerEl.style.cssText = [
       'flex:1;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      'padding:4px;',
+      'padding:6px;',
     ].join('');
     rightArea.appendChild(pickerEl);
 
     body.appendChild(rightArea);
-    rootEl.appendChild(body);
+    card.appendChild(body);
 
     // ── Bottom action bar: CANCEL + SEND ──
     var actionBar = document.createElement('div');
     actionBar.style.cssText = [
-      'display:flex;gap:6px;flex-shrink:0;',
-      'padding:4px 6px 6px 6px;',
-      'border-top:2px solid ' + T.border + ';',
-      'background:' + T.bg + ';',
+      'display:flex;gap:8px;flex-shrink:0;',
+      'padding:6px 8px 8px 8px;',
+      'border-top:3px solid ' + _darkenHex(T.mint, 0.3) + ';',
+      'background:' + T.bgDark + ';',
     ].join('');
 
-    var cancelPair = buildStyledButton({ label: 'CANCEL', variant: 'vermillion', size: 'sm', onClick: function() { onCancel(); } });
-    cancelPair.wrap.style.flex = '1';
-    var sendPair = buildStyledButton({ label: 'SEND', variant: 'mint', size: 'sm', onClick: function() { handleSend(); } });
-    sendPair.wrap.style.flex = '2';
+    var undoPair = buildStyledButton({ label: 'UNDO / RESET', variant: 'vermillion', size: 'md', onClick: function() { onCancel(); } });
+    undoPair.wrap.style.flex = '1';
+    var confirmPair = buildStyledButton({ label: 'CONFIRM', variant: 'mint', size: 'md', onClick: function() { handleSend(); } });
+    confirmPair.wrap.style.flex = '2';
 
-    actionBar.appendChild(cancelPair.wrap);
-    actionBar.appendChild(sendPair.wrap);
-    rootEl.appendChild(actionBar);
+    actionBar.appendChild(undoPair.wrap);
+    actionBar.appendChild(confirmPair.wrap);
+    card.appendChild(actionBar);
 
     container.appendChild(rootEl);
     renderTabs();
@@ -204,10 +238,11 @@ export function ModifierPanel(container, opts) {
       var pair = buildStyledButton({ label: labelText, variant: variant, size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '9px';
+      pair.inner.style.fontSize = '13px';
       pair.inner.style.letterSpacing = '1px';
-      pair.inner.style.padding = '2px 4px';
+      pair.inner.style.padding = '4px 6px';
       pair.inner.style.wordBreak = 'break-word';
+      pair.inner.style.lineHeight = '1.1';
 
       pair.wrap.addEventListener('pointerup', function() {
         activeTabKey = tab.key;
@@ -238,8 +273,8 @@ export function ModifierPanel(container, opts) {
         var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
         pair.wrap.style.flex = '1';
         pair.wrap.style.minWidth = '0';
-        pair.inner.style.fontSize = '9px';
-        pair.inner.style.padding = '2px';
+        pair.inner.style.fontSize = '12px';
+        pair.inner.style.padding = '4px';
 
         pair.wrap.addEventListener('pointerup', function() {
           activeOptPrefix = pfx.id;
@@ -254,7 +289,7 @@ export function ModifierPanel(container, opts) {
     // Placement bar — always visible (1st / Whole / 2nd)
     var placeWrap = buildStyledButton(T.darkBtn);
     placeWrap.wrap.style.width = '100%';
-    placeWrap.inner.style.height = '32px';
+    placeWrap.inner.style.height = '40px';
     placeWrap.inner.style.display = 'flex';
     placeWrap.inner.style.alignItems = 'stretch';
     placeWrap.inner.style.justifyContent = 'stretch';
@@ -273,7 +308,7 @@ export function ModifierPanel(container, opts) {
       seg.style.cssText = [
         'flex:' + (pl.id === 'whole' ? '2' : '1') + ';',
         'display:flex;align-items:center;justify-content:center;',
-        'font-family:' + T.fb + ';font-size:11px;letter-spacing:1px;text-transform:uppercase;',
+        'font-family:' + T.fb + ';font-size:18px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;',
         'background:' + (isActive ? T.mint : 'transparent') + ';',
         'color:' + (isActive ? T.bgDark : T.mutedText) + ';',
         'cursor:pointer;transition:background 80ms,color 80ms;',
@@ -309,7 +344,7 @@ export function ModifierPanel(container, opts) {
           row.style.cssText = [
             'display:flex;justify-content:space-between;align-items:center;',
             'padding:1px 0;cursor:pointer;',
-            'font-family:' + T.fb + ';font-size:11px;color:' + T.textPrimary + ';',
+            'font-family:' + T.fb + ';font-size:14px;color:' + T.textPrimary + ';',
           ].join('');
 
           var label = document.createElement('span');
@@ -336,7 +371,7 @@ export function ModifierPanel(container, opts) {
     // Info line for mandatory tabs
     if (tab.type === 'mandatory') {
       var info = document.createElement('div');
-      info.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.mutedText + ';padding:4px 2px;';
+      info.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';padding:4px 2px;';
       info.textContent = 'Select ' + tab.label.toLowerCase();
       topBarEl.appendChild(info);
     }
