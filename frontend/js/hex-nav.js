@@ -6,6 +6,26 @@
 
 import { T } from './tokens.js';
 
+// ── Bevel color helpers (match clock-in card depth pattern) ──
+function _lightenHex(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return '#' + [
+    Math.min(255, Math.round(r + (255 - r) * pct)),
+    Math.min(255, Math.round(g + (255 - g) * pct)),
+    Math.min(255, Math.round(b + (255 - b) * pct)),
+  ].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+function _darkenHex(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  var f = 1 - pct;
+  return '#' + [Math.round(r * f), Math.round(g * f), Math.round(b * f)]
+    .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+
 var CAT_R    = 80;
 var SUBCAT_R = 70;
 var ITEM_R   = 70;
@@ -112,13 +132,34 @@ export function HexNav(container, opts) {
     var g = document.createElementNS(svgNS, 'g');
     g.style.cursor = 'pointer';
 
-    if (h.locked) {
-      var shadow = document.createElementNS(svgNS, 'polygon');
-      shadow.setAttribute('points', hexPoints(h.x + 3, h.y + 4, h.r));
-      shadow.setAttribute('fill', 'rgba(0,0,0,0.5)');
-      g.appendChild(shadow);
-    }
+    var baseColor = h.color;
+    var lightColor = _lightenHex(baseColor, 0.25);
+    var darkColor  = _darkenHex(baseColor, 0.4);
+    var bevelOff = 2.5; // offset for bevel layers
 
+    // Drop shadow (behind everything)
+    var shadow = document.createElementNS(svgNS, 'polygon');
+    shadow.setAttribute('points', hexPoints(h.x + 3, h.y + 4, h.r));
+    shadow.setAttribute('fill', 'rgba(0,0,0,0.45)');
+    g.appendChild(shadow);
+
+    // Dark bevel layer (bottom-right — drawn first, shifted down-right)
+    var darkBevel = document.createElementNS(svgNS, 'polygon');
+    darkBevel.setAttribute('points', hexPoints(h.x + bevelOff, h.y + bevelOff, h.r));
+    darkBevel.setAttribute('fill', 'none');
+    darkBevel.setAttribute('stroke', darkColor);
+    darkBevel.setAttribute('stroke-width', '5');
+    g.appendChild(darkBevel);
+
+    // Light bevel layer (top-left — shifted up-left)
+    var lightBevel = document.createElementNS(svgNS, 'polygon');
+    lightBevel.setAttribute('points', hexPoints(h.x - bevelOff, h.y - bevelOff, h.r));
+    lightBevel.setAttribute('fill', 'none');
+    lightBevel.setAttribute('stroke', lightColor);
+    lightBevel.setAttribute('stroke-width', '5');
+    g.appendChild(lightBevel);
+
+    // Main hex polygon (on top of bevels)
     var poly = document.createElementNS(svgNS, 'polygon');
     poly.setAttribute('points', hexPoints(h.x, h.y, h.r));
     if (h.locked) {
@@ -126,20 +167,23 @@ export function HexNav(container, opts) {
       poly.setAttribute('stroke', h.color);
       poly.setAttribute('stroke-width', '7');
     } else {
-      poly.setAttribute('fill', 'transparent');
+      poly.setAttribute('fill', T.bg5);
       poly.setAttribute('stroke', h.color);
       poly.setAttribute('stroke-width', '7');
     }
     g.appendChild(poly);
 
+    // Inner highlight bevel (locked gets brighter, unlocked gets subtle)
+    var innerBevel = document.createElementNS(svgNS, 'polygon');
+    innerBevel.setAttribute('points', hexPoints(h.x, h.y, h.r - 6));
+    innerBevel.setAttribute('fill', 'none');
     if (h.locked) {
-      var bevel = document.createElementNS(svgNS, 'polygon');
-      bevel.setAttribute('points', hexPoints(h.x, h.y, h.r - 6));
-      bevel.setAttribute('fill', 'none');
-      bevel.setAttribute('stroke', 'rgba(255,255,255,0.3)');
-      bevel.setAttribute('stroke-width', '3');
-      g.appendChild(bevel);
+      innerBevel.setAttribute('stroke', 'rgba(255,255,255,0.3)');
+    } else {
+      innerBevel.setAttribute('stroke', 'rgba(255,255,255,0.08)');
     }
+    innerBevel.setAttribute('stroke-width', '2');
+    g.appendChild(innerBevel);
 
     // Pulse animation for unsatisfied mandatory mod hexes
     if (h.pulse) {
