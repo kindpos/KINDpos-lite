@@ -637,20 +637,20 @@ function buildHeatmapBody(body) {
   body.appendChild(wrap);
 }
 
-// Card 6 — All Checks
+// Card 6 — All Checks (grid of check tiles)
 function buildAllChecksBody(body) {
   var filtered = D_CHECKS;
   if (hmFilter) {
     filtered = D_CHECKS.filter(function(c) { return c.srv === hmFilter.server && c.hr === hmFilter.hour; });
   }
 
-  var wrap = el('div', 'height:100%;overflow-y:auto;');
+  var wrap = el('div', 'height:100%;overflow-y:auto;display:flex;flex-direction:column;');
 
   // Filter badge
   if (hmFilter) {
-    var badge = el('div', 'display:flex;justify-content:space-between;align-items:center;padding:3px 6px;background:' + C.bg + ';margin-bottom:4px;');
-    badge.appendChild(el('span', 'font-family:' + FONT + ';font-size:20px;color:' + C.lime + ';', 'SERVER: ' + hmFilter.server + '  HOUR: ' + hmFilter.hour));
-    var clrBtn = el('span', 'font-family:' + FONT + ';font-size:20px;color:' + C.verm + ';cursor:pointer;', 'CLEAR');
+    var badge = el('div', 'display:flex;justify-content:space-between;align-items:center;padding:4px 6px;background:#2a1800;border:1px solid ' + C.gold + ';margin-bottom:4px;flex-shrink:0;');
+    badge.appendChild(el('span', 'font-family:' + FONT + ';font-size:11px;color:' + C.lime + ';letter-spacing:1px;', 'SERVER: ' + hmFilter.server + '  HOUR: ' + hmFilter.hour));
+    var clrBtn = el('span', 'font-family:' + FONT + ';font-size:11px;color:' + C.verm + ';cursor:pointer;letter-spacing:1px;', 'CLEAR');
     clrBtn.addEventListener('pointerup', function(e) {
       e.stopPropagation();
       hmFilter = null;
@@ -661,20 +661,28 @@ function buildAllChecksBody(body) {
     wrap.appendChild(badge);
   }
 
+  // Grid of check tiles
+  var grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:4px;flex:1;overflow-y:auto;align-content:start;');
   for (var i = 0; i < filtered.length; i++) {
     var c = filtered[i];
     var statusColor = c.status === 'OPEN' ? C.verm : C.green;
-    var row = el('div', 'display:flex;justify-content:space-between;padding:4px 6px;border-bottom:1px solid ' + C.border + ';font-family:' + FONT + ';font-size:14px;cursor:pointer;');
-    row.innerHTML = '<span style="color:' + C.mint + '">' + c.id + '</span>' +
-      '<span style="color:#ffffff">' + c.srv + '</span>' +
-      '<span style="color:' + (c.tbl ? '#ffffff' : C.dim) + '">' + (c.tbl || c.type) + '</span>' +
-      '<span style="color:' + statusColor + '">' + c.status + '</span>' +
-      '<span style="color:' + C.gold + '">' + fmt(c.total) + '</span>';
-    wrap.appendChild(row);
+    var borderColor = c.status === 'OPEN' ? C.verm : C.border;
+    var tile = el('div', 'background:' + C.dark + ';border:1px solid ' + borderColor + ';padding:5px 6px;font-family:' + FONT + ';cursor:pointer;');
+    // Top row: ID + status
+    var top = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;');
+    top.appendChild(el('span', 'font-size:10px;color:' + C.mint + ';letter-spacing:1px;', c.id));
+    top.appendChild(el('span', 'font-size:8px;color:' + statusColor + ';font-weight:bold;', c.status));
+    tile.appendChild(top);
+    // Middle: server + table
+    tile.appendChild(el('div', 'font-size:8px;color:#ffffff;', c.srv + ' \u00B7 ' + (c.tbl || c.type)));
+    // Bottom: total
+    tile.appendChild(el('div', 'font-size:11px;color:' + C.gold + ';font-weight:bold;text-align:right;margin-top:2px;', fmt(c.total)));
+    grid.appendChild(tile);
   }
   if (filtered.length === 0) {
-    wrap.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.dim + ';text-align:center;padding:20px;', 'No checks match filter'));
+    grid.appendChild(el('div', 'grid-column:1/-1;font-family:' + FONT + ';font-size:12px;color:' + C.dim + ';text-align:center;padding:16px;', 'No checks match filter'));
   }
+  wrap.appendChild(grid);
   body.appendChild(wrap);
 }
 
@@ -706,55 +714,49 @@ function buildAllChecksOverlay(panel) {
   panel.appendChild(wrap);
 }
 
-// Card 3 — Server Checkouts
+// Card 3 — Server Checkouts (horizontal overlapping bars per server)
 function buildServerCheckoutsBody(body) {
   var servers = D_SERVERS;
-  var maxCount = 0;
-  for (var s = 0; s < servers.length; s++) {
-    var oc = servers[s].openChecks.length;
-    var ut = 0; for (var j = 0; j < servers[s].tips.length; j++) if (servers[s].tips[j].tip === null) ut++;
-    if (oc > maxCount) maxCount = oc;
-    if (ut > maxCount) maxCount = ut;
-  }
-  if (maxCount === 0) maxCount = 1;
+  var maxCount = 5; // scale max for bar width
 
-  var svgW = Math.max(200, servers.length * 100);
-  var svg = mk('svg', { viewBox: '0 0 ' + svgW + ' 120', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
-  var barArea = { x: 20, y: 10, w: svgW - 40, h: 80 };
-  var groupW = barArea.w / servers.length;
+  var wrap = el('div', 'height:100%;display:flex;flex-direction:column;gap:2px;overflow-y:auto;');
 
   for (var s = 0; s < servers.length; s++) {
     var srv = servers[s];
     var oc = srv.openChecks.length;
     var ut = 0; for (var j = 0; j < srv.tips.length; j++) if (srv.tips[j].tip === null) ut++;
-    var cx = barArea.x + s * groupW + groupW / 2;
 
-    // Back bar — mint (unadjusted tips)
-    var backH = (ut / maxCount) * barArea.h;
-    var backW = groupW * 0.55;
-    svg.appendChild(mk('rect', { x: cx - backW / 2, y: barArea.y + barArea.h - backH, width: backW, height: backH, fill: C.mint, opacity: '0.7' }));
+    var row = el('div', 'flex-shrink:0;');
+    // Server name + status
+    var hdr = el('div', 'display:flex;align-items:center;gap:6px;margin-bottom:2px;');
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:10px;color:' + C.mint + ';letter-spacing:1px;font-weight:bold;', srv.name));
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + C.verm + ';', '\u25CF ACTIVE'));
+    row.appendChild(hdr);
 
-    // Front bar — vermillion (open checks)
-    var frontH = (oc / maxCount) * barArea.h;
-    var frontW = groupW * 0.38;
-    svg.appendChild(mk('rect', { x: cx - frontW / 2, y: barArea.y + barArea.h - frontH, width: frontW, height: frontH, fill: C.verm }));
+    // Bar track
+    var track = el('div', 'position:relative;height:18px;background:' + C.dark + ';border:1px solid #2a2a2a;');
+    // Tips bar (mint, full height, back layer)
+    var tipsPct = (ut / maxCount * 100).toFixed(0);
+    track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + tipsPct + '%;background:' + C.mint + ';'));
+    // Checks bar (vermillion, inset, front layer)
+    var checksPct = (oc / maxCount * 100).toFixed(0);
+    track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + checksPct + '%;background:' + C.verm + ';z-index:1;'));
+    row.appendChild(track);
 
-    // Callout boxes
-    if (ut > 0) {
-      var utY = barArea.y + barArea.h - backH - 14;
-      svg.appendChild(mk('rect', { x: cx - 22, y: utY, width: 44, height: 14, fill: C.dark, stroke: C.mint, 'stroke-width': '0.5' }));
-      svg.appendChild(mk('text', { x: cx, y: utY + 11, fill: C.mint, 'font-size': '15', 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' }, '' + ut + ' tips'));
-    }
-    if (oc > 0) {
-      var ocY = barArea.y + barArea.h - frontH - 16;
-      if (ut > 0 && Math.abs(ocY - (barArea.y + barArea.h - backH - 16)) < 18) ocY -= 18;
-      svg.appendChild(mk('rect', { x: cx - 22, y: ocY, width: 44, height: 14, fill: C.dark, stroke: C.verm, 'stroke-width': '0.5' }));
-      svg.appendChild(mk('text', { x: cx, y: ocY + 11, fill: C.verm, 'font-size': '15', 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' }, '' + oc + ' open'));
-    }
+    // Labels below bar
+    var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:7px;margin-top:1px;');
+    labels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
+    labels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
+    row.appendChild(labels);
 
-    // Server name
-    svg.appendChild(mk('text', { x: cx, y: barArea.y + barArea.h + 16, fill: C.mint, 'font-size': '12', 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' }, srv.name));
+    wrap.appendChild(row);
   }
+
+  // Legend
+  var leg = el('div', 'display:flex;gap:12px;margin-top:auto;padding-top:4px;font-family:' + FONT + ';font-size:7px;');
+  leg.innerHTML = '<span><span style="display:inline-block;width:8px;height:6px;background:' + C.verm + ';vertical-align:middle;margin-right:3px;"></span><span style="color:' + C.verm + '">OPEN CHECKS</span></span>' +
+    '<span><span style="display:inline-block;width:8px;height:6px;background:' + C.mint + ';vertical-align:middle;margin-right:3px;"></span><span style="color:' + C.mint + '">UNADJ TIPS</span></span>';
+  wrap.appendChild(leg);
   body.appendChild(svg);
 }
 
@@ -858,7 +860,7 @@ function buildLaborCobBody(body) {
     var x1 = cxA + R * Math.cos(a1), y1 = cyA - R * Math.sin(a1);
     var x2 = cxA + R * Math.cos(a2), y2 = cyA - R * Math.sin(a2);
     var large = (a1 - a2) > Math.PI ? 1 : 0;
-    return 'M' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' A' + R + ',' + R + ' 0 ' + large + ' 0 ' + x2.toFixed(1) + ',' + y2.toFixed(1);
+    return 'M' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' A' + R + ',' + R + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ',' + y2.toFixed(1);
   }
 
   // Background track
@@ -884,20 +886,20 @@ function buildLaborCobBody(body) {
   svg.appendChild(mk('circle', { cx: cxA, cy: cyA, r: '5', fill: needleColor }));
 
   // Center readout
-  svg.appendChild(mk('text', { x: cxA, y: cyA - 22, fill: needleColor, 'font-size': '36', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, cobPct.toFixed(1) + '%'));
-  svg.appendChild(mk('text', { x: cxA, y: cyA - 8, fill: C.mint, 'font-size': '14', 'font-family': FONT, 'text-anchor': 'middle' }, 'LABOR COB'));
+  svg.appendChild(mk('text', { x: cxA, y: cyA - 22, fill: needleColor, 'font-size': '24', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, cobPct.toFixed(1) + '%'));
+  svg.appendChild(mk('text', { x: cxA, y: cyA - 6, fill: C.mint, 'font-size': '7', 'font-family': FONT, 'text-anchor': 'middle' }, 'LABOR COB'));
 
   // Stat strip below arc
   svg.appendChild(mk('line', { x1: 30, y1: cyA + 12, x2: 270, y2: cyA + 12, stroke: C.border, 'stroke-width': '1' }));
-  var statY = cyA + 26;
+  var statY = cyA + 24;
   var statusText = cobPct > 30 ? 'HIGH' : 'OK';
   var statusColor = cobPct > 30 ? C.verm : C.green;
-  svg.appendChild(mk('text', { x: 60, y: statY, fill: C.label, 'font-size': '14', 'font-family': FONT, 'text-anchor': 'middle' }, 'LABOR'));
-  svg.appendChild(mk('text', { x: 60, y: statY + 12, fill: C.gold, 'font-size': '11', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, fmt(totalLab)));
-  svg.appendChild(mk('text', { x: 150, y: statY, fill: C.label, 'font-size': '14', 'font-family': FONT, 'text-anchor': 'middle' }, 'SALES'));
-  svg.appendChild(mk('text', { x: 150, y: statY + 12, fill: C.gold, 'font-size': '11', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, fmt(totalSales)));
-  svg.appendChild(mk('text', { x: 240, y: statY, fill: C.label, 'font-size': '14', 'font-family': FONT, 'text-anchor': 'middle' }, 'STATUS'));
-  svg.appendChild(mk('text', { x: 240, y: statY + 12, fill: statusColor, 'font-size': '11', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, statusText));
+  svg.appendChild(mk('text', { x: 60, y: statY, fill: C.label, 'font-size': '6', 'font-family': FONT, 'text-anchor': 'middle' }, 'LABOR'));
+  svg.appendChild(mk('text', { x: 60, y: statY + 10, fill: C.gold, 'font-size': '8', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, fmt(totalLab)));
+  svg.appendChild(mk('text', { x: 150, y: statY, fill: C.label, 'font-size': '6', 'font-family': FONT, 'text-anchor': 'middle' }, 'SALES'));
+  svg.appendChild(mk('text', { x: 150, y: statY + 10, fill: C.gold, 'font-size': '8', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, fmt(totalSales)));
+  svg.appendChild(mk('text', { x: 240, y: statY, fill: C.label, 'font-size': '6', 'font-family': FONT, 'text-anchor': 'middle' }, 'STATUS'));
+  svg.appendChild(mk('text', { x: 240, y: statY + 10, fill: statusColor, 'font-size': '8', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, statusText));
 
   body.appendChild(svg);
 }
