@@ -53,11 +53,14 @@ var D_ITEMS = {
   DRINKS:[{n:'Soda',q:15,p:1.50},{n:'Water',q:2,p:1.00},{n:'Lemonade',q:1,p:3.00}],
   SPECIALS:[{n:'Daily Special',q:3,p:5.00},{n:"Chef's Choice",q:2,p:1.50}],
 };
-var D_SERVERS = [{
-  name:'ALEX', color:'#4499ff',
-  openChecks:[{id:'CHK-042',table:'T3',total:24.50},{id:'CHK-057',table:'T7',total:18.75}],
-  tips:[{id:'CHK-031',amt:32.00,tip:null},{id:'CHK-035',amt:28.50,tip:null},{id:'CHK-039',amt:15.00,tip:null}],
-}];
+var D_SERVERS = [
+  { name:'ALEX', color:'#4499ff', active:true,
+    openChecks:[{id:'QS-005',table:'T3',cvr:1,time:'5:58P',total:14.08},{id:'QS-006',table:'T7',cvr:2,time:'1:42P',total:16.05}],
+    tips:[{id:'QS-001',amt:32.00,tip:null},{id:'QS-003',amt:28.50,tip:null},{id:'QS-004',amt:15.00,tip:null}],
+  },
+  { name:'MARIA', color:'#ff9900', active:false, openChecks:[], tips:[] },
+  { name:'JAKE', color:'#bb44ff', active:false, openChecks:[], tips:[] },
+];
 var D_HSALES = [18,50.5,65,43,34,39.5,38,17.75];
 var D_HLAB = [8,17,17,17,17,9,9,9];
 var D_EMP = [
@@ -740,53 +743,86 @@ function buildAllChecksOverlay(panel) {
 
 // Card 3 — Server Checkouts (horizontal overlapping bars per server)
 function buildServerCheckoutsBody(body) {
-  var servers = D_SERVERS;
-  var maxCount = 5; // scale max for bar width
+  var maxCount = 5;
+  var wrap = el('div', 'height:100%;display:flex;flex-direction:column;gap:3px;overflow-y:auto;');
 
-  var wrap = el('div', 'height:100%;display:flex;flex-direction:column;gap:2px;overflow-y:auto;');
-
-  for (var s = 0; s < servers.length; s++) {
-    var srv = servers[s];
+  for (var s = 0; s < D_SERVERS.length; s++) {
+    var srv = D_SERVERS[s];
     var oc = srv.openChecks.length;
     var ut = 0; for (var j = 0; j < srv.tips.length; j++) if (srv.tips[j].tip === null) ut++;
+    var isActive = srv.active;
 
     var row = el('div', 'flex-shrink:0;');
     // Server name + status
-    var hdr = el('div', 'display:flex;align-items:center;gap:6px;margin-bottom:2px;');
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:10px;color:' + C.mint + ';letter-spacing:1px;font-weight:bold;', srv.name));
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + C.verm + ';', '\u25CF ACTIVE'));
+    var hdr = el('div', 'display:flex;align-items:center;gap:4px;margin-bottom:1px;');
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + (isActive ? C.mint : '#444') + ';letter-spacing:1px;font-weight:bold;', srv.name));
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:6px;color:' + (isActive ? C.verm : '#333') + ';', '\u25CF ' + (isActive ? 'ACTIVE' : 'OFFLINE')));
     row.appendChild(hdr);
 
     // Bar track
-    var track = el('div', 'position:relative;height:18px;background:' + C.dark + ';border:1px solid #2a2a2a;');
-    // Tips bar (mint, full height, back layer)
-    var tipsPct = (ut / maxCount * 100).toFixed(0);
-    track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + tipsPct + '%;background:' + C.mint + ';'));
-    // Checks bar (vermillion, inset, front layer)
-    var checksPct = (oc / maxCount * 100).toFixed(0);
-    track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + checksPct + '%;background:' + C.verm + ';z-index:1;'));
+    var track = el('div', 'position:relative;height:16px;background:' + (isActive ? C.dark : '#161616') + ';border:1px solid #2a2a2a;');
+    if (isActive) {
+      // Tips bar (mint, full height, back layer)
+      track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / maxCount * 100).toFixed(0) + '%;background:' + C.mint + ';'));
+      // Checks bar (vermillion, inset, front layer)
+      track.appendChild(el('div', 'position:absolute;top:2px;left:0;height:calc(100% - 4px);width:' + (oc / maxCount * 100).toFixed(0) + '%;background:' + C.verm + ';z-index:1;'));
+      // Callout numbers on the bars
+      if (oc > 0) {
+        var ckEl = el('div', 'position:absolute;top:1px;z-index:2;background:#333;color:' + C.verm + ';font-family:' + FONT + ';font-size:8px;font-weight:bold;padding:1px 4px;');
+        ckEl.style.left = Math.max(2, (oc / maxCount * 100) - 12) + '%';
+        ckEl.textContent = oc;
+        track.appendChild(ckEl);
+      }
+      if (ut > 0) {
+        var tpEl = el('div', 'position:absolute;top:1px;z-index:2;background:#333;color:' + C.mint + ';font-family:' + FONT + ';font-size:8px;font-weight:bold;padding:1px 4px;');
+        tpEl.style.left = Math.max(2, (ut / maxCount * 100) - 12) + '%';
+        track.appendChild(tpEl);
+        tpEl.textContent = ut;
+      }
+    } else {
+      track.appendChild(el('div', 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:6px;color:#2a2a2a;', 'NOT CLOCKED IN'));
+    }
     row.appendChild(track);
 
-    // Labels below bar
-    var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:7px;margin-top:1px;');
-    labels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
-    labels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
-    row.appendChild(labels);
+    if (isActive) {
+      var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:6px;margin-top:1px;');
+      labels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
+      labels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
+      row.appendChild(labels);
+    }
 
     wrap.appendChild(row);
+    // Divider between servers
+    if (s < D_SERVERS.length - 1) wrap.appendChild(el('div', 'height:1px;background:#2a2a2a;flex-shrink:0;'));
   }
 
   // Legend
-  var leg = el('div', 'display:flex;gap:12px;margin-top:auto;padding-top:4px;font-family:' + FONT + ';font-size:7px;');
-  leg.innerHTML = '<span><span style="display:inline-block;width:8px;height:6px;background:' + C.verm + ';vertical-align:middle;margin-right:3px;"></span><span style="color:' + C.verm + '">OPEN CHECKS</span></span>' +
-    '<span><span style="display:inline-block;width:8px;height:6px;background:' + C.mint + ';vertical-align:middle;margin-right:3px;"></span><span style="color:' + C.mint + '">UNADJ TIPS</span></span>';
+  var leg = el('div', 'display:flex;gap:10px;margin-top:auto;padding-top:3px;font-family:' + FONT + ';font-size:6px;');
+  leg.innerHTML = '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.verm + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.verm + '">OPEN CHECKS</span></span>' +
+    '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.mint + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.mint + '">UNADJ TIPS</span></span>';
   wrap.appendChild(leg);
-  body.appendChild(svg);
+  body.appendChild(wrap);
 }
 
 function buildServerCheckoutsOverlay(panel) {
-  var title = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:24px;font-weight:bold;padding:8px 14px;letter-spacing:2px;', 'SERVER CHECKOUTS');
-  panel.appendChild(title);
+  // Compute totals
+  var serversOn = 0, totalOpen = 0, totalUnadj = 0, totalTips = 0;
+  for (var i = 0; i < D_SERVERS.length; i++) {
+    if (D_SERVERS[i].active) serversOn++;
+    totalOpen += D_SERVERS[i].openChecks.length;
+    for (var j = 0; j < D_SERVERS[i].tips.length; j++) {
+      if (D_SERVERS[i].tips[j].tip === null) totalUnadj++;
+      else totalTips += D_SERVERS[i].tips[j].tip;
+    }
+  }
+
+  // Stat strip
+  panel.appendChild(buildStatStrip([
+    { label:'SERVERS ON', value:''+serversOn, color:C.lime },
+    { label:'OPEN CHECKS', value:''+totalOpen, color:C.verm },
+    { label:'UNADJ TIPS', value:''+totalUnadj, color:C.mint },
+    { label:'TOTAL TIPS', value:fmt(totalTips), color:C.gold },
+  ]));
 
   var wrap = el('div', 'padding:8px;');
 
@@ -794,73 +830,106 @@ function buildServerCheckoutsOverlay(panel) {
     wrap.innerHTML = '';
     for (var s = 0; s < D_SERVERS.length; s++) {
       var srv = D_SERVERS[s];
-      var section = el('div', 'border:1px solid ' + C.border + ';margin-bottom:8px;');
+      var oc = srv.openChecks.length;
+      var ut = 0; for (var j2 = 0; j2 < srv.tips.length; j2++) if (srv.tips[j2].tip === null) ut++;
+      var hasFlags = oc > 0 || ut > 0;
+
+      var section = el('div', 'background:#161616;border:2px solid ' + (hasFlags ? '#ffdd44' : '#2a2a2a') + ';margin-bottom:8px;');
 
       // Server header
-      var sHdr = el('div', 'background:' + C.bg + ';padding:6px 10px;font-family:' + FONT + ';font-size:20px;font-weight:bold;color:' + srv.color + ';display:flex;justify-content:space-between;align-items:center;');
-      sHdr.appendChild(el('span', '', srv.name));
+      var sHdr = el('div', 'background:' + (hasFlags ? '#2a1800' : '#2a2a2a') + ';padding:5px 10px;display:flex;align-items:center;gap:8px;');
+      sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:10px;color:' + C.mint + ';letter-spacing:2px;flex:1;', srv.name));
+      if (!srv.active) {
+        sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:#444;border:1px solid #333;padding:1px 6px;', '\u25CF OFFLINE'));
+      } else {
+        if (oc > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + C.verm + ';border:1px solid ' + C.verm + ';padding:1px 6px;', '\u25CF ' + oc + ' OPEN'));
+        if (ut > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + C.mint + ';border:1px solid ' + C.mint + ';padding:1px 6px;', '\u26A0 ' + ut + ' UNADJ TIPS'));
+      }
+      section.appendChild(sHdr);
 
-      // Checkout button
-      var hasOpen = srv.openChecks.length > 0;
-      var coBtn = el('div', 'font-family:' + FONT + ';font-size:14px;padding:4px 12px;cursor:pointer;' +
-        (hasOpen ? 'background:' + C.dim + ';color:' + C.dark + ';' : 'background:' + C.mint + ';color:' + C.dark + ';'),
-        hasOpen ? 'BLOCKED' : 'CHECKOUT');
-      if (!hasOpen) {
+      if (!srv.active) {
+        // Offline server — empty bar + disabled button
+        var offBar = el('div', 'padding:6px 10px;');
+        var offTrack = el('div', 'height:14px;background:#161616;border:1px solid #222;');
+        offBar.appendChild(offTrack);
+        offBar.appendChild(el('div', 'font-family:' + FONT + ';font-size:7px;color:#333;margin-top:2px;', 'not clocked in'));
+        section.appendChild(offBar);
+        var offAction = el('div', 'border-top:1px solid #2a2a2a;background:#111;padding:6px 10px;');
+        offAction.appendChild(el('div', 'font-family:' + FONT + ';font-size:9px;color:#333;text-align:center;padding:5px;background:#1a1a1a;letter-spacing:2px;', 'NO ACTIVE SESSION'));
+        section.appendChild(offAction);
+      } else {
+        // Overlapping bar (large version)
+        var barRow = el('div', 'padding:6px 10px;');
+        var scale = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:6px;color:#333;padding:0 0 2px;');
+        for (var k = 0; k <= 5; k++) scale.appendChild(el('span', '', '' + k));
+        barRow.appendChild(scale);
+        var track = el('div', 'position:relative;height:18px;background:' + C.dark + ';border:1px solid #2a2a2a;');
+        track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / 5 * 100) + '%;background:' + C.mint + ';'));
+        track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / 5 * 100) + '%;background:' + C.verm + ';z-index:1;'));
+        barRow.appendChild(track);
+        var barLabels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:7px;margin-top:2px;');
+        barLabels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
+        barLabels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
+        barRow.appendChild(barLabels);
+        section.appendChild(barRow);
+
+        // Two-column detail grid
+        var detailGrid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2a2a2a;border-top:1px solid #2a2a2a;');
+
+        // Left — Open Checks
+        var leftCol = el('div', 'background:#161616;padding:8px 10px;');
+        leftCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:8px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'OPEN CHECKS'));
+        for (var j = 0; j < srv.openChecks.length; j++) {
+          var ck = srv.openChecks[j];
+          var ckRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';');
+          ckRow.appendChild(el('span', 'font-size:8px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', ck.id));
+          ckRow.appendChild(el('span', 'font-size:7px;color:#555;flex:1;', '\u00D7' + ck.cvr + ' CVR \u00B7 ' + ck.time));
+          ckRow.appendChild(el('span', 'font-size:9px;color:' + C.gold + ';text-align:right;', fmt(ck.total)));
+          leftCol.appendChild(ckRow);
+        }
+        detailGrid.appendChild(leftCol);
+
+        // Right — Tip Status
+        var rightCol = el('div', 'background:#161616;padding:8px 10px;');
+        rightCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:8px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'TIP STATUS'));
+        for (var j = 0; j < srv.tips.length; j++) {
+          (function(tipIdx, srvIdx) {
+            var tip = D_SERVERS[srvIdx].tips[tipIdx];
+            var tRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';cursor:pointer;');
+            tRow.appendChild(el('span', 'font-size:8px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', tip.id));
+            if (tip.tip === null) {
+              tRow.appendChild(el('span', 'font-size:8px;color:' + C.mint + ';flex:1;', '\u26A0 UNADJUSTED'));
+              tRow.appendChild(el('span', 'font-size:9px;color:#555;', '\u2014'));
+              tRow.addEventListener('pointerup', function() {
+                showNumpad(function(val) {
+                  D_SERVERS[srvIdx].tips[tipIdx].tip = val;
+                  renderServerSections();
+                  refreshCloseDay();
+                });
+              });
+            } else {
+              tRow.appendChild(el('span', 'font-size:8px;color:' + C.green + ';flex:1;', '\u2713 ADJUSTED'));
+              tRow.appendChild(el('span', 'font-size:9px;color:' + C.gold + ';', fmt(tip.tip)));
+            }
+            rightCol.appendChild(tRow);
+          })(j, s);
+        }
+        detailGrid.appendChild(rightCol);
+        section.appendChild(detailGrid);
+
+        // Action row
+        var actionRow = el('div', 'border-top:1px solid #2a2a2a;background:#111;padding:6px 10px;');
+        var coBtn = el('div', 'font-family:' + FONT + ';font-size:9px;letter-spacing:2px;text-align:center;padding:6px;cursor:pointer;' +
+          'color:' + C.mint + ';border:1px solid ' + C.mint + ';background:#0a1a0e;' +
+          'clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);',
+          'CHECKOUT ' + srv.name + '  \u25B6');
         coBtn.addEventListener('pointerup', function() {
           showToast('Server checked out', { bg: C.green, duration: 2000 });
         });
+        actionRow.appendChild(coBtn);
+        section.appendChild(actionRow);
       }
-      sHdr.appendChild(coBtn);
-      section.appendChild(sHdr);
 
-      var content = el('div', 'display:flex;gap:8px;padding:8px;');
-
-      // Left — Open Checks
-      var leftP = el('div', 'flex:1;');
-      leftP.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.verm + ';margin-bottom:4px;font-weight:bold;', 'OPEN CHECKS (' + srv.openChecks.length + ')'));
-      if (srv.openChecks.length === 0) {
-        leftP.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.green + ';', '\u2713 All checks closed'));
-      }
-      for (var j = 0; j < srv.openChecks.length; j++) {
-        var ck = srv.openChecks[j];
-        var row = el('div', 'display:flex;justify-content:space-between;padding:3px 0;font-family:' + FONT + ';font-size:14px;border-bottom:1px solid ' + C.border + ';');
-        row.innerHTML = '<span style="color:' + C.verm + '">' + ck.id + '</span><span style="color:#ffffff">' + ck.table + '</span><span style="color:' + C.gold + '">' + fmt(ck.total) + '</span>';
-        leftP.appendChild(row);
-      }
-      if (srv.openChecks.length > 0) {
-        leftP.appendChild(el('div', 'font-family:' + FONT + ';font-size:13px;color:' + C.verm + ';margin-top:4px;', '\u26A0 Close all checks before checkout'));
-      }
-      content.appendChild(leftP);
-
-      // Right — Tip Status
-      var rightP = el('div', 'flex:1;');
-      var utCount = 0; for (var j2 = 0; j2 < srv.tips.length; j2++) if (srv.tips[j2].tip === null) utCount++;
-      rightP.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.mint + ';margin-bottom:4px;font-weight:bold;', 'TIP STATUS (' + utCount + ' unadjusted)'));
-      for (var j = 0; j < srv.tips.length; j++) {
-        (function(tipIdx, srvIdx) {
-          var tip = D_SERVERS[srvIdx].tips[tipIdx];
-          var row = el('div', 'display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-family:' + FONT + ';font-size:14px;border-bottom:1px solid ' + C.border + ';cursor:pointer;');
-          var left2 = el('span', 'color:#ffffff', tip.id + ' ' + fmt(tip.amt));
-          var right2;
-          if (tip.tip === null) {
-            right2 = el('span', 'color:' + C.verm + ';font-weight:bold;', '\u26A0 UNADJUSTED');
-            row.addEventListener('pointerup', function() {
-              showNumpad(function(val) {
-                D_SERVERS[srvIdx].tips[tipIdx].tip = val;
-                renderServerSections();
-                refreshCloseDay();
-              });
-            });
-          } else {
-            right2 = el('span', 'color:' + C.green + ';font-weight:bold;', '\u2713 ' + fmt(tip.tip));
-          }
-          row.appendChild(left2);
-          row.appendChild(right2);
-          rightP.appendChild(row);
-        })(j, s);
-      }
-      content.appendChild(rightP);
-      section.appendChild(content);
       wrap.appendChild(section);
     }
   }
