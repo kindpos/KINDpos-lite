@@ -187,7 +187,7 @@ function refreshAllChecks() { if (allChecksEl) { allChecksEl.innerHTML = ''; bui
 function openOverlay(builderFn) {
   if (activeOverlay) closeOverlay();
   var ov = el('div', 'position:fixed;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:50;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px 0;');
-  var panel = el('div', 'border:2px solid ' + C.mint + ';width:min(96vw,700px);margin:0 auto;background:' + C.dark + ';');
+  var panel = el('div', 'border:2px solid ' + C.mint + ';width:min(96vw,700px);margin:0 auto;background:' + C.dark + ';overflow-x:auto;');
   builderFn(panel);
   ov.appendChild(panel);
   ov.addEventListener('click', function(e) { if (e.target === ov) closeOverlay(); });
@@ -339,9 +339,9 @@ function buildSalesOverviewOverlay(panel) {
   ]));
 
   // Chart A — Net Sales Line (large)
-  var secA = el('div', 'padding:8px;');
+  var secA = el('div', 'padding:8px;overflow-x:auto;');
   secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'NET SALES — TODAY vs LAST WEEK'));
-  var svgA = mk('svg', { viewBox:'0 0 660 220', width:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var svgA = mk('svg', { viewBox:'0 0 660 220', width:'900px', preserveAspectRatio:'xMidYMid meet' });
   addDefs(svgA, 'soa');
   var ax=50,ay=12,aw=580,ah=150,aMax=65;
   function atx(i){return ax+(i/7)*aw;} function aty(v){return ay+ah-(v/aMax)*ah;}
@@ -370,9 +370,9 @@ function buildSalesOverviewOverlay(panel) {
   panel.appendChild(secA);
 
   // Chart B — Check Average Bar + Target Line
-  var secB = el('div', 'padding:8px;');
+  var secB = el('div', 'padding:8px;overflow-x:auto;');
   secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'CHECK AVERAGE BY HOUR'));
-  var svgB = mk('svg', { viewBox:'0 0 660 170', width:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var svgB = mk('svg', { viewBox:'0 0 660 170', width:'900px', preserveAspectRatio:'xMidYMid meet' });
   addDefs(svgB, 'sob');
   var bx=50,by=12,bw=570,bh=100,bMax=7;
   var target = sum(D_CAVG)/D_CAVG.length;
@@ -401,9 +401,9 @@ function buildSalesOverviewOverlay(panel) {
   panel.appendChild(secB);
 
   // Chart C — Order Type Split Bars
-  var secC = el('div', 'padding:8px;');
+  var secC = el('div', 'padding:8px;overflow-x:auto;');
   secC.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'ORDER TYPE — CASH vs CARD'));
-  var svgC = mk('svg', { viewBox:'0 0 660 180', width:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var svgC = mk('svg', { viewBox:'0 0 660 180', width:'900px', preserveAspectRatio:'xMidYMid meet' });
   var ocx=100,ocy=14,ocw=480,och=110;
   var oMax=156; // max order type total
   // Vertical grid
@@ -1062,9 +1062,9 @@ function buildLaborCobOverlay(panel) {
   ]));
 
   // Chart A — Hourly COB% Bars + Target Line
-  var secA = el('div', 'padding:8px;');
+  var secA = el('div', 'padding:8px;overflow-x:auto;');
   secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'HOURLY COB% — BAR + TARGET'));
-  var svgA = mk('svg', { viewBox: '0 0 660 190', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
+  var svgA = mk('svg', { viewBox: '0 0 660 190', width: '900px', preserveAspectRatio: 'xMidYMid meet' });
   addDefs(svgA, 'lca');
   var ax = 50, ay = 14, aw = 580, ah = 110;
   var cobMax = 60;
@@ -1103,9 +1103,9 @@ function buildLaborCobOverlay(panel) {
   panel.appendChild(secA);
 
   // Chart B — Labor Cost by Employee
-  var secB = el('div', 'padding:8px;');
+  var secB = el('div', 'padding:8px;overflow-x:auto;');
   secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'LABOR COST BY EMPLOYEE'));
-  var svgB = mk('svg', { viewBox: '0 0 660 180', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
+  var svgB = mk('svg', { viewBox: '0 0 660 180', width: '900px', preserveAspectRatio: 'xMidYMid meet' });
   addDefs(svgB, 'lcb');
   var ebx = 100, eby = 14, ebw = 480, ebh = 120;
   var empMax = 63;
