@@ -49,24 +49,29 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 8px;
   font-family: 'B612 Mono', monospace;
-  font-size: 40px;
+  font-size: 32px;
   color: #333333;
   position: relative;
   z-index: 10;
+  border-top: 7px solid #151515;
+  border-left: 7px solid #151515;
+  border-bottom: 7px solid #5a5a5a;
+  border-right: 7px solid #5a5a5a;
+  clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
 }
 
 #header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
 #header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* ── Layer containers ─────────────────────────────────
