@@ -771,15 +771,22 @@ export function ModifierPanel(container, opts) {
 
   function buildOutputItem() {
     var mands = activeItem.mandatorySelections;
-    var mandLabels = [];
-    mandatoryGroups.forEach(function(g) {
-      if (mands[g.key]) mandLabels.push(mands[g.key].label);
-    });
 
     var mandPrice = 0;
     Object.keys(mands).forEach(function(k) { mandPrice += mands[k].price || 0; });
 
+    // Mandatory selections as modifier lines
     var mods = [];
+    mandatoryGroups.forEach(function(g) {
+      if (mands[g.key]) {
+        mods.push({
+          name: mands[g.key].label,
+          price: mands[g.key].price || 0,
+          charged: (mands[g.key].price || 0) > 0,
+          prefix: null,
+        });
+      }
+    });
     activeItem.optionalModifiers.forEach(function(m) {
       var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
       mods.push({
@@ -806,10 +813,8 @@ export function ModifierPanel(container, opts) {
       mods.push({ name: '\uD83D\uDCDD ' + activeItem.note, price: 0, charged: false, prefix: null });
     }
 
-    var mandSuffix = mandLabels.length > 0 ? ' \u2014 ' + mandLabels.join(' / ') : '';
-
     return {
-      itemLabel: activeItem.itemLabel + mandSuffix,
+      itemLabel: activeItem.itemLabel,
       basePrice: activeItem.basePrice + mandPrice,
       mods: mods,
       activeItem: activeItem,

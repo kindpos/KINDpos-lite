@@ -1257,15 +1257,25 @@ function closeModifierPanel() {
 function commitModifierPanelItem(originalItem, activeItem) {
   // Build ticket item from modifier panel state
   var mands = activeItem.mandatorySelections;
-  var mandLabels = [];
   var mandPrice = 0;
   Object.keys(mands).forEach(function(k) {
-    mandLabels.push(mands[k].label);
     mandPrice += mands[k].price || 0;
   });
-  var mandSuffix = mandLabels.length > 0 ? ' \u2014 ' + mandLabels.join(' / ') : '';
 
+  // Mandatory selections as modifier lines
   var mods = [];
+  var modConfig = originalItem.modifierConfig || getModifierConfig(originalItem.label) || {};
+  var mandGroups = modConfig.mandatoryGroups || [];
+  mandGroups.forEach(function(g) {
+    if (mands[g.key]) {
+      mods.push({
+        name: mands[g.key].label,
+        price: mands[g.key].price || 0,
+        charged: (mands[g.key].price || 0) > 0,
+        prefix: null,
+      });
+    }
+  });
 
   // Optional modifiers — map placement to Left/Right prefix
   activeItem.optionalModifiers.forEach(function(m) {
@@ -1310,7 +1320,7 @@ function commitModifierPanelItem(originalItem, activeItem) {
   var ticketItem = {
     id:        ++ticketSeq,
     idemKey:   _idemKey(),
-    name:      activeItem.itemLabel + mandSuffix,
+    name:      activeItem.itemLabel,
     unitPrice: activeItem.basePrice + mandPrice,
     mods:      mods,
     selected:  false,
