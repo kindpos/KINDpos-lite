@@ -1744,26 +1744,27 @@ function renderTicket() {
     pRow.appendChild(pPrice);
     previewCard.appendChild(pRow);
 
-    // Modifier lines
-    (_modPanelItem.mods || []).forEach(function(m) {
-      var modEl = document.createElement('div');
-      modEl.style.cssText = [
-        'display:flex;justify-content:space-between;',
-        'padding:1px 8px 1px 16px;',
-        'font-family:' + T.fb + ';font-size:24px;',
-        'color:' + T.textPrimary + ';',
-      ].join('');
-      var mName = document.createElement('span');
-      mName.textContent = m.name;
-      modEl.appendChild(mName);
-      if (m.price > 0) {
-        var mPrice = document.createElement('span');
-        mPrice.style.color = T.gold;
-        mPrice.textContent = '+$' + m.price.toFixed(2);
-        modEl.appendChild(mPrice);
-      }
-      previewCard.appendChild(modEl);
+    // Modifier lines — partition into whole / left / right (same as committed items)
+    var pMods = _modPanelItem.mods || [];
+    var pWhole = [];
+    var pLeft = [];
+    var pRight = [];
+    pMods.forEach(function(m) {
+      if (m.prefix === 'Left') pLeft.push(m);
+      else if (m.prefix === 'Right') pRight.push(m);
+      else pWhole.push(m);
     });
+
+    if (pWhole.length > 0) {
+      previewCard.appendChild(buildSeparator());
+      pWhole.forEach(function(m) {
+        previewCard.appendChild(buildModRowSized(m.name, m.price, '24px'));
+      });
+    }
+
+    if (pLeft.length > 0 || pRight.length > 0) {
+      previewCard.appendChild(buildHalfTable(pLeft, pRight, '24px'));
+    }
 
     list.appendChild(previewCard);
   }
