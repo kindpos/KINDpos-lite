@@ -205,9 +205,9 @@ function closeOverlay() {
 function buildStatStrip(items) {
   var strip = el('div', 'display:flex;gap:2px;padding:8px;');
   for (var i = 0; i < items.length; i++) {
-    var box = el('div', 'flex:1;background:' + C.bg + ';padding:8px 6px;text-align:center;');
-    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.dim + ';letter-spacing:1px;margin-bottom:4px;', items[i].label));
-    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:28px;font-weight:bold;color:' + items[i].color + ';', items[i].value));
+    var box = el('div', 'flex:1;background:' + C.bg + ';padding:6px 4px;text-align:center;overflow:hidden;min-width:0;');
+    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.dim + ';letter-spacing:1px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', items[i].label));
+    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:24px;font-weight:bold;color:' + items[i].color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', items[i].value));
     strip.appendChild(box);
   }
   return strip;
@@ -560,7 +560,7 @@ function buildSalesBreakdownOverlay(panel) {
 
   function renderChips(){
     chipWrap.innerHTML='';
-    var row=el('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;');
+    var row=el('div','display:flex;gap:6px;flex-wrap:nowrap;margin-bottom:6px;overflow-x:auto;');
     for(var c=0;c<CATS_DISPLAY.length;c++){
       var cat=CATS_DISPLAY[c];
       var isAct=activeCat===cat;
@@ -592,14 +592,14 @@ function buildSalesBreakdownOverlay(panel) {
       hdr.appendChild(left2);hdr.appendChild(ltotal);sec.appendChild(hdr);
 
       // Column headers
-      var colH=el('div','display:flex;padding:4px 0;font-family:'+FONT+';font-size:18px;color:'+C.dim+';');
-      colH.innerHTML='<span style="flex:2">ITEM</span><span style="flex:1;text-align:center">QTY</span><span style="flex:1;text-align:right">UNIT</span><span style="flex:1;text-align:right">TOTAL</span>';
+      var colH=el('div','display:flex;padding:4px 0;font-family:'+FONT+';font-size:18px;color:'+C.dim+';white-space:nowrap;');
+      colH.innerHTML='<span style="flex:2;min-width:0">ITEM</span><span style="flex:1;text-align:center">QTY</span><span style="flex:1;text-align:right">UNIT</span><span style="flex:1;text-align:right">TOTAL</span>';
       sec.appendChild(colH);
 
       var items=D_ITEMS[cat];
       for(var j=0;j<items.length;j++){
-        var row2=el('div','display:flex;padding:4px 0;font-family:'+FONT+';font-size:20px;color:#ffffff;');
-        row2.innerHTML='<span style="flex:2">'+items[j].n+'</span><span style="flex:1;text-align:center">'+items[j].q+'</span><span style="flex:1;text-align:right">'+fmt(items[j].p)+'</span><span style="flex:1;text-align:right;color:'+C.gold+'">'+fmt(items[j].q*items[j].p)+'</span>';
+        var row2=el('div','display:flex;padding:4px 0;font-family:'+FONT+';font-size:18px;color:#ffffff;white-space:nowrap;');
+        row2.innerHTML='<span style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis">'+items[j].n+'</span><span style="flex:1;text-align:center">'+items[j].q+'</span><span style="flex:1;text-align:right">'+fmt(items[j].p)+'</span><span style="flex:1;text-align:right;color:'+C.gold+'">'+fmt(items[j].q*items[j].p)+'</span>';
         sec.appendChild(row2);
       }
       tableWrap.appendChild(sec);
@@ -703,7 +703,7 @@ function buildHeatmapBody(body) {
 
   // Legend strip (only in expanded mode)
   if (hmExpanded) {
-    var leg = el('div', 'display:flex;gap:6px;align-items:center;padding:3px 48px 2px;font-family:' + FONT + ';font-size:18px;flex-shrink:0;');
+    var leg = el('div', 'display:flex;gap:6px;align-items:center;padding:3px 48px 2px;font-family:' + FONT + ';font-size:18px;flex-shrink:0;white-space:nowrap;overflow-x:auto;');
     var tiers = [
       { bg:'#1a2e1a', label:'0' },
       { bg:'#2d6b2d', label:'1' },
@@ -749,19 +749,19 @@ function buildAllChecksBody(body) {
   }
 
   // Grid of check tiles
-  var grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:4px;flex:1;overflow-y:auto;align-content:start;');
+  var grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;flex:1;overflow-y:auto;align-content:start;');
   for (var i = 0; i < filtered.length; i++) {
     var c = filtered[i];
     var statusColor = c.status === 'OPEN' ? C.verm : C.green;
     var borderColor = c.status === 'OPEN' ? C.verm : C.border;
-    var tile = el('div', 'background:' + C.dark + ';border:1px solid ' + borderColor + ';padding:5px 6px;font-family:' + FONT + ';cursor:pointer;');
+    var tile = el('div', 'background:' + C.dark + ';border:1px solid ' + borderColor + ';padding:5px 6px;font-family:' + FONT + ';cursor:pointer;overflow:hidden;');
     // Top row: ID + status
-    var top = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;');
+    var top = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;white-space:nowrap;');
     top.appendChild(el('span', 'font-size:18px;color:' + C.mint + ';letter-spacing:1px;', c.id));
     top.appendChild(el('span', 'font-size:18px;color:' + statusColor + ';font-weight:bold;', c.status));
     tile.appendChild(top);
     // Middle: server + table
-    tile.appendChild(el('div', 'font-size:18px;color:#ffffff;', c.srv + ' \u00B7 ' + (c.tbl || c.type)));
+    tile.appendChild(el('div', 'font-size:18px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', c.srv + ' \u00B7 ' + (c.tbl || c.type)));
     // Bottom: total
     tile.appendChild(el('div', 'font-size:18px;color:' + C.gold + ';font-weight:bold;text-align:right;margin-top:2px;', fmt(c.total)));
     grid.appendChild(tile);
@@ -893,8 +893,8 @@ function buildServerCheckoutsOverlay(panel) {
       var section = el('div', 'background:#161616;border:2px solid ' + (hasFlags ? '#ffdd44' : '#2a2a2a') + ';margin-bottom:8px;');
 
       // Server header
-      var sHdr = el('div', 'background:' + (hasFlags ? '#2a1800' : '#2a2a2a') + ';padding:5px 10px;display:flex;align-items:center;gap:8px;');
-      sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;flex:1;', srv.name));
+      var sHdr = el('div', 'background:' + (hasFlags ? '#2a1800' : '#2a2a2a') + ';padding:5px 10px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden;');
+      sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;flex-shrink:0;', srv.name));
       if (!srv.active) {
         sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:#444;border:1px solid #333;padding:1px 6px;', '\u25CF OFFLINE'));
       } else {
@@ -937,7 +937,7 @@ function buildServerCheckoutsOverlay(panel) {
         leftCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'OPEN CHECKS'));
         for (var j = 0; j < srv.openChecks.length; j++) {
           var ck = srv.openChecks[j];
-          var ckRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';');
+          var ckRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';white-space:nowrap;');
           ckRow.appendChild(el('span', 'font-size:18px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', ck.id));
           ckRow.appendChild(el('span', 'font-size:18px;color:#555;flex:1;', '\u00D7' + ck.cvr + ' CVR \u00B7 ' + ck.time));
           ckRow.appendChild(el('span', 'font-size:18px;color:' + C.gold + ';text-align:right;', fmt(ck.total)));
@@ -951,7 +951,7 @@ function buildServerCheckoutsOverlay(panel) {
         for (var j = 0; j < srv.tips.length; j++) {
           (function(tipIdx, srvIdx) {
             var tip = D_SERVERS[srvIdx].tips[tipIdx];
-            var tRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';cursor:pointer;');
+            var tRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';cursor:pointer;white-space:nowrap;');
             tRow.appendChild(el('span', 'font-size:18px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', tip.id));
             if (tip.tip === null) {
               tRow.appendChild(el('span', 'font-size:18px;color:' + C.mint + ';flex:1;', '\u26A0 UNADJUSTED'));
@@ -1229,7 +1229,7 @@ function buildCloseDayOverlay(panel) {
 
   // Action Card 1 — Settle Batch
   var ac1 = el('div', 'border:1px solid ' + (closeState.settled ? C.green : C.border) + ';padding:10px;margin-bottom:10px;' + (closeState.settled ? '' : ''));
-  var ac1Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;');
+  var ac1Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:nowrap;overflow:hidden;');
   var badge1Bg = closeState.settled ? C.green : '#ffdd44';
   var badge1Text = closeState.settled ? '\u2713 SETTLED' : 'PENDING';
   ac1Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closeState.settled ? C.green : C.mint) + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;color:' + (closeState.settled ? C.green : C.mint) + ';', closeState.settled ? '\u2713' : '1'));
@@ -1256,7 +1256,7 @@ function buildCloseDayOverlay(panel) {
   var locked = !closeState.settled;
   var closed = closeState.closed;
   var ac2 = el('div', 'border:1px solid ' + (closed ? C.green : locked ? C.dim : C.border) + ';padding:10px;' + (locked ? 'opacity:0.4;pointer-events:none;' : '') + (closed ? '' : ''));
-  var ac2Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;');
+  var ac2Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:nowrap;overflow:hidden;');
   var badge2Bg = closed ? C.green : locked ? C.dim : '#ffdd44';
   var badge2Text = closed ? '\u2713 CLOSED' : locked ? 'LOCKED' : 'READY';
   ac2Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closed ? C.green : locked ? C.dim : C.mint) + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;color:' + (closed ? C.green : locked ? C.dim : C.mint) + ';', closed ? '\u2713' : '2'));
