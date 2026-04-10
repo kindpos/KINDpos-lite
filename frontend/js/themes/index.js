@@ -15,6 +15,7 @@ export { Speakeasy }      from './speakeasy.js';
 export { FarmTable }      from './farm-table.js';
 export { RooftopBar }     from './rooftop-bar.js';
 export { AtomicPurple }   from './atomic-purple.js';
+export { Rainbow }        from './rainbow.js';
 
 // Theme catalog for settings UI
 export var THEMES = [
@@ -30,4 +31,5 @@ export var THEMES = [
   { id: 'farm-table',     label: 'Farm Table',      loader: function() { return import('./farm-table.js').then(function(m) { return m.FarmTable; }); } },
   { id: 'rooftop-bar',    label: 'Rooftop Bar',     loader: function() { return import('./rooftop-bar.js').then(function(m) { return m.RooftopBar; }); } },
   { id: 'atomic-purple',  label: 'Atomic Purple',   loader: function() { return import('./atomic-purple.js').then(function(m) { return m.AtomicPurple; }); } },
+  { id: 'rainbow',        label: 'Rainbow',         loader: function() { return import('./rainbow.js').then(function(m) { return m.Rainbow; }); } },
 ];

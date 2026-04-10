@@ -814,6 +814,7 @@ var _THEME_SWATCHES = {
   'farm-table':    { accent: '#d4a84b', bg: '#161410', bg2: '#0e0c08' },
   'rooftop-bar':   { accent: '#ff7eb3', bg: '#0a0510', bg2: '#060208' },
   'atomic-purple': { accent: '#9b59ff', bg: '#0d0d0f', bg2: '#141418' },
+  'rainbow':       { accent: '#ff3333', bg: '#1a1a2e', bg2: '#0f0f1a' },
 };
 
 function renderThemePicker(body) {
