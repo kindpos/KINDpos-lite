@@ -99,15 +99,14 @@ var PIZZA_PREP = {
   key: 'prep', label: 'PREP',
   options: [
     { id: 'bbq-sauce',    label: 'BBQ Sauce',    price: 0 },
-    { id: 'cut-square',   label: 'Cut Square',   price: 0 },
-    { id: 'extra-sauce',  label: 'Extra Sauce',  price: 0 },
-    { id: 'light-bake',   label: 'Light Bake',   price: 0 },
-    { id: 'light-sauce',  label: 'Light Sauce',  price: 0 },
-    { id: 'no-cut',       label: 'No Cut',       price: 0 },
-    { id: 'no-sauce',     label: 'No Sauce',     price: 0 },
-    { id: 'sub-gf-crust', label: 'Sub GF Crust', price: 3.00 },
-    { id: 'well-done',    label: 'Well Done',    price: 0 },
     { id: 'white-sauce',  label: 'White Sauce',  price: 0 },
+    { id: 'alfredo-sauce', label: 'Alfredo Sauce', price: 0 },
+    { id: 'well-done',    label: 'Well Done',    price: 0 },
+    { id: 'light-bake',   label: 'Light Bake',   price: 0 },
+    { id: 'cut-square',   label: 'Cut Square',   price: 0 },
+    { id: 'cut-party',    label: 'Party Cut',    price: 0 },
+    { id: 'double-bake',  label: 'Double Bake',  price: 0 },
+    { id: 'sub-gf-crust', label: 'Sub GF Crust', price: 3.00 },
   ],
 };
 
