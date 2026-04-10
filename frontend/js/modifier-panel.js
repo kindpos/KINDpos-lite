@@ -608,9 +608,35 @@ export function ModifierPanel(container, opts) {
 
   function applyOptionalMod(groupKey, opt, mandKey) {
     var price = _resolvePrice(opt, mandKey);
+    var modId = opt.id || opt.label.toLowerCase().replace(/\s+/g, '-');
+
+    // If ADD is tapped and this item already exists as ADD, upgrade to EXTRA
+    if (activeOptPrefix === 'ADD') {
+      var existing = null;
+      for (var i = 0; i < activeItem.optionalModifiers.length; i++) {
+        var em = activeItem.optionalModifiers[i];
+        if (em.modifierId === modId && em.placement === activePlacement) {
+          existing = em;
+          break;
+        }
+      }
+      if (existing && existing.prefix === 'ADD') {
+        existing.prefix = 'EXTRA';
+        fireUpdate();
+        renderTopBar();
+        renderPicker();
+        return;
+      }
+      if (existing && existing.prefix === 'EXTRA') {
+        // Already EXTRA — ignore repeated taps
+        fireUpdate();
+        return;
+      }
+    }
+
     var mod = {
       prefix: activeOptPrefix,
-      modifierId: opt.id || opt.label.toLowerCase().replace(/\s+/g, '-'),
+      modifierId: modId,
       label: opt.label,
       price: price,
       priceMap: opt.priceMap || null,
