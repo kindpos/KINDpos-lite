@@ -247,13 +247,16 @@ export function ModifierPanel(container, opts) {
         letterText = 'N\u2022';
       }
 
-      var variant = isActive ? 'mint' : 'ghost';
-      var pair = buildStyledButton({ label: letterText, variant: variant, size: 'sm' });
+      var pair = buildStyledButton({ label: letterText, variant: 'ghost', size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '24px';
       pair.inner.style.letterSpacing = '0';
       pair.inner.style.padding = '6px 4px';
+      if (isActive) {
+        pair.wrap.style.background = T.numpadChassis;
+        pair.inner.style.color = T.bgDark;
+      }
 
       pair.wrap.addEventListener('pointerup', function() {
         activeTabKey = tab.key;
@@ -321,7 +324,7 @@ export function ModifierPanel(container, opts) {
         'flex:' + (pl.id === 'whole' ? '2' : '1') + ';',
         'display:flex;align-items:center;justify-content:center;',
         'font-family:' + T.fb + ';font-size:18px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;',
-        'background:' + (isActive ? T.mint : 'transparent') + ';',
+        'background:' + (isActive ? T.numpadChassis : 'transparent') + ';',
         'color:' + (isActive ? T.bgDark : T.mutedText) + ';',
         'cursor:pointer;transition:background 80ms,color 80ms;',
       ].join('');
@@ -395,7 +398,7 @@ export function ModifierPanel(container, opts) {
       var seg = segs[pl.id];
       if (!seg) return;
       var isActive = activePlacement === pl.id;
-      seg.style.background = isActive ? T.mint : 'transparent';
+      seg.style.background = isActive ? T.numpadChassis : 'transparent';
       seg.style.color = isActive ? T.bgDark : T.mutedText;
     });
   }
@@ -459,12 +462,16 @@ export function ModifierPanel(container, opts) {
         (group.options || []).forEach(function(opt) {
           var isSelected = opt.key === currentKey;
           var variant = isSelected ? 'mint' : 'dark';
-          var pair = buildStyledButton({ label: opt.label, variant: variant, size: 'sm' });
+          var pair = buildStyledButton({ label: opt.label, variant: variant, size: 'md' });
           pair.wrap.style.width = '100%';
           pair.wrap.style.minWidth = '0';
-          pair.inner.style.fontSize = '9px';
-          pair.inner.style.padding = '3px 2px';
+          pair.inner.style.fontSize = '11px';
+          pair.inner.style.padding = '4px 3px';
           pair.inner.style.lineHeight = '1.1';
+          if (isSelected) {
+            pair.wrap.style.background = T.numpadChassis;
+            pair.inner.style.color = T.bgDark;
+          }
 
           if (typeof opt.price === 'number' && opt.price !== 0) {
             var priceEl = document.createElement('div');
@@ -527,9 +534,10 @@ export function ModifierPanel(container, opts) {
       var isRemoved = activeItem.includedRemovals.indexOf(incl.id) !== -1;
       var variant = isRemoved ? 'vermillion' : 'dark';
       var label = isRemoved ? 'NO ' + incl.label : incl.label;
-      var pair = buildStyledButton({ label: label, variant: variant, size: 'sm' });
+      var pair = buildStyledButton({ label: label, variant: variant, size: 'md' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
+      pair.inner.style.fontSize = '11px';
 
       pair.wrap.addEventListener('pointerup', function() {
         var idx = activeItem.includedRemovals.indexOf(incl.id);
@@ -567,11 +575,11 @@ export function ModifierPanel(container, opts) {
     allOpts.forEach(function(entry) {
       var opt = entry.opt;
       var price = _resolvePrice(opt, mandKey);
-      var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'sm' });
+      var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'md' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '9px';
-      pair.inner.style.padding = '3px 2px';
+      pair.inner.style.fontSize = '11px';
+      pair.inner.style.padding = '4px 3px';
       pair.inner.style.lineHeight = '1.1';
 
       // Specials get yellow border to stand out
@@ -621,9 +629,10 @@ export function ModifierPanel(container, opts) {
     ALLERGENS.forEach(function(a) {
       if (a.id === 'other') {
         var isActive = activeItem.allergenNote.length > 0;
-        var pair = buildStyledButton({ label: a.label, variant: isActive ? 'vermillion' : 'dark', size: 'sm' });
+        var pair = buildStyledButton({ label: a.label, variant: isActive ? 'vermillion' : 'dark', size: 'md' });
         pair.wrap.style.width = '100%';
         pair.wrap.style.minWidth = '0';
+        pair.inner.style.fontSize = '11px';
         pair.wrap.addEventListener('pointerup', function() {
           showKeyboard({
             placeholder: 'Describe allergen...',
@@ -643,9 +652,10 @@ export function ModifierPanel(container, opts) {
       }
 
       var selected = activeItem.allergens.indexOf(a.id) !== -1;
-      var pair = buildStyledButton({ label: a.label, variant: selected ? 'vermillion' : 'dark', size: 'sm' });
+      var pair = buildStyledButton({ label: a.label, variant: selected ? 'vermillion' : 'dark', size: 'md' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
+      pair.inner.style.fontSize = '11px';
 
       pair.wrap.addEventListener('pointerup', function() {
         var idx = activeItem.allergens.indexOf(a.id);
