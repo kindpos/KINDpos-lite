@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T } from './tokens.js';
+import { T, onThemeChange } from './tokens.js';
 
 // ── Scene Registry ───────────────────────────────
 const _scenes = {};
@@ -62,7 +62,46 @@ function init() {
   _layerInterrupt = document.getElementById('layer-interrupt');
   _layerGate = document.getElementById('layer-gate');
 
-  // Apply z-indexes from tokens
+  _applyLayerGeometry();
+
+  // Re-apply geometry when theme changes
+  onThemeChange(function() { _applyLayerGeometry(); });
+}
+
+function _applyLayerGeometry() {
+  var hH = T.headerH + 'px';
+  var bodyH = 'calc(100% - ' + hH + ')';
+  var summaryW = T.pcLeftW;
+  var sceneLeft = (summaryW + T.colGapSm) + 'px';
+  var sceneW = 'calc(100% - ' + sceneLeft + ')';
+
+  // Summary panel — fixed left column
+  if (_layerSummary) {
+    _layerSummary.style.top = hH;
+    _layerSummary.style.left = '0';
+    _layerSummary.style.width = summaryW + 'px';
+    _layerSummary.style.height = bodyH;
+    _layerSummary.style.zIndex = T.zSummary;
+  }
+
+  // Scene layers — shifted right of summary panel
+  [_layerWorking, _layerTransactional, _layerInterrupt].forEach(function(el) {
+    if (!el) return;
+    el.style.top = hH;
+    el.style.left = sceneLeft;
+    el.style.width = sceneW;
+    el.style.height = bodyH;
+  });
+
+  // Gate — always full width (covers summary too)
+  if (_layerGate) {
+    _layerGate.style.top = hH;
+    _layerGate.style.left = '0';
+    _layerGate.style.width = '100%';
+    _layerGate.style.height = bodyH;
+  }
+
+  // Z-indexes
   if (_layerWorking)       _layerWorking.style.zIndex = T.zWorking;
   if (_layerTransactional) _layerTransactional.style.zIndex = T.zTransactional;
   if (_layerSummary)       _layerSummary.style.zIndex = T.zSummary;

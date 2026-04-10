@@ -69,37 +69,22 @@ html, body {
   gap: 8px;
 }
 
-/* ── Persistent order summary layer ──────────────── */
+/* ── Layer containers ─────────────────────────────────
+   Geometry (top, left, width, height, z-index) applied
+   by SceneManager.init() from tokens — only structural
+   CSS lives here.
+   ──────────────────────────────────────────────────── */
 #order-summary {
   position: absolute;
-  top: 52px;
-  left: 0;
-  width: 280px;
-  height: calc(100% - 52px);
-  /* z-index applied by SceneManager from T.zSummary */
   pointer-events: auto;
   display: none;
 }
 
-/* ── Layer containers ────────────────────────────── */
 #layer-working,
 #layer-transactional,
-#layer-interrupt {
-  position: absolute;
-  top: 52px;
-  left: 292px;
-  width: calc(100% - 292px);
-  height: calc(100% - 52px);
-  pointer-events: none;
-}
-
-/* Gate (login) needs full width */
+#layer-interrupt,
 #layer-gate {
   position: absolute;
-  top: 52px;
-  left: 0;
-  width: 100%;
-  height: calc(100% - 52px);
   pointer-events: none;
 }
 

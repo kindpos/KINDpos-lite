@@ -378,3 +378,80 @@ export function applyRaisedStyle(el, fillColor) {
   el.style.borderRight  = b + 'px solid ' + edges.dark;
   el.style.clipPath = chamfer(10);
 }
+
+
+// ═══════════════════════════════════════════════════
+//  THEME SYSTEM
+//  Snapshot defaults, apply overrides, notify listeners
+// ═══════════════════════════════════════════════════
+
+// Snapshot of every T key at load time (flat values only)
+var _defaults = {};
+(function() {
+  var keys = Object.keys(T);
+  for (var i = 0; i < keys.length; i++) {
+    var v = T[keys[i]];
+    if (typeof v !== 'function' && typeof v !== 'object') {
+      _defaults[keys[i]] = v;
+    }
+  }
+})();
+
+var _themeListeners = [];
+
+export function onThemeChange(fn) {
+  _themeListeners.push(fn);
+}
+
+export function setTheme(overrides) {
+  if (!overrides) return;
+  var keys = Object.keys(overrides);
+  for (var i = 0; i < keys.length; i++) {
+    var val = overrides[keys[i]];
+    if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+      // Merge objects (e.g. categoryPalette, roles)
+      T[keys[i]] = T[keys[i]] || {};
+      var oKeys = Object.keys(val);
+      for (var k = 0; k < oKeys.length; k++) {
+        T[keys[i]][oKeys[k]] = val[oKeys[k]];
+      }
+    } else {
+      T[keys[i]] = val;
+    }
+  }
+  // Recompute derived values
+  _recomputeEmbossed();
+  // Notify listeners (SceneManager re-applies geometry, etc.)
+  for (var j = 0; j < _themeListeners.length; j++) {
+    _themeListeners[j](T);
+  }
+}
+
+export function resetTheme() {
+  var keys = Object.keys(_defaults);
+  for (var i = 0; i < keys.length; i++) {
+    T[keys[i]] = _defaults[keys[i]];
+  }
+  _recomputeEmbossed();
+  for (var j = 0; j < _themeListeners.length; j++) {
+    _themeListeners[j](T);
+  }
+}
+
+export function getThemeDefaults() {
+  return _defaults;
+}
+
+function _recomputeEmbossed() {
+  // Refresh embossed variant table when theme colors change
+  _EMB_VARIANTS.dark.bg = T.embDarkBg;
+  _EMB_VARIANTS.dark.label = T.textPrimary;
+  _EMB_VARIANTS.gold.bg = T.embGoldBg;
+  _EMB_VARIANTS.gold.label = T.embGoldLabel;
+  _EMB_VARIANTS.mint.bg = T.embMintBg;
+  _EMB_VARIANTS.mint.label = T.embMintLabel;
+  _EMB_VARIANTS.vermillion.bg = T.embVermBg;
+  _EMB_VARIANTS.vermillion.label = T.embVermLabel;
+  _EMB_VARIANTS.ghost.bg = T.embGhostBg;
+  _EMB_VARIANTS.ghost.label = T.textPrimary;
+}
