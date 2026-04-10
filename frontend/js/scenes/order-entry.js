@@ -14,7 +14,7 @@ import { showKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
 import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
-import '../modifier-panel.js';  // registers 'item-mods' interrupt scene
+import { ModifierPanel } from '../modifier-panel.js';
 import { getModifierConfig } from '../data/modifier-configs.js';
 
 // ── Beveled depth card helpers (match clock-in card pattern) ──
@@ -281,7 +281,8 @@ var _tabModsBtn  = null;
 var _bottomBar   = null;  // DOM ref for bottom action bar
 var _mainArea    = null;  // DOM ref for right panel
 
-// ── Modifier Panel (interrupt overlay) ──
+// ── Modifier Panel (overlay on hex-canvas) ──
+var _modPanel      = null;   // ModifierPanel instance
 var _modPanelItem  = null;   // ticket preview item for active panel
 
 // ── Batch Modifier Session ───────────────────────
@@ -330,6 +331,7 @@ SceneManager.register({
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _bottomBar     = null;
     _mainArea      = null;
+    _modPanel      = null;
     _modPanelItem  = null;
 
     container.style.cssText = [
@@ -355,6 +357,7 @@ SceneManager.register({
 
   unmount: function() {
     if (hexNav) { hexNav.destroy(); hexNav = null; }
+    if (_modPanel) { _modPanel.destroy(); _modPanel = null; }
   },
 });
 
@@ -1219,25 +1222,34 @@ function endModifierSession() {
   if (hexNav) hexNav.reset();
 }
 
-// ── MODIFIER PANEL (interrupt overlay) ───────────
+// ── MODIFIER PANEL (overlay on hex-canvas) ───────
 function openModifierPanel(item, modConfig) {
-  SceneManager.interrupt('item-mods', {
-    onConfirm: function(activeItem) {
-      _modPanelItem = null;
+  if (_modPanel) closeModifierPanel();
+
+  _modPanel = new ModifierPanel(_tabCanvas, {
+    item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
+    onUpdate: function(outputItem) {
+      _modPanelItem = outputItem;
+      renderTicket();
+    },
+    onSend: function(activeItem) {
       commitModifierPanelItem(item, activeItem);
     },
     onCancel: function() {
-      _modPanelItem = null;
-      renderTicket();
+      closeModifierPanel();
     },
-    params: {
-      item: item,
-      modConfig: modConfig,
-      onUpdate: function(outputItem) {
-        _modPanelItem = outputItem;
-        renderTicket();
-      },
-    },
+  });
+}
+
+function closeModifierPanel() {
+  if (_modPanel) {
+    _modPanel.destroy();
+    _modPanel = null;
+  }
+  _modPanelItem = null;
+  renderTicket();
+  requestAnimationFrame(function() {
+    if (hexNav) hexNav.reset();
   });
 }
 

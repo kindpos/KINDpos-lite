@@ -8,7 +8,6 @@
 
 import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
 import { showKeyboard } from './keyboard.js';
-import { SceneManager } from './scene-manager.js';
 
 // ── Standard allergen list ──
 var ALLERGENS = [
@@ -123,7 +122,6 @@ export function ModifierPanel(container, opts) {
   var tabBarEl = null;
   var topBarEl = null;
   var pickerEl = null;
-  var summaryEl = null;
   var _allergenNoteInput = null;
 
   // ── Bevel helpers (match clock-in card pattern) ──
@@ -151,8 +149,7 @@ export function ModifierPanel(container, opts) {
     // Outer wrapper: drop-shadow (matches clock-in depth pattern)
     rootEl = document.createElement('div');
     rootEl.style.cssText = [
-      'width:98%;max-width:960px;height:90%;max-height:500px;',
-      'filter:drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));',
+      'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;',
     ].join('');
 
     // Inner card: beveled border (light top-left, dark bottom-right)
@@ -209,18 +206,6 @@ export function ModifierPanel(container, opts) {
     centerArea.appendChild(pickerEl);
 
     body.appendChild(centerArea);
-
-    // Summary card (right)
-    summaryEl = document.createElement('div');
-    summaryEl.style.cssText = [
-      'width:200px;flex-shrink:0;display:flex;flex-direction:column;',
-      'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      'background:' + T.bgDark + ';',
-      'border-left:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'padding:6px;',
-    ].join('');
-    body.appendChild(summaryEl);
-
     card.appendChild(body);
 
     // ── Bottom action bar: CANCEL + SEND ──
@@ -752,135 +737,6 @@ export function ModifierPanel(container, opts) {
 
   function fireUpdate() {
     onUpdate(buildOutputItem());
-    renderSummary();
-  }
-
-  // ═══ SUMMARY CARD (right panel) ═══
-  function renderSummary() {
-    if (!summaryEl) return;
-    summaryEl.innerHTML = '';
-
-    var output = buildOutputItem();
-
-    // Item name + price header
-    var header = document.createElement('div');
-    header.style.cssText = [
-      'font-family:' + T.fb + ';font-size:14px;font-weight:bold;',
-      'color:' + T.mint + ';padding-bottom:4px;',
-      'border-bottom:2px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'margin-bottom:4px;',
-    ].join('');
-    header.textContent = output.itemLabel;
-    summaryEl.appendChild(header);
-
-    var priceRow = document.createElement('div');
-    priceRow.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.gold + ';margin-bottom:6px;';
-    var total = output.basePrice + output.mods.reduce(function(s, m) { return s + m.price; }, 0);
-    priceRow.textContent = '$' + total.toFixed(2);
-    summaryEl.appendChild(priceRow);
-
-    // Mandatory selections (not removable)
-    mandatoryGroups.forEach(function(g) {
-      var sel = activeItem.mandatorySelections[g.key];
-      if (sel) {
-        var row = document.createElement('div');
-        row.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.textSecondary + ';padding:1px 0;';
-        row.textContent = g.label + ': ' + sel.label;
-        if (sel.price) {
-          var pEl = document.createElement('span');
-          pEl.style.color = T.gold;
-          pEl.textContent = ' $' + sel.price.toFixed(2);
-          row.appendChild(pEl);
-        }
-        summaryEl.appendChild(row);
-      }
-    });
-
-    // Included removals
-    activeItem.includedRemovals.forEach(function(rid) {
-      var incl = includedItems.find(function(i) { return i.id === rid; });
-      if (incl) {
-        _appendModLine('NO ' + incl.label, 0, function() {
-          activeItem.includedRemovals.splice(activeItem.includedRemovals.indexOf(rid), 1);
-          fireUpdate();
-          renderPicker();
-        });
-      }
-    });
-
-    // Optional modifiers (removable)
-    activeItem.optionalModifiers.forEach(function(mod, idx) {
-      var displayPrice = mod.prefix === 'NO' ? 0 : mod.price;
-      _appendModLine(mod.prefix + ' ' + mod.label, displayPrice, function() {
-        activeItem.optionalModifiers.splice(idx, 1);
-        fireUpdate();
-        renderTopBar();
-        renderPicker();
-      });
-    });
-
-    // Allergens (removable)
-    activeItem.allergens.forEach(function(aId, idx) {
-      var a = ALLERGENS.find(function(x) { return x.id === aId; });
-      if (a) {
-        _appendModLine('\u26A0 ' + a.label, 0, function() {
-          activeItem.allergens.splice(idx, 1);
-          fireUpdate();
-          renderPicker();
-        });
-      }
-    });
-
-    if (activeItem.allergenNote) {
-      _appendModLine('\u26A0 ' + activeItem.allergenNote, 0, function() {
-        activeItem.allergenNote = '';
-        fireUpdate();
-        renderPicker();
-      });
-    }
-
-    // Note (removable)
-    if (activeItem.note) {
-      _appendModLine('\uD83D\uDCDD ' + activeItem.note, 0, function() {
-        activeItem.note = '';
-        fireUpdate();
-        renderTabs();
-        renderPicker();
-      });
-    }
-  }
-
-  function _appendModLine(text, price, onRemove) {
-    var row = document.createElement('div');
-    row.style.cssText = [
-      'display:flex;align-items:center;gap:4px;',
-      'padding:2px 0;',
-      'font-family:' + T.fb + ';font-size:11px;color:' + T.textPrimary + ';',
-      'border-bottom:1px solid ' + T.border + ';',
-    ].join('');
-
-    var label = document.createElement('span');
-    label.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-    label.textContent = text;
-    row.appendChild(label);
-
-    if (price > 0) {
-      var priceEl = document.createElement('span');
-      priceEl.style.cssText = 'flex-shrink:0;color:' + T.gold + ';';
-      priceEl.textContent = '+$' + price.toFixed(2);
-      row.appendChild(priceEl);
-    }
-
-    var xBtn = document.createElement('span');
-    xBtn.style.cssText = 'flex-shrink:0;color:' + T.red + ';cursor:pointer;font-size:13px;padding:0 2px;';
-    xBtn.textContent = '\u2715';
-    xBtn.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
-      onRemove();
-    });
-    row.appendChild(xBtn);
-
-    summaryEl.appendChild(row);
   }
 
   function buildOutputItem() {
@@ -943,29 +799,3 @@ export function ModifierPanel(container, opts) {
   fireUpdate();
 }
 
-// ═══════════════════════════════════════════════════
-//  INTERRUPT SCENE REGISTRATION
-//  Usage: SceneManager.interrupt('item-mods', {
-//    onConfirm: fn(activeItem),
-//    onCancel: fn(),
-//    params: { item, modConfig }
-//  })
-// ═══════════════════════════════════════════════════
-
-SceneManager.register({
-  name: 'item-mods',
-  mount: function(container, params) {
-    var _panel = new ModifierPanel(container, {
-      item: { label: params.item.label, price: params.item.price || 0, id: params.item.id, modifierConfig: params.modConfig },
-      onUpdate: params.onUpdate || function() {},
-      onSend: function(activeItem) {
-        if (params.onConfirm) params.onConfirm(activeItem);
-      },
-      onCancel: function() {
-        if (params.onCancel) params.onCancel();
-      },
-    });
-    return function() { _panel.destroy(); };
-  },
-  unmount: function() {},
-});
