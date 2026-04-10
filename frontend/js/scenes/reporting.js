@@ -220,7 +220,7 @@ function buildCard(title, bodyFn, overlayFn) {
   var header = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
   card.appendChild(header);
   card._header = header;
-  var body = el('div', 'flex:1;overflow:hidden;padding:0;cursor:pointer;min-height:0;');
+  var body = el('div', 'flex:1;overflow:hidden;padding:0;cursor:pointer;min-height:0;display:flex;flex-direction:column;');
   bodyFn(body);
   card.appendChild(body);
   card._body = body;
@@ -268,7 +268,7 @@ function showNumpad(callback) {
 
 // Card 1 — Sales Overview
 function buildSalesOverviewBody(body) {
-  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block' });
   addDefs(svg, 'card');
   var x0 = 28, y0 = 10, W = 256, H = 106;
   var bot = y0 + H;
@@ -431,7 +431,7 @@ function buildSalesOverviewOverlay(panel) {
 
 // Card 2 — Sales Breakdown
 function buildSalesBreakdownBody(body) {
-  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block' });
   addDefs(svg, 'sb');
   var cx=28, cy=10, cw=256, ch=108, maxY=65;
   function tx(i){return cx+(i/7)*cw;} function ty(v){return cy+ch-(v/maxY)*ch;}
@@ -784,7 +784,7 @@ function buildAllChecksOverlay(panel) {
 // Card 3 — Server Checkouts (horizontal overlapping bars per server)
 function buildServerCheckoutsBody(body) {
   var maxCount = 5;
-  var wrap = el('div', 'height:100%;display:flex;flex-direction:column;gap:3px;overflow-y:auto;');
+  var wrap = el('div', 'height:100%;display:flex;flex-direction:column;gap:4px;overflow-y:auto;padding:4px;');
 
   for (var s = 0; s < D_SERVERS.length; s++) {
     var srv = D_SERVERS[s];
@@ -794,50 +794,46 @@ function buildServerCheckoutsBody(body) {
 
     var row = el('div', 'flex-shrink:0;');
     // Server name + status
-    var hdr = el('div', 'display:flex;align-items:center;gap:4px;margin-bottom:1px;');
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + (isActive ? C.mint : '#444') + ';letter-spacing:1px;font-weight:bold;', srv.name));
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:6px;color:' + (isActive ? C.verm : '#333') + ';', '\u25CF ' + (isActive ? 'ACTIVE' : 'OFFLINE')));
+    var hdr = el('div', 'display:flex;align-items:center;gap:6px;margin-bottom:2px;');
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:16px;color:' + (isActive ? C.mint : '#444') + ';letter-spacing:1px;font-weight:bold;', srv.name));
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:12px;color:' + (isActive ? C.verm : '#333') + ';', '\u25CF ' + (isActive ? 'ACTIVE' : 'OFFLINE')));
     row.appendChild(hdr);
 
     // Bar track
-    var track = el('div', 'position:relative;height:16px;background:' + (isActive ? C.dark : '#161616') + ';border:1px solid #2a2a2a;');
+    var track = el('div', 'position:relative;height:20px;background:' + (isActive ? C.dark : '#161616') + ';border:1px solid #2a2a2a;');
     if (isActive) {
-      // Tips bar (mint, full height, back layer)
       track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / maxCount * 100).toFixed(0) + '%;background:' + C.mint + ';'));
-      // Checks bar (vermillion, inset, front layer)
-      track.appendChild(el('div', 'position:absolute;top:2px;left:0;height:calc(100% - 4px);width:' + (oc / maxCount * 100).toFixed(0) + '%;background:' + C.verm + ';z-index:1;'));
-      // Callout numbers on the bars
+      track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / maxCount * 100).toFixed(0) + '%;background:' + C.verm + ';z-index:1;'));
       if (oc > 0) {
-        var ckEl = el('div', 'position:absolute;top:1px;z-index:2;background:#333;color:' + C.verm + ';font-family:' + FONT + ';font-size:8px;font-weight:bold;padding:1px 4px;');
+        var ckEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.verm + ';font-family:' + FONT + ';font-size:16px;font-weight:bold;padding:1px 5px;');
         ckEl.style.left = Math.max(2, (oc / maxCount * 100) - 12) + '%';
         ckEl.textContent = oc;
         track.appendChild(ckEl);
       }
       if (ut > 0) {
-        var tpEl = el('div', 'position:absolute;top:1px;z-index:2;background:#333;color:' + C.mint + ';font-family:' + FONT + ';font-size:8px;font-weight:bold;padding:1px 4px;');
+        var tpEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.mint + ';font-family:' + FONT + ';font-size:16px;font-weight:bold;padding:1px 5px;');
         tpEl.style.left = Math.max(2, (ut / maxCount * 100) - 12) + '%';
         track.appendChild(tpEl);
         tpEl.textContent = ut;
       }
     } else {
-      track.appendChild(el('div', 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:6px;color:#2a2a2a;', 'NOT CLOCKED IN'));
+      track.appendChild(el('div', 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:12px;color:#2a2a2a;', 'NOT CLOCKED IN'));
     }
     row.appendChild(track);
 
     if (isActive) {
-      var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:6px;margin-top:1px;');
+      var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:12px;margin-top:2px;');
       labels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
       labels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
       row.appendChild(labels);
     }
 
     wrap.appendChild(row);
-    // Divider between servers
     if (s < D_SERVERS.length - 1) wrap.appendChild(el('div', 'height:1px;background:#2a2a2a;flex-shrink:0;'));
   }
 
   // Legend
-  var leg = el('div', 'display:flex;gap:10px;margin-top:auto;padding-top:3px;font-family:' + FONT + ';font-size:6px;');
+  var leg = el('div', 'display:flex;gap:12px;margin-top:auto;padding-top:4px;font-family:' + FONT + ';font-size:12px;');
   leg.innerHTML = '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.verm + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.verm + '">OPEN CHECKS</span></span>' +
     '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.mint + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.mint + '">UNADJ TIPS</span></span>';
   wrap.appendChild(leg);
