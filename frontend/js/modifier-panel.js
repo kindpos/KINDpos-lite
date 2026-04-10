@@ -299,7 +299,9 @@ export function ModifierPanel(container, opts) {
       topBarEl.appendChild(prefixRow);
     }
 
-    // Placement bar — always visible (1st / Whole / 2nd)
+    // Placement bar — only for optional tabs
+    if (tab.type !== 'optional') return;
+
     var placeWrap = buildStyledButton(T.darkBtn);
     placeWrap.wrap.style.width = '100%';
     placeWrap.inner.style.height = '40px';
@@ -340,13 +342,6 @@ export function ModifierPanel(container, opts) {
 
     topBarEl.appendChild(placeWrap.wrap);
 
-    // Info line for mandatory tabs
-    if (tab.type === 'mandatory') {
-      var info = document.createElement('div');
-      info.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';padding:4px 2px;';
-      info.textContent = 'Select ' + tab.label.toLowerCase();
-      topBarEl.appendChild(info);
-    }
   }
 
   function _refreshPlacement(segs) {
