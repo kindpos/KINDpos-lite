@@ -23,8 +23,8 @@ var C = {
   verm:'#ff4422', green:'#39b54a', dim:'#555555',
   bg:'#222222', dark:'#1a1a1a', border:'#333333',
   well:'#111111', wellBrd:'#2a2a2a',
-  axis:'rgba(255,255,255,0.5)', grid:'rgba(255,255,255,0.1)',
-  label:'rgba(255,255,255,0.4)', overlay:'rgba(18,18,18,0.94)',
+  axis:'rgba(255,255,255,0.7)', grid:'rgba(255,255,255,0.1)',
+  label:'rgba(255,255,255,0.65)', overlay:'rgba(18,18,18,0.94)',
 };
 
 var CAT = {PIZZA:'#ff5533',SUBS:'#4499ff',GENERAL:'#bb44ff',DRINKS:'#ff9900',SPECIALS:'#00bbcc'};
