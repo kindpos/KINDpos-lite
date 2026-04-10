@@ -187,12 +187,13 @@ function refreshAllChecks() { if (allChecksEl) { allChecksEl.innerHTML = ''; bui
 
 function openOverlay(builderFn) {
   if (activeOverlay) closeOverlay();
-  var ov = el('div', 'position:fixed;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:50;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px 0;');
+  var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px 0;');
   var panel = el('div', 'border:2px solid ' + C.mint + ';width:min(96vw,700px);margin:0 auto;background:' + C.dark + ';overflow-x:auto;');
   builderFn(panel);
   ov.appendChild(panel);
   ov.addEventListener('click', function(e) { if (e.target === ov) closeOverlay(); });
-  document.body.appendChild(ov);
+  var terminal = document.getElementById('terminal') || document.body;
+  terminal.appendChild(ov);
   activeOverlay = ov;
 }
 
