@@ -259,28 +259,28 @@ function buildCard(title, bodyFn, overlayFn) {
     'border-top:5px solid ' + T.numpadChassisL + ';border-left:5px solid ' + T.numpadChassisL + ';' +
     'border-bottom:5px solid ' + T.numpadChassisD + ';border-right:5px solid ' + T.numpadChassisD + ';' +
     'clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);');
-  var header = el('div', 'background:' + T.numpadChassis + ';color:' + T.bgDark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
+  var header = el('div', 'background:' + T.numpadChassis + ';color:' + T.bgDark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;', title);
+  if (overlayFn) {
+    var drillBtn = buildStyledButton(T.darkBtn);
+    drillBtn.wrap.style.height = '24px';
+    drillBtn.wrap.style.width = '48px';
+    drillBtn.wrap.style.flexShrink = '0';
+    drillBtn.inner.style.fontFamily = FONT;
+    drillBtn.inner.style.fontSize = '14px';
+    drillBtn.inner.style.color = T.mint;
+    drillBtn.inner.textContent = '>>>';
+    drillBtn.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      openOverlay(overlayFn);
+    });
+    header.appendChild(drillBtn.wrap);
+  }
   card.appendChild(header);
   card._header = header;
   var body = el('div', 'flex:1;overflow:hidden;padding:0;min-height:0;display:flex;flex-direction:column;');
   bodyFn(body);
   card.appendChild(body);
   card._body = body;
-  if (overlayFn) {
-    card.style.cursor = 'pointer';
-    // Transparent overlay on top of body to catch all taps
-    var tapZone = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;cursor:pointer;');
-    card.style.position = 'relative';
-    var _tapped = false;
-    tapZone.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
-      if (_tapped) return;
-      _tapped = true;
-      setTimeout(function() { _tapped = false; }, 300);
-      openOverlay(overlayFn);
-    });
-    card.appendChild(tapZone);
-  }
   return card;
 }
 
