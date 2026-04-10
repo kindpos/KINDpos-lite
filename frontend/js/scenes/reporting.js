@@ -195,10 +195,10 @@ function openOverlay(builderFn) {
   var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;display:flex;align-items:flex-start;justify-content:center;padding:12px 0;');
 
   // Flex row to hold panel (left) and optional numpad (right)
-  var row = el('div', 'display:flex;gap:12px;justify-content:center;align-items:flex-start;width:100%;max-width:100%;margin:0 auto;transition:all 0.3s ease;');
+  var row = el('div', 'display:flex;gap:12px;justify-content:center;align-items:flex-start;width:100%;max-width:960px;margin:0 auto;transition:all 0.3s ease;');
   _overlayRow = row;
 
-  var panel = el('div', 'flex:1;max-width:100%;background:' + T.bgDark + ';overflow-x:auto;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;max-height:calc(100vh - 80px);' +
+  var panel = el('div', 'flex:1;max-width:940px;background:' + T.bgDark + ';overflow-x:auto;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;max-height:calc(100vh - 80px);' +
     'border-top:7px solid ' + T.numpadChassisL + ';border-left:7px solid ' + T.numpadChassisL + ';' +
     'border-bottom:7px solid ' + T.numpadChassisD + ';border-right:7px solid ' + T.numpadChassisD + ';' +
     'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);' +
@@ -262,20 +262,24 @@ function buildCard(title, bodyFn, overlayFn) {
   var header = el('div', 'background:' + T.numpadChassis + ';color:' + T.bgDark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
   card.appendChild(header);
   card._header = header;
-  var body = el('div', 'flex:1;overflow:hidden;padding:0;min-height:0;display:flex;flex-direction:column;pointer-events:none;');
+  var body = el('div', 'flex:1;overflow:hidden;padding:0;min-height:0;display:flex;flex-direction:column;');
   bodyFn(body);
   card.appendChild(body);
   card._body = body;
   if (overlayFn) {
     card.style.cursor = 'pointer';
-    // Use touchend + click for maximum compatibility on touch terminals
+    // Transparent overlay on top of body to catch all taps
+    var tapZone = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;cursor:pointer;');
+    card.style.position = 'relative';
     var _tapped = false;
-    card.addEventListener('pointerup', function(e) {
+    tapZone.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
       if (_tapped) return;
       _tapped = true;
       setTimeout(function() { _tapped = false; }, 300);
       openOverlay(overlayFn);
     });
+    card.appendChild(tapZone);
   }
   return card;
 }
@@ -382,7 +386,7 @@ function hideTipNumpad() {
   _numpadSide = null;
   // Restore panel width
   if (_overlayPanel) {
-    _overlayPanel.style.maxWidth = '100%';
+    _overlayPanel.style.maxWidth = '940px';
     _overlayPanel.style.flex = '1';
   }
 }
@@ -703,7 +707,7 @@ function buildSalesBreakdownOverlay(panel) {
       hdr.appendChild(left2);hdr.appendChild(ltotal);sec.appendChild(hdr);
 
       // Column headers
-      var colH=el('div','display:flex;padding:4px 0;font-family:'+FONT+';font-size:18px;color:'+C.dim+';white-space:nowrap;');
+      var colH=el('div','display:flex;padding:6px 0;font-family:'+FONT+';font-size:22px;color:'+C.mint+';font-weight:bold;white-space:nowrap;letter-spacing:1px;');
       colH.innerHTML='<span style="flex:2;min-width:0">ITEM</span><span style="flex:1;text-align:center">QTY</span><span style="flex:1;text-align:right">UNIT</span><span style="flex:1;text-align:right">TOTAL</span>';
       sec.appendChild(colH);
 
