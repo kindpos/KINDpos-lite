@@ -192,13 +192,13 @@ var _numpadSide = null;
 
 function openOverlay(builderFn) {
   if (activeOverlay) closeOverlay();
-  var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:12px 0;');
+  var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;display:flex;align-items:flex-start;justify-content:center;padding:12px 0;');
 
   // Flex row to hold panel (left) and optional numpad (right)
-  var row = el('div', 'display:flex;gap:12px;justify-content:center;align-items:flex-start;width:100%;max-width:1000px;margin:0 auto;transition:all 0.3s ease;');
+  var row = el('div', 'display:flex;gap:12px;justify-content:center;align-items:flex-start;width:100%;max-width:100%;margin:0 auto;transition:all 0.3s ease;');
   _overlayRow = row;
 
-  var panel = el('div', 'flex:1;max-width:700px;background:' + T.bgDark + ';overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 80px);' +
+  var panel = el('div', 'flex:1;max-width:100%;background:' + T.bgDark + ';overflow-x:auto;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;max-height:calc(100vh - 80px);' +
     'border-top:7px solid ' + T.numpadChassisL + ';border-left:7px solid ' + T.numpadChassisL + ';' +
     'border-bottom:7px solid ' + T.numpadChassisD + ';border-right:7px solid ' + T.numpadChassisD + ';' +
     'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);' +
@@ -262,13 +262,20 @@ function buildCard(title, bodyFn, overlayFn) {
   var header = el('div', 'background:' + T.numpadChassis + ';color:' + T.bgDark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
   card.appendChild(header);
   card._header = header;
-  var body = el('div', 'flex:1;overflow:hidden;padding:0;min-height:0;display:flex;flex-direction:column;');
+  var body = el('div', 'flex:1;overflow:hidden;padding:0;min-height:0;display:flex;flex-direction:column;pointer-events:none;');
   bodyFn(body);
   card.appendChild(body);
   card._body = body;
   if (overlayFn) {
     card.style.cursor = 'pointer';
-    card.addEventListener('click', function() { openOverlay(overlayFn); });
+    // Use touchend + click for maximum compatibility on touch terminals
+    var _tapped = false;
+    card.addEventListener('pointerup', function(e) {
+      if (_tapped) return;
+      _tapped = true;
+      setTimeout(function() { _tapped = false; }, 300);
+      openOverlay(overlayFn);
+    });
   }
   return card;
 }
@@ -375,7 +382,7 @@ function hideTipNumpad() {
   _numpadSide = null;
   // Restore panel width
   if (_overlayPanel) {
-    _overlayPanel.style.maxWidth = '700px';
+    _overlayPanel.style.maxWidth = '100%';
     _overlayPanel.style.flex = '1';
   }
 }
@@ -386,7 +393,9 @@ function hideTipNumpad() {
 
 // Card 1 — Sales Overview
 function buildSalesOverviewBody(body) {
-  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block;pointer-events:none' });
+  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none' });
+  svg.style.display = 'block';
+  svg.style.pointerEvents = 'none';
   addDefs(svg, 'card');
   var x0 = 28, y0 = 10, W = 256, H = 106;
   var bot = y0 + H;
@@ -547,7 +556,7 @@ function buildSalesOverviewOverlay(panel) {
 
 // Card 2 — Sales Breakdown
 function buildSalesBreakdownBody(body) {
-  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block;pointer-events:none' });
+  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block' });
   addDefs(svg, 'sb');
   var cx=28, cy=10, cw=256, ch=108, maxY=65;
   function tx(i){return cx+(i/7)*cw;} function ty(v){return cy+ch-(v/maxY)*ch;}
@@ -1101,7 +1110,7 @@ function buildLaborCobBody(body) {
   var cobPct = (totalLab / totalSales * 100);
   var tgtPct = 25;
 
-  var svg = mk('svg', { viewBox: '0 0 300 148', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: 'pointer-events:none' });
+  var svg = mk('svg', { viewBox: '0 0 300 148', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: '' });
   var cxA = 150, cyA = 106, R = 72;
 
   function arcPath(pStart, pEnd) {
@@ -1255,7 +1264,7 @@ function buildCloseDayBody(body) {
 
   if (unlocked && !closeState.closed) {
     // Show CLOSE DAY button state
-    var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: 'pointer-events:none' });
+    var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: '' });
     // Filled hex
     svg.appendChild(mk('polygon', { points: '150,20 200,50 200,100 150,130 100,100 100,50', fill: C.mint }));
     svg.appendChild(mk('text', { x: 150, y: 68, fill: C.dark, 'font-size': '18', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, 'CLOSE'));
@@ -1278,7 +1287,7 @@ function buildCloseDayBody(body) {
   }
 
   // Hex ring state
-  var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: 'pointer-events:none' });
+  var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: '' });
   var hexPath = 'M55,27 L87.9,46 L87.9,84 L55,103 L22.1,84 L22.1,46 Z';
   var perim = 228;
   var progress = gate.resolved / gate.total;
