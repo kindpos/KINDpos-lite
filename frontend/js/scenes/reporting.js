@@ -4,10 +4,13 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton } from '../tokens.js';
+import { T, buildStyledButton, shadowColor } from '../tokens.js';
 import { showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { CHART, createSVG, svgEl, drawBarChart, drawStackedArea, drawParetoChart, drawHorizontalBars, drawTrendLine, drawProgressBar, drawStackedColumn, drawHistogram, drawHeatmap, drawParetoHBar, buildChartPanel, buildChartGrid } from '../chart-helpers.js';
+import { DATA } from '../chart-colors.js';
+import { PAT, GLOW } from '../chart-patterns.js';
 
 // ── Constants ──────────────────────────────────────
 
@@ -1187,3 +1190,344 @@ SceneManager.register({
     heatmapEl = null;
   },
 });
+
+// ═══════════════════════════════════════════════════
+//  LEGACY EXPORTS — used by landing.js
+// ═══════════════════════════════════════════════════
+
+function hrLabel(h) {
+  var hr = typeof h === 'string' ? parseInt(h.split(':')[0]) : h;
+  if (hr === 0 || hr === 24) return '12a';
+  if (hr === 12) return '12p';
+  return hr > 12 ? (hr - 12) + 'p' : hr + 'a';
+}
+
+function fetchData(params) {
+  var today = new Date().toISOString().slice(0, 10);
+  var salesUrl = '/api/v1/reports/sales-summary?date=' + today;
+  var laborUrl = '/api/v1/reports/labor-summary?date=' + today;
+  if (params.role === 'server' && params.employeeId) {
+    salesUrl += '&server_id=' + encodeURIComponent(params.employeeId);
+    laborUrl += '&server_id=' + encodeURIComponent(params.employeeId);
+  }
+  return Promise.all([
+    fetch(salesUrl).then(function(r) { return r.json(); }).catch(function() { return null; }),
+    fetch(laborUrl).then(function(r) { return r.json(); }).catch(function() { return null; }),
+  ]).then(function(results) {
+    return { sales: results[0], labor: results[1] };
+  });
+}
+
+function buildCardWrap(cardInner) {
+  var btn = buildStyledButton(T.darkBtn);
+  btn.inner.style.padding = '0';
+  btn.inner.appendChild(cardInner);
+  btn.wrap.style.flex = '1';
+  btn.wrap.style.maxHeight = '85%';
+  btn.wrap.style.maxWidth = '46%';
+  btn.wrap.style.height = '100%';
+  var shadow = shadowColor(T.darkBtn);
+  btn.wrap.style.filter = 'drop-shadow(6px 8px 2px ' + shadow + ')';
+  btn.wrap._shadow = shadow;
+  return btn.wrap;
+}
+
+function buildLeftCard(params, sales, labor) {
+  var compact = params.compact;
+  var titleFs = compact ? '44px' : '75px';
+  var kpiFs = compact ? '24px' : '40px';
+  var subFs = compact ? '18px' : T.fsBtn;
+  var btnFs = compact ? '18px' : T.fsSmall;
+  var pad = compact ? '10px 12px' : '16px 20px';
+  var btnPad = compact ? '3px 8px' : '4px 10px';
+  var card = document.createElement('div');
+  card.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:' + pad + ';box-sizing:border-box;overflow:hidden;';
+  var s = sales;
+  if (params.role === 'manager') {
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + titleFs + ';font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:4px;';
+    title.textContent = 'SALES';
+    card.appendChild(title);
+    var g = T.gold;
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';';
+    kpis.innerHTML = '<div>Net: <span style="color:' + g + '">' + (s ? fmt(s.net_sales) : '--') + '</span></div><div>Checks: <span style="color:' + g + '">' + (s ? s.total_checks : '--') + '</span></div><div>Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div>';
+    card.appendChild(kpis);
+    if (s) {
+      var total = s.cash_total + s.card_total;
+      var cashPct = total > 0 ? (s.cash_total / total * 100).toFixed(0) : 0;
+      var cardPct = total > 0 ? (s.card_total / total * 100).toFixed(0) : 0;
+      var breakdown = document.createElement('div');
+      breakdown.style.cssText = 'margin-top:4px;font-family:' + T.fb + ';font-size:' + subFs + ';color:' + T.mint + ';';
+      breakdown.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></span><span>Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></span></div><div style="display:flex;height:' + (compact ? '10' : '16') + 'px;background:' + T.bg + ';"><div style="width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.8;"></div><div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.8;"></div></div>';
+      card.appendChild(breakdown);
+    }
+    if (!compact) {
+      var btnArea = document.createElement('div');
+      btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
+      [['Sales Detail','sales-summary'],['Close Day','close-day'],['Tip Adjustment','tip-adjustment']].forEach(function(b) {
+        var pair = buildStyledButton(T.darkBtn);
+        pair.inner.textContent = b[0]; pair.inner.style.fontFamily = T.fh; pair.inner.style.fontSize = btnFs; pair.inner.style.color = T.mint; pair.inner.style.padding = btnPad; pair.wrap.style.alignSelf = 'stretch';
+        pair.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); SceneManager.openTransactional(b[1], b[1] === 'sales-summary' ? { role: params.role, employeeId: params.employeeId } : params); });
+        btnArea.appendChild(pair.wrap);
+      });
+      card.appendChild(btnArea);
+    }
+  } else {
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + titleFs + ';font-weight:bold;font-style:italic;color:' + T.gold + ';margin-bottom:4px;';
+    title.textContent = 'SHIFT';
+    card.appendChild(title);
+    var g = T.gold;
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';';
+    kpis.innerHTML = '<div>Guests: <span style="color:' + g + '">' + (s ? (s.total_guests || '--') : '--') + '</span></div><div>Tables: <span style="color:' + g + '">' + (s ? (s.total_tables || '--') : '--') + '</span></div><div>Avg: <span style="color:' + g + '">' + (s ? fmt(s.check_avg) : '--') + '</span></div><div style="margin-top:2px">Tips: <span style="color:' + g + '">' + (s ? fmt(s.tips_collected || 0) : '--') + '</span></div><div>Out: <span style="color:' + g + '">' + (s ? fmt(s.tipout_amount || 0) : '--') + '</span></div>';
+    card.appendChild(kpis);
+    if (!compact) {
+      var btnArea = document.createElement('div');
+      btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
+      [['Checkout','server-checkout'],['Tip Adjustment','tip-adjustment']].forEach(function(b) {
+        var pair = buildStyledButton(T.darkBtn);
+        pair.inner.textContent = b[0]; pair.inner.style.fontFamily = T.fh; pair.inner.style.fontSize = btnFs; pair.inner.style.color = T.mint; pair.inner.style.padding = btnPad; pair.wrap.style.alignSelf = 'stretch';
+        pair.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); SceneManager.openTransactional(b[1], params); });
+        btnArea.appendChild(pair.wrap);
+      });
+      card.appendChild(btnArea);
+    }
+  }
+  return card;
+}
+
+function buildLeftCardButtons(params, sales) {
+  var s = sales;
+  var btnFs = '18px';
+  var btnPad = '3px 8px';
+  var btnArea = document.createElement('div');
+  btnArea.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-self:stretch;';
+  var buttons = params.role === 'manager'
+    ? [['Sales Detail','sales-summary'],['Close Day','close-day'],['Tip Adjustment','tip-adjustment']]
+    : [['Checkout','server-checkout'],['Tip Adjustment','tip-adjustment']];
+  buttons.forEach(function(b) {
+    var pair = buildStyledButton(T.darkBtn);
+    pair.inner.textContent = b[0]; pair.inner.style.fontFamily = T.fh; pair.inner.style.fontSize = btnFs; pair.inner.style.color = T.mint; pair.inner.style.padding = btnPad; pair.wrap.style.alignSelf = 'stretch';
+    pair.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); SceneManager.openTransactional(b[1], b[1] === 'sales-summary' ? { role: params.role, employeeId: params.employeeId } : params); });
+    btnArea.appendChild(pair.wrap);
+  });
+  var activeChecks = document.createElement('div');
+  activeChecks.style.cssText = 'font-family:' + T.fb + ';font-size:' + btnFs + ';color:' + T.mint + ';text-align:center;';
+  var checkCount = s ? s.total_checks : 0;
+  activeChecks.textContent = checkCount + ' active check' + (checkCount !== 1 ? 's' : '');
+  btnArea.appendChild(activeChecks);
+  return btnArea;
+}
+
+function buildVerticalRail(text, color, compact) {
+  var fs = compact ? '44px' : '75px';
+  var rail = document.createElement('div');
+  rail.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:' + T.fh + ';font-size:' + fs + ';font-weight:bold;color:' + color + ';flex-shrink:0;padding-right:' + (compact ? '6' : '10') + 'px;';
+  for (var i = 0; i < text.length; i++) {
+    var ch = document.createElement('div');
+    ch.style.cssText = 'line-height:1;';
+    ch.textContent = text[i];
+    rail.appendChild(ch);
+  }
+  return rail;
+}
+
+function buildRightCard(params, sales, labor) {
+  var compact = params.compact;
+  var kpiFs = compact ? '24px' : '40px';
+  var subFs = compact ? '18px' : T.fsBtn;
+  var pad = compact ? '10px 12px' : '16px 20px';
+  var card = document.createElement('div');
+  card.style.cssText = 'display:flex;width:100%;height:100%;background:' + T.bgDark + ';cursor:pointer;user-select:none;-webkit-user-select:none;padding:' + pad + ';gap:' + (compact ? '6' : '10') + 'px;box-sizing:border-box;overflow:hidden;';
+  var l = labor;
+  if (params.role === 'manager') {
+    var lc = '#33ff99';
+    card.appendChild(buildVerticalRail('LABOR', lc, compact));
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';justify-content:center;';
+    var otAlert = '--';
+    if (l && l.ot_alerts && l.ot_alerts.length > 0) otAlert = l.ot_alerts.length + ' warning(s)';
+    else if (l) otAlert = 'All clear';
+    kpis.innerHTML = '<div>Hrs: <span style="color:' + lc + '">' + (l ? l.total_hours : '--') + '</span></div><div>Tips: <span style="color:' + T.gold + '">' + (l ? fmt(l.tip_pool) : '--') + '</span></div><div>COB: <span style="color:' + lc + '">' + (l ? l.cob_percent + '%' : '--') + '</span></div><div style="margin-top:2px;font-size:' + subFs + '">OT: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+    card.appendChild(kpis);
+  } else {
+    var hc = '#33ff99';
+    card.appendChild(buildVerticalRail('HOURS', hc, compact));
+    var kpis = document.createElement('div');
+    kpis.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;font-family:' + T.fb + ';font-size:' + kpiFs + ';color:' + T.mint + ';justify-content:center;';
+    var otAlert = '--';
+    if (l) { if (l.ot_status === 'warning') otAlert = 'Warning'; else if (l.ot_status === 'over') otAlert = 'OVERTIME'; else otAlert = 'All clear'; }
+    kpis.innerHTML = '<div>In: <span style="color:' + hc + '">' + (l ? l.clock_in : '--') + '</span></div><div>Out: <span style="color:' + hc + '">' + (l ? (l.clock_out || 'active') : '--') + '</span></div><div>Today: <span style="color:' + hc + '">' + (l ? l.today_hours + 'h' : '--') + '</span></div><div>Week: <span style="color:' + hc + '">' + (l ? l.weekly_hours + 'h' : '--') + '</span></div><div style="margin-top:2px;font-size:' + subFs + '">OT: <span style="color:' + T.gold + '">' + otAlert + '</span></div>';
+    card.appendChild(kpis);
+  }
+  return card;
+}
+
+function buildManagerSalesPanels(sales, fullSize) {
+  var s = sales || {};
+  var hourly = s.hourly_sales || [];
+  var lastWeek = s.last_week_hourly || [];
+  var topItems = s.top_items || [];
+  var svgW = fullSize ? 900 : 400;
+  var svgH = fullSize ? 380 : 160;
+  var p1 = buildChartPanel('SALES BY HOUR', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = [];
+    for (var i = 0; i < hourly.length; i++) data.push({ label: hrLabel(hourly[i].hour), food: hourly[i].food || hourly[i].net || 0, drink: hourly[i].drink || 0, other: hourly[i].other || 0 });
+    drawStackedColumn(svg, data, { width: svgW, height: svgH, showCumulative: true, lineColor: DATA.coral, series: [{ key: 'food', color: DATA.orange, pattern: PAT.orange }, { key: 'drink', color: DATA.pink, pattern: PAT.pink }, { key: 'other', color: DATA.violet, pattern: PAT.violet }] });
+    body.appendChild(svg);
+  }, [{ label: 'Food', color: DATA.orange }, { label: 'Drink', color: DATA.pink }, { label: 'Other', color: DATA.violet }]);
+  var p2 = buildChartPanel('PEAK HOURS', s.total_checks || '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var peakData = s.peak_hours || [];
+    var colLabels = [], heatGrid = [];
+    if (peakData.length > 0 && peakData[0].hours) {
+      for (var c = 0; c < peakData[0].hours.length; c++) colLabels.push(hrLabel(peakData[0].hours[c].hour));
+      for (var r = 0; r < peakData.length; r++) { var row = []; for (var c = 0; c < peakData[r].hours.length; c++) row.push(peakData[r].hours[c].value || 0); heatGrid.push(row); }
+    } else {
+      for (var i = 0; i < hourly.length; i++) colLabels.push(hrLabel(hourly[i].hour));
+      for (var r = 0; r < 7; r++) { var row = []; for (var c = 0; c < hourly.length; c++) row.push(hourly[c].checks || hourly[c].net || 0); heatGrid.push(row); }
+    }
+    var rowLabels = peakData.length > 0 ? peakData.map(function(d) { return d.day; }) : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    drawHeatmap(svg, heatGrid, { width: svgW, height: svgH, rows: rowLabels, cols: colLabels });
+    body.appendChild(svg);
+  });
+  var p3 = buildChartPanel('TODAY vs LAST WK', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = [], compare = [];
+    var lwByHour = {};
+    for (var j = 0; j < lastWeek.length; j++) lwByHour[lastWeek[j].hour] = lastWeek[j];
+    for (var i = 0; i < hourly.length; i++) { var label = hrLabel(hourly[i].hour); data.push({ label: label, value: hourly[i].net || 0 }); var lw = lwByHour[hourly[i].hour]; compare.push({ label: label, value: lw ? lw.net : 0 }); }
+    drawTrendLine(svg, data, { color: DATA.orange, compareData: compare, compareColor: DATA.blue, width: svgW, height: svgH, shaded: true, areaPatternFill: PAT.coral, compareAreaPatternFill: PAT.blue });
+    body.appendChild(svg);
+  }, [{ label: 'Today', color: DATA.orange }, { label: 'Last Wk', color: DATA.blue }]);
+  var paretoData = [];
+  for (var i = 0; i < topItems.length; i++) { var item = topItems[i]; paretoData.push({ label: item.name || item.label, value: item.revenue || item.value || 0, color: T.catColor((item.category || '').toUpperCase()) }); }
+  var p4 = buildChartPanel('TOP ITEMS', s.net_sales ? fmt(s.net_sales) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = paretoData.length > 0 ? paretoData : hourly.slice(0, 8).map(function(h) { return { label: h.hour + '', value: h.net || 0, color: DATA.orange }; });
+    drawParetoHBar(svg, data, { width: svgW, height: svgH });
+    body.appendChild(svg);
+  });
+  return [p1, p2, p3, p4];
+}
+
+function buildManagerLaborPanels(labor, fullSize) {
+  var l = labor || {};
+  var employees = l.employees || [];
+  var cobTrend = l.cob_trend || [];
+  var otAlerts = l.ot_alerts || [];
+  var svgW = fullSize ? 900 : 400, svgH = fullSize ? 380 : 160, lblW = fullSize ? 120 : 80;
+  var p1 = buildChartPanel('TOTAL HRS', l.total_hours ? l.total_hours + 'h' : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = employees.map(function(e) { return { label: e.name, value: e.hours, sublabel: e.hours + 'h (' + e.clock_in + '-' + e.clock_out + ')', color: DATA.orange }; });
+    drawHorizontalBars(svg, data, { width: svgW, height: svgH, labelWidth: lblW });
+    body.appendChild(svg);
+  });
+  var p2 = buildChartPanel('TIP POOL', l.tip_pool ? fmt(l.tip_pool) : '--', function(body) {
+    var chartH = fullSize ? 300 : 120;
+    var svg = createSVG(svgW, chartH);
+    var data = employees.map(function(e) { return { label: e.name, value: e.tips, sublabel: fmt(e.tips), color: DATA.coral }; });
+    drawHorizontalBars(svg, data, { width: svgW, height: chartH, labelWidth: lblW });
+    body.appendChild(svg);
+  });
+  var p3 = buildChartPanel('COB %', l.cob_percent ? l.cob_percent + '%' : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = cobTrend.map(function(d) { return { label: d.day, value: d.percent }; });
+    drawTrendLine(svg, data, { color: DATA.orange, width: svgW, height: svgH, thresholds: [{ value: 35, color: DATA.warning }, { value: 45, color: DATA.critical }] });
+    body.appendChild(svg);
+  });
+  var otStatus = otAlerts.length > 0 ? 'Warning' : 'All clear';
+  var p4 = buildChartPanel('OT ALERT', otStatus, function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = employees.map(function(e) { var c = DATA.orange; if (e.weekly_hours > 40) c = DATA.critical; else if (e.weekly_hours >= 35) c = DATA.warning; return { label: e.name, value: e.weekly_hours, sublabel: e.weekly_hours + 'h', color: c }; });
+    drawHorizontalBars(svg, data, { width: svgW, height: svgH, labelWidth: lblW });
+    body.appendChild(svg);
+  });
+  return [p1, p2, p3, p4];
+}
+
+function buildServerShiftPanels(sales, fullSize) {
+  var s = sales || {};
+  var hourly = s.hourly_sales || [];
+  var lastWeek = s.last_week_hourly || [];
+  var topItems = s.top_items || [];
+  var tipBuckets = s.tip_buckets || [];
+  var svgW = fullSize ? 900 : 400, svgH = fullSize ? 380 : 160;
+  var p1 = buildChartPanel('SALES BY HOUR', s.net_sales ? fmt(s.net_sales || 0) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = hourly.map(function(h) { return { label: hrLabel(h.hour), food: h.food || h.net || 0, drink: h.drink || 0 }; });
+    drawStackedColumn(svg, data, { width: svgW, height: svgH, showCumulative: true, lineColor: DATA.coral, series: [{ key: 'food', color: DATA.orange, pattern: PAT.orange }, { key: 'drink', color: DATA.pink, pattern: PAT.pink }] });
+    body.appendChild(svg);
+  }, [{ label: 'Food', color: DATA.orange }, { label: 'Drink', color: DATA.pink }]);
+  var p2 = buildChartPanel('TIP DISTRIBUTION', s.tips_collected ? fmt(s.tips_collected) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = tipBuckets.length > 0 ? tipBuckets.map(function(b) { return { label: b.range || b.label, count: b.count || 0 }; }) : ['$0-3','$3-5','$5-8','$8-12','$12-15','$15-20','$20+'].map(function(r) { return { label: r, count: 0 }; });
+    drawHistogram(svg, data, { width: svgW, height: svgH, avgValue: s.tip_avg || 0 });
+    body.appendChild(svg);
+  });
+  var p3 = buildChartPanel('TODAY vs LAST WK', s.check_avg ? fmt(s.check_avg) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = [], compare = [];
+    var lwByHour = {};
+    for (var j = 0; j < lastWeek.length; j++) lwByHour[lastWeek[j].hour] = lastWeek[j];
+    for (var i = 0; i < hourly.length; i++) { var label = hrLabel(hourly[i].hour); data.push({ label: label, value: hourly[i].net || 0 }); var lw = lwByHour[hourly[i].hour]; compare.push({ label: label, value: lw ? lw.net : 0 }); }
+    drawTrendLine(svg, data, { color: DATA.orange, compareData: compare, compareColor: DATA.blue, width: svgW, height: svgH, shaded: true, areaPatternFill: PAT.coral, compareAreaPatternFill: PAT.blue });
+    body.appendChild(svg);
+  }, [{ label: 'Today', color: DATA.orange }, { label: 'Last Wk', color: DATA.blue }]);
+  var paretoData = topItems.map(function(item) { return { label: item.name || item.label, value: item.revenue || item.value || 0, color: T.catColor((item.category || '').toUpperCase()) }; });
+  var p4 = buildChartPanel('TOP ITEMS', s.net_sales ? fmt(s.net_sales || 0) : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = paretoData.length > 0 ? paretoData : hourly.slice(0, 8).map(function(h) { return { label: h.hour + '', value: h.net || 0, color: DATA.orange }; });
+    drawParetoHBar(svg, data, { width: svgW, height: svgH });
+    body.appendChild(svg);
+  });
+  return [p1, p2, p3, p4];
+}
+
+function buildServerHoursPanels(sales, labor, fullSize) {
+  var l = labor || {};
+  var weekly = l.weekly_breakdown || [];
+  var svgW = fullSize ? 900 : 400, svgH = fullSize ? 380 : 160;
+  var fontSize = fullSize ? T.fsSmall : T.fsBtn;
+  var progW = fullSize ? 860 : 380;
+  var p1 = buildChartPanel("TODAY'S SHIFT", l.today_hours ? l.today_hours + 'h' : '--', function(body) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:8px 12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:4px;';
+    wrap.innerHTML = '<div style="font-size:' + fontSize + ';color:' + DATA.orange + '">Time In</div><div style="font-size:40px;color:' + DATA.orange + '">' + (l.clock_in || '--') + '</div><div style="font-size:' + fontSize + ';color:' + DATA.coral + '">Time Out</div><div style="font-size:40px;color:' + DATA.coral + '">' + (l.clock_out || 'active') + '</div>';
+    body.appendChild(wrap);
+    var svg = createSVG(progW, 24);
+    drawProgressBar(svg, l.today_hours || 0, 12, { width: progW, height: 24, color: DATA.orange });
+    svg.style.marginLeft = '12px';
+    body.appendChild(svg);
+  });
+  var p2 = buildChartPanel('WEEKLY HOURS', l.weekly_hours ? l.weekly_hours + 'h' : '--', function(body) {
+    var svg = createSVG(svgW, svgH);
+    var data = weekly.map(function(d) { return { label: d.day, value: d.hours || 0 }; });
+    drawBarChart(svg, data, { color: DATA.orange, patternFill: PAT.orange, width: svgW, height: svgH, showLabels: true, showValueAbove: true });
+    body.appendChild(svg);
+  });
+  var p3 = buildChartPanel('TOTAL HRS', l.weekly_hours ? l.weekly_hours + '/40h' : '--', function(body) {
+    var svg = createSVG(progW, 28);
+    drawProgressBar(svg, l.weekly_hours || 0, 48, { width: progW, height: 28, color: DATA.orange, warnAt: 35, critAt: 40 });
+    svg.style.margin = '4px 12px';
+    body.appendChild(svg);
+  });
+  var otStatus = l.ot_status || 'clear';
+  var statusLabel = otStatus === 'warning' ? 'WARNING' : otStatus === 'over' ? 'OVERTIME' : 'All clear';
+  var statusColor = otStatus === 'warning' ? DATA.warning : otStatus === 'over' ? DATA.critical : DATA.orange;
+  var p4 = buildChartPanel('OT ALERT', statusLabel, function(body) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:8px 12px;font-family:' + T.fb + ';display:flex;flex-direction:column;gap:6px;';
+    var statusBox = document.createElement('div');
+    statusBox.style.cssText = 'border:2px solid ' + statusColor + ';padding:8px;text-align:center;font-size:' + fontSize + ';font-weight:bold;color:' + statusColor + ';';
+    statusBox.textContent = statusLabel;
+    wrap.appendChild(statusBox);
+    body.appendChild(wrap);
+  });
+  return [p1, p2, p3, p4];
+}
+
+export { fetchData as fetchReportData, buildLeftCard, buildLeftCardButtons, buildRightCard, buildCardWrap, buildServerShiftPanels, buildServerHoursPanels, buildManagerSalesPanels, buildManagerLaborPanels };
