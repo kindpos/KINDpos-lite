@@ -520,15 +520,15 @@ function buildSalesBreakdownOverlay(panel) {
     var tender=el('div','padding:8px;');
     tender.appendChild(el('div','font-family:'+FONT+';font-size:12px;color:'+C.mint+';margin-bottom:4px;letter-spacing:1px;','TENDER SPLIT'));
     var svg=mk('svg',{viewBox:'0 0 600 44',width:'100%',preserveAspectRatio:'xMidYMid meet'});
-    var ditherUrl=addDither(svg,'dither_sbt');
+    addDefs(svg,'sbt');
     var cashPct=0.81,cashAmt=247.62,cardAmt=58.13;
     var bw=580,bx=10,by=6,bh=24;
     var cashW=bw*cashPct,cardW=bw*(1-cashPct);
     svg.appendChild(mk('rect',{x:bx,y:by,width:cashW,height:bh,fill:C.gold}));
-    svg.appendChild(mk('rect',{x:bx,y:by,width:cashW,height:bh,fill:ditherUrl}));
+    svg.appendChild(mk('rect',{x:bx,y:by,width:cashW,height:bh,fill:'url(#dit_sbt)'}));
     svg.appendChild(mk('text',{x:bx+cashW/2,y:by+bh/2+4,fill:C.dark,'font-size':'13','font-weight':'bold','font-family':FONT,'text-anchor':'middle'},'CASH '+fmt(cashAmt)+' 81%'));
     svg.appendChild(mk('rect',{x:bx+cashW,y:by,width:cardW,height:bh,fill:C.pink}));
-    svg.appendChild(mk('rect',{x:bx+cashW,y:by,width:cardW,height:bh,fill:ditherUrl}));
+    svg.appendChild(mk('rect',{x:bx+cashW,y:by,width:cardW,height:bh,fill:'url(#dit_sbt)'}));
     svg.appendChild(mk('text',{x:bx+cashW+cardW/2,y:by+bh/2+4,fill:C.dark,'font-size':'13','font-weight':'bold','font-family':FONT,'text-anchor':'middle'},'CARD 19%'));
     tender.appendChild(svg);
     panel.appendChild(tender);
@@ -720,7 +720,6 @@ function buildServerCheckoutsBody(body) {
 
   var svgW = Math.max(200, servers.length * 100);
   var svg = mk('svg', { viewBox: '0 0 ' + svgW + ' 120', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
-  svg.innerHTML = '';
   var barArea = { x: 20, y: 10, w: svgW - 40, h: 80 };
   var groupW = barArea.w / servers.length;
 
@@ -851,7 +850,6 @@ function buildLaborCobBody(body) {
   var tgtPct = 25;
 
   var svg = mk('svg', { viewBox: '0 0 300 148', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
-  svg.innerHTML = '';
   var cxA = 150, cyA = 106, R = 72;
 
   function arcPath(pStart, pEnd) {
@@ -921,12 +919,11 @@ function buildLaborCobOverlay(panel) {
   var secA = el('div', 'padding:8px;');
   secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'HOURLY COB% — BAR + TARGET'));
   var svgA = mk('svg', { viewBox: '0 0 660 162', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
-  svgA.innerHTML = '';
+  addDefs(svgA, 'lca');
   var ax = 44, ay = 12, aw = 596, ah = 110;
   var cobMax = 60; // max Y for COB%
-  drawGrid(svgA, ax, ay, aw, ah, 4);
-  drawAxes(svgA, ax, ay, aw, ah);
-  drawHourLabels(svgA, ax, aw, ay + ah + 14, '10');
+  chartFrame(svgA, ax, ay, aw, ah, 'lca');
+  xLabels(svgA, ax, aw, ay + ah, '10');
   // Y labels
   for (var g = 0; g <= 4; g++) {
     var gy = ay + ah - (g / 4) * ah;
@@ -959,8 +956,7 @@ function buildLaborCobOverlay(panel) {
   var secB = el('div', 'padding:8px;');
   secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'LABOR COST BY EMPLOYEE'));
   var svgB = mk('svg', { viewBox: '0 0 660 148', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
-  svgB.innerHTML = '';
-  var ditherUrl = addDither(svgB, 'dither_lcb');
+  addDefs(svgB, 'lcb');
   var ebx = 88, eby = 14, ebw = 500, ebh = 80;
   var empMax = 63; // max employee cost
   // Vertical grid
@@ -980,7 +976,7 @@ function buildLaborCobOverlay(panel) {
     svgB.appendChild(mk('text', { x: ebx - 4, y: ey + eH / 2 + 12, fill: C.dim, 'font-size': '7', 'font-family': FONT, 'text-anchor': 'end' }, emp.role));
     // Bar
     svgB.appendChild(mk('rect', { x: ebx, y: ey, width: eW, height: eH, fill: emp.color }));
-    svgB.appendChild(mk('rect', { x: ebx, y: ey, width: eW, height: eH, fill: ditherUrl }));
+    svgB.appendChild(mk('rect', { x: ebx, y: ey, width: eW, height: eH, fill: 'url(#dit_lcb)' }));
     // Inside label
     if (eW > 120) {
       svgB.appendChild(mk('text', { x: ebx + 6, y: ey + eH / 2 + 3, fill: C.dark, 'font-size': '8', 'font-weight': 'bold', 'font-family': FONT }, fmt(emp.cost) + '  \u00B7  ' + emp.hours + 'hr  \u00B7  ' + emp.share.toFixed(0) + '% of labor'));
@@ -1004,7 +1000,6 @@ function buildCloseDayBody(body) {
   if (unlocked && !closeState.closed) {
     // Show CLOSE DAY button state
     var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
-    svg.innerHTML = '';
     // Filled hex
     svg.appendChild(mk('polygon', { points: '150,20 200,50 200,100 150,130 100,100 100,50', fill: C.mint }));
     svg.appendChild(mk('text', { x: 150, y: 68, fill: C.dark, 'font-size': '18', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, 'CLOSE'));
@@ -1028,7 +1023,6 @@ function buildCloseDayBody(body) {
 
   // Hex ring state
   var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
-  svg.innerHTML = '';
   var hexPath = 'M55,27 L87.9,46 L87.9,84 L55,103 L22.1,84 L22.1,46 Z';
   var perim = 228;
   var progress = gate.resolved / gate.total;
