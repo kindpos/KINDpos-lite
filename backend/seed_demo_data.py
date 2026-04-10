@@ -40,13 +40,8 @@ CATEGORIES = [
 # ── Menu Items ────────────────────────────────────────────────────────────────
 
 MENU_ITEMS = [
-    # Pizza sizes (pizza_builder category — these become size hexes)
-    {"item_id": "pz_slice",     "name": "Slice",           "price":  3.50, "category": "Pizza",       "display_order": 1, "pizza_size": True},
-    {"item_id": "pz_small",     "name": "Small 10\"",      "price": 10.00, "category": "Pizza",       "display_order": 2, "pizza_size": True},
-    {"item_id": "pz_medium",    "name": "Medium 14\"",     "price": 12.00, "category": "Pizza",       "display_order": 3, "pizza_size": True},
-    {"item_id": "pz_large",     "name": "Large 18\"",      "price": 14.00, "category": "Pizza",       "display_order": 4, "pizza_size": True},
-    {"item_id": "pz_xl",        "name": "XL 20\"",         "price": 18.00, "category": "Pizza",       "display_order": 5, "pizza_size": True},
-    {"item_id": "pz_calzone",   "name": "Calzone",         "price": 12.00, "category": "Pizza",       "display_order": 6, "pizza_size": True},
+    # Pizza — single item, size/crust/toppings handled by modifier panel
+    {"item_id": "pizza",         "name": "Pizza",           "price":  0,    "category": "Pizza",       "display_order": 1},
     # Appetizers
     {"item_id": "garlic_knots", "name": "Garlic Knots",    "price":  6.00, "category": "Appetizers",  "display_order": 1},
     {"item_id": "mozz_sticks",  "name": "Mozz Sticks",     "price":  8.00, "category": "Appetizers",  "display_order": 2},
