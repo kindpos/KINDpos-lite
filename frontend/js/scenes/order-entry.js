@@ -17,6 +17,35 @@ import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEM
 import { ModifierPanel } from '../modifier-panel.js';
 import { getModifierConfig } from '../data/modifier-configs.js';
 
+// ── Beveled depth card helpers (match clock-in card pattern) ──
+function _lightenHex(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return '#' + [
+    Math.min(255, Math.round(r + (255 - r) * pct)),
+    Math.min(255, Math.round(g + (255 - g) * pct)),
+    Math.min(255, Math.round(b + (255 - b) * pct)),
+  ].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+function _darkenHex(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  var f = 1 - pct;
+  return '#' + [Math.round(r * f), Math.round(g * f), Math.round(b * f)]
+    .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+var _bevelL = _lightenHex(T.numpadChassis, 0.2);
+var _bevelD = _darkenHex(T.numpadChassis, 0.3);
+function _applyCardBevel(el, width) {
+  var w = width || 4;
+  el.style.borderTop    = w + 'px solid ' + _bevelL;
+  el.style.borderLeft   = w + 'px solid ' + _bevelL;
+  el.style.borderBottom = w + 'px solid ' + _bevelD;
+  el.style.borderRight  = w + 'px solid ' + _bevelD;
+}
+
 function _landingScene(roles) {
   return (roles || []).indexOf('manager') !== -1 ? 'manager-landing' : 'server-landing';
 }
@@ -1528,9 +1557,9 @@ function renderTicket() {
       var gc = document.createElement('div');
       gc.style.cssText = [
         'flex-shrink:0;cursor:pointer;touch-action:manipulation;',
-        'background:#333333;',
-        'border:4px solid ' + T.mint + ';',
+        'background:' + T.bg + ';',
       ].join('');
+      _applyCardBevel(gc);
 
       var gRow = document.createElement('div');
       gRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:3px 8px;';
@@ -1613,10 +1642,9 @@ function renderTicket() {
         ic.style.cssText = [
           'flex-shrink:0;cursor:pointer;touch-action:manipulation;',
           'background:' + bg + ';',
-          'border:4px solid ' + T.mint + ';',
-          (active ? 'border-left:4px solid ' + T.mint + ';' : ''),
           'margin-bottom:2px;',
         ].join('');
+        _applyCardBevel(ic);
 
         var iRow = document.createElement('div');
         iRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:' + (active ? '5px 8px' : '3px 8px') + ';';
@@ -1692,9 +1720,9 @@ function renderTicket() {
     previewCard.style.cssText = [
       'flex-shrink:0;',
       'background:' + T.bg + ';',
-      'border:4px solid ' + T.mint + ';',
-      'margin-bottom:2px;border-radius:5px;',
+      'margin-bottom:2px;',
     ].join('');
+    _applyCardBevel(previewCard);
 
     // Item header row
     var pRow = document.createElement('div');
@@ -2031,10 +2059,10 @@ function buildPinOverlay(el, cb) {
   var panel = document.createElement('div');
   panel.style.cssText = [
     'display:flex;flex-direction:column;align-items:center;',
-    'gap:14px;background:#1a1a1a;',
-    'border:4px solid ' + T.mint + ';padding:20px;',
+    'gap:14px;background:' + T.bgDark + ';padding:20px;',
     'max-height:90vh;overflow-y:auto;',
   ].join('');
+  _applyCardBevel(panel, 7);
 
   var lbl = document.createElement('div');
   lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';letter-spacing:2px;';
@@ -2525,7 +2553,8 @@ SceneManager.register({
   mount: function(container, params) {
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
     var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;width:600px;max-height:520px;background:' + T.bgDark + ';border:4px solid ' + T.mint + ';padding:0;overflow:hidden;';
+    panel.style.cssText = 'display:flex;flex-direction:column;width:600px;max-height:520px;background:' + T.bgDark + ';padding:0;overflow:hidden;';
+    _applyCardBevel(panel, 7);
 
     var hdr = document.createElement('div');
     hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;';
@@ -2575,7 +2604,8 @@ SceneManager.register({
   mount: function(container, params) {
     var tab = params.tab;
     var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:360px;background:' + T.bgDark + ';border:4px solid ' + T.mint + ';padding:20px;';
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:360px;background:' + T.bgDark + ';padding:20px;';
+    _applyCardBevel(panel, 7);
 
     if (tab.label) {
       var nameLbl = document.createElement('div');
