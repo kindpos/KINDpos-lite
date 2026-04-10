@@ -191,11 +191,16 @@ function openOverlay(builderFn) {
   var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px 0;');
   var panel = el('div', 'border:3px solid ' + C.mint + ';width:min(96vw,700px);margin:0 auto;background:' + C.dark + ';overflow-x:auto;');
   // Close button header
-  var closeHdr = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:6px 12px;letter-spacing:2px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;');
-  closeHdr.appendChild(el('span', '', ''));
-  var xBtn = el('div', 'background:#333;color:' + C.verm + ';font-family:' + FONT + ';font-size:18px;padding:3px 10px;cursor:pointer;letter-spacing:1px;clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);', '\u2715 CLOSE');
-  xBtn.addEventListener('click', function(e) { e.stopPropagation(); closeOverlay(); });
-  closeHdr.appendChild(xBtn);
+  var closeHdr = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 8px;letter-spacing:2px;display:flex;justify-content:flex-end;align-items:center;position:sticky;top:0;z-index:1;');
+  var backBtn = buildStyledButton(T.darkBtn);
+  backBtn.wrap.style.height = '32px';
+  backBtn.wrap.style.width = '64px';
+  backBtn.inner.style.fontFamily = FONT;
+  backBtn.inner.style.fontSize = '18px';
+  backBtn.inner.style.color = C.mint;
+  backBtn.inner.textContent = '<<<';
+  backBtn.wrap.addEventListener('click', function(e) { e.stopPropagation(); closeOverlay(); });
+  closeHdr.appendChild(backBtn.wrap);
   panel.appendChild(closeHdr);
   builderFn(panel);
   ov.appendChild(panel);
