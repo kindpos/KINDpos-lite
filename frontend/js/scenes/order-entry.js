@@ -1253,13 +1253,15 @@ function closeModifierPanel() {
     _modPanel = null;
   }
   _modPanelItem = null;
-
-  // Restore bottom bar
-  if (_bottomBar) _bottomBar.style.display = '';
-  rebuildBottomBar();
   renderTicket();
+
+  // Defer bottom bar restore + hexNav reset so layout settles first
   requestAnimationFrame(function() {
-    if (hexNav) hexNav.reset();
+    if (_bottomBar) _bottomBar.style.display = '';
+    rebuildBottomBar();
+    requestAnimationFrame(function() {
+      if (hexNav) hexNav.reset();
+    });
   });
 }
 
