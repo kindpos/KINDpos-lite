@@ -68,12 +68,14 @@ function init() {
   onThemeChange(function() { _applyLayerGeometry(); });
 }
 
+var _summaryVisible = false;
+
 function _applyLayerGeometry() {
   var hH = T.headerH + 'px';
   var bodyH = 'calc(100% - ' + hH + ')';
   var summaryW = T.pcLeftW;
-  var sceneLeft = (summaryW + T.colGapSm) + 'px';
-  var sceneW = 'calc(100% - ' + sceneLeft + ')';
+  var sceneLeft = _summaryVisible ? (summaryW + T.colGapSm) + 'px' : '0';
+  var sceneW = _summaryVisible ? 'calc(100% - ' + sceneLeft + ')' : '100%';
 
   // Summary panel — fixed left column
   if (_layerSummary) {
@@ -84,7 +86,7 @@ function _applyLayerGeometry() {
     _layerSummary.style.zIndex = T.zSummary;
   }
 
-  // Scene layers — shifted right of summary panel
+  // Scene layers — shifted right when summary visible, full width when hidden
   [_layerWorking, _layerTransactional, _layerInterrupt].forEach(function(el) {
     if (!el) return;
     el.style.top = hH;
@@ -432,13 +434,17 @@ function emit(event, data) {
 
 function showSummary() {
   if (!_layerSummary) return;
+  _summaryVisible = true;
   _layerSummary.style.display = 'flex';
+  _applyLayerGeometry();
   _emit('summary:shown');
 }
 
 function hideSummary() {
   if (!_layerSummary) return;
+  _summaryVisible = false;
   _layerSummary.style.display = 'none';
+  _applyLayerGeometry();
   _emit('summary:hidden');
 }
 
