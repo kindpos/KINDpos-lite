@@ -610,26 +610,25 @@ export function ModifierPanel(container, opts) {
     var price = _resolvePrice(opt, mandKey);
     var modId = opt.id || opt.label.toLowerCase().replace(/\s+/g, '-');
 
-    // If ADD is tapped and this item already exists as ADD, upgrade to EXTRA
+    // If ADD is tapped and this item already has ADD, auto-add EXTRA instead
+    var _restorePrefix = false;
     if (activeOptPrefix === 'ADD') {
-      var existing = null;
+      var hasAdd = false;
+      var hasExtra = false;
       for (var i = 0; i < activeItem.optionalModifiers.length; i++) {
         var em = activeItem.optionalModifiers[i];
         if (em.modifierId === modId && em.placement === activePlacement) {
-          existing = em;
-          break;
+          if (em.prefix === 'ADD') hasAdd = true;
+          if (em.prefix === 'EXTRA') hasExtra = true;
         }
       }
-      if (existing && existing.prefix === 'ADD') {
-        existing.prefix = 'EXTRA';
-        fireUpdate();
-        renderTopBar();
-        renderPicker();
-        return;
+      if (hasAdd && !hasExtra) {
+        // Second tap: add EXTRA alongside the existing ADD
+        activeOptPrefix = 'EXTRA';
+        _restorePrefix = true;
       }
-      if (existing && existing.prefix === 'EXTRA') {
-        // Already EXTRA — ignore repeated taps
-        fireUpdate();
+      if (hasAdd && hasExtra) {
+        // Already has both ADD + EXTRA — ignore
         return;
       }
     }
@@ -650,8 +649,11 @@ export function ModifierPanel(container, opts) {
       mod.exclusions = [];
     }
     activeItem.optionalModifiers.push(mod);
+    // Restore prefix if we auto-switched to EXTRA
+    if (_restorePrefix) activeOptPrefix = 'ADD';
     fireUpdate();
     renderTopBar();
+    renderPrefixBar();
     renderPicker();
   }
 
