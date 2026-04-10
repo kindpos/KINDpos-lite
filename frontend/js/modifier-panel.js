@@ -109,7 +109,7 @@ export function ModifierPanel(container, opts) {
     tabs.push({ type: 'optional', key: '_prep', label: 'PREP', tabColor: T.mint, groups: prepGroups });
   }
   tabs.push({ type: 'note', key: '_note', label: 'NOTE', tabColor: T.gold });
-  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALRG', tabColor: T.red, tabTextInactive: '#ffffff' });
+  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALRG', tabColor: T.vermillion, tabTextActive: '#ffffff' });
 
   var activeTabKey = tabs.length > 0 ? tabs[0].key : null;
   var activeOptPrefix = 'ADD';
@@ -264,9 +264,9 @@ export function ModifierPanel(container, opts) {
       pair.inner.style.padding = '6px 4px';
       if (isActive) {
         pair.wrap.style.background = tab.tabColor;
-        pair.inner.style.color = T.bgDark;
+        pair.inner.style.color = tab.tabTextActive || T.bgDark;
       } else {
-        pair.inner.style.color = tab.tabTextInactive || tab.tabColor;
+        pair.inner.style.color = tab.tabColor;
       }
 
       pair.wrap.addEventListener('pointerup', function() {
