@@ -186,14 +186,26 @@ function refreshAllChecks() { if (allChecksEl) { allChecksEl.innerHTML = ''; bui
 
 // ── Overlay System ─────────────────────────────────
 
+var _overlayPanel = null;
+var _overlayRow = null;
+var _numpadSide = null;
+
 function openOverlay(builderFn) {
   if (activeOverlay) closeOverlay();
-  var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px 0;');
-  var panel = el('div', 'width:min(96vw,700px);margin:0 auto;background:' + T.bgDark + ';overflow-x:auto;' +
+  var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:12px 0;');
+
+  // Flex row to hold panel (left) and optional numpad (right)
+  var row = el('div', 'display:flex;gap:12px;justify-content:center;align-items:flex-start;width:100%;max-width:1000px;margin:0 auto;transition:all 0.3s ease;');
+  _overlayRow = row;
+
+  var panel = el('div', 'flex:1;max-width:700px;background:' + T.bgDark + ';overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 80px);' +
     'border-top:7px solid ' + T.numpadChassisL + ';border-left:7px solid ' + T.numpadChassisL + ';' +
     'border-bottom:7px solid ' + T.numpadChassisD + ';border-right:7px solid ' + T.numpadChassisD + ';' +
     'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);' +
-    'filter:drop-shadow(3px 4px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));');
+    'filter:drop-shadow(3px 4px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));' +
+    'transition:max-width 0.3s ease,flex 0.3s ease;');
+  _overlayPanel = panel;
+
   // Close button header
   var closeHdr = el('div', 'background:' + T.numpadChassis + ';color:' + T.bgDark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 8px;letter-spacing:2px;display:flex;justify-content:flex-end;align-items:center;position:sticky;top:0;z-index:1;');
   var backBtn = buildStyledButton(T.darkBtn);
@@ -207,7 +219,8 @@ function openOverlay(builderFn) {
   closeHdr.appendChild(backBtn.wrap);
   panel.appendChild(closeHdr);
   builderFn(panel);
-  ov.appendChild(panel);
+  row.appendChild(panel);
+  ov.appendChild(row);
   // Defer dismiss listener so the opening click doesn't immediately close
   setTimeout(function() {
     ov.addEventListener('click', function(e) { if (e.target === ov) closeOverlay(); });
@@ -218,8 +231,11 @@ function openOverlay(builderFn) {
 }
 
 function closeOverlay() {
+  hideTipNumpad();
   if (activeOverlay && activeOverlay.parentNode) activeOverlay.parentNode.removeChild(activeOverlay);
   activeOverlay = null;
+  _overlayPanel = null;
+  _overlayRow = null;
 }
 
 // ── Stat Strip ─────────────────────────────────────
@@ -281,6 +297,7 @@ SceneManager.register({
       },
       displayColor: T.gold,
       chassisColor: T.numpadChassis,
+      digitColor: T.digitColor,
       displayH: 60,
       gap: 16,
       keyH: 84,
@@ -303,13 +320,64 @@ SceneManager.register({
 });
 
 function showTipNumpad(callback) {
+  if (_numpadSide) return; // already showing
   _tipCallback = callback;
-  SceneManager.interrupt('tip-numpad', {
-    onConfirm: function(amount) {
+
+  // Shrink panel to make room
+  if (_overlayPanel) {
+    _overlayPanel.style.maxWidth = '480px';
+    _overlayPanel.style.flex = '0 0 480px';
+  }
+
+  // Build numpad side panel
+  var side = el('div', 'flex:0 0 380px;background:' + T.bgDark + ';padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;' +
+    'border-top:7px solid ' + T.numpadChassisL + ';border-left:7px solid ' + T.numpadChassisL + ';' +
+    'border-bottom:7px solid ' + T.numpadChassisD + ';border-right:7px solid ' + T.numpadChassisD + ';' +
+    'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);' +
+    'filter:drop-shadow(3px 4px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));' +
+    'align-self:flex-start;');
+  side.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + T.gold + ';letter-spacing:2px;text-align:center;', 'ENTER TIP AMOUNT'));
+  var numpad = buildNumpad({
+    maxDigits: 6,
+    masked: false,
+    displayFormat: function(digits) {
+      var cents = parseInt(digits || '0', 10);
+      return '$' + (cents / 100).toFixed(2);
+    },
+    displayColor: T.gold,
+    chassisColor: T.numpadChassis,
+      digitColor: T.digitColor,
+    displayH: 60,
+    gap: 16,
+    keyH: 84,
+    keyGap: 12,
+    cardPad: 18,
+    chassisChamfer: 6,
+    chassisBevel: 5,
+    onSubmit: function(digits) {
+      var cents = parseInt(digits || '0', 10);
+      var amount = cents / 100;
+      hideTipNumpad();
       if (_tipCallback) { _tipCallback(amount); _tipCallback = null; }
     },
-    onCancel: function() { _tipCallback = null; },
+    onCancel: function() {
+      hideTipNumpad();
+      _tipCallback = null;
+    },
   });
+  side.appendChild(numpad);
+  _numpadSide = side;
+  if (_overlayRow) _overlayRow.appendChild(side);
+}
+
+function hideTipNumpad() {
+  if (_numpadSide && _numpadSide.parentNode) _numpadSide.parentNode.removeChild(_numpadSide);
+  _numpadSide = null;
+  // Restore panel width
+  if (_overlayPanel) {
+    _overlayPanel.style.maxWidth = '700px';
+    _overlayPanel.style.flex = '1';
+  }
 }
 
 // ═══════════════════════════════════════════════════
