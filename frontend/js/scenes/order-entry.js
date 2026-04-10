@@ -1264,6 +1264,11 @@ function closeModifierPanel() {
   if (_bottomBar) _bottomBar.style.display = '';
   rebuildBottomBar();
   renderTicket();
+
+  // Reset HexNav after layout settles (resize SVG viewBox)
+  requestAnimationFrame(function() {
+    if (hexNav) hexNav.reset();
+  });
 }
 
 function commitModifierPanelItem(originalItem, activeItem) {
