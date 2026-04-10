@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Payment Console Scene
-//  Condensed single-screen: Recap + Denominations + Numpad + Method Toggle
+//  2-column: Denominations + Numpad (left recap is persistent OrderSummary)
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
@@ -9,10 +9,10 @@ import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
+import { OrderSummary } from '../order-summary.js';
 
 var PAD     = T.scenePad;
 var GAP     = T.colGapSm;
-var LEFT_W  = T.pcLeftW;
 var API     = '/api/v1';
 
 // ── Scene state ───────────────────────────────────
@@ -31,12 +31,13 @@ var dotTimer          = null;
 
 // DOM refs
 var _modeButtons      = {};
-var _footerPaidRow    = null;
-var _footerRemainRow  = null;
 
 // Card processing overlay state
 var _procStatusEl     = null;
 var _procAnimTimer    = null;
+
+// Split tap handler (bound to event bus)
+function _onSplitTap() { showSplitPopup(); }
 
 SceneManager.register({
   name: 'payment-console',
@@ -56,8 +57,6 @@ SceneManager.register({
     numpadRef         = null;
     dotTimer          = null;
     _modeButtons      = {};
-    _footerPaidRow    = null;
-    _footerRemainRow  = null;
     _procStatusEl     = null;
     _procAnimTimer    = null;
 
@@ -73,174 +72,21 @@ SceneManager.register({
       'display:flex;gap:' + GAP + 'px;',
       'padding:' + PAD + 'px;',
       'box-sizing:border-box;overflow:hidden;',
+      'background:' + T.bg + ';',
     ].join('');
 
-    container.appendChild(buildReceiptPanel(params));
+    // Summary panel is already visible from order-entry — just update split progress
+    SceneManager.on('split:tap', _onSplitTap);
     container.appendChild(buildCenterColumn(params));
     container.appendChild(buildRightColumn(params));
   },
 
   unmount: function() {
+    SceneManager.off('split:tap', _onSplitTap);
     if (dotTimer) { clearInterval(dotTimer); dotTimer = null; }
     if (_procAnimTimer) { clearInterval(_procAnimTimer); _procAnimTimer = null; }
   },
 });
-
-
-// ═══════════════════════════════════════════════════
-//  LEFT COLUMN — Receipt Panel
-// ═══════════════════════════════════════════════════
-
-function buildReceiptPanel(params) {
-  var col = document.createElement('div');
-  col.style.cssText = [
-    'width:' + LEFT_W + 'px;flex-shrink:0;',
-    'display:flex;flex-direction:column;',
-    'background:' + T.bgDark + ';',
-  ].join('');
-  applySunkenStyle(col);
-
-  // ── Header ──
-  var header = document.createElement('div');
-  header.style.cssText = [
-    'padding:8px 12px;flex-shrink:0;',
-    'background:' + T.bg4 + ';',
-    'border-bottom:2px solid ' + T.bgEdge + ';',
-    'display:flex;justify-content:space-between;align-items:center;',
-  ].join('');
-  var hTitle = document.createElement('div');
-  hTitle.style.cssText = [
-    'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';',
-    'color:' + T.gold + ';letter-spacing:0.08em;',
-  ].join('');
-  hTitle.textContent = 'ORDER RECAP';
-  var hId = document.createElement('div');
-  hId.style.cssText = [
-    'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';',
-    'color:' + T.mint + ';white-space:nowrap;',
-  ].join('');
-  hId.textContent = params.checkId || '';
-  header.appendChild(hTitle);
-  header.appendChild(hId);
-  col.appendChild(header);
-
-  // ── Column headers ──
-  var colHead = document.createElement('div');
-  colHead.style.cssText = [
-    'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
-    'padding:4px 10px;',
-    'font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.gold + ';letter-spacing:0.06em;',
-    'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
-  ].join('');
-  ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
-    var c = document.createElement('div');
-    c.textContent = t;
-    if (i > 0) c.style.textAlign = 'right';
-    colHead.appendChild(c);
-  });
-  col.appendChild(colHead);
-
-  // ── Scrollable items ──
-  var itemScroll = document.createElement('div');
-  itemScroll.style.cssText = 'flex:1;overflow-y:auto;padding:2px 10px;';
-
-  (params.items || []).forEach(function(item) {
-    var row = document.createElement('div');
-    row.style.cssText = [
-      'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
-      'padding:3px 0;',
-      'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.mint + ';',
-      'border-bottom:1px solid ' + T.bg3 + ';',
-    ].join('');
-    var name = document.createElement('div');
-    name.textContent = item.name;
-    name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-    var qty = document.createElement('div');
-    qty.style.cssText = 'text-align:right;color:' + T.gold + ';';
-    qty.textContent = item.qty + '\u00D7';
-    var price = document.createElement('div');
-    price.style.cssText = 'text-align:right;color:' + T.gold + ';';
-    price.textContent = '$' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
-    row.appendChild(name);
-    row.appendChild(qty);
-    row.appendChild(price);
-    itemScroll.appendChild(row);
-  });
-  col.appendChild(itemScroll);
-
-  // ── Bottom: [Summary | Split] row ──
-  var summaryRow = document.createElement('div');
-  summaryRow.style.cssText = [
-    'flex-shrink:0;display:flex;gap:6px;',
-    'padding:4px 6px;',
-  ].join('');
-
-  // Summary mini-box (bordered)
-  var summaryBox = document.createElement('div');
-  summaryBox.style.cssText = [
-    'flex:1;padding:4px 8px;',
-    'background:' + T.bgDark + ';',
-  ].join('');
-  applySunkenStyle(summaryBox);
-  summaryBox.appendChild(footerRow('Subtotal:', '$' + (params.subtotal || 0).toFixed(2), T.mint));
-  if (params.discount && params.discount > 0) {
-    summaryBox.appendChild(footerRow('Discount:', '$' + params.discount.toFixed(2), T.mint));
-  }
-  summaryBox.appendChild(footerRow('Tax:', '$' + (params.tax || 0).toFixed(2), T.mint));
-  summaryRow.appendChild(summaryBox);
-
-  // Split button (next to summary)
-  var splitBtn = buildButton('Split', {
-    fill: T.darkBtn, color: T.vermillion, fontSize: T.fsBtnSm,
-    onTap: function() { showSplitPopup(); },
-  });
-  splitBtn.style.cssText += 'flex-shrink:0;width:90px;';
-  splitBtn.style.outline = '3px solid ' + T.vermillion;
-  splitBtn.style.outlineOffset = '-1px';
-  summaryRow.appendChild(splitBtn);
-  col.appendChild(summaryRow);
-
-  // ── Prices box (bordered) ──
-  var pricesBox = document.createElement('div');
-  pricesBox.style.cssText = [
-    'flex-shrink:0;padding:4px 8px;margin:0 6px 4px;',
-    'background:' + T.bgDark + ';',
-  ].join('');
-  applySunkenStyle(pricesBox);
-  pricesBox.appendChild(footerRow('Card Price:', '$' + (params.cardTotal || 0).toFixed(2), T.gold, true));
-  pricesBox.appendChild(footerRow('Cash Price:', '$' + (params.cashPrice || 0).toFixed(2), T.gold, true));
-
-  // Dynamic split-progress rows (hidden until partial payment)
-  _footerPaidRow = footerRow('Paid:', '$0.00', T.cyan);
-  _footerPaidRow.style.display = 'none';
-  pricesBox.appendChild(_footerPaidRow);
-
-  _footerRemainRow = footerRow('Remaining:', '$' + baseTotal.toFixed(2), T.cyan);
-  _footerRemainRow.style.display = 'none';
-  pricesBox.appendChild(_footerRemainRow);
-
-  col.appendChild(pricesBox);
-  return col;
-}
-
-function footerRow(label, value, color, bold) {
-  var row = document.createElement('div');
-  row.style.cssText = [
-    'display:flex;justify-content:space-between;padding:1px 0;',
-    'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';',
-    'color:' + (color || T.mint) + ';',
-    bold ? 'font-weight:bold;' : '',
-  ].join('');
-  var l = document.createElement('span');
-  l.textContent = label;
-  var v = document.createElement('span');
-  v.style.color = T.gold;
-  v.textContent = value;
-  v.setAttribute('data-val', '1');
-  row.appendChild(l);
-  row.appendChild(v);
-  return row;
-}
 
 
 // ═══════════════════════════════════════════════════
@@ -400,10 +246,13 @@ function setPaymentMode(mode) {
     var b = _modeButtons[m];
     if (!b) return;
     if (m === mode) {
-      b.wrap.style.outline = '3px solid ' + b.color;
-      b.wrap.style.outlineOffset = '-1px';
-      b.inner.style.color = b.color;
+      // Active: colored fill, dark text (inverted)
+      b.wrap.style.background = b.color;
+      b.wrap.style.outline = 'none';
+      b.inner.style.color = T.bgDark;
     } else {
+      // Inactive: dark fill, colored text
+      b.wrap.style.background = b.wrap._embV ? b.wrap._embV.bg : T.embDarkBg;
       b.wrap.style.outline = 'none';
       b.inner.style.color = T.mint;
     }
@@ -448,16 +297,7 @@ function getRemainingBalance() {
 
 function updateSplitDisplay() {
   if (totalPaid > 0) {
-    if (_footerPaidRow) {
-      _footerPaidRow.style.display = 'flex';
-      var pv = _footerPaidRow.querySelector('[data-val]');
-      if (pv) pv.textContent = '$' + totalPaid.toFixed(2);
-    }
-    if (_footerRemainRow) {
-      _footerRemainRow.style.display = 'flex';
-      var rv = _footerRemainRow.querySelector('[data-val]');
-      if (rv) rv.textContent = '$' + getRemainingBalance().toFixed(2);
-    }
+    OrderSummary.updateSplit({ totalPaid: totalPaid, remaining: getRemainingBalance() });
   }
 }
 

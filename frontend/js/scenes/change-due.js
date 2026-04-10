@@ -8,6 +8,7 @@ import { T, chamfer, applySunkenStyle } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { OrderSummary } from '../order-summary.js';
 
 var returned = false;
 var sceneEl  = null;
@@ -161,6 +162,7 @@ function doReturn(target) {
     sceneEl._countdownTimer = null;
   }
   SceneManager.closeAllTransactional();
+  OrderSummary.hide();
   if (target === 'login') {
     SceneManager.unmountWorking(SceneManager.getActiveWorking());
     SceneManager.openGate('login');

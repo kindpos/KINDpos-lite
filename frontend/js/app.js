@@ -7,6 +7,7 @@ import { SceneManager } from './scene-manager.js';
 import { T, buildStyledButton } from './tokens.js';
 import { hideKeyboard } from './keyboard.js';
 import { showToast } from './components.js';
+import { OrderSummary } from './order-summary.js';
 
 // Import scenes (self-registering)
 import './scenes/login.js?v=2';
@@ -69,6 +70,7 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
     logoutPair.wrap.addEventListener('pointerup', onClose || function() {
       SceneManager.closeAllTransactional();
       SceneManager.unmountWorking(SceneManager.getActiveWorking());
+      OrderSummary.hide();
       SceneManager.openGate('login');
     });
     logout.appendChild(logoutPair.wrap);
@@ -84,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open login gate on boot
   SceneManager.openGate('login');
+
+  // Hide order summary on boot (login gate is up)
+  OrderSummary.hide();
 
   updateClock();
   setInterval(updateClock, 30000);

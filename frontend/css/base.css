@@ -69,10 +69,31 @@ html, body {
   gap: 8px;
 }
 
+/* ── Persistent order summary panel ──────────────── */
+#order-summary {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  width: 280px;
+  height: calc(100% - 52px);
+  z-index: 25;
+  pointer-events: auto;
+  display: none;
+}
+
 /* ── Layer containers ────────────────────────────── */
 #layer-working,
 #layer-transactional,
-#layer-interrupt,
+#layer-interrupt {
+  position: absolute;
+  top: 52px;
+  left: 292px;
+  width: calc(100% - 292px);
+  height: calc(100% - 52px);
+  pointer-events: none;
+}
+
+/* Gate (login) needs full width */
 #layer-gate {
   position: absolute;
   top: 52px;
@@ -118,6 +139,7 @@ html, body {
 
 #ticket-list::-webkit-scrollbar,
 #receipt-scroll::-webkit-scrollbar,
-#closeday-right::-webkit-scrollbar {
+#closeday-right::-webkit-scrollbar,
+#order-summary::-webkit-scrollbar {
   display: none;
 }
