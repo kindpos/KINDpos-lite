@@ -322,12 +322,16 @@ function statRow(label, value, color) {
   return row;
 }
 
-// ── Embossed Card Style ──────────────────────────
+// ── Beveled Card Style (matches clock-in depth pattern) ──
 
-var CARD_SHADOW = 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 2px 0 0 rgba(255,255,255,0.04),inset -2px 0 0 rgba(0,0,0,0.25),inset 0 4px 8px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50)';
+var BEVEL_LIGHT = T.numpadChassisL;
+var BEVEL_DARK  = T.numpadChassisD;
 
 function applyCardStyle(el) {
-  el.style.cssText = 'background:' + T.bgDark + ';border:5px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;box-shadow:' + CARD_SHADOW + ';';
+  el.style.cssText = 'background:' + T.bgDark + ';display:flex;flex-direction:column;flex:0 0 auto;'
+    + 'border-top:5px solid ' + BEVEL_LIGHT + ';border-left:5px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:5px solid ' + BEVEL_DARK + ';border-right:5px solid ' + BEVEL_DARK + ';'
+    + 'clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);';
 }
 
 // ── Server Color Lookup ──────────────────────────
@@ -824,7 +828,10 @@ function buildCenterColumn() {
 
   // ── Check grid container ──
   var checkWrap = document.createElement('div');
-  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';border:5px solid ' + CHROME + ';box-shadow:' + CARD_SHADOW + ';';
+  checkWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';'
+    + 'border-top:5px solid ' + BEVEL_LIGHT + ';border-left:5px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:5px solid ' + BEVEL_DARK + ';border-right:5px solid ' + BEVEL_DARK + ';'
+    + 'clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);';
 
   // Header: "ALL CHECKS" or "{SERVER NAME}"
   _checkHeader = buildCardHeader('ALL CHECKS');
