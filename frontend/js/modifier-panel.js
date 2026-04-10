@@ -437,7 +437,7 @@ export function ModifierPanel(container, opts) {
           var pair = buildStyledButton({ label: opt.label, variant: variant, size: 'md' });
           pair.wrap.style.width = '100%';
           pair.wrap.style.minWidth = '0';
-          pair.inner.style.fontSize = '16px';
+          pair.inner.style.fontSize = '20px';
           pair.inner.style.padding = '4px 3px';
           pair.inner.style.lineHeight = '1.1';
           if (isSelected) {
@@ -502,14 +502,14 @@ export function ModifierPanel(container, opts) {
     var grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
 
-    includedItems.forEach(function(incl) {
+    includedItems.slice().sort(function(a, b) { return a.label.localeCompare(b.label); }).forEach(function(incl) {
       var isRemoved = activeItem.includedRemovals.indexOf(incl.id) !== -1;
       var variant = isRemoved ? 'vermillion' : 'dark';
       var label = isRemoved ? 'NO ' + incl.label : incl.label;
       var pair = buildStyledButton({ label: label, variant: variant, size: 'md' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '16px';
+      pair.inner.style.fontSize = '20px';
 
       pair.wrap.addEventListener('pointerup', function() {
         var idx = activeItem.includedRemovals.indexOf(incl.id);
@@ -550,7 +550,7 @@ export function ModifierPanel(container, opts) {
       var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'md' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '16px';
+      pair.inner.style.fontSize = '20px';
       pair.inner.style.padding = '4px 3px';
       pair.inner.style.lineHeight = '1.1';
 
@@ -598,13 +598,13 @@ export function ModifierPanel(container, opts) {
     var grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
 
-    ALLERGENS.forEach(function(a) {
+    ALLERGENS.slice().sort(function(a, b) { return a.label.localeCompare(b.label); }).forEach(function(a) {
       if (a.id === 'other') {
         var isActive = activeItem.allergenNote.length > 0;
         var pair = buildStyledButton({ label: a.label, variant: 'dark', size: 'md' });
         pair.wrap.style.width = '100%';
         pair.wrap.style.minWidth = '0';
-        pair.inner.style.fontSize = '16px';
+        pair.inner.style.fontSize = '20px';
         pair.wrap.style.background = a.color;
         pair.inner.style.color = T.bgDark;
         if (isActive) {
@@ -633,7 +633,7 @@ export function ModifierPanel(container, opts) {
       var pair = buildStyledButton({ label: a.label, variant: 'dark', size: 'md' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '16px';
+      pair.inner.style.fontSize = '20px';
       pair.wrap.style.background = a.color;
       pair.inner.style.color = T.bgDark;
       if (selected) {
