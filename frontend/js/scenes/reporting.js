@@ -54,31 +54,37 @@ var D_ITEMS = {
   SPECIALS:[{n:'Daily Special',q:3,p:5.00},{n:"Chef's Choice",q:2,p:1.50}],
 };
 var D_SERVERS = [
-  { name:'ALEX', color:'#4499ff', active:true,
+  { name:'DOROTHY', color:'#4499ff', active:true,
     openChecks:[{id:'QS-005',table:'T3',cvr:1,time:'5:58P',total:14.08},{id:'QS-006',table:'T7',cvr:2,time:'1:42P',total:16.05}],
     tips:[{id:'QS-001',amt:32.00,tip:null},{id:'QS-003',amt:28.50,tip:null},{id:'QS-004',amt:15.00,tip:null}],
   },
-  { name:'MARIA', color:'#ff9900', active:false, openChecks:[], tips:[] },
-  { name:'JAKE', color:'#bb44ff', active:false, openChecks:[], tips:[] },
+  { name:'BLANCHE', color:'#ff9900', active:true,
+    openChecks:[],
+    tips:[{id:'QS-007',amt:18.00,tip:null},{id:'QS-008',amt:22.50,tip:null}],
+  },
+  { name:'ROSE', color:'#bb44ff', active:false, openChecks:[], tips:[] },
+  { name:'SOPHIA', color:'#00bbcc', active:false, openChecks:[], tips:[] },
 ];
 var D_HSALES = [18,50.5,65,43,34,39.5,38,17.75];
 var D_HLAB = [8,17,17,17,17,9,9,9];
 var D_EMP = [
-  {name:'ALEX',role:'SERVER',rate:9,hours:7,sched:'12P\u20136P',cost:63,cob:20.6,share:61.2,color:'#4499ff'},
-  {name:'JAMIE',role:'COOK',rate:8,hours:5,sched:'11A\u20133P',cost:40,cob:13.1,share:38.8,color:'#ff9900'},
+  {name:'DOROTHY',role:'SERVER',rate:9,hours:7,sched:'12P\u20136P',cost:63,cob:20.6,share:61.2,color:'#4499ff'},
+  {name:'BLANCHE',role:'SERVER',rate:9,hours:6,sched:'11A\u20134P',cost:54,cob:17.7,share:52.4,color:'#ff9900'},
+  {name:'ROSE',role:'COOK',rate:8,hours:5,sched:'11A\u20133P',cost:40,cob:13.1,share:38.8,color:'#bb44ff'},
+  {name:'SOPHIA',role:'COOK',rate:8,hours:0,sched:'OFF',cost:0,cob:0,share:0,color:'#00bbcc'},
 ];
 var D_CHECKS = [
-  {id:'CHK-042',srv:'ALEX',hr:'1P',tbl:'T3',type:'DINE-IN',total:24.50,status:'OPEN',items:['Pepperoni Slice x2','Soda x2']},
-  {id:'CHK-057',srv:'ALEX',hr:'2P',tbl:'T7',type:'DINE-IN',total:18.75,status:'OPEN',items:['Margherita Slice x1','Fries x1']},
-  {id:'CHK-031',srv:'ALEX',hr:'12P',tbl:null,type:'TO-GO',total:32.00,status:'CLOSED',items:['Supreme Slice x2','Lemonade x1']},
-  {id:'CHK-035',srv:'ALEX',hr:'12P',tbl:'T2',type:'DINE-IN',total:28.50,status:'CLOSED',items:['Classic Italian x1','Onion Rings x1']},
-  {id:'CHK-039',srv:'ALEX',hr:'1P',tbl:null,type:'ONLINE',total:15.00,status:'CLOSED',items:['Mini Sub x1','Water x1']},
-  {id:'CHK-044',srv:'JAMIE',hr:'11A',tbl:'T1',type:'DINE-IN',total:22.00,status:'CLOSED',items:['Pepperoni Slice x1','Club Sub x1']},
-  {id:'CHK-048',srv:'JAMIE',hr:'12P',tbl:null,type:'TO-GO',total:19.25,status:'CLOSED',items:['Daily Special x1','Soda x1']},
+  {id:'CHK-042',srv:'DOROTHY',hr:'1P',tbl:'T3',type:'DINE-IN',total:24.50,status:'OPEN',items:['Pepperoni Slice x2','Soda x2']},
+  {id:'CHK-057',srv:'DOROTHY',hr:'2P',tbl:'T7',type:'DINE-IN',total:18.75,status:'OPEN',items:['Margherita Slice x1','Fries x1']},
+  {id:'CHK-031',srv:'DOROTHY',hr:'12P',tbl:null,type:'TO-GO',total:32.00,status:'CLOSED',items:['Supreme Slice x2','Lemonade x1']},
+  {id:'CHK-035',srv:'BLANCHE',hr:'12P',tbl:'T2',type:'DINE-IN',total:28.50,status:'CLOSED',items:['Classic Italian x1','Onion Rings x1']},
+  {id:'CHK-039',srv:'BLANCHE',hr:'1P',tbl:null,type:'ONLINE',total:15.00,status:'CLOSED',items:['Mini Sub x1','Water x1']},
+  {id:'CHK-044',srv:'ROSE',hr:'11A',tbl:'T1',type:'DINE-IN',total:22.00,status:'CLOSED',items:['Pepperoni Slice x1','Club Sub x1']},
+  {id:'CHK-048',srv:'ROSE',hr:'12P',tbl:null,type:'TO-GO',total:19.25,status:'CLOSED',items:['Daily Special x1','Soda x1']},
 ];
 var D_HEAT = {
-  servers:['Alex','Maria','Jake'],
-  data:{Alex:[0,1,2,3,1,1,2,3,2],Maria:[0,0,1,2,2,0,1,2,3],Jake:[0,1,1,1,0,1,0,1,1]},
+  servers:['DOROTHY','BLANCHE','ROSE','SOPHIA'],
+  data:{DOROTHY:[0,1,2,3,1,1,2,3],BLANCHE:[0,0,1,2,2,0,1,2],ROSE:[0,1,1,1,0,1,0,1],SOPHIA:[0,0,0,0,0,0,0,0]},
 };
 
 // ── Module State ───────────────────────────────────
@@ -641,7 +647,7 @@ function buildHeatmapBody(body) {
   var wrap = el('div', 'display:flex;flex-direction:column;gap:1px;height:100%;background:#111;');
 
   // Hour header row
-  var hdrRow = el('div', 'display:flex;gap:1px;padding-left:48px;');
+  var hdrRow = el('div', 'display:flex;gap:1px;padding-left:60px;');
   for (var h = 0; h < visibleHours.length; h++) {
     hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px;padding:2px 0;', HOURS[visibleHours[h]]));
   }
@@ -650,7 +656,7 @@ function buildHeatmapBody(body) {
   // Server rows
   for (var s = 0; s < servers.length; s++) {
     var row = el('div', 'display:flex;gap:1px;flex:1;align-items:stretch;');
-    var nameEl = el('div', 'width:46px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:9px;font-style:italic;color:' + C.mint + ';');
+    var nameEl = el('div', 'width:58px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:10px;font-style:italic;color:' + C.mint + ';');
     nameEl.textContent = servers[s];
     row.appendChild(nameEl);
     for (var h = 0; h < visibleHours.length; h++) {
