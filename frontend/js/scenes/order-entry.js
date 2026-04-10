@@ -14,6 +14,8 @@ import { showKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
 import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
+import { ModifierPanel } from '../modifier-panel.js';
+import { getModifierConfig } from '../data/modifier-configs.js';
 
 function _landingScene(roles) {
   return (roles || []).indexOf('manager') !== -1 ? 'manager-landing' : 'server-landing';
@@ -55,6 +57,7 @@ var MENU_DATA = [
     id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
     subcats: [
       { id: 'pizza-sizes', label: 'Size', items: [
+        { label: 'BYO Pizza', price: 14.00 },
         { label: 'Slice', price: 3.75, pizzaSize: true },
         { label: 'S 10"', price: 10.00, pizzaSize: true },
         { label: 'MED 14"', price: 12.00, pizzaSize: true },
@@ -70,16 +73,7 @@ var MENU_DATA = [
       { id: 'apps-items', label: 'Appetizers', items: [
         { label: 'Garlic Knots', price: 6.00 },
         { label: 'Mozz Sticks', price: 8.00 },
-        { label: 'Buffalo Wings', price: 10.00, requiredMods: [
-          { id: 'wing-sauce', label: 'SAUCE', color: '#7a2832', textColor: '#ffb3b8', choices: [
-            { label: 'Buffalo', price: 0 }, { label: 'BBQ', price: 0 },
-            { label: 'Garlic Parm', price: 0 }, { label: 'Plain', price: 0 },
-          ] },
-          { id: 'wing-temp', label: 'HEAT', color: '#7a5201', textColor: '#ffd480', choices: [
-            { label: 'Mild', price: 0 }, { label: 'Medium', price: 0 },
-            { label: 'Hot', price: 0 }, { label: 'Xtra Hot', price: 0 },
-          ] },
-        ] },
+        { label: 'Buffalo Wings', price: 10.00 },
         { label: 'Garlic Bread', price: 5.00 },
       ] },
     ]
@@ -98,12 +92,7 @@ var MENU_DATA = [
     id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: '#001a1a',
     subcats: [
       { id: 'side-items', label: 'Sides', items: [
-        { label: 'House Salad', price: 7.00, requiredMods: [
-          { id: 'dressing', label: 'DRESSING', color: T.cyan, textColor: '#001a1a', choices: [
-            { label: 'Ranch', price: 0 }, { label: 'Blue Cheese', price: 0 },
-            { label: 'Italian', price: 0 }, { label: 'Caesar', price: 0 },
-          ] }
-        ] },
+        { label: 'House Salad', price: 7.00 },
         { label: 'Caesar Salad', price: 8.00 },
         { label: 'Fries', price: 4.00 },
       ] },
@@ -269,6 +258,11 @@ var _tabModsBtn  = null;
 var _bottomBar   = null;  // DOM ref for bottom action bar
 var _mainArea    = null;  // DOM ref for right panel
 
+// ── Modifier Panel (item-level modifier builder) ──
+var _modPanel      = null;   // ModifierPanel instance
+var _modPanelItem  = null;   // ticket preview item for active panel
+var _modPanelWrap  = null;   // DOM wrapper for modifier panel
+
 // ── Batch Modifier Session ───────────────────────
 var modifierSession = {
   active: false,
@@ -315,6 +309,9 @@ SceneManager.register({
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _bottomBar     = null;
     _mainArea      = null;
+    _modPanel      = null;
+    _modPanelItem  = null;
+    _modPanelWrap  = null;
 
     container.style.cssText = [
       'width:100%;height:100%;',
@@ -339,6 +336,7 @@ SceneManager.register({
 
   unmount: function() {
     if (hexNav) { hexNav.destroy(); hexNav = null; }
+    if (_modPanel) { _modPanel.destroy(); _modPanel = null; }
   },
 });
 
@@ -1203,6 +1201,141 @@ function endModifierSession() {
   if (hexNav) hexNav.reset();
 }
 
+// ── MODIFIER PANEL (item-level builder) ──────────
+function openModifierPanel(item, modConfig) {
+  // Close any existing modifier panel
+  if (_modPanel) closeModifierPanel();
+
+  // Hide hex canvas (spec: panel overlaps HexNav card)
+  if (_tabCanvas) _tabCanvas.style.display = 'none';
+
+  // Create wrapper that sits where HexNav was
+  _modPanelWrap = document.createElement('div');
+  _modPanelWrap.style.cssText = [
+    'flex:1;display:flex;flex-direction:column;overflow:hidden;',
+    'margin-bottom:0;',
+  ].join('');
+
+  if (_mainArea && _bottomBar) {
+    _mainArea.insertBefore(_modPanelWrap, _bottomBar);
+  }
+
+  // Mount the modifier panel inside the wrapper
+  _modPanel = new ModifierPanel(_modPanelWrap, {
+    item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
+    onUpdate: function(outputItem) {
+      // Live ticket preview
+      _modPanelItem = outputItem;
+      renderTicket();
+    },
+    onSend: function(activeItem) {
+      commitModifierPanelItem(item, activeItem);
+    },
+    onCancel: function() {
+      closeModifierPanel();
+    },
+  });
+
+  // Hide bottom bar actions during panel
+  if (_bottomBar) _bottomBar.style.display = 'none';
+}
+
+function closeModifierPanel() {
+  if (_modPanel) {
+    _modPanel.destroy();
+    _modPanel = null;
+  }
+  if (_modPanelWrap && _modPanelWrap.parentNode) {
+    _modPanelWrap.parentNode.removeChild(_modPanelWrap);
+  }
+  _modPanelWrap = null;
+  _modPanelItem = null;
+
+  // Restore hex canvas
+  if (_tabCanvas) _tabCanvas.style.display = '';
+  // Restore bottom bar
+  if (_bottomBar) _bottomBar.style.display = '';
+  rebuildBottomBar();
+  renderTicket();
+  if (hexNav) hexNav.reset();
+}
+
+function commitModifierPanelItem(originalItem, activeItem) {
+  // Build ticket item from modifier panel state
+  var mands = activeItem.mandatorySelections;
+  var mandLabels = [];
+  var mandPrice = 0;
+  Object.keys(mands).forEach(function(k) {
+    mandLabels.push(mands[k].label);
+    mandPrice += mands[k].price || 0;
+  });
+  var mandSuffix = mandLabels.length > 0 ? ' \u2014 ' + mandLabels.join(' / ') : '';
+
+  var mods = [];
+
+  // Optional modifiers
+  activeItem.optionalModifiers.forEach(function(m) {
+    var charged = m.prefix !== 'NO' && m.price > 0;
+    mods.push({
+      name: m.prefix + ' ' + m.label,
+      price: m.prefix === 'NO' ? 0 : m.price,
+      charged: charged,
+      prefix: null,
+    });
+  });
+
+  // Included removals
+  var modConfig = originalItem.modifierConfig || getModifierConfig(originalItem.label) || {};
+  var includedItems = modConfig.includedItems || [];
+  activeItem.includedRemovals.forEach(function(rid) {
+    var incl = includedItems.find(function(i) { return i.id === rid; });
+    if (incl) {
+      mods.push({ name: 'NO ' + incl.label, price: 0, charged: false, prefix: null });
+    }
+  });
+
+  // Allergens
+  var ALLERGEN_LABELS = {
+    nuts: 'Nuts', shellfish: 'Shellfish', gluten: 'Gluten', dairy: 'Dairy',
+    soy: 'Soy', eggs: 'Eggs', fish: 'Fish',
+  };
+  activeItem.allergens.forEach(function(aId) {
+    var label = ALLERGEN_LABELS[aId] || aId;
+    mods.push({ name: '\u26A0 ALLERGEN: ' + label, price: 0, charged: false, prefix: null });
+  });
+  if (activeItem.allergenNote) {
+    mods.push({ name: '\u26A0 ALLERGEN: ' + activeItem.allergenNote, price: 0, charged: false, prefix: null });
+  }
+
+  // Note
+  if (activeItem.note) {
+    mods.push({ name: '\uD83D\uDCDD ' + activeItem.note, price: 0, charged: false, prefix: null });
+  }
+
+  var ticketItem = {
+    id:        ++ticketSeq,
+    idemKey:   _idemKey(),
+    name:      activeItem.itemLabel + mandSuffix,
+    unitPrice: activeItem.basePrice + mandPrice,
+    mods:      mods,
+    selected:  false,
+    sent:      false,
+    category:  hexNav ? hexNav.getCatId() : null,
+    // Preserve modifier panel data for ledger
+    _modPanelData: {
+      mandatory: mands,
+      optionalModifiers: activeItem.optionalModifiers,
+      includedRemovals: activeItem.includedRemovals,
+      allergens: activeItem.allergens,
+      allergenNote: activeItem.allergenNote,
+      note: activeItem.note,
+    },
+  };
+
+  ticket.push(ticketItem);
+  closeModifierPanel();
+}
+
 // ── TAB SWITCHING ─────────────────────────────────
 function switchTab(tab) {
   activeTab = tab || 'items';
@@ -1292,6 +1425,13 @@ function handleItemSelect(item) {
       renderTicket();
       rebuildBottomBar();
     }).catch(function() { /* cancelled */ });
+    return;
+  }
+
+  // ── Modifier panel: item with modifierConfig opens the panel ──
+  var modConfig = getModifierConfig(item.label);
+  if (modConfig) {
+    openModifierPanel(item, modConfig);
     return;
   }
 
@@ -1569,8 +1709,63 @@ function renderTicket() {
     }
   });
 
+  // ── Live preview: active modifier panel item ──────
+  if (_modPanelItem) {
+    var previewCard = document.createElement('div');
+    previewCard.style.cssText = [
+      'flex-shrink:0;',
+      'background:#2a3320;',
+      'border:4px solid ' + T.gold + ';',
+      'margin-bottom:2px;',
+    ].join('');
+
+    // Item header row
+    var pRow = document.createElement('div');
+    pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
+    var pName = document.createElement('span');
+    pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+    pName.textContent = '\u270E ' + _modPanelItem.itemLabel;
+    var pPrice = document.createElement('span');
+    pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
+    var previewTotal = _modPanelItem.basePrice + (_modPanelItem.mods || []).reduce(function(s, m) { return s + m.price; }, 0);
+    pPrice.textContent = '$' + previewTotal.toFixed(2);
+    pRow.appendChild(pName);
+    pRow.appendChild(pPrice);
+    previewCard.appendChild(pRow);
+
+    // Modifier lines
+    (_modPanelItem.mods || []).forEach(function(m) {
+      var modEl = document.createElement('div');
+      modEl.style.cssText = [
+        'display:flex;justify-content:space-between;',
+        'padding:1px 8px 1px 16px;',
+        'font-family:' + T.fb + ';font-size:' + T.fsMod + ';font-weight:bold;',
+        'color:' + T.gold + ';',
+      ].join('');
+      var mName = document.createElement('span');
+      mName.textContent = m.name;
+      modEl.appendChild(mName);
+      if (m.price > 0) {
+        var mPrice = document.createElement('span');
+        mPrice.textContent = '+$' + m.price.toFixed(2);
+        modEl.appendChild(mPrice);
+      }
+      previewCard.appendChild(modEl);
+    });
+
+    list.appendChild(previewCard);
+  }
+
   // ── Live totals ───────────────────────────────────
   var totals = computeTotals();
+  // Include modifier panel preview item in totals
+  if (_modPanelItem) {
+    var previewPrice = _modPanelItem.basePrice + (_modPanelItem.mods || []).reduce(function(s, m) { return s + m.price; }, 0);
+    totals.subtotal += previewPrice;
+    totals.tax = Math.round(totals.subtotal * TAX_RATE * 100) / 100;
+    totals.cardTotal = Math.round((totals.subtotal + totals.tax) * 100) / 100;
+    totals.cashPrice = Math.round(totals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
+  }
   var subEl  = document.getElementById('ticket-subtotal');
   var taxEl  = document.getElementById('ticket-tax');
   var totEl  = document.getElementById('ticket-total');
@@ -1908,6 +2103,38 @@ function buildPinOverlay(el, cb) {
   });
 }
 
+function _buildItemPayload(inst) {
+  var payload = {
+    menu_item_id: inst.name.toLowerCase().replace(/\s+/g, '_'),
+    name:         inst.name,
+    price:        inst.unitPrice,
+    quantity:     1,
+    category:     inst.category || 'general',
+    modifiers:    inst.mods.map(function(m) {
+      return {
+        name: m.name, price: m.price, modifier_price: m.price,
+        charged: m.charged, prefix: m.prefix || null,
+        half_price: m.half_price != null ? m.half_price : null,
+      };
+    }),
+  };
+
+  // Include modifier panel data for atomic ledger write (ORDER_ITEM_ADDED)
+  if (inst._modPanelData) {
+    var mpd = inst._modPanelData;
+    payload.mandatory_selections = mpd.mandatory;
+    payload.included_removals = mpd.includedRemovals;
+    payload.allergens = mpd.allergens;
+    payload.allergen_note = mpd.allergenNote || '';
+    payload.note = mpd.note || '';
+    payload.optional_modifiers = mpd.optionalModifiers.map(function(m) {
+      return { prefix: m.prefix, modifier_id: m.modifierId, label: m.label, price: m.price };
+    });
+  }
+
+  return payload;
+}
+
 async function handleSend() {
   if (ticket.length === 0) return;
   if (isSending) return;
@@ -1968,16 +2195,7 @@ async function handleSend() {
           'Content-Type': 'application/json',
           'Idempotency-Key': inst.idemKey || _idemKey(),
         },
-        body: JSON.stringify({
-          menu_item_id: inst.name.toLowerCase().replace(/\s+/g, '_'),
-          name:         inst.name,
-          price:        inst.unitPrice,
-          quantity:     1,
-          category:     inst.category || 'general',
-          modifiers:    inst.mods.map(function(m) {
-            return { name: m.name, price: m.price, modifier_price: m.price, charged: m.charged, prefix: m.prefix || null, half_price: m.half_price != null ? m.half_price : null };
-          }),
-        }),
+        body: JSON.stringify(_buildItemPayload(inst)),
       });
     });
     var results = await Promise.allSettled(itemPromises);
