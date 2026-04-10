@@ -669,11 +669,12 @@ export function ModifierPanel(container, opts) {
 
     var mods = [];
     activeItem.optionalModifiers.forEach(function(m) {
+      var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
       mods.push({
         name: m.prefix + ' ' + m.label,
         price: m.prefix === 'NO' ? 0 : m.price,
         charged: m.prefix !== 'NO' && m.price > 0,
-        prefix: null,
+        prefix: halfSide,
       });
     });
 

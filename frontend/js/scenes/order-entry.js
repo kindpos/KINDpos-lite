@@ -1284,14 +1284,15 @@ function commitModifierPanelItem(originalItem, activeItem) {
 
   var mods = [];
 
-  // Optional modifiers
+  // Optional modifiers — map placement to Left/Right prefix
   activeItem.optionalModifiers.forEach(function(m) {
     var charged = m.prefix !== 'NO' && m.price > 0;
+    var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
     mods.push({
       name: m.prefix + ' ' + m.label,
       price: m.prefix === 'NO' ? 0 : m.price,
       charged: charged,
-      prefix: null,
+      prefix: halfSide,
     });
   });
 
