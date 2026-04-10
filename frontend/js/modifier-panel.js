@@ -8,6 +8,7 @@
 
 import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
 import { showKeyboard } from './keyboard.js';
+import { SceneManager } from './scene-manager.js';
 
 // ── Standard allergen list ──
 var ALLERGENS = [
@@ -149,7 +150,7 @@ export function ModifierPanel(container, opts) {
     // Outer wrapper: drop-shadow (matches clock-in depth pattern)
     rootEl = document.createElement('div');
     rootEl.style.cssText = [
-      'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;',
+      'width:98%;max-width:960px;height:90%;max-height:500px;',
       'filter:drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));',
     ].join('');
 
@@ -831,3 +832,30 @@ export function ModifierPanel(container, opts) {
   build();
   fireUpdate();
 }
+
+// ═══════════════════════════════════════════════════
+//  INTERRUPT SCENE REGISTRATION
+//  Usage: SceneManager.interrupt('item-mods', {
+//    onConfirm: fn(activeItem),
+//    onCancel: fn(),
+//    params: { item, modConfig }
+//  })
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'item-mods',
+  mount: function(container, params) {
+    var _panel = new ModifierPanel(container, {
+      item: { label: params.item.label, price: params.item.price || 0, id: params.item.id, modifierConfig: params.modConfig },
+      onUpdate: params.onUpdate || function() {},
+      onSend: function(activeItem) {
+        if (params.onConfirm) params.onConfirm(activeItem);
+      },
+      onCancel: function() {
+        if (params.onCancel) params.onCancel();
+      },
+    });
+    return function() { _panel.destroy(); };
+  },
+  unmount: function() {},
+});

@@ -14,7 +14,7 @@ import { showKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
 import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
-import { ModifierPanel } from '../modifier-panel.js';
+import '../modifier-panel.js';  // registers 'item-mods' interrupt scene
 import { getModifierConfig } from '../data/modifier-configs.js';
 
 // ── Beveled depth card helpers (match clock-in card pattern) ──
@@ -281,8 +281,7 @@ var _tabModsBtn  = null;
 var _bottomBar   = null;  // DOM ref for bottom action bar
 var _mainArea    = null;  // DOM ref for right panel
 
-// ── Modifier Panel (item-level modifier builder) ──
-var _modPanel      = null;   // ModifierPanel instance
+// ── Modifier Panel (interrupt overlay) ──
 var _modPanelItem  = null;   // ticket preview item for active panel
 
 // ── Batch Modifier Session ───────────────────────
@@ -331,7 +330,6 @@ SceneManager.register({
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _bottomBar     = null;
     _mainArea      = null;
-    _modPanel      = null;
     _modPanelItem  = null;
 
     container.style.cssText = [
@@ -357,7 +355,6 @@ SceneManager.register({
 
   unmount: function() {
     if (hexNav) { hexNav.destroy(); hexNav = null; }
-    if (_modPanel) { _modPanel.destroy(); _modPanel = null; }
   },
 });
 
@@ -1222,52 +1219,25 @@ function endModifierSession() {
   if (hexNav) hexNav.reset();
 }
 
-// ── MODIFIER PANEL (item-level builder) ──────────
+// ── MODIFIER PANEL (interrupt overlay) ───────────
 function openModifierPanel(item, modConfig) {
-  // Close any existing modifier panel
-  if (_modPanel) closeModifierPanel();
-
-  // Hide hex-canvas border while panel is open (avoid double border)
-  if (_tabCanvas) _tabCanvas.style.borderColor = 'transparent';
-
-  // Mount the modifier panel as an absolute overlay inside hex-canvas
-  // HexNav stays mounted underneath — no display:none needed
-  _modPanel = new ModifierPanel(_tabCanvas, {
-    item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
-    onUpdate: function(outputItem) {
-      _modPanelItem = outputItem;
-      renderTicket();
-    },
-    onSend: function(activeItem) {
+  SceneManager.interrupt('item-mods', {
+    onConfirm: function(activeItem) {
+      _modPanelItem = null;
       commitModifierPanelItem(item, activeItem);
     },
     onCancel: function() {
-      closeModifierPanel();
+      _modPanelItem = null;
+      renderTicket();
     },
-  });
-
-  // Hide bottom bar actions during panel
-  if (_bottomBar) _bottomBar.style.display = 'none';
-}
-
-function closeModifierPanel() {
-  if (_modPanel) {
-    _modPanel.destroy();
-    _modPanel = null;
-  }
-  _modPanelItem = null;
-
-  // Restore hex-canvas border
-  if (_tabCanvas) _tabCanvas.style.borderColor = T.mint;
-
-  // Restore bottom bar
-  if (_bottomBar) _bottomBar.style.display = '';
-  rebuildBottomBar();
-  renderTicket();
-
-  // Reset HexNav after layout settles (resize SVG viewBox)
-  requestAnimationFrame(function() {
-    if (hexNav) hexNav.reset();
+    params: {
+      item: item,
+      modConfig: modConfig,
+      onUpdate: function(outputItem) {
+        _modPanelItem = outputItem;
+        renderTicket();
+      },
+    },
   });
 }
 
