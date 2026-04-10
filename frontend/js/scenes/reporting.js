@@ -107,31 +107,53 @@ function el(tag, css, t) {
 function fmt(n) { return '$' + Math.abs(n).toFixed(2); }
 function sum(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
 
-function addDither(svg, id) {
-  var defs = svg.querySelector('defs');
-  if (!defs) { defs = mk('defs'); svg.insertBefore(defs, svg.firstChild); }
-  var p = mk('pattern', { id: id, width:'2', height:'2', patternUnits:'userSpaceOnUse' });
-  p.appendChild(mk('rect', { x:'0', y:'0', width:'1', height:'1', fill:'rgba(0,0,0,0.22)' }));
-  p.appendChild(mk('rect', { x:'1', y:'1', width:'1', height:'1', fill:'rgba(0,0,0,0.22)' }));
-  defs.appendChild(p);
-  return 'url(#' + id + ')';
+function addDefs(svg, uid) {
+  var defs = mk('defs');
+  // dot-grid background
+  var bg = mk('pattern', { id:'bg_'+uid, width:'4', height:'4', patternUnits:'userSpaceOnUse' });
+  bg.appendChild(mk('rect', { width:'4', height:'4', fill:'#111' }));
+  var corners = [[0,0],[4,0],[0,4],[4,4]];
+  for (var i = 0; i < corners.length; i++)
+    bg.appendChild(mk('circle', { cx:corners[i][0], cy:corners[i][1], r:'0.5', fill:'#1c1c1c' }));
+  bg.appendChild(mk('circle', { cx:'2', cy:'2', r:'0.4', fill:'#181818' }));
+  defs.appendChild(bg);
+  // win98 dither
+  var dit = mk('pattern', { id:'dit_'+uid, width:'2', height:'2', patternUnits:'userSpaceOnUse' });
+  dit.appendChild(mk('rect', { x:'0', y:'0', width:'1', height:'1', fill:'rgba(0,0,0,0.22)' }));
+  dit.appendChild(mk('rect', { x:'1', y:'1', width:'1', height:'1', fill:'rgba(0,0,0,0.22)' }));
+  defs.appendChild(dit);
+  svg.appendChild(defs);
 }
 
-function drawGrid(svg, x, y, w, h, n) {
-  for (var i = 1; i < n; i++) {
-    var gy = y + h - (i / n) * h;
-    svg.appendChild(mk('line', { x1:x, y1:gy, x2:x+w, y2:gy, stroke:C.grid, 'stroke-width':'1' }));
+function chartFrame(svg, x0, y0, W, H, uid) {
+  // chart well with dot-grid bg
+  svg.appendChild(mk('rect', { x:x0, y:y0, width:W, height:H,
+    fill:'url(#bg_'+uid+')', stroke:'#2a2a2a', 'stroke-width':'1' }));
+  // horizontal grid at 25/50/75%
+  for (var f = 1; f <= 3; f++) {
+    svg.appendChild(mk('line', { x1:x0, y1:y0+H-f*H/4, x2:x0+W, y2:y0+H-f*H/4,
+      stroke:'rgba(255,255,255,0.1)', 'stroke-width':'1' }));
+  }
+  // axes
+  svg.appendChild(mk('line', { x1:x0, y1:y0, x2:x0, y2:y0+H,
+    stroke:'rgba(255,255,255,0.5)', 'stroke-width':'1.5' }));
+  svg.appendChild(mk('line', { x1:x0, y1:y0+H, x2:x0+W, y2:y0+H,
+    stroke:'rgba(255,255,255,0.5)', 'stroke-width':'1.5' }));
+}
+
+function xLabels(svg, x0, W, bot, fs) {
+  var step = W / (HOURS.length - 1);
+  for (var i = 0; i < HOURS.length; i++) {
+    svg.appendChild(mk('text', { x:(x0+i*step).toFixed(1), y:bot+12,
+      'text-anchor':'middle', fill:'rgba(255,255,255,0.45)', 'font-size':fs||'7.5', 'font-family':FONT }, HOURS[i]));
   }
 }
 
-function drawAxes(svg, x, y, w, h) {
-  svg.appendChild(mk('line', { x1:x, y1:y, x2:x, y2:y+h, stroke:C.axis, 'stroke-width':'1.5' }));
-  svg.appendChild(mk('line', { x1:x, y1:y+h, x2:x+w, y2:y+h, stroke:C.axis, 'stroke-width':'1.5' }));
-}
-
-function drawHourLabels(svg, x, w, y, fs) {
-  for (var i = 0; i < 8; i++) {
-    svg.appendChild(mk('text', { x: x + (i / 7) * w, y: y, fill: C.label, 'font-size': fs || '9', 'font-family': FONT, 'text-anchor': 'middle' }, HOURS[i]));
+function xLabelsCentered(svg, x0, W, n, bot, fs) {
+  var step = W / n;
+  for (var i = 0; i < HOURS.length; i++) {
+    svg.appendChild(mk('text', { x:(x0+i*step+step/2).toFixed(1), y:bot+12,
+      'text-anchor':'middle', fill:'rgba(255,255,255,0.45)', 'font-size':fs||'7.5', 'font-family':FONT }, HOURS[i]));
   }
 }
 
@@ -237,17 +259,15 @@ function showNumpad(callback) {
 // Card 1 — Sales Overview
 function buildSalesOverviewBody(body) {
   var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'xMidYMid meet' });
-  svg.innerHTML = '';
-  var ditherUrl = addDither(svg, 'dither_so');
-  var cx = 28, cy = 10, cw = 256, ch = 106;
+  addDefs(svg, 'card');
+  var x0 = 28, y0 = 10, W = 256, H = 106;
+  var bot = y0 + H;
   var maxVal = 65; // peak of today data
-  function tx(i) { return cx + (i / 7) * cw; }
-  function ty(v) { return cy + ch - (v / maxVal) * ch; }
+  function tx(i) { return x0 + (i / 7) * W; }
+  function ty(v) { return y0 + H - (v / maxVal) * H; }
 
-  // Grid
-  drawGrid(svg, cx, cy, cw, ch, 4);
-  drawAxes(svg, cx, cy, cw, ch);
-  drawHourLabels(svg, cx, cw, cy + ch + 12, '9');
+  chartFrame(svg, x0, y0, W, H, 'card');
+  xLabels(svg, x0, W, bot, '5.5');
 
   // Last week (pink dashed, behind)
   var lwPts = [];
@@ -256,9 +276,9 @@ function buildSalesOverviewBody(body) {
   for (var i = 0; i < 8; i++) svg.appendChild(mk('rect', { x:tx(i)-2, y:ty(D_LASTW[i])-2, width:'4', height:'4', fill:C.pink }));
 
   // Today area fill
-  var areaD = 'M' + tx(0).toFixed(1) + ',' + (cy + ch);
+  var areaD = 'M' + tx(0).toFixed(1) + ',' + bot;
   for (var i = 0; i < 8; i++) areaD += ' L' + tx(i).toFixed(1) + ',' + ty(D_TODAY[i]).toFixed(1);
-  areaD += ' L' + tx(7).toFixed(1) + ',' + (cy + ch) + ' Z';
+  areaD += ' L' + tx(7).toFixed(1) + ',' + bot + ' Z';
   svg.appendChild(mk('path', { d:areaD, fill:C.lime, opacity:'0.08' }));
 
   // Today glow + solid
@@ -269,14 +289,14 @@ function buildSalesOverviewBody(body) {
   for (var i = 0; i < 8; i++) svg.appendChild(mk('rect', { x:tx(i)-2.5, y:ty(D_TODAY[i])-2.5, width:'5', height:'5', fill:C.lime }));
 
   // Net callout top-right
-  svg.appendChild(mk('text', { x:282, y:20, fill:C.gold, 'font-size':'14', 'font-weight':'bold', 'font-family':FONT, 'text-anchor':'end' }, fmt(sum(D_TODAY))));
-  svg.appendChild(mk('text', { x:282, y:30, fill:C.dim, 'font-size':'13', 'font-family':FONT, 'text-anchor':'end' }, 'NET SALES TODAY'));
+  svg.appendChild(mk('text', { x:282, y:20, fill:C.lime, 'font-size':'9', 'font-weight':'bold', 'font-family':FONT, 'text-anchor':'end' }, fmt(sum(D_TODAY))));
+  svg.appendChild(mk('text', { x:282, y:30, fill:'rgba(255,255,255,0.35)', 'font-size':'5.5', 'font-family':FONT, 'text-anchor':'end' }, 'NET SALES TODAY'));
 
   // Legend
-  svg.appendChild(mk('rect', { x:cx+30, y:ch+22, width:'8', height:'8', fill:C.lime }));
-  svg.appendChild(mk('text', { x:cx+42, y:ch+29, fill:C.label, 'font-size':'11', 'font-family':FONT }, 'TODAY'));
-  svg.appendChild(mk('rect', { x:cx+100, y:ch+22, width:'8', height:'8', fill:C.pink }));
-  svg.appendChild(mk('text', { x:cx+112, y:ch+29, fill:C.label, 'font-size':'11', 'font-family':FONT }, 'LAST WEEK'));
+  svg.appendChild(mk('rect', { x:x0+30, y:bot+22, width:'8', height:'8', fill:C.lime }));
+  svg.appendChild(mk('text', { x:x0+42, y:bot+29, fill:C.label, 'font-size':'5.5', 'font-family':FONT }, 'TODAY'));
+  svg.appendChild(mk('rect', { x:x0+100, y:bot+22, width:'8', height:'8', fill:C.pink }));
+  svg.appendChild(mk('text', { x:x0+112, y:bot+29, fill:C.label, 'font-size':'5.5', 'font-family':FONT }, 'LAST WEEK'));
 
   body.appendChild(svg);
 }
@@ -297,13 +317,11 @@ function buildSalesOverviewOverlay(panel) {
   var secA = el('div', 'padding:8px;');
   secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'NET SALES — TODAY vs LAST WEEK'));
   var svgA = mk('svg', { viewBox:'0 0 660 200', width:'100%', preserveAspectRatio:'xMidYMid meet' });
-  svgA.innerHTML = '';
-  addDither(svgA, 'dither_soa');
+  addDefs(svgA, 'soa');
   var ax=44,ay=12,aw=596,ah=150,aMax=65;
   function atx(i){return ax+(i/7)*aw;} function aty(v){return ay+ah-(v/aMax)*ah;}
-  drawGrid(svgA,ax,ay,aw,ah,4);
-  drawAxes(svgA,ax,ay,aw,ah);
-  drawHourLabels(svgA,ax,aw,ay+ah+14,'10');
+  chartFrame(svgA,ax,ay,aw,ah,'soa');
+  xLabels(svgA,ax,aw,ay+ah,'10');
 
   // Last week
   var lwP=[];for(var i=0;i<8;i++)lwP.push(atx(i).toFixed(1)+','+aty(D_LASTW[i]).toFixed(1));
@@ -335,12 +353,11 @@ function buildSalesOverviewOverlay(panel) {
   var secB = el('div', 'padding:8px;');
   secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'CHECK AVERAGE BY HOUR'));
   var svgB = mk('svg', { viewBox:'0 0 660 148', width:'100%', preserveAspectRatio:'xMidYMid meet' });
-  svgB.innerHTML = '';
+  addDefs(svgB, 'sob');
   var bx=44,by=12,bw=596,bh=100,bMax=7;
   var target = sum(D_CAVG)/D_CAVG.length;
-  drawGrid(svgB,bx,by,bw,bh,4);
-  drawAxes(svgB,bx,by,bw,bh);
-  drawHourLabels(svgB,bx,bw,by+bh+14,'10');
+  chartFrame(svgB,bx,by,bw,bh,'sob');
+  xLabels(svgB,bx,bw,by+bh,'10');
   var barW = bw/8*0.55;
   for(var i=0;i<8;i++){
     var bx2=bx+(i/7)*bw-barW/2;
@@ -364,7 +381,6 @@ function buildSalesOverviewOverlay(panel) {
   var secC = el('div', 'padding:8px;');
   secC.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'ORDER TYPE — CASH vs CARD'));
   var svgC = mk('svg', { viewBox:'0 0 660 162', width:'100%', preserveAspectRatio:'xMidYMid meet' });
-  svgC.innerHTML = '';
   var ocx=88,ocy=14,ocw=500,och=110;
   var oMax=156; // max order type total
   // Vertical grid
@@ -406,14 +422,12 @@ function buildSalesOverviewOverlay(panel) {
 // Card 2 — Sales Breakdown
 function buildSalesBreakdownBody(body) {
   var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'xMidYMid meet' });
-  svg.innerHTML = '';
-  var ditherUrl = addDither(svg, 'dither_sb');
+  addDefs(svg, 'sb');
   var cx=28, cy=10, cw=256, ch=108, maxY=65;
   function tx(i){return cx+(i/7)*cw;} function ty(v){return cy+ch-(v/maxY)*ch;}
 
-  drawGrid(svg,cx,cy,cw,ch,4);
-  drawAxes(svg,cx,cy,cw,ch);
-  drawHourLabels(svg,cx,cw,cy+ch+12,'9');
+  chartFrame(svg,cx,cy,cw,ch,'sb');
+  xLabels(svg,cx,cw,cy+ch,'9');
   // Y labels
   svg.appendChild(mk('text',{x:cx-3,y:cy+ch+2,fill:C.label,'font-size':'11','font-family':FONT,'text-anchor':'end'},'$0'));
   svg.appendChild(mk('text',{x:cx-3,y:cy+6,fill:C.label,'font-size':'11','font-family':FONT,'text-anchor':'end'},'$'+maxY));
@@ -430,7 +444,7 @@ function buildSalesBreakdownBody(body) {
     for(var i=7;i>=0;i--) d+=' L'+tx(i).toFixed(1)+','+ty(bottom[i]).toFixed(1);
     d+=' Z';
     svg.appendChild(mk('path',{d:d,fill:CAT[cat],opacity:'0.75'}));
-    svg.appendChild(mk('path',{d:d,fill:ditherUrl}));
+    svg.appendChild(mk('path',{d:d,fill:'url(#dit_sb)'}));
     // Top edge
     var tp=[];for(var i=0;i<8;i++)tp.push(tx(i).toFixed(1)+','+ty(cum[i]).toFixed(1));
     svg.appendChild(mk('polyline',{points:tp.join(' '),fill:'none',stroke:CAT[cat],'stroke-width':'1'}));
@@ -469,13 +483,11 @@ function buildSalesBreakdownOverlay(panel) {
     areaWrap.innerHTML='';
     areaWrap.appendChild(el('div','font-family:'+FONT+';font-size:12px;color:'+C.mint+';margin-bottom:4px;letter-spacing:1px;','STACKED REVENUE BY CATEGORY'));
     var svg=mk('svg',{viewBox:'0 0 660 220',width:'100%',preserveAspectRatio:'xMidYMid meet'});
-    svg.innerHTML='';
-    var ditherUrl=addDither(svg,'dither_sba');
+    addDefs(svg,'sba');
     var ax=40,ay=12,aw=600,ah=175,maxY2=65;
     function tx2(i){return ax+(i/7)*aw;}function ty2(v){return ay+ah-(v/maxY2)*ah;}
-    drawGrid(svg,ax,ay,aw,ah,4);
-    drawAxes(svg,ax,ay,aw,ah);
-    drawHourLabels(svg,ax,aw,ay+ah+14,'10');
+    chartFrame(svg,ax,ay,aw,ah,'sba');
+    xLabels(svg,ax,aw,ay+ah,'10');
     var cum2=[0,0,0,0,0,0,0,0];
     for(var s=0;s<CATS_STACK.length;s++){
       var cat=CATS_STACK[s];
@@ -487,7 +499,7 @@ function buildSalesBreakdownOverlay(panel) {
       for(var i=7;i>=0;i--)d+=' L'+tx2(i).toFixed(1)+','+ty2(bottom[i]).toFixed(1);
       d+=' Z';
       svg.appendChild(mk('path',{d:d,fill:CAT[cat],opacity:isActive?'0.75':'0.12'}));
-      if(isActive)svg.appendChild(mk('path',{d:d,fill:ditherUrl}));
+      if(isActive)svg.appendChild(mk('path',{d:d,fill:'url(#dit_sba)'}));
       var tp=[];for(var i=0;i<8;i++)tp.push(tx2(i).toFixed(1)+','+ty2(cum2[i]).toFixed(1));
       svg.appendChild(mk('polyline',{points:tp.join(' '),fill:'none',stroke:CAT[cat],'stroke-width':'1',opacity:isActive?'1':'0.3'}));
       // Clickable transparent overlay
