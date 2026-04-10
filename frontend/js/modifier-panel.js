@@ -401,12 +401,13 @@ export function ModifierPanel(container, opts) {
       var currentSel = activeItem.mandatorySelections[group.key];
       var selLabel = currentSel ? currentSel.label : '\u2014';
 
-      // Card header — tap to expand/collapse
-      var headerVariant = currentSel ? 'dark' : 'gold';
+      // Card header — tap to expand/collapse, colored like the item
       var headerLabel = group.label + ': ' + selLabel;
-      var headerPair = buildStyledButton({ label: headerLabel, variant: headerVariant, size: 'sm' });
+      var headerPair = buildStyledButton({ label: headerLabel, variant: 'dark', size: 'sm' });
       headerPair.wrap.style.width = '100%';
       headerPair.wrap.style.minWidth = '0';
+      headerPair.wrap.style.background = catColor;
+      headerPair.inner.style.color = T.bgDark;
       headerPair.inner.style.fontSize = '12px';
       headerPair.inner.style.justifyContent = 'space-between';
       headerPair.inner.style.padding = '4px 8px';
