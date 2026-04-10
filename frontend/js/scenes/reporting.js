@@ -220,7 +220,7 @@ function buildCard(title, bodyFn, overlayFn) {
   var header = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
   card.appendChild(header);
   card._header = header;
-  var body = el('div', 'flex:1;overflow:hidden;padding:4px;cursor:pointer;min-height:0;');
+  var body = el('div', 'flex:1;overflow:hidden;padding:0;cursor:pointer;min-height:0;');
   bodyFn(body);
   card.appendChild(body);
   card._body = body;
@@ -1330,18 +1330,18 @@ function buildScene(container) {
     allCk.style.gridColumn = '2'; allCk.style.gridRow = '3 / 5';
     container.appendChild(allCk);
 
-    // Right col: Server Checkouts, Labor COB%, Close Day — even thirds
+    // Right col: Server Checkouts (large), Labor COB% (compact), Close Day
     var srvCo = buildCard('SERVER CHECKOUTS', buildServerCheckoutsBody, buildServerCheckoutsOverlay);
-    srvCo.style.gridColumn = '3'; srvCo.style.gridRow = '1 / 2';
+    srvCo.style.gridColumn = '3'; srvCo.style.gridRow = '1 / 3';
     container.appendChild(srvCo);
 
     var labCob = buildCard('LABOR COB%', buildLaborCobBody, buildLaborCobOverlay);
-    labCob.style.gridColumn = '3'; labCob.style.gridRow = '2 / 4';
+    labCob.style.gridColumn = '3'; labCob.style.gridRow = '3';
     container.appendChild(labCob);
 
     var cdCard = buildCard('CLOSE DAY', function(b) { closeDayEl = b; buildCloseDayBody(b); }, null);
     cdCard._cdCard = true;
-    cdCard.style.gridColumn = '3'; cdCard.style.gridRow = '4 / 5';
+    cdCard.style.gridColumn = '3'; cdCard.style.gridRow = '4';
     container.appendChild(cdCard);
   }
 }
