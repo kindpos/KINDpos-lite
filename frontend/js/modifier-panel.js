@@ -607,7 +607,6 @@ export function ModifierPanel(container, opts) {
         pair.wrap.style.width = '100%';
         pair.wrap.style.minWidth = '0';
         pair.inner.style.fontSize = '20px';
-        pair.inner.style.fontFamily = T.fb;
         pair.wrap.style.background = a.color;
         pair.inner.style.color = a.light ? '#ffffff' : T.bgDark;
         if (isActive) {
@@ -637,7 +636,6 @@ export function ModifierPanel(container, opts) {
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '20px';
-      pair.inner.style.fontFamily = T.fb;
       pair.wrap.style.background = a.color;
       pair.inner.style.color = a.light ? '#ffffff' : T.bgDark;
       if (selected) {
