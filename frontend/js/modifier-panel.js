@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════
 
 import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
+import { showKeyboard } from './keyboard.js';
 
 // ── Standard allergen list ──
 var ALLERGENS = [
@@ -544,8 +545,18 @@ export function ModifierPanel(container, opts) {
         pair.wrap.style.width = '100%';
         pair.wrap.style.minWidth = '0';
         pair.wrap.addEventListener('pointerup', function() {
-          _allergenNoteInput = true;
-          renderPicker();
+          showKeyboard({
+            placeholder: 'Describe allergen...',
+            initialValue: activeItem.allergenNote,
+            maxLength: 60,
+            onDone: function(val) {
+              activeItem.allergenNote = val || '';
+              fireUpdate();
+              renderPicker();
+            },
+            onDismiss: function() {},
+            dismissOnDone: true,
+          });
         });
         grid.appendChild(pair.wrap);
         return;
@@ -569,52 +580,77 @@ export function ModifierPanel(container, opts) {
 
     pickerEl.appendChild(grid);
 
-    if (_allergenNoteInput) {
-      var noteArea = document.createElement('div');
-      noteArea.style.cssText = 'padding:8px 0;';
-      var input = document.createElement('input');
-      input.type = 'text';
-      input.value = activeItem.allergenNote;
-      input.placeholder = 'Describe allergen...';
-      input.style.cssText = [
-        'width:100%;box-sizing:border-box;padding:8px 12px;',
-        'font-family:' + T.fb + ';font-size:12px;',
+    // Show current allergen note if set
+    if (activeItem.allergenNote) {
+      var noteDisplay = document.createElement('div');
+      noteDisplay.style.cssText = [
+        'margin-top:6px;padding:6px 10px;',
+        'font-family:' + T.fb + ';font-size:14px;',
         'background:' + T.bgDark + ';color:' + T.textPrimary + ';',
-        'border:2px solid ' + T.red + ';border-radius:5px;outline:none;',
+        'border:2px solid ' + T.red + ';border-radius:5px;',
       ].join('');
-      input.addEventListener('input', function() {
-        activeItem.allergenNote = input.value;
-        fireUpdate();
-      });
-      noteArea.appendChild(input);
-      pickerEl.appendChild(noteArea);
-      requestAnimationFrame(function() { input.focus(); });
+      noteDisplay.textContent = '\u26A0 ' + activeItem.allergenNote;
+      pickerEl.appendChild(noteDisplay);
     }
   }
 
   // ═══ NOTE TAB ═══
   function renderNote(tab) {
     var noteArea = document.createElement('div');
-    noteArea.style.cssText = 'flex:1;display:flex;flex-direction:column;';
+    noteArea.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;padding:4px;';
 
-    var textarea = document.createElement('textarea');
-    textarea.value = activeItem.note;
-    textarea.placeholder = 'Special instructions...';
-    textarea.style.cssText = [
-      'flex:1;width:100%;box-sizing:border-box;padding:10px 14px;',
-      'font-family:' + T.fb + ';font-size:12px;',
-      'background:' + T.bgDark + ';color:' + T.textPrimary + ';',
-      'border:2px solid ' + T.mint + ';border-radius:5px;outline:none;',
-      'resize:none;',
-    ].join('');
-    textarea.addEventListener('input', function() {
-      activeItem.note = textarea.value;
-      fireUpdate();
-      renderTabs();
+    // Show current note if set
+    if (activeItem.note) {
+      var noteDisplay = document.createElement('div');
+      noteDisplay.style.cssText = [
+        'padding:10px 14px;',
+        'font-family:' + T.fb + ';font-size:16px;',
+        'background:' + T.bgDark + ';color:' + T.textPrimary + ';',
+        'border-radius:5px;',
+      ].join('');
+      noteDisplay.textContent = activeItem.note;
+      noteArea.appendChild(noteDisplay);
+    }
+
+    // Button to open keyboard
+    var editPair = buildStyledButton({
+      label: activeItem.note ? 'EDIT NOTE' : 'ADD NOTE',
+      variant: 'dark', size: 'md',
+      onClick: function() {
+        showKeyboard({
+          placeholder: 'Special instructions...',
+          initialValue: activeItem.note,
+          maxLength: 100,
+          onDone: function(val) {
+            activeItem.note = val || '';
+            fireUpdate();
+            renderTabs();
+            renderPicker();
+          },
+          onDismiss: function() {},
+          dismissOnDone: true,
+        });
+      },
     });
-    noteArea.appendChild(textarea);
+    editPair.wrap.style.width = '100%';
+    noteArea.appendChild(editPair.wrap);
+
+    // Clear button if note exists
+    if (activeItem.note) {
+      var clearPair = buildStyledButton({
+        label: 'CLEAR NOTE', variant: 'vermillion', size: 'sm',
+        onClick: function() {
+          activeItem.note = '';
+          fireUpdate();
+          renderTabs();
+          renderPicker();
+        },
+      });
+      clearPair.wrap.style.width = '100%';
+      noteArea.appendChild(clearPair.wrap);
+    }
+
     pickerEl.appendChild(noteArea);
-    requestAnimationFrame(function() { textarea.focus(); });
   }
 
   // ═══ SEND ═══
