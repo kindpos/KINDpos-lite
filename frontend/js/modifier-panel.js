@@ -218,7 +218,8 @@ export function ModifierPanel(container, opts) {
       'background:' + T.bgDark + ';',
     ].join('');
 
-    var undoPair = buildStyledButton({ label: 'UNDO / RESET', variant: 'vermillion', size: 'md', onClick: function() { onCancel(); } });
+    var undoPair = buildStyledButton({ label: '<<<', variant: 'dark', size: 'md', onClick: function() { onCancel(); } });
+    undoPair.inner.style.color = T.textPrimary;
     undoPair.wrap.style.flex = '1';
     var confirmPair = buildStyledButton({ label: 'CONFIRM', variant: 'mint', size: 'md', onClick: function() { handleSend(); } });
     confirmPair.wrap.style.flex = '2';

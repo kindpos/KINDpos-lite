@@ -572,9 +572,9 @@ function buildMain(parentEl, params) {
   bottom.style.cssText = [
     'display:grid;',
     'grid-template-columns:1fr 1fr 1fr 1fr 1fr;',
-    'grid-template-rows:auto auto;',
-    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;row-gap:16px;',
-    'position:relative;z-index:2;',
+    'grid-template-rows:40px 40px;',
+    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;row-gap:6px;',
+    'position:relative;z-index:2;flex-shrink:0;',
     'margin-top:-' + OVERLAP + 'px;',
   ].join('');
   _bottomBar = bottom;
