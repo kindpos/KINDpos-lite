@@ -87,32 +87,35 @@ export function ModifierPanel(container, opts) {
   var optionalGroups = config.optionalGroups || [];
 
   // ── Build tab list ──
-  // Order: Mandatory → Included → Optional (non-prep) → Prep → Note → Allergen
+  // Single-letter tabs: M I O P N A
+  // All mandatory groups live under the M tab as expandable cards
   var tabs = [];
-  mandatoryGroups.forEach(function(g) {
-    tabs.push({ type: 'mandatory', key: g.key, label: g.label, group: g });
-  });
-  if (includedItems.length > 0) {
-    tabs.push({ type: 'included', key: '_included', label: 'INCL' });
+  if (mandatoryGroups.length > 0) {
+    tabs.push({ type: 'mandatory', key: '_mandatory', letter: 'M', label: 'Mandatory' });
   }
-  // Optional groups: non-prep first, then prep
+  if (includedItems.length > 0) {
+    tabs.push({ type: 'included', key: '_included', letter: 'I', label: 'Included' });
+  }
+  // Optional groups: non-prep grouped under O, prep under P
+  var nonPrepGroups = [];
   var prepGroups = [];
   optionalGroups.forEach(function(g) {
-    if (g.key === 'prep') {
-      prepGroups.push(g);
-    } else {
-      tabs.push({ type: 'optional', key: g.key, label: g.label, group: g });
-    }
+    if (g.key === 'prep') { prepGroups.push(g); }
+    else { nonPrepGroups.push(g); }
   });
-  prepGroups.forEach(function(g) {
-    tabs.push({ type: 'optional', key: g.key, label: g.label, group: g });
-  });
-  tabs.push({ type: 'note', key: '_note', label: 'NOTE' });
-  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALLRG' });
+  if (nonPrepGroups.length > 0) {
+    tabs.push({ type: 'optional', key: '_optional', letter: 'O', label: 'Optional', groups: nonPrepGroups });
+  }
+  if (prepGroups.length > 0) {
+    tabs.push({ type: 'optional', key: '_prep', letter: 'P', label: 'Prep', groups: prepGroups });
+  }
+  tabs.push({ type: 'note', key: '_note', letter: 'N', label: 'Note' });
+  tabs.push({ type: 'allergen', key: '_allergen', letter: 'A', label: 'Allergen' });
 
   var activeTabKey = tabs.length > 0 ? tabs[0].key : null;
   var activeOptPrefix = 'ADD';
   var activePlacement = 'whole';
+  var expandedMandatory = null; // key of the expanded mandatory card
 
   // ── DOM refs ──
   var rootEl = null;
@@ -172,7 +175,7 @@ export function ModifierPanel(container, opts) {
     // Vertical tab bar (left side) — wider
     tabBarEl = document.createElement('div');
     tabBarEl.style.cssText = [
-      'width:120px;flex-shrink:0;display:flex;flex-direction:column;',
+      'width:50px;flex-shrink:0;display:flex;flex-direction:column;',
       'gap:4px;padding:6px;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
       'background:' + T.bgDark + ';',
@@ -236,27 +239,23 @@ export function ModifierPanel(container, opts) {
     tabs.forEach(function(tab) {
       var isActive = tab.key === activeTabKey;
 
-      // Build label
-      var labelText = tab.label;
-      if (tab.type === 'mandatory' && activeItem.mandatorySelections[tab.key]) {
-        labelText = activeItem.mandatorySelections[tab.key].label;
-      }
+      // Single-letter label; dot indicator for note
+      var letterText = tab.letter;
       if (tab.type === 'note' && activeItem.note.length > 0) {
-        labelText = 'NOTE \u2022';
+        letterText = 'N\u2022';
       }
 
       var variant = isActive ? 'mint' : 'ghost';
-      var pair = buildStyledButton({ label: labelText, variant: variant, size: 'sm' });
+      var pair = buildStyledButton({ label: letterText, variant: variant, size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '13px';
-      pair.inner.style.letterSpacing = '1px';
-      pair.inner.style.padding = '4px 6px';
-      pair.inner.style.wordBreak = 'break-word';
-      pair.inner.style.lineHeight = '1.1';
+      pair.inner.style.fontSize = '18px';
+      pair.inner.style.letterSpacing = '0';
+      pair.inner.style.padding = '6px 4px';
 
       pair.wrap.addEventListener('pointerup', function() {
         activeTabKey = tab.key;
+        expandedMandatory = null;
         if (tab.type === 'optional') activeOptPrefix = 'ADD';
         renderTabs();
         renderTopBar();
@@ -340,8 +339,9 @@ export function ModifierPanel(container, opts) {
 
     // Show active selections for optional tab
     if (tab.type === 'optional') {
+      var tabGroupKeys = (tab.groups || (tab.group ? [tab.group] : [])).map(function(g) { return g.key; });
       var groupMods = activeItem.optionalModifiers.filter(function(m) {
-        return m.groupKey === tab.group.key;
+        return tabGroupKeys.indexOf(m.groupKey) !== -1;
       });
       if (groupMods.length > 0) {
         var selList = document.createElement('div');
@@ -415,36 +415,74 @@ export function ModifierPanel(container, opts) {
 
   // ═══ MANDATORY TAB ═══
   function renderMandatory(tab) {
-    var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
+    // Show all mandatory groups as expandable cards
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
 
-    var group = tab.group;
-    var currentKey = activeItem.mandatorySelections[group.key]
-      ? activeItem.mandatorySelections[group.key].key : null;
+    mandatoryGroups.forEach(function(group) {
+      var isExpanded = expandedMandatory === group.key;
+      var currentSel = activeItem.mandatorySelections[group.key];
+      var selLabel = currentSel ? currentSel.label : '\u2014';
 
-    (group.options || []).forEach(function(opt) {
-      var isSelected = opt.key === currentKey;
-      var variant = isSelected ? 'mint' : 'dark';
-      var pair = buildStyledButton({ label: opt.label, variant: variant, size: 'sm' });
-      pair.wrap.style.width = '100%';
-      pair.wrap.style.minWidth = '0';
+      // Card header — tap to expand/collapse
+      var headerVariant = currentSel ? 'dark' : 'gold';
+      var headerLabel = group.label + ': ' + selLabel;
+      var headerPair = buildStyledButton({ label: headerLabel, variant: headerVariant, size: 'sm' });
+      headerPair.wrap.style.width = '100%';
+      headerPair.wrap.style.minWidth = '0';
+      headerPair.inner.style.fontSize = '12px';
+      headerPair.inner.style.justifyContent = 'space-between';
+      headerPair.inner.style.padding = '4px 8px';
 
-      // Price subtitle
-      if (typeof opt.price === 'number' && opt.price !== 0) {
-        var priceEl = document.createElement('div');
-        priceEl.style.cssText = 'font-size:9px;color:' + T.gold + ';margin-top:1px;';
-        priceEl.textContent = (opt.price > 0 ? '+' : '') + '$' + Math.abs(opt.price).toFixed(2);
-        pair.inner.appendChild(priceEl);
-      }
+      // Arrow indicator
+      var arrow = document.createElement('span');
+      arrow.style.cssText = 'margin-left:6px;font-size:10px;';
+      arrow.textContent = isExpanded ? '\u25B2' : '\u25BC';
+      headerPair.inner.appendChild(arrow);
 
-      pair.wrap.addEventListener('pointerup', function() {
-        onMandatoryChange(group.key, opt);
+      headerPair.wrap.addEventListener('pointerup', function() {
+        expandedMandatory = isExpanded ? null : group.key;
+        renderPicker();
       });
 
-      grid.appendChild(pair.wrap);
+      wrap.appendChild(headerPair.wrap);
+
+      // Expanded options grid
+      if (isExpanded) {
+        var grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 0;';
+
+        var currentKey = currentSel ? currentSel.key : null;
+
+        (group.options || []).forEach(function(opt) {
+          var isSelected = opt.key === currentKey;
+          var variant = isSelected ? 'mint' : 'dark';
+          var pair = buildStyledButton({ label: opt.label, variant: variant, size: 'sm' });
+          pair.wrap.style.width = '100%';
+          pair.wrap.style.minWidth = '0';
+          pair.inner.style.fontSize = '9px';
+          pair.inner.style.padding = '3px 2px';
+          pair.inner.style.lineHeight = '1.1';
+
+          if (typeof opt.price === 'number' && opt.price !== 0) {
+            var priceEl = document.createElement('div');
+            priceEl.style.cssText = 'font-size:8px;color:' + T.gold + ';margin-top:1px;';
+            priceEl.textContent = (opt.price > 0 ? '+' : '') + '$' + Math.abs(opt.price).toFixed(2);
+            pair.inner.appendChild(priceEl);
+          }
+
+          pair.wrap.addEventListener('pointerup', function() {
+            onMandatoryChange(group.key, opt);
+          });
+
+          grid.appendChild(pair.wrap);
+        });
+
+        wrap.appendChild(grid);
+      }
     });
 
-    pickerEl.appendChild(grid);
+    pickerEl.appendChild(wrap);
   }
 
   function onMandatoryChange(groupKey, newSelection) {
@@ -498,18 +536,25 @@ export function ModifierPanel(container, opts) {
 
   // ═══ OPTIONAL TAB ═══
   function renderOptional(tab) {
-    var group = tab.group;
+    var groups = tab.groups || (tab.group ? [tab.group] : []);
     var grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
 
     var mandKey = _currentMandatoryKey();
 
-    // Sort options alphabetically
-    var sorted = (group.options || []).slice().sort(function(a, b) {
-      return a.label.localeCompare(b.label);
+    // Merge all groups' options, tag each with its groupKey, sort alphabetically
+    var allOpts = [];
+    groups.forEach(function(g) {
+      (g.options || []).forEach(function(opt) {
+        allOpts.push({ opt: opt, groupKey: g.key });
+      });
+    });
+    allOpts.sort(function(a, b) {
+      return a.opt.label.localeCompare(b.opt.label);
     });
 
-    sorted.forEach(function(opt) {
+    allOpts.forEach(function(entry) {
+      var opt = entry.opt;
       var price = _resolvePrice(opt, mandKey);
       var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'sm' });
       pair.wrap.style.width = '100%';
@@ -532,7 +577,7 @@ export function ModifierPanel(container, opts) {
       }
 
       pair.wrap.addEventListener('pointerup', function() {
-        applyOptionalMod(group.key, opt, mandKey);
+        applyOptionalMod(entry.groupKey, opt, mandKey);
       });
 
       grid.appendChild(pair.wrap);
