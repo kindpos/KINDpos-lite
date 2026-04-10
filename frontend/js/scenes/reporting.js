@@ -1221,43 +1221,39 @@ function buildLaborCobOverlay(panel) {
   secA.appendChild(svgA);
   panel.appendChild(secA);
 
-  // Chart B — Labor Cost by Employee
-  var secB = el('div', 'padding:8px;overflow-x:auto;');
-  secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'LABOR COST BY EMPLOYEE'));
-  var svgB = mk('svg', { viewBox: '0 0 660 180', width: '900px', preserveAspectRatio: 'xMidYMid meet' });
-  addDefs(svgB, 'lcb');
-  var ebx = 100, eby = 14, ebw = 480, ebh = 120;
-  var empMax = 63;
-  // Vertical grid
-  for (var g = 1; g <= 4; g++) {
-    var gx = ebx + (g / 4) * ebw;
-    svgB.appendChild(mk('line', { x1: gx, y1: eby, x2: gx, y2: eby + ebh, stroke: C.grid, 'stroke-width': '1' }));
-    svgB.appendChild(mk('text', { x: gx, y: eby - 3, fill: C.label, 'font-size': '14', 'font-family': FONT, 'text-anchor': 'middle' }, fmt(empMax * g / 4)));
-  }
-  var eRowH = ebh / D_EMP.length;
+  // Employee Table — clean HTML instead of complex SVG
+  var secB = el('div', 'padding:8px;');
+  secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:8px;letter-spacing:1px;', 'LABOR COST BY EMPLOYEE'));
+
+  // Header row
+  var tblHdr = el('div', 'display:flex;padding:6px 0;font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';font-weight:bold;border-bottom:2px solid ' + C.mint + ';white-space:nowrap;letter-spacing:1px;');
+  tblHdr.innerHTML = '<span style="flex:2">NAME</span><span style="flex:1;text-align:center">HOURS</span><span style="flex:1;text-align:right">COST</span><span style="flex:1;text-align:right">COB%</span><span style="flex:1;text-align:right">SHARE</span>';
+  secB.appendChild(tblHdr);
+
+  // Employee rows
   for (var i = 0; i < D_EMP.length; i++) {
     var emp = D_EMP[i];
-    var ey = eby + i * eRowH + 4;
-    var eH = eRowH - 10;
-    var eW = (emp.cost / empMax) * ebw;
-    // Name + role label
-    svgB.appendChild(mk('text', { x: ebx - 4, y: ey + eH / 2 + 2, fill: emp.color, 'font-size': '16', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'end' }, emp.name));
-    svgB.appendChild(mk('text', { x: ebx - 4, y: ey + eH / 2 + 12, fill: C.dim, 'font-size': '14', 'font-family': FONT, 'text-anchor': 'end' }, emp.role));
-    // Bar
-    svgB.appendChild(mk('rect', { x: ebx, y: ey, width: eW, height: eH, fill: emp.color }));
-    svgB.appendChild(mk('rect', { x: ebx, y: ey, width: eW, height: eH, fill: 'url(#dit_lcb)' }));
-    // Inside label
-    if (eW > 120) {
-      svgB.appendChild(mk('text', { x: ebx + 6, y: ey + eH / 2 + 3, fill: C.dark, 'font-size': '14', 'font-weight': 'bold', 'font-family': FONT }, fmt(emp.cost) + '  \u00B7  ' + emp.hours + 'hr  \u00B7  ' + emp.share.toFixed(0) + '% of labor'));
-    }
-    // After bar
-    svgB.appendChild(mk('text', { x: ebx + eW + 6, y: ey + eH / 2 + 3, fill: C.label, 'font-size': '14', 'font-family': FONT }, 'COB: ' + emp.cob + '%  ' + emp.sched + '  $' + emp.rate + '/hr'));
+    if (emp.cost === 0) continue; // skip off-shift employees
+    var row = el('div', 'display:flex;padding:8px 0;font-family:' + FONT + ';font-size:20px;color:#ffffff;border-bottom:1px solid #2a2a2a;white-space:nowrap;align-items:center;');
+    row.innerHTML =
+      '<span style="flex:2;color:' + emp.color + ';font-weight:bold">' + emp.name + ' <span style="font-size:18px;color:#aaaaaa">' + emp.role + '</span></span>' +
+      '<span style="flex:1;text-align:center">' + emp.hours + 'hr</span>' +
+      '<span style="flex:1;text-align:right;color:' + C.gold + ';font-weight:bold">' + fmt(emp.cost) + '</span>' +
+      '<span style="flex:1;text-align:right">' + emp.cob + '%</span>' +
+      '<span style="flex:1;text-align:right">' + emp.share.toFixed(0) + '%</span>';
+    secB.appendChild(row);
   }
-  // Total bar
-  var totalBarY = eby + ebh + 6;
-  svgB.appendChild(mk('rect', { x: ebx, y: totalBarY, width: ebw, height: 14, fill: C.gold }));
-  svgB.appendChild(mk('text', { x: ebx + 6, y: totalBarY + 11, fill: C.dark, 'font-size': '14', 'font-weight': 'bold', 'font-family': FONT }, fmt(totalLab) + '  \u00B7  COB ' + cobPct.toFixed(1) + '%'));
-  secB.appendChild(svgB);
+
+  // Total row
+  var totalRow = el('div', 'display:flex;padding:8px 0;font-family:' + FONT + ';font-size:20px;color:' + C.gold + ';font-weight:bold;border-top:2px solid ' + C.gold + ';white-space:nowrap;');
+  totalRow.innerHTML =
+    '<span style="flex:2">TOTAL</span>' +
+    '<span style="flex:1;text-align:center">' + D_EMP.reduce(function(s,e){return s+e.hours;},0) + 'hr</span>' +
+    '<span style="flex:1;text-align:right">' + fmt(totalLab) + '</span>' +
+    '<span style="flex:1;text-align:right">' + cobPct.toFixed(1) + '%</span>' +
+    '<span style="flex:1;text-align:right">100%</span>';
+  secB.appendChild(totalRow);
+
   panel.appendChild(secB);
 }
 
