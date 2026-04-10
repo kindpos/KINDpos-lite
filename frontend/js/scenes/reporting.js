@@ -222,13 +222,13 @@ function buildCard(title, bodyFn, overlayFn) {
   var header = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
   card.appendChild(header);
   card._header = header;
-  var body = el('div', 'flex:1;overflow:hidden;padding:0;cursor:pointer;min-height:0;display:flex;flex-direction:column;');
+  var body = el('div', 'flex:1;overflow:hidden;padding:0;min-height:0;display:flex;flex-direction:column;');
   bodyFn(body);
   card.appendChild(body);
   card._body = body;
   if (overlayFn) {
-    body.addEventListener('click', function(e) { e.stopPropagation(); openOverlay(overlayFn); });
-    body.style.cursor = 'pointer';
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', function() { openOverlay(overlayFn); });
   }
   return card;
 }
