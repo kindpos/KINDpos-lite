@@ -605,10 +605,11 @@ export function ModifierPanel(container, opts) {
         pair.wrap.style.width = '100%';
         pair.wrap.style.minWidth = '0';
         pair.inner.style.fontSize = '11px';
-        pair.inner.style.color = a.color;
+        pair.wrap.style.background = a.color;
+        pair.inner.style.color = T.bgDark;
         if (isActive) {
-          pair.wrap.style.background = a.color;
-          pair.inner.style.color = T.bgDark;
+          pair.wrap.style.outline = '3px solid ' + T.numpadChassis;
+          pair.wrap.style.outlineOffset = '-3px';
         }
         pair.wrap.addEventListener('pointerup', function() {
           showKeyboard({
@@ -633,10 +634,11 @@ export function ModifierPanel(container, opts) {
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '11px';
-      pair.inner.style.color = a.color;
+      pair.wrap.style.background = a.color;
+      pair.inner.style.color = T.bgDark;
       if (selected) {
-        pair.wrap.style.background = a.color;
-        pair.inner.style.color = T.bgDark;
+        pair.wrap.style.outline = '3px solid ' + T.numpadChassis;
+        pair.wrap.style.outlineOffset = '-3px';
       }
 
       pair.wrap.addEventListener('pointerup', function() {
