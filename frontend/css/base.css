@@ -69,16 +69,22 @@ html, body {
   gap: 8px;
 }
 
-/* ── Layer containers ────────────────────────────── */
+/* ── Layer containers ─────────────────────────────────
+   Geometry (top, left, width, height, z-index) applied
+   by SceneManager.init() from tokens — only structural
+   CSS lives here.
+   ──────────────────────────────────────────────────── */
+#order-summary {
+  position: absolute;
+  pointer-events: auto;
+  display: none;
+}
+
 #layer-working,
 #layer-transactional,
 #layer-interrupt,
 #layer-gate {
   position: absolute;
-  top: 52px;
-  left: 0;
-  width: 100%;
-  height: calc(100% - 52px);
   pointer-events: none;
 }
 
@@ -118,6 +124,7 @@ html, body {
 
 #ticket-list::-webkit-scrollbar,
 #receipt-scroll::-webkit-scrollbar,
-#closeday-right::-webkit-scrollbar {
+#closeday-right::-webkit-scrollbar,
+#order-summary::-webkit-scrollbar {
   display: none;
 }

@@ -8,6 +8,7 @@ import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { OrderSummary } from '../order-summary.js';
 import { HexNav } from '../hex-nav.js';
 import { buildNumpad } from '../numpad.js';
 import { showKeyboard } from '../keyboard.js';
@@ -52,7 +53,6 @@ function _landingScene(roles) {
 
 var PAD      = 16;
 var GAP      = 16;
-var TICKET_W = 280;
 var BTN_H    = 50;
 var OVERLAP  = 18;
 
@@ -341,9 +341,10 @@ SceneManager.register({
       'box-sizing:border-box;',
     ].join('');
 
-    var ticketPanel = buildTicket(container);
-    var mainArea    = buildMain(container, params);
-    container.appendChild(ticketPanel);
+    // Show persistent order summary panel (left column)
+    OrderSummary.show({ checkId: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 });
+
+    var mainArea = buildMain(container, params);
     container.appendChild(mainArea);
 
     if (!_menuFetched) fetchMenuFromAPI();
@@ -377,78 +378,6 @@ function computeTotals() {
   return { counts: counts, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
 }
 
-// ── TICKET PANEL ──────────────────────────────────
-function buildTicket(parentEl) {
-  var panel = document.createElement('div');
-  panel.style.cssText = [
-    'width:' + TICKET_W + 'px;flex-shrink:0;',
-    'display:flex;flex-direction:column;',
-    'padding-right:' + GAP + 'px;',
-  ].join('');
-
-  // SAVE / RECALL
-  var topRow = document.createElement('div');
-  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;';
-
-  saveBtn = buildButton('SAVE', {
-    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
-    onTap: function() { handleSave(); },
-  });
-
-  var recallBtnEl = buildButton('RECALL', {
-    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
-    onTap: function() { handleRecall(); },
-  });
-
-  topRow.appendChild(saveBtn);
-  topRow.appendChild(recallBtnEl);
-
-  // Item list
-  var itemList = document.createElement('div');
-  itemList.id = 'ticket-list';
-  itemList.style.cssText = 'flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;-ms-overflow-style:none;';
-  panel.appendChild(itemList);
-
-  // Summary + Totals — combined card with sunken bevel
-  var summaryTotals = document.createElement('div');
-  summaryTotals.style.cssText = 'background:' + T.bgDark + ';padding:4px;flex-shrink:0;';
-  applySunkenStyle(summaryTotals);
-  summaryTotals.appendChild(buildSummaryRow('Subtotal', '$0.00', 'ticket-subtotal'));
-  summaryTotals.appendChild(buildSummaryRow('Tax',      '$0.00', 'ticket-tax'));
-  var mintSep = document.createElement('div');
-  mintSep.style.cssText = 'height:2px;background:' + T.mint + ';margin:2px 0;';
-  summaryTotals.appendChild(mintSep);
-  summaryTotals.appendChild(buildTotalRow('Total', '$0.00', 'ticket-total'));
-  summaryTotals.appendChild(buildTotalRow('Cash',  '$0.00', 'ticket-cash'));
-  panel.appendChild(summaryTotals);
-
-  // SAVE / RECALL below totals
-  panel.appendChild(topRow);
-
-  return panel;
-}
-
-function buildSummaryRow(label, value, id) {
-  var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';line-height:0.92;';
-  var valEl = document.createElement('span');
-  if (id) valEl.id = id;
-  valEl.textContent = value;
-  row.innerHTML = '<span>' + label + '</span>';
-  row.appendChild(valEl);
-  return row;
-}
-
-function buildTotalRow(label, value, id) {
-  var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;font-weight:bold;color:' + T.gold + ';line-height:0.92;';
-  var valEl = document.createElement('span');
-  if (id) valEl.id = id;
-  valEl.textContent = value;
-  row.innerHTML = '<span>' + label + '</span>';
-  row.appendChild(valEl);
-  return row;
-}
 
 // ── PREFIX CARD ───────────────────────────────────
 function buildPrefixCard() {
@@ -556,6 +485,22 @@ function buildMain(parentEl, params) {
   var main = document.createElement('div');
   main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
   _mainArea = main;
+
+  // SAVE / RECALL toolbar
+  var topRow = document.createElement('div');
+  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;margin-bottom:4px;';
+
+  saveBtn = buildButton('SAVE', {
+    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
+    onTap: function() { handleSave(); },
+  });
+  var recallBtnEl = buildButton('RECALL', {
+    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
+    onTap: function() { handleRecall(); },
+  });
+  topRow.appendChild(saveBtn);
+  topRow.appendChild(recallBtnEl);
+  main.appendChild(topRow);
 
   var canvas = document.createElement('div');
   canvas.id = 'hex-canvas';
@@ -1801,14 +1746,15 @@ function renderTicket() {
     totals.cardTotal = Math.round((totals.subtotal + totals.tax) * 100) / 100;
     totals.cashPrice = Math.round(totals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
   }
-  var subEl  = document.getElementById('ticket-subtotal');
-  var taxEl  = document.getElementById('ticket-tax');
-  var totEl  = document.getElementById('ticket-total');
-  var cashEl = document.getElementById('ticket-cash');
-  if (subEl)  subEl.textContent  = '$' + totals.subtotal.toFixed(2);
-  if (taxEl)  taxEl.textContent  = '$' + totals.tax.toFixed(2);
-  if (totEl)  totEl.textContent  = '$' + totals.cardTotal.toFixed(2);
-  if (cashEl) cashEl.textContent = '$' + totals.cashPrice.toFixed(2);
+  // Update persistent order summary panel with current totals (skip items — we render interactive ones above)
+  OrderSummary.update({
+    checkId: currentCheckNumber || '',
+    skipItems: true,
+    subtotal: totals.subtotal,
+    tax: totals.tax,
+    cardTotal: totals.cardTotal,
+    cashPrice: totals.cashPrice,
+  });
 }
 
 // ── SEPARATOR + MOD ROW helpers ───────────────────
@@ -1992,6 +1938,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
         }).then(function() {
           currentOrderId = null;
           currentCheckNumber = null;
+          OrderSummary.hide();
           SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
         }).catch(function(err) {
           console.error('[KINDpos] Void API error:', err);
@@ -2004,6 +1951,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
       } else if (isFullVoid) {
         currentOrderId = null;
         currentCheckNumber = null;
+        OrderSummary.hide();
         SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
       } else {
         var hadSent = targets.some(function(t) { return t.sent; });
@@ -2311,6 +2259,7 @@ function handleClose() {
     });
     showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
   }
+  OrderSummary.hide();
   SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
 }
 
