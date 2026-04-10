@@ -123,6 +123,7 @@ export function ModifierPanel(container, opts) {
   var tabBarEl = null;
   var topBarEl = null;
   var pickerEl = null;
+  var summaryEl = null;
   var _allergenNoteInput = null;
 
   // ── Bevel helpers (match clock-in card pattern) ──
@@ -169,11 +170,11 @@ export function ModifierPanel(container, opts) {
     card.style.clipPath = chamfer(10);
     rootEl.appendChild(card);
 
-    // ── Main body: vertical tabs left | content right ──
+    // ── Main body: tabs | content | summary ──
     var body = document.createElement('div');
     body.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
 
-    // Vertical tab bar (left side) — wider
+    // Vertical tab bar (left)
     tabBarEl = document.createElement('div');
     tabBarEl.style.cssText = [
       'width:50px;flex-shrink:0;display:flex;flex-direction:column;',
@@ -184,9 +185,9 @@ export function ModifierPanel(container, opts) {
     ].join('');
     body.appendChild(tabBarEl);
 
-    // Right content area: top bar + picker
-    var rightArea = document.createElement('div');
-    rightArea.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    // Center content area: top bar + picker
+    var centerArea = document.createElement('div');
+    centerArea.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
 
     // Top bar (prefixes + placement)
     topBarEl = document.createElement('div');
@@ -196,7 +197,7 @@ export function ModifierPanel(container, opts) {
       'background:' + T.bgDark + ';',
       'border-bottom:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
     ].join('');
-    rightArea.appendChild(topBarEl);
+    centerArea.appendChild(topBarEl);
 
     // Picker area
     pickerEl = document.createElement('div');
@@ -205,9 +206,21 @@ export function ModifierPanel(container, opts) {
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
       'padding:6px;',
     ].join('');
-    rightArea.appendChild(pickerEl);
+    centerArea.appendChild(pickerEl);
 
-    body.appendChild(rightArea);
+    body.appendChild(centerArea);
+
+    // Summary card (right)
+    summaryEl = document.createElement('div');
+    summaryEl.style.cssText = [
+      'width:200px;flex-shrink:0;display:flex;flex-direction:column;',
+      'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
+      'background:' + T.bgDark + ';',
+      'border-left:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'padding:6px;',
+    ].join('');
+    body.appendChild(summaryEl);
+
     card.appendChild(body);
 
     // ── Bottom action bar: CANCEL + SEND ──
@@ -341,48 +354,6 @@ export function ModifierPanel(container, opts) {
     });
 
     topBarEl.appendChild(placeWrap.wrap);
-
-    // Show active selections for optional tab
-    if (tab.type === 'optional') {
-      var tabGroupKeys = (tab.groups || (tab.group ? [tab.group] : [])).map(function(g) { return g.key; });
-      var groupMods = activeItem.optionalModifiers.filter(function(m) {
-        return tabGroupKeys.indexOf(m.groupKey) !== -1;
-      });
-      if (groupMods.length > 0) {
-        var selList = document.createElement('div');
-        selList.style.cssText = [
-          'max-height:60px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-          'background:' + T.bgDark + ';padding:2px 6px;border-radius:5px;',
-        ].join('');
-
-        groupMods.forEach(function(mod) {
-          var row = document.createElement('div');
-          row.style.cssText = [
-            'display:flex;justify-content:space-between;align-items:center;',
-            'padding:1px 0;cursor:pointer;',
-            'font-family:' + T.fb + ';font-size:14px;color:' + T.textPrimary + ';',
-          ].join('');
-
-          var label = document.createElement('span');
-          label.textContent = mod.prefix + ' ' + mod.label;
-          row.appendChild(label);
-
-          var right = document.createElement('span');
-          right.style.cssText = 'color:' + T.gold + ';';
-          right.textContent = mod.price > 0 ? '+$' + mod.price.toFixed(2) : '';
-          row.appendChild(right);
-
-          row.addEventListener('pointerup', function() {
-            activeItem.optionalModifiers.splice(activeItem.optionalModifiers.indexOf(mod), 1);
-            fireUpdate();
-            renderTopBar();
-          });
-
-          selList.appendChild(row);
-        });
-        topBarEl.appendChild(selList);
-      }
-    }
 
     // Info line for mandatory tabs
     if (tab.type === 'mandatory') {
@@ -781,6 +752,135 @@ export function ModifierPanel(container, opts) {
 
   function fireUpdate() {
     onUpdate(buildOutputItem());
+    renderSummary();
+  }
+
+  // ═══ SUMMARY CARD (right panel) ═══
+  function renderSummary() {
+    if (!summaryEl) return;
+    summaryEl.innerHTML = '';
+
+    var output = buildOutputItem();
+
+    // Item name + price header
+    var header = document.createElement('div');
+    header.style.cssText = [
+      'font-family:' + T.fb + ';font-size:14px;font-weight:bold;',
+      'color:' + T.mint + ';padding-bottom:4px;',
+      'border-bottom:2px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'margin-bottom:4px;',
+    ].join('');
+    header.textContent = output.itemLabel;
+    summaryEl.appendChild(header);
+
+    var priceRow = document.createElement('div');
+    priceRow.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.gold + ';margin-bottom:6px;';
+    var total = output.basePrice + output.mods.reduce(function(s, m) { return s + m.price; }, 0);
+    priceRow.textContent = '$' + total.toFixed(2);
+    summaryEl.appendChild(priceRow);
+
+    // Mandatory selections (not removable)
+    mandatoryGroups.forEach(function(g) {
+      var sel = activeItem.mandatorySelections[g.key];
+      if (sel) {
+        var row = document.createElement('div');
+        row.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.textSecondary + ';padding:1px 0;';
+        row.textContent = g.label + ': ' + sel.label;
+        if (sel.price) {
+          var pEl = document.createElement('span');
+          pEl.style.color = T.gold;
+          pEl.textContent = ' $' + sel.price.toFixed(2);
+          row.appendChild(pEl);
+        }
+        summaryEl.appendChild(row);
+      }
+    });
+
+    // Included removals
+    activeItem.includedRemovals.forEach(function(rid) {
+      var incl = includedItems.find(function(i) { return i.id === rid; });
+      if (incl) {
+        _appendModLine('NO ' + incl.label, 0, function() {
+          activeItem.includedRemovals.splice(activeItem.includedRemovals.indexOf(rid), 1);
+          fireUpdate();
+          renderPicker();
+        });
+      }
+    });
+
+    // Optional modifiers (removable)
+    activeItem.optionalModifiers.forEach(function(mod, idx) {
+      var displayPrice = mod.prefix === 'NO' ? 0 : mod.price;
+      _appendModLine(mod.prefix + ' ' + mod.label, displayPrice, function() {
+        activeItem.optionalModifiers.splice(idx, 1);
+        fireUpdate();
+        renderTopBar();
+        renderPicker();
+      });
+    });
+
+    // Allergens (removable)
+    activeItem.allergens.forEach(function(aId, idx) {
+      var a = ALLERGENS.find(function(x) { return x.id === aId; });
+      if (a) {
+        _appendModLine('\u26A0 ' + a.label, 0, function() {
+          activeItem.allergens.splice(idx, 1);
+          fireUpdate();
+          renderPicker();
+        });
+      }
+    });
+
+    if (activeItem.allergenNote) {
+      _appendModLine('\u26A0 ' + activeItem.allergenNote, 0, function() {
+        activeItem.allergenNote = '';
+        fireUpdate();
+        renderPicker();
+      });
+    }
+
+    // Note (removable)
+    if (activeItem.note) {
+      _appendModLine('\uD83D\uDCDD ' + activeItem.note, 0, function() {
+        activeItem.note = '';
+        fireUpdate();
+        renderTabs();
+        renderPicker();
+      });
+    }
+  }
+
+  function _appendModLine(text, price, onRemove) {
+    var row = document.createElement('div');
+    row.style.cssText = [
+      'display:flex;align-items:center;gap:4px;',
+      'padding:2px 0;',
+      'font-family:' + T.fb + ';font-size:11px;color:' + T.textPrimary + ';',
+      'border-bottom:1px solid ' + T.border + ';',
+    ].join('');
+
+    var label = document.createElement('span');
+    label.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    label.textContent = text;
+    row.appendChild(label);
+
+    if (price > 0) {
+      var priceEl = document.createElement('span');
+      priceEl.style.cssText = 'flex-shrink:0;color:' + T.gold + ';';
+      priceEl.textContent = '+$' + price.toFixed(2);
+      row.appendChild(priceEl);
+    }
+
+    var xBtn = document.createElement('span');
+    xBtn.style.cssText = 'flex-shrink:0;color:' + T.red + ';cursor:pointer;font-size:13px;padding:0 2px;';
+    xBtn.textContent = '\u2715';
+    xBtn.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      onRemove();
+    });
+    row.appendChild(xBtn);
+
+    summaryEl.appendChild(row);
   }
 
   function buildOutputItem() {
