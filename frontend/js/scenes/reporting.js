@@ -77,8 +77,8 @@ var D_CHECKS = [
   {id:'CHK-048',srv:'JAMIE',hr:'12P',tbl:null,type:'TO-GO',total:19.25,status:'CLOSED',items:['Daily Special x1','Soda x1']},
 ];
 var D_HEAT = {
-  servers:['ALEX','JAMIE'],
-  data:{ALEX:[0,3,4,2,2,2,1,1],JAMIE:[2,2,3,2,1,2,2,1]},
+  servers:['Alex','Maria','Jake'],
+  data:{Alex:[0,1,2,3,1,1,2,3,2],Maria:[0,0,1,2,2,0,1,2,3],Jake:[0,1,1,1,0,1,0,1,1]},
 };
 
 // ── Module State ───────────────────────────────────
@@ -608,6 +608,17 @@ function getCurrentHourIdx() {
   return Math.min(idx, 7);
 }
 
+function heatColor(val, maxVal) {
+  // 0=dark, scale through green→yellow-green→yellow→orange as intensity rises
+  if (val === 0) return { bg:'#1a2e1a', fg:'#333' };
+  var t = val / maxVal;
+  if (t <= 0.25) return { bg:'#2d6b2d', fg:'#1a1a1a' };       // dark green
+  if (t <= 0.50) return { bg:'#4a9e3a', fg:'#1a1a1a' };       // green
+  if (t <= 0.75) return { bg:'#8cc63f', fg:'#1a1a1a' };       // yellow-green
+  if (t <= 0.90) return { bg:'#d4e34a', fg:'#1a1a1a' };       // yellow
+  return { bg:'#f5a623', fg:'#1a1a1a' };                       // orange (slammed)
+}
+
 function buildHeatmapBody(body) {
   var servers = D_HEAT.servers;
   var data = D_HEAT.data;
@@ -627,24 +638,26 @@ function buildHeatmapBody(body) {
     for (var i = start; i <= Math.min(start + 2, 7); i++) visibleHours.push(i);
   }
 
-  var wrap = el('div', 'display:flex;flex-direction:column;gap:2px;height:100%;');
+  var wrap = el('div', 'display:flex;flex-direction:column;gap:1px;height:100%;background:#111;');
 
   // Hour header row
-  var hdrRow = el('div', 'display:flex;gap:2px;padding-left:44px;');
+  var hdrRow = el('div', 'display:flex;gap:1px;padding-left:48px;');
   for (var h = 0; h < visibleHours.length; h++) {
-    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:10px;color:#ffffff;letter-spacing:1px;', HOURS[visibleHours[h]]));
+    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px;padding:2px 0;', HOURS[visibleHours[h]]));
   }
   wrap.appendChild(hdrRow);
 
+  // Server rows
   for (var s = 0; s < servers.length; s++) {
-    var row = el('div', 'display:flex;gap:2px;flex:1;align-items:stretch;');
-    row.appendChild(el('div', 'width:42px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:10px;color:' + C.mint + ';font-weight:bold;letter-spacing:1px;', servers[s]));
+    var row = el('div', 'display:flex;gap:1px;flex:1;align-items:stretch;');
+    var nameEl = el('div', 'width:46px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:9px;font-style:italic;color:' + C.mint + ';');
+    nameEl.textContent = servers[s];
+    row.appendChild(nameEl);
     for (var h = 0; h < visibleHours.length; h++) {
       (function(srv, hrIdx, val) {
-        var intensity = val / maxVal;
-        var bg = 'rgba(135,247,156,' + (intensity * 0.8 + 0.05).toFixed(2) + ')';
+        var hc = heatColor(val, maxVal);
         var isActive = hmFilter && hmFilter.server === srv && hmFilter.hour === HOURS[hrIdx];
-        var cell = el('div', 'flex:1;background:' + bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:12px;color:' + C.dark + ';font-weight:bold;' + (isActive ? 'outline:2px solid ' + C.lime + ';outline-offset:-2px;' : ''));
+        var cell = el('div', 'flex:1;background:' + hc.bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:11px;color:' + hc.fg + ';font-weight:bold;' + (isActive ? 'outline:2px solid #fff;outline-offset:-2px;' : ''));
         if (val > 0) cell.textContent = val;
         cell.addEventListener('pointerup', function(e) {
           e.stopPropagation();
@@ -661,6 +674,27 @@ function buildHeatmapBody(body) {
     }
     wrap.appendChild(row);
   }
+
+  // Legend strip (only in expanded mode)
+  if (hmExpanded) {
+    var leg = el('div', 'display:flex;gap:6px;align-items:center;padding:3px 48px 2px;font-family:' + FONT + ';font-size:7px;flex-shrink:0;');
+    var tiers = [
+      { bg:'#1a2e1a', label:'0' },
+      { bg:'#2d6b2d', label:'1' },
+      { bg:'#4a9e3a', label:'2' },
+      { bg:'#8cc63f', label:'3' },
+      { bg:'#d4e34a', label:'4' },
+      { bg:'#f5a623', label:'5+' },
+    ];
+    for (var t = 0; t < tiers.length; t++) {
+      leg.appendChild(el('span', 'display:inline-block;width:10px;height:8px;background:' + tiers[t].bg + ';'));
+      leg.appendChild(el('span', 'color:rgba(255,255,255,0.4);margin-right:4px;', tiers[t].label));
+    }
+    leg.appendChild(el('span', 'color:' + C.verm + ';margin-left:8px;', '\u25A0 OPEN'));
+    leg.appendChild(el('span', 'color:rgba(255,255,255,0.35);margin-left:4px;', '\u2014 TAP CELL TO FILTER \u25BC'));
+    wrap.appendChild(leg);
+  }
+
   body.appendChild(wrap);
 }
 
@@ -1241,7 +1275,7 @@ function buildScene(container) {
     hmCard.style.gridColumn = '1 / -1';
     hmCard.style.gridRow = '1';
     hmCard._header.style.cursor = 'pointer';
-    hmCard._header.textContent = 'SERVER LOAD HEATMAP \u25BC';
+    hmCard._header.innerHTML = 'SERVER LOAD \u2014 FULL DAY <span style="float:right;font-size:10px;opacity:0.6">\u25C0\u25C0 TAP TO COLLAPSE</span>';
     hmCard._header.addEventListener('pointerup', function(e) { e.stopPropagation(); hmExpanded = false; buildScene(container); });
     container.appendChild(hmCard);
 
