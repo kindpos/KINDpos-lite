@@ -8,6 +8,7 @@ import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { buildNumpad } from '../numpad.js';
 
 // ── SVG Namespace ────────────────────────────────
 var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -44,6 +45,9 @@ var _salesByCategory = [];
 var _tableStats = null;
 var _checkoutStatus = null;
 var _tipsFilter = 'unadjusted'; // 'all' | 'adjusted' | 'unadjusted'
+var _tipsNumpadSide = null;      // side numpad panel in tips drilldown
+var _tipsContentPanel = null;    // tips drilldown content panel ref
+var _tipsMainRow = null;         // tips drilldown flex row ref
 
 // DOM refs for partial re-renders
 var _centerGrid = null;
@@ -1034,6 +1038,280 @@ function buildRightColumn(emp) {
 }
 
 // ═══════════════════════════════════════════════════
+//  TIPS DRILL-DOWN — Manager-style layout
+//  Stat strip | Stacked check cards | Side numpad
+// ═══════════════════════════════════════════════════
+
+function buildTipsDrillContent(content, emp) {
+  // Override content to use flex row for side numpad support
+  content.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:0;';
+
+  // Stat strip
+  var allChecks = getClosedChecks();
+  var unadjChecks = allChecks.filter(function(c) { return !c.adjusted; });
+  var adjChecks = allChecks.filter(function(c) { return c.adjusted; });
+  var totalTips = adjChecks.reduce(function(s, c) { return s + (c.tip || 0); }, 0);
+
+  var strip = document.createElement('div');
+  strip.style.cssText = 'display:flex;gap:2px;padding:8px;flex-shrink:0;';
+  var stripItems = [
+    { label: 'UNADJ TIPS', value: '' + unadjChecks.length, color: T.mint },
+    { label: 'TOTAL TIPS', value: fmt(totalTips), color: T.gold },
+  ];
+  for (var si = 0; si < stripItems.length; si++) {
+    var box = document.createElement('div');
+    box.style.cssText = 'flex:1;background:' + T.bgDark + ';padding:6px 4px;text-align:center;overflow:hidden;min-width:0;';
+    var sLbl = document.createElement('div');
+    sLbl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';letter-spacing:1px;margin-bottom:2px;white-space:nowrap;';
+    sLbl.textContent = stripItems[si].label;
+    box.appendChild(sLbl);
+    var sVal = document.createElement('div');
+    sVal.style.cssText = 'font-family:' + T.fb + ';font-size:24px;font-weight:bold;color:' + stripItems[si].color + ';white-space:nowrap;';
+    sVal.textContent = stripItems[si].value;
+    box.appendChild(sVal);
+    strip.appendChild(box);
+  }
+  strip.dataset.tipsstrip = '1';
+  content.appendChild(strip);
+
+  // Main row: scrollable cards + side numpad
+  _tipsMainRow = document.createElement('div');
+  _tipsMainRow.style.cssText = 'display:flex;gap:12px;flex:1;min-height:0;overflow:hidden;transition:all 0.3s ease;';
+
+  _tipsContentPanel = document.createElement('div');
+  _tipsContentPanel.style.cssText = 'flex:1;overflow-y:auto;scrollbar-width:none;padding:8px;transition:max-width 0.3s ease,flex 0.3s ease;';
+
+  function renderTipsCards() {
+    _tipsContentPanel.innerHTML = '';
+
+    var allClosed = getClosedChecks();
+    var unadj = allClosed.filter(function(c) { return !c.adjusted; });
+    var adj = allClosed.filter(function(c) { return c.adjusted; });
+
+    // Unadjusted section
+    if (unadj.length > 0) {
+      var uLabel = document.createElement('div');
+      uLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';letter-spacing:2px;margin-bottom:6px;';
+      uLabel.textContent = 'UNADJUSTED TIPS';
+      _tipsContentPanel.appendChild(uLabel);
+
+      for (var i = 0; i < unadj.length; i++) {
+        _tipsContentPanel.appendChild(buildTipCheckCard(unadj[i], emp, renderTipsCards));
+      }
+
+      // Adjust Remaining to $0.00
+      var zeroBtn = document.createElement('div');
+      zeroBtn.style.cssText = 'font-family:' + T.fb + ';font-size:18px;letter-spacing:1px;text-align:center;padding:8px;cursor:pointer;margin-bottom:8px;' +
+        'color:' + T.gold + ';border:2px solid ' + T.gold + ';background:#1a1400;';
+      zeroBtn.textContent = 'ADJUST REMAINING TO $0.00';
+      zeroBtn.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        var empId = emp.id || emp.employeeId;
+        var zeroUrl = '/api/v1/payments/zero-unadjusted';
+        if (empId) zeroUrl += '?server_id=' + encodeURIComponent(empId);
+        fetch(zeroUrl, { method: 'POST' })
+          .then(function() {
+            showToast('Remaining tips set to $0.00', { bg: T.gold, duration: 2000 });
+            refreshData(emp);
+          })
+          .catch(function() { showToast('Zero-all failed', { bg: T.red }); });
+      });
+      _tipsContentPanel.appendChild(zeroBtn);
+    }
+
+    // Adjusted section
+    if (adj.length > 0) {
+      var aLabel = document.createElement('div');
+      aLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.green + ';letter-spacing:2px;margin:12px 0 6px;';
+      aLabel.textContent = 'ADJUSTED';
+      _tipsContentPanel.appendChild(aLabel);
+
+      for (var j = 0; j < adj.length; j++) {
+        _tipsContentPanel.appendChild(buildTipCheckCard(adj[j], emp, renderTipsCards));
+      }
+    }
+
+    // Empty state
+    if (allClosed.length === 0) {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';text-align:center;padding:40px 0;';
+      empty.textContent = 'No card checks to adjust';
+      _tipsContentPanel.appendChild(empty);
+    } else if (unadj.length === 0) {
+      var allDone = document.createElement('div');
+      allDone.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.green + ';text-align:center;padding:20px 0;';
+      allDone.textContent = '\u2713 All tips adjusted';
+      _tipsContentPanel.insertBefore(allDone, _tipsContentPanel.firstChild);
+    }
+
+    // Update stat strip
+    var stripEl = content.querySelector('[data-tipsstrip]');
+    if (stripEl) {
+      var newUnadj = getClosedChecks().filter(function(c) { return !c.adjusted; });
+      var newAdj = getClosedChecks().filter(function(c) { return c.adjusted; });
+      var newTotal = newAdj.reduce(function(s, c) { return s + (c.tip || 0); }, 0);
+      var cells = stripEl.children;
+      if (cells[0]) cells[0].children[1].textContent = '' + newUnadj.length;
+      if (cells[1]) cells[1].children[1].textContent = fmt(newTotal);
+    }
+  }
+
+  renderTipsCards();
+
+  _tipsMainRow.appendChild(_tipsContentPanel);
+  content.appendChild(_tipsMainRow);
+}
+
+function buildTipCheckCard(chk, emp, renderCallback) {
+  var unadj = !chk.adjusted;
+  var borderColor = unadj ? T.mint : T.green;
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:#111;border:3px solid ' + borderColor + ';padding:10px 12px;margin-bottom:8px;font-family:' + T.fb + ';' +
+    (unadj ? 'cursor:pointer;' : '');
+
+  // Row 1: Check # + time
+  var r1 = document.createElement('div');
+  r1.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:4px;white-space:nowrap;';
+  var chkLabel = document.createElement('span');
+  chkLabel.style.cssText = 'font-size:20px;color:#ffffff;font-weight:bold;';
+  chkLabel.textContent = chk.checkLabel || 'CHK';
+  r1.appendChild(chkLabel);
+  var timeEl = document.createElement('span');
+  timeEl.style.cssText = 'font-size:18px;color:#aaaaaa;';
+  timeEl.textContent = chk.time || '';
+  r1.appendChild(timeEl);
+  card.appendChild(r1);
+
+  // Row 2: Check Total + amount
+  var r2 = document.createElement('div');
+  r2.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:4px;white-space:nowrap;';
+  var totalLabel = document.createElement('span');
+  totalLabel.style.cssText = 'font-size:18px;color:#ffffff;';
+  totalLabel.textContent = 'Check Total';
+  r2.appendChild(totalLabel);
+  var amtEl = document.createElement('span');
+  amtEl.style.cssText = 'font-size:20px;color:' + T.gold + ';font-weight:bold;';
+  amtEl.textContent = fmt(chk.amount || 0);
+  r2.appendChild(amtEl);
+  card.appendChild(r2);
+
+  if (!unadj) {
+    // Row 3: Tip
+    var r3 = document.createElement('div');
+    r3.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:2px;white-space:nowrap;';
+    var tipLabel = document.createElement('span');
+    tipLabel.style.cssText = 'font-size:18px;color:#ffffff;';
+    tipLabel.textContent = 'Tip';
+    r3.appendChild(tipLabel);
+    var tipVal = document.createElement('span');
+    tipVal.style.cssText = 'font-size:20px;color:' + T.green + ';font-weight:bold;';
+    tipVal.textContent = fmt(chk.tip || 0);
+    r3.appendChild(tipVal);
+    card.appendChild(r3);
+
+    // Row 4: Final Total
+    var r4 = document.createElement('div');
+    r4.style.cssText = 'display:flex;justify-content:space-between;border-top:1px solid #333;padding-top:4px;white-space:nowrap;';
+    var ftLabel = document.createElement('span');
+    ftLabel.style.cssText = 'font-size:18px;color:#ffffff;font-weight:bold;';
+    ftLabel.textContent = 'Final Total';
+    r4.appendChild(ftLabel);
+    var ftVal = document.createElement('span');
+    ftVal.style.cssText = 'font-size:22px;color:' + T.gold + ';font-weight:bold;';
+    ftVal.textContent = fmt((chk.amount || 0) + (chk.tip || 0));
+    r4.appendChild(ftVal);
+    card.appendChild(r4);
+  } else {
+    // Tap to adjust prompt
+    var prompt = document.createElement('div');
+    prompt.style.cssText = 'font-size:18px;color:' + T.mint + ';text-align:center;margin-top:4px;';
+    prompt.textContent = '\u26A0 TAP TO ADJUST TIP';
+    card.appendChild(prompt);
+
+    card.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      openTipsSideNumpad(chk, emp, renderCallback);
+    });
+  }
+
+  return card;
+}
+
+function openTipsSideNumpad(chk, emp, renderCallback) {
+  if (_tipsNumpadSide) closeTipsSideNumpad();
+
+  // Shrink content panel
+  if (_tipsContentPanel) {
+    _tipsContentPanel.style.maxWidth = '480px';
+    _tipsContentPanel.style.flex = '0 0 480px';
+  }
+
+  var side = document.createElement('div');
+  side.style.cssText = 'flex:0 0 380px;background:' + T.bgDark + ';padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;' +
+    'border-top:7px solid ' + T.numpadChassisL + ';border-left:7px solid ' + T.numpadChassisL + ';' +
+    'border-bottom:7px solid ' + T.numpadChassisD + ';border-right:7px solid ' + T.numpadChassisD + ';' +
+    'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);' +
+    'filter:drop-shadow(3px 4px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));' +
+    'align-self:flex-start;';
+
+  var header = document.createElement('div');
+  header.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';letter-spacing:2px;text-align:center;';
+  header.textContent = 'ENTER TIP AMOUNT';
+  side.appendChild(header);
+
+  var numpad = buildNumpad({
+    maxDigits: 6,
+    masked: false,
+    displayFormat: function(digits) {
+      var cents = parseInt(digits || '0', 10);
+      return '$' + (cents / 100).toFixed(2);
+    },
+    displayColor: T.gold,
+    chassisColor: T.numpadChassis,
+    digitColor: T.digitColor,
+    displayH: 60,
+    gap: 16,
+    keyH: 84,
+    keyGap: 12,
+    cardPad: 18,
+    chassisChamfer: 6,
+    chassisBevel: 5,
+    onSubmit: function(digits) {
+      var cents = parseInt(digits || '0', 10);
+      var tipVal = cents / 100;
+      closeTipsSideNumpad();
+
+      if (!chk.paymentId) { showToast('No card payment to adjust', { bg: T.gold }); return; }
+      fetch('/api/v1/orders/' + chk.checkId + '/adjust-tip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_id: chk.paymentId, tip_amount: tipVal }),
+      }).then(function(r) {
+        if (r.ok) { showToast('Tip adjusted', { bg: T.goGreen }); refreshData(emp); }
+        else { showToast('Tip adjust failed', { bg: T.red }); }
+      }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
+    },
+    onCancel: function() {
+      closeTipsSideNumpad();
+    },
+  });
+  side.appendChild(numpad);
+
+  _tipsNumpadSide = side;
+  if (_tipsMainRow) _tipsMainRow.appendChild(side);
+}
+
+function closeTipsSideNumpad() {
+  if (_tipsNumpadSide && _tipsNumpadSide.parentNode) _tipsNumpadSide.parentNode.removeChild(_tipsNumpadSide);
+  _tipsNumpadSide = null;
+  if (_tipsContentPanel) {
+    _tipsContentPanel.style.maxWidth = '';
+    _tipsContentPanel.style.flex = '1';
+  }
+}
+
+// ═══════════════════════════════════════════════════
 //  DRILL-DOWN OVERLAY (>>> / <<<)
 //  Pure CSS expand/collapse — not SceneManager overlay
 // ═══════════════════════════════════════════════════
@@ -1138,101 +1416,7 @@ function showDrillDown() {
     }
 
   } else if (_expandedCard === 'tips') {
-    // Filter tabs: ALL / ADJUSTED / UNADJUSTED
-    var tabBar = document.createElement('div');
-    tabBar.style.cssText = 'display:flex;margin-bottom:8px;flex-shrink:0;';
-    var tabs = ['ALL', 'ADJUSTED', 'UNADJUSTED'];
-    var tabKeys = ['all', 'adjusted', 'unadjusted'];
-
-    function renderTipsList(filterKey) {
-      var listEl = _drillEl.querySelector('[data-tiplist]');
-      if (listEl) listEl.innerHTML = '';
-      else return;
-      var allChecks = getClosedChecks();
-      var filtered = allChecks;
-      if (filterKey === 'adjusted') filtered = allChecks.filter(function(c) { return c.adjusted; });
-      if (filterKey === 'unadjusted') filtered = allChecks.filter(function(c) { return !c.adjusted; });
-
-      for (var i = 0; i < filtered.length; i++) {
-        (function(chk) {
-          var row = document.createElement('div');
-          row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;cursor:pointer;border-bottom:1px solid ' + T.bg3 + ';';
-          var lbl = document.createElement('span');
-          lbl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
-          lbl.textContent = chk.checkLabel || 'CHK';
-          var amt = document.createElement('span');
-          amt.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;';
-          amt.textContent = fmt(chk.amount || 0);
-          var tip = document.createElement('span');
-          tip.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + (chk.adjusted ? T.gold : T.mutedText) + ';';
-          tip.textContent = chk.adjusted ? fmt(chk.tip || 0) : 'unadj';
-          row.appendChild(lbl);
-          row.appendChild(amt);
-          row.appendChild(tip);
-
-          if (!chk.adjusted) {
-            row.addEventListener('pointerup', function() {
-              SceneManager.interrupt('sl-tip-numpad', {
-                onConfirm: function(tipVal) {
-                  if (!chk.paymentId) { showToast('No card payment to adjust', { bg: T.gold }); return; }
-                  fetch('/api/v1/orders/' + chk.checkId + '/adjust-tip', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ payment_id: chk.paymentId, tip_amount: tipVal }),
-                  }).then(function(r) {
-                    if (r.ok) { showToast('Tip adjusted', { bg: T.goGreen }); refreshData(emp); hideDrillDown(); }
-                    else { showToast('Tip adjust failed', { bg: T.red }); }
-                  }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
-                },
-                onCancel: function() {},
-                params: { title: 'TIP — ' + (chk.checkLabel || ''), checkAmount: chk.amount },
-              });
-            });
-          }
-          listEl.appendChild(row);
-        })(filtered[i]);
-      }
-      if (filtered.length === 0) {
-        var noData = document.createElement('div');
-        noData.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';text-align:center;padding:20px;';
-        noData.textContent = 'No checks';
-        listEl.appendChild(noData);
-      }
-    }
-
-    for (var t = 0; t < tabs.length; t++) {
-      (function(idx) {
-        var tab = document.createElement('div');
-        tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:14px;letter-spacing:1px;';
-        tab.textContent = tabs[idx];
-        if (tabKeys[idx] === _tipsFilter) {
-          tab.style.color = T.bgDark;
-          tab.style.background = T.mint;
-        } else {
-          tab.style.color = T.mutedText;
-          tab.style.background = T.bgDark;
-        }
-        tab.addEventListener('pointerup', function() {
-          _tipsFilter = tabKeys[idx];
-          // Re-style tabs
-          var allTabs = tabBar.children;
-          for (var j = 0; j < allTabs.length; j++) {
-            if (j === idx) { allTabs[j].style.color = T.bgDark; allTabs[j].style.background = T.mint; }
-            else { allTabs[j].style.color = T.mutedText; allTabs[j].style.background = T.bgDark; }
-          }
-          renderTipsList(tabKeys[idx]);
-        });
-        tabBar.appendChild(tab);
-      })(t);
-    }
-    content.appendChild(tabBar);
-
-    var listContainer = document.createElement('div');
-    listContainer.dataset.tiplist = '1';
-    content.appendChild(listContainer);
-
-    // Initial render after DOM is in place
-    setTimeout(function() { renderTipsList(_tipsFilter); }, 0);
+    buildTipsDrillContent(content, emp);
   }
 
   _drillEl.appendChild(content);
@@ -1262,6 +1446,7 @@ function showDrillDown() {
 
 function hideDrillDown() {
   if (!_drillEl) return;
+  closeTipsSideNumpad();
   var el = _drillEl;
 
   if (_expandOrigin && _el) {
@@ -1278,6 +1463,8 @@ function hideDrillDown() {
   _drillEl = null;
   _expandedCard = null;
   _expandOrigin = null;
+  _tipsMainRow = null;
+  _tipsContentPanel = null;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1359,6 +1546,9 @@ SceneManager.register({
     _tableStats = null;
     _checkoutStatus = null;
     _tipsFilter = 'unadjusted';
+    closeTipsSideNumpad();
+    _tipsMainRow = null;
+    _tipsContentPanel = null;
   },
 });
 
