@@ -14,6 +14,7 @@ import './scenes/settings.js?v=8';
 import './scenes/order-entry.js?v=7';
 import './scenes/receipt-review.js?v=2';
 import './scenes/payment.js?v=2';
+import './scenes/payment-console.js?v=1';
 import './scenes/change-due.js?v=2';
 import './scenes/tip-adjustment.js?v=3';
 import './scenes/reporting.js?v=4';

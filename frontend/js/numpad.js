@@ -50,6 +50,8 @@ export function buildNumpad(opts) {
   var chassisBevel   = o.chassisBevel   != null ? o.chassisBevel   : null;
 
   var onCancel    = o.onCancel    || null;
+  var submitLabel = o.submitLabel || '>>>';
+  var canSubmit   = o.canSubmit   || function(p) { return p.length > 0; };
 
   var pin = '';
   var _submitCooldown = false;
@@ -148,7 +150,7 @@ export function buildNumpad(opts) {
     { label: '9', type: 'digit' },
     { label: 'clr', type: 'clear' },
     { label: '0', type: 'digit' },
-    { label: '>>>', type: 'submit' },
+    { label: submitLabel, type: 'submit' },
   ];
 
   layout.forEach(function(key) {
@@ -219,7 +221,7 @@ export function buildNumpad(opts) {
             if (onChange) onChange(pin);
           }
         } else if (key.type === 'submit') {
-          if (pin.length > 0 && !_submitCooldown) {
+          if (canSubmit(pin) && !_submitCooldown) {
             _submitCooldown = true;
             setTimeout(function() { _submitCooldown = false; }, 200);
             onSubmit(pin);
@@ -243,6 +245,7 @@ export function buildNumpad(opts) {
 
   container.clear = function() { pin = ''; render(); };
   container.getPin = function() { return pin; };
+  container.setPin = function(digits) { pin = digits || ''; render(); };
   container.setError = function(msg) {
     display.textContent = msg || '';
     display.style.color = T.red;
