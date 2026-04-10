@@ -9,16 +9,16 @@
 import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
 import { showKeyboard } from './keyboard.js';
 
-// ── Standard allergen list (color-coded) ──
+// ── Standard allergen list (FDA/industry standard colors) ──
 var ALLERGENS = [
-  { id: 'nuts',      label: 'Nuts',      color: '#8B4513' },
-  { id: 'shellfish', label: 'Shellfish', color: '#FF6347' },
-  { id: 'gluten',    label: 'Gluten',    color: '#DAA520' },
-  { id: 'dairy',     label: 'Dairy',     color: '#87CEEB' },
-  { id: 'soy',       label: 'Soy',       color: '#9ACD32' },
-  { id: 'eggs',      label: 'Eggs',      color: '#FFD700' },
-  { id: 'fish',      label: 'Fish',      color: '#4682B4' },
-  { id: 'other',     label: 'Other / Note', color: '#CC44FF' },
+  { id: 'dairy',     label: 'Dairy',        color: '#4A90D9' },
+  { id: 'eggs',      label: 'Eggs',         color: '#F5C518' },
+  { id: 'fish',      label: 'Fish',         color: '#1B3A5C', light: true },
+  { id: 'gluten',    label: 'Gluten',       color: '#A0794A' },
+  { id: 'nuts',      label: 'Nuts',         color: '#E87C1E' },
+  { id: 'shellfish', label: 'Shellfish',    color: '#D94040' },
+  { id: 'soy',       label: 'Soy',          color: '#5AAE3A' },
+  { id: 'other',     label: 'Other / Note', color: '#8855BB' },
 ];
 
 // ── Prefix definitions for optional tabs ──
@@ -606,7 +606,7 @@ export function ModifierPanel(container, opts) {
         pair.wrap.style.minWidth = '0';
         pair.inner.style.fontSize = '20px';
         pair.wrap.style.background = a.color;
-        pair.inner.style.color = T.bgDark;
+        pair.inner.style.color = a.light ? '#ffffff' : T.bgDark;
         if (isActive) {
           pair.wrap.style.outline = '3px solid ' + T.numpadChassis;
           pair.wrap.style.outlineOffset = '-3px';
@@ -635,7 +635,7 @@ export function ModifierPanel(container, opts) {
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '20px';
       pair.wrap.style.background = a.color;
-      pair.inner.style.color = T.bgDark;
+      pair.inner.style.color = a.light ? '#ffffff' : T.bgDark;
       if (selected) {
         pair.wrap.style.outline = '3px solid ' + T.numpadChassis;
         pair.wrap.style.outlineOffset = '-3px';
