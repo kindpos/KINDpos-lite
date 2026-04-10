@@ -43,7 +43,6 @@ var _tipoutRate = 0;
 var _salesByCategory = [];
 var _tableStats = null;
 var _checkoutStatus = null;
-var _drillCategory = null;  // for item-level drill in pareto
 var _tipsFilter = 'unadjusted'; // 'all' | 'adjusted' | 'unadjusted'
 
 // DOM refs for partial re-renders
@@ -77,20 +76,6 @@ function ordersByTab(tab) {
   });
 }
 
-function computeTopSeller() {
-  var counts = {};
-  _allOrders.forEach(function(o) {
-    (o.items || []).forEach(function(item) {
-      var n = item.name || 'Unknown';
-      counts[n] = (counts[n] || 0) + (item.quantity || 1);
-    });
-  });
-  var best = '--', bestN = 0;
-  Object.keys(counts).forEach(function(k) {
-    if (counts[k] > bestN) { best = k; bestN = counts[k]; }
-  });
-  return best;
-}
 
 function fmtClockIn() {
   if (!_clockedInAt) return '--';
@@ -106,44 +91,20 @@ function fmtHours() {
   return Math.floor(ms / 3600000) + 'h ' + Math.floor((ms % 3600000) / 60000) + 'm';
 }
 
-// ── Color Helpers (match clock-in bevel) ─────────
-
-function _darkenHex(hex, pct) {
-  var r = parseInt(hex.slice(1, 3), 16);
-  var g = parseInt(hex.slice(3, 5), 16);
-  var b = parseInt(hex.slice(5, 7), 16);
-  var f = 1 - pct;
-  return '#' + [Math.round(r * f), Math.round(g * f), Math.round(b * f)]
-    .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
-}
-
-function _lightenHex(hex, pct) {
-  var r = parseInt(hex.slice(1, 3), 16);
-  var g = parseInt(hex.slice(3, 5), 16);
-  var b = parseInt(hex.slice(5, 7), 16);
-  return '#' + [
-    Math.min(255, Math.round(r + (255 - r) * pct)),
-    Math.min(255, Math.round(g + (255 - g) * pct)),
-    Math.min(255, Math.round(b + (255 - b) * pct)),
-  ].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
-}
-
 // ── Card UI Builders ──────────────────────────────
+// Matches manager landing (reporting.js) buildCard() pattern:
+// 5px bevel using T.numpadChassisL/D, 8px chamfer, no drop-shadow on cards
 
 var CHROME = T.numpadChassis;
-var BEVEL_W = 7;
-var BEVEL_LIGHT = _lightenHex(CHROME, 0.2);
-var BEVEL_DARK = _darkenHex(CHROME, 0.3);
-var CARD_DROP = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 12px rgba(135,247,156,0.12))';
+var BEVEL_LIGHT = T.numpadChassisL;
+var BEVEL_DARK = T.numpadChassisD;
+var OVERLAY_FILTER = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15))';
 
 function applyCardStyle(el) {
-  el.style.cssText = 'background:' + T.bg + ';display:flex;flex-direction:column;flex:0 0 auto;box-sizing:border-box;'
-    + 'border-top:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
-    + 'border-left:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
-    + 'border-bottom:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
-    + 'border-right:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';';
-  el.style.clipPath = chamfer(8);
-  el.style.filter = CARD_DROP;
+  el.style.cssText = 'background:' + T.bgDark + ';display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;'
+    + 'border-top:5px solid ' + BEVEL_LIGHT + ';border-left:5px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:5px solid ' + BEVEL_DARK + ';border-right:5px solid ' + BEVEL_DARK + ';'
+    + 'clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);';
 }
 
 function buildCardHeader(label) {
@@ -156,14 +117,13 @@ function buildCardHeader(label) {
   return bar;
 }
 
-function applyInterruptCardStyle(el, frameColor) {
-  var lt = _lightenHex(frameColor, 0.25);
-  var dk = _darkenHex(frameColor, 0.35);
-  el.style.cssText = 'background:' + T.bg + ';padding:24px 32px;text-align:center;max-width:420px;box-sizing:border-box;'
-    + 'border-top:5px solid ' + lt + ';border-left:5px solid ' + lt + ';'
-    + 'border-bottom:5px solid ' + dk + ';border-right:5px solid ' + dk + ';';
-  el.style.clipPath = chamfer(10);
-  el.style.filter = 'drop-shadow(0 0 12px ' + frameColor + ')';
+function applyInterruptCardStyle(el) {
+  // Matches manager landing tip-numpad frame: 7px bevel, 10px chamfer, drop-shadow
+  el.style.cssText = 'background:' + T.bgDark + ';padding:24px 32px;text-align:center;max-width:420px;'
+    + 'border-top:7px solid ' + BEVEL_LIGHT + ';border-left:7px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:7px solid ' + BEVEL_DARK + ';border-right:7px solid ' + BEVEL_DARK + ';'
+    + 'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);'
+    + 'filter:' + OVERLAY_FILTER + ';';
 }
 
 function statRow(label, value, color) {
@@ -486,8 +446,6 @@ function buildLeftColumn(emp) {
   // ── SALES OVERVIEW card ──
   var salesCard = document.createElement('div');
   applyCardStyle(salesCard);
-  salesCard.style.flex = '1';
-  salesCard.style.minHeight = '0';
   salesCard.appendChild(buildCardHeader('SALES OVERVIEW'));
 
   var salesChart = document.createElement('div');
@@ -500,8 +458,6 @@ function buildLeftColumn(emp) {
   // ── TABLE STATISTICS card ──
   var tablesCard = document.createElement('div');
   applyCardStyle(tablesCard);
-  tablesCard.style.flex = '1';
-  tablesCard.style.minHeight = '0';
   tablesCard.appendChild(buildCardHeader('TABLE STATISTICS'));
 
   // Stat row above chart
@@ -552,17 +508,14 @@ function buildLeftColumn(emp) {
 
 function buildCenterColumn(emp) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;background:' + T.bg + ';box-sizing:border-box;'
-    + 'border-top:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
-    + 'border-left:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
-    + 'border-bottom:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
-    + 'border-right:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';';
-  col.style.clipPath = chamfer(8);
-  col.style.filter = CARD_DROP;
+  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';'
+    + 'border-top:5px solid ' + BEVEL_LIGHT + ';border-left:5px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:5px solid ' + BEVEL_DARK + ';border-right:5px solid ' + BEVEL_DARK + ';'
+    + 'clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);';
 
   // ── Check Grid ──
   var gridFrame = document.createElement('div');
-  gridFrame.style.cssText = 'flex:1;overflow:hidden;margin:8px;border:2px solid ' + BEVEL_DARK + ';';
+  gridFrame.style.cssText = 'flex:1;overflow:hidden;margin:8px;border:2px solid ' + T.numpadChassisD + ';';
   _centerGrid = document.createElement('div');
   _centerGrid.style.cssText = 'width:100%;height:100%;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
   gridFrame.appendChild(_centerGrid);
@@ -659,10 +612,8 @@ function buildCheckTile(order, emp) {
   var isVoid = _activeTab === 'void';
 
   var tile = document.createElement('div');
-  tile.style.cssText = 'background:' + T.bgDark + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;'
-    + 'border-top:3px solid ' + BEVEL_LIGHT + ';border-left:3px solid ' + BEVEL_LIGHT + ';'
-    + 'border-bottom:3px solid ' + BEVEL_DARK + ';border-right:3px solid ' + BEVEL_DARK + ';';
-  tile.style.clipPath = chamfer(4);
+  tile.style.cssText = 'background:' + T.bgDark + ';border:2px solid ' + T.mint + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;'
+    + 'clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px);';
   if (isClosed) tile.style.opacity = '0.7';
   if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
 
@@ -1066,7 +1017,7 @@ function buildRightColumn(emp) {
           });
         },
         onCancel: function() {},
-        params: { reasons: [unadjCount + ' unadjusted tip' + (unadjCount !== 1 ? 's' : '')] },
+        params: { warning: true, reasons: [unadjCount + ' unadjusted tip' + (unadjCount !== 1 ? 's' : '')] },
       });
     } else {
       SceneManager.mountWorking('server-checkout', {
@@ -1096,14 +1047,12 @@ function showDrillDown() {
   var emp = (_params || {}).emp || _params || {};
 
   _drillEl = document.createElement('div');
-  _drillEl.style.cssText = 'position:absolute;background:' + T.bg + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;box-sizing:border-box;'
-    + 'border-top:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
-    + 'border-left:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
-    + 'border-bottom:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
-    + 'border-right:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
+  _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;'
+    + 'border-top:7px solid ' + BEVEL_LIGHT + ';border-left:7px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:7px solid ' + BEVEL_DARK + ';border-right:7px solid ' + BEVEL_DARK + ';'
+    + 'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);'
+    + 'filter:' + OVERLAY_FILTER + ';'
     + 'transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;';
-  _drillEl.style.clipPath = chamfer(8);
-  _drillEl.style.filter = CARD_DROP;
 
   // Start at card's position
   if (rect) {
@@ -1340,7 +1289,7 @@ function renderScene() {
   var emp = _params.emp || _params;
 
   _el.innerHTML = '';
-  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:25fr 50fr 25fr;gap:' + T.colGap + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;position:relative;';
+  _el.style.cssText = 'width:100%;height:100%;background:' + T.bg + ';display:grid;grid-template-columns:25fr 50fr 25fr;gap:6px;padding:6px;box-sizing:border-box;position:relative;';
 
   _el.appendChild(buildLeftColumn(emp));
   _el.appendChild(buildCenterColumn(emp));
@@ -1409,7 +1358,6 @@ SceneManager.register({
     _salesByCategory = [];
     _tableStats = null;
     _checkoutStatus = null;
-    _drillCategory = null;
     _tipsFilter = 'unadjusted';
   },
 });
@@ -1424,7 +1372,7 @@ SceneManager.register({
   name: 'sl-reopen-confirm',
   mount: function(container, params) {
     var card = document.createElement('div');
-    applyInterruptCardStyle(card, T.frameInterruptDecision);
+    applyInterruptCardStyle(card);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1453,7 +1401,7 @@ SceneManager.register({
   name: 'sl-void-gate',
   mount: function(container, params) {
     var card = document.createElement('div');
-    applyInterruptCardStyle(card, T.frameInterruptCritical);
+    applyInterruptCardStyle(card);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1481,11 +1429,11 @@ SceneManager.register({
 SceneManager.register({
   name: 'sl-checkout-gate',
   mount: function(container, params) {
-    var isWarning = !!(params.onConfirm); // warning mode allows proceeding
+    var isWarning = !!(params.warning); // warning mode allows proceeding
     var frameColor = isWarning ? T.frameInterruptDecision : T.frameInterruptCritical;
 
     var card = document.createElement('div');
-    applyInterruptCardStyle(card, frameColor);
+    applyInterruptCardStyle(card);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
@@ -1526,7 +1474,7 @@ SceneManager.register({
   name: 'sl-manager-gate',
   mount: function(container, params) {
     var card = document.createElement('div');
-    applyInterruptCardStyle(card, T.frameInterruptDecision);
+    applyInterruptCardStyle(card);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1555,7 +1503,7 @@ SceneManager.register({
   name: 'sl-transfer-choice',
   mount: function(container, params) {
     var card = document.createElement('div');
-    applyInterruptCardStyle(card, T.frameInterruptDecision);
+    applyInterruptCardStyle(card);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1592,7 +1540,7 @@ SceneManager.register({
   name: 'sl-merge-choice',
   mount: function(container, params) {
     var card = document.createElement('div');
-    applyInterruptCardStyle(card, T.frameInterruptDecision);
+    applyInterruptCardStyle(card);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:8px;';
@@ -1646,10 +1594,9 @@ SceneManager.register({
     for (var i = 0; i < checks.length; i++) {
       var order = checks[i];
       var col = document.createElement('div');
-      col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';display:flex;flex-direction:column;overflow-y:auto;box-sizing:border-box;'
-        + 'border-top:3px solid ' + BEVEL_LIGHT + ';border-left:3px solid ' + BEVEL_LIGHT + ';'
-        + 'border-bottom:3px solid ' + BEVEL_DARK + ';border-right:3px solid ' + BEVEL_DARK + ';';
-      col.style.clipPath = chamfer(6);
+      col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';display:flex;flex-direction:column;overflow-y:auto;'
+        + 'border:2px solid ' + T.mint + ';'
+        + 'clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px);';
 
       var colHeader = document.createElement('div');
       colHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + CHROME + ';padding:6px 8px;border-bottom:1px solid ' + T.border + ';';
@@ -1703,7 +1650,7 @@ SceneManager.register({
 
 function buildNumpadInterrupt(container, params, titlePrefix) {
   var card = document.createElement('div');
-  applyInterruptCardStyle(card, T.frameInterruptDecision);
+  applyInterruptCardStyle(card);
   card.style.maxWidth = '360px';
   card.style.width = '90%';
 
