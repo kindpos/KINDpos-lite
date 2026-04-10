@@ -1198,6 +1198,9 @@ function openModifierPanel(item, modConfig) {
   // Close any existing modifier panel
   if (_modPanel) closeModifierPanel();
 
+  // Hide hex-canvas border while panel is open (avoid double border)
+  if (_tabCanvas) _tabCanvas.style.borderColor = 'transparent';
+
   // Mount the modifier panel as an absolute overlay inside hex-canvas
   // HexNav stays mounted underneath — no display:none needed
   _modPanel = new ModifierPanel(_tabCanvas, {
@@ -1224,6 +1227,9 @@ function closeModifierPanel() {
     _modPanel = null;
   }
   _modPanelItem = null;
+
+  // Restore hex-canvas border
+  if (_tabCanvas) _tabCanvas.style.borderColor = T.mint;
 
   // Restore bottom bar
   if (_bottomBar) _bottomBar.style.display = '';
