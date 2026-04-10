@@ -2459,7 +2459,7 @@ async function handlePay(params) {
     return { name: name, qty: totals.counts[name].qty, unitPrice: totals.counts[name].unitPrice };
   });
 
-  SceneManager.openTransactional('receipt-review', {
+  SceneManager.openTransactional('payment-console', {
     orderId:     currentOrderId,
     checkId:     currentCheckNumber,
     items:       items,
@@ -2467,6 +2467,7 @@ async function handlePay(params) {
     tax:         totals.tax,
     cardTotal:   totals.cardTotal,
     cashPrice:   totals.cashPrice,
+    discount:    0,
     returnScene: 'order-entry',
   });
 }
