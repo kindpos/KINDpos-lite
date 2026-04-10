@@ -510,6 +510,7 @@ export function ModifierPanel(container, opts) {
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '20px';
+      pair.inner.style.fontFamily = T.fb;
 
       pair.wrap.addEventListener('pointerup', function() {
         var idx = activeItem.includedRemovals.indexOf(incl.id);
@@ -551,6 +552,7 @@ export function ModifierPanel(container, opts) {
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '20px';
+      pair.inner.style.fontFamily = T.fb;
       pair.inner.style.padding = '4px 3px';
       pair.inner.style.lineHeight = '1.1';
 
@@ -605,6 +607,7 @@ export function ModifierPanel(container, opts) {
         pair.wrap.style.width = '100%';
         pair.wrap.style.minWidth = '0';
         pair.inner.style.fontSize = '20px';
+        pair.inner.style.fontFamily = T.fb;
         pair.wrap.style.background = a.color;
         pair.inner.style.color = a.light ? '#ffffff' : T.bgDark;
         if (isActive) {
@@ -634,6 +637,7 @@ export function ModifierPanel(container, opts) {
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '20px';
+      pair.inner.style.fontFamily = T.fb;
       pair.wrap.style.background = a.color;
       pair.inner.style.color = a.light ? '#ffffff' : T.bgDark;
       if (selected) {
