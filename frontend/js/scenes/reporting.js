@@ -155,7 +155,7 @@ function xLabels(svg, x0, W, bot, fs) {
   var step = W / (HOURS.length - 1);
   for (var i = 0; i < HOURS.length; i++) {
     svg.appendChild(mk('text', { x:(x0+i*step).toFixed(1), y:bot+12,
-      'text-anchor':'middle', fill:'rgba(255,255,255,0.45)', 'font-size':fs||'17', 'font-family':FONT }, HOURS[i]));
+      'text-anchor':'middle', fill:'rgba(255,255,255,0.45)', 'font-size':fs||'18', 'font-family':FONT }, HOURS[i]));
   }
 }
 
@@ -163,7 +163,7 @@ function xLabelsCentered(svg, x0, W, n, bot, fs) {
   var step = W / n;
   for (var i = 0; i < HOURS.length; i++) {
     svg.appendChild(mk('text', { x:(x0+i*step+step/2).toFixed(1), y:bot+12,
-      'text-anchor':'middle', fill:'rgba(255,255,255,0.45)', 'font-size':fs||'17', 'font-family':FONT }, HOURS[i]));
+      'text-anchor':'middle', fill:'rgba(255,255,255,0.45)', 'font-size':fs||'18', 'font-family':FONT }, HOURS[i]));
   }
 }
 
@@ -255,7 +255,7 @@ function showNumpad(callback) {
     })(keys[i]);
   }
   frame.appendChild(grid);
-  var dismiss = el('div', 'text-align:center;margin-top:10px;font-family:' + FONT + ';font-size:12px;color:' + C.dim + ';cursor:pointer;', 'DISMISS');
+  var dismiss = el('div', 'text-align:center;margin-top:10px;font-family:' + FONT + ';font-size:18px;color:' + C.dim + ';cursor:pointer;', 'DISMISS');
   dismiss.addEventListener('pointerup', function() { ov.parentNode && ov.parentNode.removeChild(ov); });
   frame.appendChild(dismiss);
   ov.addEventListener('click', function(e) { if (e.target === ov) { ov.parentNode && ov.parentNode.removeChild(ov); } });
@@ -277,7 +277,7 @@ function buildSalesOverviewBody(body) {
   function ty(v) { return y0 + H - (v / maxVal) * H; }
 
   chartFrame(svg, x0, y0, W, H, 'card');
-  xLabels(svg, x0, W, bot, '8');
+  xLabels(svg, x0, W, bot, '18');
 
   // Last week (pink dashed, behind)
   var lwPts = [];
@@ -299,7 +299,7 @@ function buildSalesOverviewBody(body) {
   for (var i = 0; i < 8; i++) svg.appendChild(mk('rect', { x:tx(i)-2.5, y:ty(D_TODAY[i])-2.5, width:'5', height:'5', fill:C.lime }));
 
   // Net callout top-right
-  svg.appendChild(mk('text', { x:282, y:20, fill:C.lime, 'font-size':'14', 'font-weight':'bold', 'font-family':FONT, 'text-anchor':'end' }, fmt(sum(D_TODAY))));
+  svg.appendChild(mk('text', { x:282, y:20, fill:C.lime, 'font-size':'18', 'font-weight':'bold', 'font-family':FONT, 'text-anchor':'end' }, fmt(sum(D_TODAY))));
   svg.appendChild(mk('text', { x:282, y:30, fill:'rgba(255,255,255,0.35)', 'font-size':'18', 'font-family':FONT, 'text-anchor':'end' }, 'NET SALES TODAY'));
 
   // Legend
@@ -331,7 +331,7 @@ function buildSalesOverviewOverlay(panel) {
   var ax=44,ay=12,aw=596,ah=150,aMax=65;
   function atx(i){return ax+(i/7)*aw;} function aty(v){return ay+ah-(v/aMax)*ah;}
   chartFrame(svgA,ax,ay,aw,ah,'soa');
-  xLabels(svgA,ax,aw,ay+ah,'15');
+  xLabels(svgA,ax,aw,ay+ah, '18');
 
   // Last week
   var lwP=[];for(var i=0;i<8;i++)lwP.push(atx(i).toFixed(1)+','+aty(D_LASTW[i]).toFixed(1));
@@ -349,7 +349,7 @@ function buildSalesOverviewOverlay(panel) {
   for(var i=0;i<8;i++)svgA.appendChild(mk('rect',{x:atx(i)-3,y:aty(D_TODAY[i])-3,width:'6',height:'6',fill:C.lime}));
 
   // Peak hour label
-  svgA.appendChild(mk('text',{x:atx(2),y:aty(65)-8,fill:C.lime,'font-size':'17','font-weight':'bold','font-family':FONT,'text-anchor':'middle'},'$65'));
+  svgA.appendChild(mk('text',{x:atx(2),y:aty(65)-8,fill:C.lime,'font-size':'18','font-weight':'bold','font-family':FONT,'text-anchor':'middle'},'$65'));
 
   // Legend
   svgA.appendChild(mk('rect',{x:ax+160,y:ah+30,width:'8',height:'8',fill:C.lime}));
@@ -367,7 +367,7 @@ function buildSalesOverviewOverlay(panel) {
   var bx=44,by=12,bw=596,bh=100,bMax=7;
   var target = sum(D_CAVG)/D_CAVG.length;
   chartFrame(svgB,bx,by,bw,bh,'sob');
-  xLabels(svgB,bx,bw,by+bh,'15');
+  xLabels(svgB,bx,bw,by+bh, '18');
   var barW = bw/8*0.55;
   for(var i=0;i<8;i++){
     var bx2=bx+(i/7)*bw-barW/2;
@@ -383,7 +383,7 @@ function buildSalesOverviewOverlay(panel) {
   svgB.appendChild(mk('text',{x:bx+bw+4,y:tgtY+4,fill:C.lime,'font-size':'18','font-family':FONT},'AVG '+fmt(target)));
   // Legend
   svgB.appendChild(mk('rect',{x:bx+100,y:bh+28,width:'8',height:'8',fill:C.gold}));
-  svgB.appendChild(mk('text',{x:bx+112,y:bh+36,fill:C.label,'font-size':'17','font-family':FONT},'CHECK AVG \u2014 dimmed bars below daily target'));
+  svgB.appendChild(mk('text',{x:bx+112,y:bh+36,fill:C.label,'font-size':'18','font-family':FONT},'CHECK AVG \u2014 dimmed bars below daily target'));
   secB.appendChild(svgB);
   panel.appendChild(secB);
 
@@ -397,7 +397,7 @@ function buildSalesOverviewOverlay(panel) {
   for(var g=1;g<=4;g++){
     var gx=ocx+(g/4)*ocw;
     svgC.appendChild(mk('line',{x1:gx,y1:ocy,x2:gx,y2:ocy+och,stroke:C.grid,'stroke-width':'1'}));
-    svgC.appendChild(mk('text',{x:gx,y:ocy-3,fill:C.label,'font-size':'17','font-family':FONT,'text-anchor':'middle'},fmt(oMax*g/4)));
+    svgC.appendChild(mk('text',{x:gx,y:ocy-3,fill:C.label,'font-size':'18','font-family':FONT,'text-anchor':'middle'},fmt(oMax*g/4)));
   }
   var rowH=och/3;
   for(var i=0;i<D_ORD.length;i++){
@@ -422,9 +422,9 @@ function buildSalesOverviewOverlay(panel) {
   }
   // Legend
   svgC.appendChild(mk('rect',{x:ocx+120,y:och+26,width:'8',height:'8',fill:C.gold}));
-  svgC.appendChild(mk('text',{x:ocx+132,y:och+34,fill:C.label,'font-size':'17','font-family':FONT},'CASH'));
+  svgC.appendChild(mk('text',{x:ocx+132,y:och+34,fill:C.label,'font-size':'18','font-family':FONT},'CASH'));
   svgC.appendChild(mk('rect',{x:ocx+200,y:och+26,width:'8',height:'8',fill:C.pink}));
-  svgC.appendChild(mk('text',{x:ocx+212,y:och+34,fill:C.label,'font-size':'17','font-family':FONT},'CARD'));
+  svgC.appendChild(mk('text',{x:ocx+212,y:och+34,fill:C.label,'font-size':'18','font-family':FONT},'CARD'));
   secC.appendChild(svgC);
   panel.appendChild(secC);
 }
@@ -437,10 +437,10 @@ function buildSalesBreakdownBody(body) {
   function tx(i){return cx+(i/7)*cw;} function ty(v){return cy+ch-(v/maxY)*ch;}
 
   chartFrame(svg,cx,cy,cw,ch,'sb');
-  xLabels(svg,cx,cw,cy+ch,'14');
+  xLabels(svg,cx,cw,cy+ch, '18');
   // Y labels
-  svg.appendChild(mk('text',{x:cx-3,y:cy+ch+2,fill:C.label,'font-size':'14','font-family':FONT,'text-anchor':'end'},'$0'));
-  svg.appendChild(mk('text',{x:cx-3,y:cy+6,fill:C.label,'font-size':'14','font-family':FONT,'text-anchor':'end'},'$'+maxY));
+  svg.appendChild(mk('text',{x:cx-3,y:cy+ch+2,fill:C.label,'font-size':'18','font-family':FONT,'text-anchor':'end'},'$0'));
+  svg.appendChild(mk('text',{x:cx-3,y:cy+6,fill:C.label,'font-size':'18','font-family':FONT,'text-anchor':'end'},'$'+maxY));
 
   // Build cumulative stacks
   var cum = [0,0,0,0,0,0,0,0];
@@ -491,13 +491,13 @@ function buildSalesBreakdownOverlay(panel) {
 
   function renderArea(){
     areaWrap.innerHTML='';
-    areaWrap.appendChild(el('div','font-family:'+FONT+';font-size:12px;color:'+C.mint+';margin-bottom:4px;letter-spacing:1px;','STACKED REVENUE BY CATEGORY'));
+    areaWrap.appendChild(el('div','font-family:'+FONT+';font-size:18px;color:'+C.mint+';margin-bottom:4px;letter-spacing:1px;','STACKED REVENUE BY CATEGORY'));
     var svg=mk('svg',{viewBox:'0 0 660 220',width:'100%',preserveAspectRatio:'xMidYMid meet'});
     addDefs(svg,'sba');
     var ax=40,ay=12,aw=600,ah=175,maxY2=65;
     function tx2(i){return ax+(i/7)*aw;}function ty2(v){return ay+ah-(v/maxY2)*ah;}
     chartFrame(svg,ax,ay,aw,ah,'sba');
-    xLabels(svg,ax,aw,ay+ah,'15');
+    xLabels(svg,ax,aw,ay+ah, '18');
     var cum2=[0,0,0,0,0,0,0,0];
     for(var s=0;s<CATS_STACK.length;s++){
       var cat=CATS_STACK[s];
@@ -528,7 +528,7 @@ function buildSalesBreakdownOverlay(panel) {
   // Chart B — Tender Split Bar
   function renderTender(){
     var tender=el('div','padding:8px;');
-    tender.appendChild(el('div','font-family:'+FONT+';font-size:12px;color:'+C.mint+';margin-bottom:4px;letter-spacing:1px;','TENDER SPLIT'));
+    tender.appendChild(el('div','font-family:'+FONT+';font-size:18px;color:'+C.mint+';margin-bottom:4px;letter-spacing:1px;','TENDER SPLIT'));
     var svg=mk('svg',{viewBox:'0 0 600 44',width:'100%',preserveAspectRatio:'xMidYMid meet'});
     addDefs(svg,'sbt');
     var cashPct=0.81,cashAmt=247.62,cardAmt=58.13;
@@ -649,21 +649,21 @@ function buildHeatmapBody(body) {
   // Hour header row
   var hdrRow = el('div', 'display:flex;gap:1px;padding-left:60px;');
   for (var h = 0; h < visibleHours.length; h++) {
-    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px;padding:2px 0;', HOURS[visibleHours[h]]));
+    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:18px;color:rgba(255,255,255,0.5);letter-spacing:1px;padding:2px 0;', HOURS[visibleHours[h]]));
   }
   wrap.appendChild(hdrRow);
 
   // Server rows
   for (var s = 0; s < servers.length; s++) {
     var row = el('div', 'display:flex;gap:1px;flex:1;align-items:stretch;');
-    var nameEl = el('div', 'width:58px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:10px;font-style:italic;color:' + C.mint + ';');
+    var nameEl = el('div', 'width:58px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:18px;font-style:italic;color:' + C.mint + ';');
     nameEl.textContent = servers[s];
     row.appendChild(nameEl);
     for (var h = 0; h < visibleHours.length; h++) {
       (function(srv, hrIdx, val) {
         var hc = heatColor(val, maxVal);
         var isActive = hmFilter && hmFilter.server === srv && hmFilter.hour === HOURS[hrIdx];
-        var cell = el('div', 'flex:1;background:' + hc.bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:11px;color:' + hc.fg + ';font-weight:bold;' + (isActive ? 'outline:2px solid #fff;outline-offset:-2px;' : ''));
+        var cell = el('div', 'flex:1;background:' + hc.bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:18px;color:' + hc.fg + ';font-weight:bold;' + (isActive ? 'outline:2px solid #fff;outline-offset:-2px;' : ''));
         if (val > 0) cell.textContent = val;
         cell.addEventListener('pointerup', function(e) {
           e.stopPropagation();
@@ -683,7 +683,7 @@ function buildHeatmapBody(body) {
 
   // Legend strip (only in expanded mode)
   if (hmExpanded) {
-    var leg = el('div', 'display:flex;gap:6px;align-items:center;padding:3px 48px 2px;font-family:' + FONT + ';font-size:7px;flex-shrink:0;');
+    var leg = el('div', 'display:flex;gap:6px;align-items:center;padding:3px 48px 2px;font-family:' + FONT + ';font-size:18px;flex-shrink:0;');
     var tiers = [
       { bg:'#1a2e1a', label:'0' },
       { bg:'#2d6b2d', label:'1' },
@@ -716,8 +716,8 @@ function buildAllChecksBody(body) {
   // Filter badge
   if (hmFilter) {
     var badge = el('div', 'display:flex;justify-content:space-between;align-items:center;padding:4px 6px;background:#2a1800;border:1px solid ' + C.gold + ';margin-bottom:4px;flex-shrink:0;');
-    badge.appendChild(el('span', 'font-family:' + FONT + ';font-size:11px;color:' + C.lime + ';letter-spacing:1px;', 'SERVER: ' + hmFilter.server + '  HOUR: ' + hmFilter.hour));
-    var clrBtn = el('span', 'font-family:' + FONT + ';font-size:11px;color:' + C.verm + ';cursor:pointer;letter-spacing:1px;', 'CLEAR');
+    badge.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.lime + ';letter-spacing:1px;', 'SERVER: ' + hmFilter.server + '  HOUR: ' + hmFilter.hour));
+    var clrBtn = el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.verm + ';cursor:pointer;letter-spacing:1px;', 'CLEAR');
     clrBtn.addEventListener('pointerup', function(e) {
       e.stopPropagation();
       hmFilter = null;
@@ -737,17 +737,17 @@ function buildAllChecksBody(body) {
     var tile = el('div', 'background:' + C.dark + ';border:1px solid ' + borderColor + ';padding:5px 6px;font-family:' + FONT + ';cursor:pointer;');
     // Top row: ID + status
     var top = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;');
-    top.appendChild(el('span', 'font-size:10px;color:' + C.mint + ';letter-spacing:1px;', c.id));
-    top.appendChild(el('span', 'font-size:8px;color:' + statusColor + ';font-weight:bold;', c.status));
+    top.appendChild(el('span', 'font-size:18px;color:' + C.mint + ';letter-spacing:1px;', c.id));
+    top.appendChild(el('span', 'font-size:18px;color:' + statusColor + ';font-weight:bold;', c.status));
     tile.appendChild(top);
     // Middle: server + table
-    tile.appendChild(el('div', 'font-size:8px;color:#ffffff;', c.srv + ' \u00B7 ' + (c.tbl || c.type)));
+    tile.appendChild(el('div', 'font-size:18px;color:#ffffff;', c.srv + ' \u00B7 ' + (c.tbl || c.type)));
     // Bottom: total
-    tile.appendChild(el('div', 'font-size:11px;color:' + C.gold + ';font-weight:bold;text-align:right;margin-top:2px;', fmt(c.total)));
+    tile.appendChild(el('div', 'font-size:18px;color:' + C.gold + ';font-weight:bold;text-align:right;margin-top:2px;', fmt(c.total)));
     grid.appendChild(tile);
   }
   if (filtered.length === 0) {
-    grid.appendChild(el('div', 'grid-column:1/-1;font-family:' + FONT + ';font-size:12px;color:' + C.dim + ';text-align:center;padding:16px;', 'No checks match filter'));
+    grid.appendChild(el('div', 'grid-column:1/-1;font-family:' + FONT + ';font-size:18px;color:' + C.dim + ';text-align:center;padding:16px;', 'No checks match filter'));
   }
   wrap.appendChild(grid);
   body.appendChild(wrap);
@@ -795,8 +795,8 @@ function buildServerCheckoutsBody(body) {
     var row = el('div', 'flex-shrink:0;');
     // Server name + status
     var hdr = el('div', 'display:flex;align-items:center;gap:6px;margin-bottom:2px;');
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:16px;color:' + (isActive ? C.mint : '#444') + ';letter-spacing:1px;font-weight:bold;', srv.name));
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:12px;color:' + (isActive ? C.verm : '#333') + ';', '\u25CF ' + (isActive ? 'ACTIVE' : 'OFFLINE')));
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + (isActive ? C.mint : '#444') + ';letter-spacing:1px;font-weight:bold;', srv.name));
+    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + (isActive ? C.verm : '#333') + ';', '\u25CF ' + (isActive ? 'ACTIVE' : 'OFFLINE')));
     row.appendChild(hdr);
 
     // Bar track
@@ -805,24 +805,24 @@ function buildServerCheckoutsBody(body) {
       track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / maxCount * 100).toFixed(0) + '%;background:' + C.mint + ';'));
       track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / maxCount * 100).toFixed(0) + '%;background:' + C.verm + ';z-index:1;'));
       if (oc > 0) {
-        var ckEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.verm + ';font-family:' + FONT + ';font-size:16px;font-weight:bold;padding:1px 5px;');
+        var ckEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.verm + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:1px 5px;');
         ckEl.style.left = Math.max(2, (oc / maxCount * 100) - 12) + '%';
         ckEl.textContent = oc;
         track.appendChild(ckEl);
       }
       if (ut > 0) {
-        var tpEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.mint + ';font-family:' + FONT + ';font-size:16px;font-weight:bold;padding:1px 5px;');
+        var tpEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.mint + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:1px 5px;');
         tpEl.style.left = Math.max(2, (ut / maxCount * 100) - 12) + '%';
         track.appendChild(tpEl);
         tpEl.textContent = ut;
       }
     } else {
-      track.appendChild(el('div', 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:12px;color:#2a2a2a;', 'NOT CLOCKED IN'));
+      track.appendChild(el('div', 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:18px;color:#2a2a2a;', 'NOT CLOCKED IN'));
     }
     row.appendChild(track);
 
     if (isActive) {
-      var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:12px;margin-top:2px;');
+      var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:18px;margin-top:2px;');
       labels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
       labels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
       row.appendChild(labels);
@@ -833,7 +833,7 @@ function buildServerCheckoutsBody(body) {
   }
 
   // Legend
-  var leg = el('div', 'display:flex;gap:12px;margin-top:auto;padding-top:4px;font-family:' + FONT + ';font-size:12px;');
+  var leg = el('div', 'display:flex;gap:12px;margin-top:auto;padding-top:4px;font-family:' + FONT + ';font-size:18px;');
   leg.innerHTML = '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.verm + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.verm + '">OPEN CHECKS</span></span>' +
     '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.mint + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.mint + '">UNADJ TIPS</span></span>';
   wrap.appendChild(leg);
@@ -874,12 +874,12 @@ function buildServerCheckoutsOverlay(panel) {
 
       // Server header
       var sHdr = el('div', 'background:' + (hasFlags ? '#2a1800' : '#2a2a2a') + ';padding:5px 10px;display:flex;align-items:center;gap:8px;');
-      sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:10px;color:' + C.mint + ';letter-spacing:2px;flex:1;', srv.name));
+      sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;flex:1;', srv.name));
       if (!srv.active) {
-        sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:#444;border:1px solid #333;padding:1px 6px;', '\u25CF OFFLINE'));
+        sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:#444;border:1px solid #333;padding:1px 6px;', '\u25CF OFFLINE'));
       } else {
-        if (oc > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + C.verm + ';border:1px solid ' + C.verm + ';padding:1px 6px;', '\u25CF ' + oc + ' OPEN'));
-        if (ut > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:8px;color:' + C.mint + ';border:1px solid ' + C.mint + ';padding:1px 6px;', '\u26A0 ' + ut + ' UNADJ TIPS'));
+        if (oc > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.verm + ';border:1px solid ' + C.verm + ';padding:1px 6px;', '\u25CF ' + oc + ' OPEN'));
+        if (ut > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';border:1px solid ' + C.mint + ';padding:1px 6px;', '\u26A0 ' + ut + ' UNADJ TIPS'));
       }
       section.appendChild(sHdr);
 
@@ -888,22 +888,22 @@ function buildServerCheckoutsOverlay(panel) {
         var offBar = el('div', 'padding:6px 10px;');
         var offTrack = el('div', 'height:14px;background:#161616;border:1px solid #222;');
         offBar.appendChild(offTrack);
-        offBar.appendChild(el('div', 'font-family:' + FONT + ';font-size:7px;color:#333;margin-top:2px;', 'not clocked in'));
+        offBar.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:#333;margin-top:2px;', 'not clocked in'));
         section.appendChild(offBar);
         var offAction = el('div', 'border-top:1px solid #2a2a2a;background:#111;padding:6px 10px;');
-        offAction.appendChild(el('div', 'font-family:' + FONT + ';font-size:9px;color:#333;text-align:center;padding:5px;background:#1a1a1a;letter-spacing:2px;', 'NO ACTIVE SESSION'));
+        offAction.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:#333;text-align:center;padding:5px;background:#1a1a1a;letter-spacing:2px;', 'NO ACTIVE SESSION'));
         section.appendChild(offAction);
       } else {
         // Overlapping bar (large version)
         var barRow = el('div', 'padding:6px 10px;');
-        var scale = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:6px;color:#333;padding:0 0 2px;');
+        var scale = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:18px;color:#333;padding:0 0 2px;');
         for (var k = 0; k <= 5; k++) scale.appendChild(el('span', '', '' + k));
         barRow.appendChild(scale);
         var track = el('div', 'position:relative;height:18px;background:' + C.dark + ';border:1px solid #2a2a2a;');
         track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / 5 * 100) + '%;background:' + C.mint + ';'));
         track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / 5 * 100) + '%;background:' + C.verm + ';z-index:1;'));
         barRow.appendChild(track);
-        var barLabels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:7px;margin-top:2px;');
+        var barLabels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:18px;margin-top:2px;');
         barLabels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
         barLabels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
         barRow.appendChild(barLabels);
@@ -914,28 +914,28 @@ function buildServerCheckoutsOverlay(panel) {
 
         // Left — Open Checks
         var leftCol = el('div', 'background:#161616;padding:8px 10px;');
-        leftCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:8px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'OPEN CHECKS'));
+        leftCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'OPEN CHECKS'));
         for (var j = 0; j < srv.openChecks.length; j++) {
           var ck = srv.openChecks[j];
           var ckRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';');
-          ckRow.appendChild(el('span', 'font-size:8px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', ck.id));
-          ckRow.appendChild(el('span', 'font-size:7px;color:#555;flex:1;', '\u00D7' + ck.cvr + ' CVR \u00B7 ' + ck.time));
-          ckRow.appendChild(el('span', 'font-size:9px;color:' + C.gold + ';text-align:right;', fmt(ck.total)));
+          ckRow.appendChild(el('span', 'font-size:18px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', ck.id));
+          ckRow.appendChild(el('span', 'font-size:18px;color:#555;flex:1;', '\u00D7' + ck.cvr + ' CVR \u00B7 ' + ck.time));
+          ckRow.appendChild(el('span', 'font-size:18px;color:' + C.gold + ';text-align:right;', fmt(ck.total)));
           leftCol.appendChild(ckRow);
         }
         detailGrid.appendChild(leftCol);
 
         // Right — Tip Status
         var rightCol = el('div', 'background:#161616;padding:8px 10px;');
-        rightCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:8px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'TIP STATUS'));
+        rightCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'TIP STATUS'));
         for (var j = 0; j < srv.tips.length; j++) {
           (function(tipIdx, srvIdx) {
             var tip = D_SERVERS[srvIdx].tips[tipIdx];
             var tRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';cursor:pointer;');
-            tRow.appendChild(el('span', 'font-size:8px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', tip.id));
+            tRow.appendChild(el('span', 'font-size:18px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', tip.id));
             if (tip.tip === null) {
-              tRow.appendChild(el('span', 'font-size:8px;color:' + C.mint + ';flex:1;', '\u26A0 UNADJUSTED'));
-              tRow.appendChild(el('span', 'font-size:9px;color:#555;', '\u2014'));
+              tRow.appendChild(el('span', 'font-size:18px;color:' + C.mint + ';flex:1;', '\u26A0 UNADJUSTED'));
+              tRow.appendChild(el('span', 'font-size:18px;color:#555;', '\u2014'));
               tRow.addEventListener('pointerup', function() {
                 showNumpad(function(val) {
                   D_SERVERS[srvIdx].tips[tipIdx].tip = val;
@@ -944,8 +944,8 @@ function buildServerCheckoutsOverlay(panel) {
                 });
               });
             } else {
-              tRow.appendChild(el('span', 'font-size:8px;color:' + C.green + ';flex:1;', '\u2713 ADJUSTED'));
-              tRow.appendChild(el('span', 'font-size:9px;color:' + C.gold + ';', fmt(tip.tip)));
+              tRow.appendChild(el('span', 'font-size:18px;color:' + C.green + ';flex:1;', '\u2713 ADJUSTED'));
+              tRow.appendChild(el('span', 'font-size:18px;color:' + C.gold + ';', fmt(tip.tip)));
             }
             rightCol.appendChild(tRow);
           })(j, s);
@@ -955,7 +955,7 @@ function buildServerCheckoutsOverlay(panel) {
 
         // Action row
         var actionRow = el('div', 'border-top:1px solid #2a2a2a;background:#111;padding:6px 10px;');
-        var coBtn = el('div', 'font-family:' + FONT + ';font-size:9px;letter-spacing:2px;text-align:center;padding:6px;cursor:pointer;' +
+        var coBtn = el('div', 'font-family:' + FONT + ';font-size:18px;letter-spacing:2px;text-align:center;padding:6px;cursor:pointer;' +
           'color:' + C.mint + ';border:1px solid ' + C.mint + ';background:#0a1a0e;' +
           'clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);',
           'CHECKOUT ' + srv.name + '  \u25B6');
@@ -1054,7 +1054,7 @@ function buildLaborCobOverlay(panel) {
   var ax = 44, ay = 12, aw = 596, ah = 110;
   var cobMax = 60; // max Y for COB%
   chartFrame(svgA, ax, ay, aw, ah, 'lca');
-  xLabels(svgA, ax, aw, ay + ah, '10');
+  xLabels(svgA, ax, aw, ay + ah, '18');
   // Y labels
   for (var g = 0; g <= 4; g++) {
     var gy = ay + ah - (g / 4) * ah;
@@ -1207,15 +1207,15 @@ function buildCloseDayOverlay(panel) {
   var ac1Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;');
   var badge1Bg = closeState.settled ? C.green : '#ffdd44';
   var badge1Text = closeState.settled ? '\u2713 SETTLED' : 'PENDING';
-  ac1Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closeState.settled ? C.green : C.mint) + ';font-family:' + FONT + ';font-size:12px;font-weight:bold;color:' + (closeState.settled ? C.green : C.mint) + ';', closeState.settled ? '\u2713' : '1'));
+  ac1Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closeState.settled ? C.green : C.mint) + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;color:' + (closeState.settled ? C.green : C.mint) + ';', closeState.settled ? '\u2713' : '1'));
   ac1Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:20px;font-weight:bold;color:#fff;', 'SETTLE BATCH'));
-  ac1Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:13px;padding:2px 8px;background:' + badge1Bg + ';color:' + C.dark + ';font-weight:bold;', badge1Text));
+  ac1Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;padding:2px 8px;background:' + badge1Bg + ';color:' + C.dark + ';font-weight:bold;', badge1Text));
   ac1.appendChild(ac1Hdr);
 
   ac1.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:#ffffff;margin-bottom:6px;', '4 card transactions  \u00B7  $35.85 total  \u00B7  Dejavoo P8'));
 
   if (!closeState.settled) {
-    var settleBtn = el('div', 'background:transparent;border:2px solid ' + C.mint + ';color:' + C.mint + ';font-family:' + FONT + ';font-size:15px;font-weight:bold;text-align:center;padding:8px;cursor:pointer;letter-spacing:2px;', 'SETTLE BATCH \u25B6');
+    var settleBtn = el('div', 'background:transparent;border:2px solid ' + C.mint + ';color:' + C.mint + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;text-align:center;padding:8px;cursor:pointer;letter-spacing:2px;', 'SETTLE BATCH \u25B6');
     settleBtn.addEventListener('pointerup', function() {
       closeState.settled = true;
       closeOverlay();
@@ -1234,18 +1234,18 @@ function buildCloseDayOverlay(panel) {
   var ac2Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;');
   var badge2Bg = closed ? C.green : locked ? C.dim : '#ffdd44';
   var badge2Text = closed ? '\u2713 CLOSED' : locked ? 'LOCKED' : 'READY';
-  ac2Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closed ? C.green : locked ? C.dim : C.mint) + ';font-family:' + FONT + ';font-size:12px;font-weight:bold;color:' + (closed ? C.green : locked ? C.dim : C.mint) + ';', closed ? '\u2713' : '2'));
+  ac2Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closed ? C.green : locked ? C.dim : C.mint) + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;color:' + (closed ? C.green : locked ? C.dim : C.mint) + ';', closed ? '\u2713' : '2'));
   ac2Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:20px;font-weight:bold;color:#fff;', 'FINALIZE CLOSE DAY'));
-  ac2Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:13px;padding:2px 8px;background:' + badge2Bg + ';color:' + C.dark + ';font-weight:bold;', badge2Text));
+  ac2Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;padding:2px 8px;background:' + badge2Bg + ';color:' + C.dark + ';font-weight:bold;', badge2Text));
   ac2.appendChild(ac2Hdr);
 
   if (locked) {
     ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.dim + ';', 'SETTLE BATCH FIRST'));
-    ac2.appendChild(el('div', 'background:' + C.dark + ';color:' + C.dim + ';font-family:' + FONT + ';font-size:15px;text-align:center;padding:8px;letter-spacing:2px;', 'FINALIZE CLOSE DAY'));
+    ac2.appendChild(el('div', 'background:' + C.dark + ';color:' + C.dim + ';font-family:' + FONT + ';font-size:18px;text-align:center;padding:8px;letter-spacing:2px;', 'FINALIZE CLOSE DAY'));
   } else if (!closed) {
     ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:#ffffff;margin-bottom:4px;', 'Net: $219.47  \u00B7  Cash to safe: $183.62  \u00B7  Tips: $35.85'));
-    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:13px;color:#ffdd44;margin-bottom:6px;', 'MGR AUTHORIZED \u00B7 IRREVERSIBLE'));
-    var finalBtn = el('div', 'background:' + C.gold + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:16px;font-weight:bold;text-align:center;padding:10px;cursor:pointer;letter-spacing:4px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);', 'FINALIZE CLOSE DAY');
+    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:#ffdd44;margin-bottom:6px;', 'MGR AUTHORIZED \u00B7 IRREVERSIBLE'));
+    var finalBtn = el('div', 'background:' + C.gold + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;text-align:center;padding:10px;cursor:pointer;letter-spacing:4px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);', 'FINALIZE CLOSE DAY');
     finalBtn.addEventListener('pointerup', function() {
       closeState.closed = true;
       showToast('Day closed — ledger sealed', { bg: C.green, duration: 3000 });
@@ -1277,7 +1277,7 @@ function buildScene(container) {
     hmCard.style.gridColumn = '1 / -1';
     hmCard.style.gridRow = '1';
     hmCard._header.style.cursor = 'pointer';
-    hmCard._header.innerHTML = 'SERVER LOAD \u2014 FULL DAY <span style="float:right;font-size:10px;opacity:0.6">\u25C0\u25C0 TAP TO COLLAPSE</span>';
+    hmCard._header.innerHTML = 'SERVER LOAD \u2014 FULL DAY <span style="float:right;font-size:18px;opacity:0.6">\u25C0\u25C0 TAP TO COLLAPSE</span>';
     hmCard._header.addEventListener('pointerup', function(e) { e.stopPropagation(); hmExpanded = false; buildScene(container); });
     container.appendChild(hmCard);
 
