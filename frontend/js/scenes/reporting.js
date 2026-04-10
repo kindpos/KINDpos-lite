@@ -234,7 +234,7 @@ function buildStatStrip(items) {
 // ── Card Builder ───────────────────────────────────
 
 function buildCard(title, bodyFn, overlayFn) {
-  var card = el('div', 'background:' + C.bg + ';border:2px solid ' + C.border + ';display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;');
+  var card = el('div', 'background:' + C.dark + ';border:5px solid ' + C.mint + ';display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;');
   var header = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
   card.appendChild(header);
   card._header = header;
