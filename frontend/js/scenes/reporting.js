@@ -384,8 +384,8 @@ function buildSalesOverviewOverlay(panel) {
     var barH=(D_CAVG[i]/bMax)*bh;
     var barY=by+bh-barH;
     var above=D_CAVG[i]>=target;
-    svgB.appendChild(mk('rect',{x:bx2,y:barY,width:barW,height:barH,fill:C.gold,opacity:above?'1':'0.38'}));
-    svgB.appendChild(mk('text',{x:bx+(i/7)*bw,y:barY-4,fill:C.gold,'font-size':'9','font-family':FONT,'text-anchor':'middle',opacity:above?'1':'0.5'},fmt(D_CAVG[i])));
+    svgB.appendChild(mk('rect',{x:bx2,y:barY,width:barW,height:barH,fill:C.gold}));
+    svgB.appendChild(mk('text',{x:bx+(i/7)*bw,y:barY-4,fill:C.gold,'font-size':'9','font-family':FONT,'text-anchor':'middle'},fmt(D_CAVG[i])));
   }
   // Target line
   var tgtY=by+bh-(target/bMax)*bh;
@@ -467,7 +467,7 @@ function buildSalesBreakdownBody(body) {
     for(var i=1;i<8;i++) d+=' L'+tx(i).toFixed(1)+','+ty(cum[i]).toFixed(1);
     for(var i=7;i>=0;i--) d+=' L'+tx(i).toFixed(1)+','+ty(bottom[i]).toFixed(1);
     d+=' Z';
-    svg.appendChild(mk('path',{d:d,fill:CAT[cat],opacity:'0.75'}));
+    svg.appendChild(mk('path',{d:d,fill:CAT[cat]}));
     svg.appendChild(mk('path',{d:d,fill:'url(#dit_sb)'}));
     // Top edge
     var tp=[];for(var i=0;i<8;i++)tp.push(tx(i).toFixed(1)+','+ty(cum[i]).toFixed(1));
@@ -1010,9 +1010,9 @@ function buildLaborCobBody(body) {
   // Background track
   svg.appendChild(mk('path', { d: arcPath(0, 40), fill: 'none', stroke: '#2a2a2a', 'stroke-width': '16', 'stroke-linecap': 'butt' }));
   // Zone arcs
-  svg.appendChild(mk('path', { d: arcPath(0, 20), fill: 'none', stroke: C.green, 'stroke-width': '16', opacity: '0.75', 'stroke-linecap': 'butt' }));
-  svg.appendChild(mk('path', { d: arcPath(20, 30), fill: 'none', stroke: '#ffdd44', 'stroke-width': '16', opacity: '0.75', 'stroke-linecap': 'butt' }));
-  svg.appendChild(mk('path', { d: arcPath(30, 40), fill: 'none', stroke: C.verm, 'stroke-width': '16', opacity: '0.75', 'stroke-linecap': 'butt' }));
+  svg.appendChild(mk('path', { d: arcPath(0, 20), fill: 'none', stroke: C.green, 'stroke-width': '16', 'stroke-linecap': 'butt' }));
+  svg.appendChild(mk('path', { d: arcPath(20, 30), fill: 'none', stroke: '#ffdd44', 'stroke-width': '16', 'stroke-linecap': 'butt' }));
+  svg.appendChild(mk('path', { d: arcPath(30, 40), fill: 'none', stroke: C.verm, 'stroke-width': '16', 'stroke-linecap': 'butt' }));
 
   // Target tick at 25%
   var tgtA = (180 - (tgtPct / 40) * 180) * Math.PI / 180;
@@ -1136,7 +1136,7 @@ function buildLaborCobOverlay(panel) {
   }
   // Total bar
   var totalBarY = eby + ebh + 6;
-  svgB.appendChild(mk('rect', { x: ebx, y: totalBarY, width: ebw, height: 14, fill: C.gold, opacity: '0.6' }));
+  svgB.appendChild(mk('rect', { x: ebx, y: totalBarY, width: ebw, height: 14, fill: C.gold }));
   svgB.appendChild(mk('text', { x: ebx + 6, y: totalBarY + 11, fill: C.dark, 'font-size': '14', 'font-weight': 'bold', 'font-family': FONT }, fmt(totalLab) + '  \u00B7  COB ' + cobPct.toFixed(1) + '%'));
   secB.appendChild(svgB);
   panel.appendChild(secB);
@@ -1222,7 +1222,7 @@ function buildCloseDayOverlay(panel) {
   var wrap = el('div', 'padding:8px;');
 
   // Action Card 1 — Settle Batch
-  var ac1 = el('div', 'border:1px solid ' + (closeState.settled ? C.green : C.border) + ';padding:10px;margin-bottom:10px;' + (closeState.settled ? 'opacity:0.65;' : ''));
+  var ac1 = el('div', 'border:1px solid ' + (closeState.settled ? C.green : C.border) + ';padding:10px;margin-bottom:10px;' + (closeState.settled ? '' : ''));
   var ac1Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;');
   var badge1Bg = closeState.settled ? C.green : '#ffdd44';
   var badge1Text = closeState.settled ? '\u2713 SETTLED' : 'PENDING';
@@ -1249,7 +1249,7 @@ function buildCloseDayOverlay(panel) {
   // Action Card 2 — Finalize Close Day
   var locked = !closeState.settled;
   var closed = closeState.closed;
-  var ac2 = el('div', 'border:1px solid ' + (closed ? C.green : locked ? C.dim : C.border) + ';padding:10px;' + (locked ? 'opacity:0.4;pointer-events:none;' : '') + (closed ? 'opacity:0.65;' : ''));
+  var ac2 = el('div', 'border:1px solid ' + (closed ? C.green : locked ? C.dim : C.border) + ';padding:10px;' + (locked ? 'opacity:0.4;pointer-events:none;' : '') + (closed ? '' : ''));
   var ac2Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;');
   var badge2Bg = closed ? C.green : locked ? C.dim : '#ffdd44';
   var badge2Text = closed ? '\u2713 CLOSED' : locked ? 'LOCKED' : 'READY';
@@ -1459,7 +1459,7 @@ function buildLeftCard(params, sales, labor) {
       var cardPct = total > 0 ? (s.card_total / total * 100).toFixed(0) : 0;
       var breakdown = document.createElement('div');
       breakdown.style.cssText = 'margin-top:4px;font-family:' + T.fb + ';font-size:' + subFs + ';color:' + T.mint + ';';
-      breakdown.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></span><span>Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></span></div><div style="display:flex;height:' + (compact ? '10' : '16') + 'px;background:' + T.bg + ';"><div style="width:' + cashPct + '%;height:100%;background:' + g + ';opacity:0.8;"></div><div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';opacity:0.8;"></div></div>';
+      breakdown.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>Cash: <span style="color:' + g + '">' + fmt(s.cash_total) + '</span></span><span>Card: <span style="color:' + g + '">' + fmt(s.card_total) + '</span></span></div><div style="display:flex;height:' + (compact ? '10' : '16') + 'px;background:' + T.bg + ';"><div style="width:' + cashPct + '%;height:100%;background:' + g + ';"></div><div style="width:' + cardPct + '%;height:100%;background:' + T.cyan + ';"></div></div>';
       card.appendChild(breakdown);
     }
     if (!compact) {
