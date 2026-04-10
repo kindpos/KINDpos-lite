@@ -1,10 +1,10 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Theme — Sammy's Pizza
+//  KINDpos Theme — Pizza Palace
 //  Jersey Retro: warm cream, classic red, gold
 //  "Geez Louise, that's good pizza."
 // ═══════════════════════════════════════════════════
 
-export var SammysPizza = {
+export var PizzaPalace = {
   // ── Surface colors ─────────────────────────────
   bg:        '#F0E8D5',      // cream
   bgDark:    '#e4d8c2',

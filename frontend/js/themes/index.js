@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-export { SammysPizza }    from './sammys-pizza.js';
+export { PizzaPalace }    from './sammys-pizza.js';
 export { NeonDiner }      from './neon-diner.js';
 export { Steakhouse }     from './steakhouse.js';
 export { TikiBar }        from './tiki-bar.js';
@@ -19,7 +19,7 @@ export { AtomicPurple }   from './atomic-purple.js';
 // Theme catalog for settings UI
 export var THEMES = [
   { id: 'terminal-glow',  label: 'Terminal Glow',   theme: null },        // default — use resetTheme()
-  { id: 'sammys-pizza',   label: "Sammy's Pizza",   loader: function() { return import('./sammys-pizza.js').then(function(m) { return m.SammysPizza; }); } },
+  { id: 'pizza-palace',   label: 'Pizza Palace',    loader: function() { return import('./sammys-pizza.js').then(function(m) { return m.PizzaPalace; }); } },
   { id: 'neon-diner',     label: 'Neon Diner',      loader: function() { return import('./neon-diner.js').then(function(m) { return m.NeonDiner; }); } },
   { id: 'steakhouse',     label: 'Steakhouse',      loader: function() { return import('./steakhouse.js').then(function(m) { return m.Steakhouse; }); } },
   { id: 'tiki-bar',       label: 'Tiki Bar',        loader: function() { return import('./tiki-bar.js').then(function(m) { return m.TikiBar; }); } },

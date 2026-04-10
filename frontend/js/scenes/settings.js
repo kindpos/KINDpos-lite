@@ -803,7 +803,7 @@ function renderDisplaySettings(body) {
 // Swatch colors for each theme tile (primary accent + bg)
 var _THEME_SWATCHES = {
   'terminal-glow': { accent: '#87f79c', bg: '#333333', bg2: '#1a1a1a' },
-  'sammys-pizza':  { accent: '#CC2200', bg: '#F0E8D5', bg2: '#e4d8c2' },
+  'pizza-palace':  { accent: '#CC2200', bg: '#F0E8D5', bg2: '#e4d8c2' },
   'neon-diner':    { accent: '#ff2d78', bg: '#0a0a1a', bg2: '#14142a' },
   'steakhouse':    { accent: '#c9943a', bg: '#2a1800', bg2: '#151515' },
   'tiki-bar':      { accent: '#5cff8f', bg: '#1a0d00', bg2: '#120800' },
