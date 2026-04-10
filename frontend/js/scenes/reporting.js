@@ -189,9 +189,13 @@ function refreshAllChecks() { if (allChecksEl) { allChecksEl.innerHTML = ''; bui
 function openOverlay(builderFn) {
   if (activeOverlay) closeOverlay();
   var ov = el('div', 'position:absolute;top:0;left:0;right:0;bottom:0;background:' + C.overlay + ';z-index:25;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px 0;');
-  var panel = el('div', 'border:3px solid ' + C.mint + ';width:min(96vw,700px);margin:0 auto;background:' + C.dark + ';overflow-x:auto;');
+  var panel = el('div', 'width:min(96vw,700px);margin:0 auto;background:' + T.bgDark + ';overflow-x:auto;' +
+    'border-top:7px solid ' + T.numpadChassisL + ';border-left:7px solid ' + T.numpadChassisL + ';' +
+    'border-bottom:7px solid ' + T.numpadChassisD + ';border-right:7px solid ' + T.numpadChassisD + ';' +
+    'clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);' +
+    'filter:drop-shadow(3px 4px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15));');
   // Close button header
-  var closeHdr = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 8px;letter-spacing:2px;display:flex;justify-content:flex-end;align-items:center;position:sticky;top:0;z-index:1;');
+  var closeHdr = el('div', 'background:' + T.numpadChassis + ';color:' + T.bgDark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 8px;letter-spacing:2px;display:flex;justify-content:flex-end;align-items:center;position:sticky;top:0;z-index:1;');
   var backBtn = buildStyledButton(T.darkBtn);
   backBtn.wrap.style.height = '32px';
   backBtn.wrap.style.width = '64px';
