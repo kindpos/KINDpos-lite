@@ -579,6 +579,35 @@ async def process_refund(
     }
 
 
+@router.post("/batch-settle")
+async def batch_settle(ledger: EventLedger = Depends(get_ledger)):
+    """Send BatchClose to the card reader to settle the current batch."""
+    manager = get_payment_manager(ledger)
+    await _ensure_devices(manager)
+
+    device = manager.get_device_for_terminal(settings.terminal_id)
+    if not device:
+        return {"success": False, "error": "No payment device registered", "using_mock": True}
+
+    is_mock = device.config and device.config.protocol == "mock"
+    if is_mock:
+        return {"success": True, "using_mock": True, "status": "mock_settled"}
+
+    try:
+        result = await device.close_batch()
+        return {
+            "success": result.status.value == "SUCCESS",
+            "using_mock": False,
+            "batch_id": result.batch_id,
+            "transaction_count": result.transaction_count,
+            "total_amount": float(result.total_amount),
+            "status": result.status.value,
+            "error": result.error.message if result.error else None,
+        }
+    except Exception as e:
+        return {"success": False, "using_mock": False, "error": str(e)}
+
+
 @router.get("/device-status")
 async def get_device_status(manager: PaymentManager = Depends(get_payment_manager)):
     """All devices: id, name, status, last_checked."""
