@@ -8,6 +8,7 @@ import { T, chamfer, buildStyledButton, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { showKeyboard } from '../keyboard.js';
 
 // == Helpers ============================================
 
@@ -727,21 +728,44 @@ function buildPresetButtons(options, current, onSelect) {
 }
 
 function buildTextInput(value, placeholder, onChange) {
-  var input = document.createElement('input');
-  input.type = 'text';
-  input.value = value || '';
-  input.placeholder = placeholder || '';
+  var currentValue = value || '';
+
+  var input = document.createElement('div');
   input.style.cssText = [
-    'background:' + T.bgDark + ';color:' + T.gold + ';',
+    'background:' + T.bgDark + ';',
     'border:2px solid ' + T.border + ';',
     'font-family:' + T.fb + ';font-size:14px;',
     'padding:6px 10px;',
     'clip-path:' + chamfer(4) + ';',
-    'outline:none;width:180px;',
+    'width:180px;box-sizing:border-box;',
+    'cursor:pointer;min-height:30px;',
+    'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;',
   ].join('');
-  input.addEventListener('change', function() {
-    if (onChange) onChange(input.value);
+
+  function render() {
+    if (currentValue) {
+      input.textContent = currentValue;
+      input.style.color = T.gold;
+    } else {
+      input.textContent = placeholder || '';
+      input.style.color = T.mutedText;
+    }
+  }
+
+  input.addEventListener('pointerup', function() {
+    showKeyboard({
+      placeholder: placeholder || '',
+      initialValue: currentValue,
+      onDone: function(val) {
+        currentValue = val || '';
+        render();
+        if (onChange) onChange(currentValue);
+      },
+      dismissOnDone: true,
+    });
   });
+
+  render();
   return input;
 }
 
