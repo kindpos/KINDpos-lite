@@ -91,6 +91,7 @@ var D_HEAT = {
 // ── Module State ───────────────────────────────────
 
 var curEl = null;
+var curParams = null;
 var activeOverlay = null;
 var hmFilter = null; // {server,hour} or null — heatmap→allchecks filter
 var hmExpanded = false; // heatmap full-width across top
@@ -643,7 +644,15 @@ function heatColor(val, maxVal) {
 }
 
 function buildHeatmapBody(body) {
-  var servers = D_HEAT.servers;
+  // Only show active (clocked-in) employees
+  var allServers = D_HEAT.servers;
+  var servers = [];
+  for (var i = 0; i < allServers.length; i++) {
+    for (var j = 0; j < D_SERVERS.length; j++) {
+      if (D_SERVERS[j].name === allServers[i] && D_SERVERS[j].active) { servers.push(allServers[i]); break; }
+    }
+  }
+  if (servers.length === 0) { body.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.dim + ';text-align:center;padding:20px;', 'No active servers')); return; }
   var data = D_HEAT.data;
   var maxVal = 0;
   for (var s = 0; s < servers.length; s++)
@@ -729,9 +738,10 @@ function buildHeatmapBody(body) {
 
 // Card 6 — All Checks (grid of check tiles)
 function buildAllChecksBody(body) {
-  var filtered = D_CHECKS;
+  // Only show OPEN checks by default
+  var filtered = D_CHECKS.filter(function(c) { return c.status === 'OPEN'; });
   if (hmFilter) {
-    filtered = D_CHECKS.filter(function(c) { return c.srv === hmFilter.server && c.hr === hmFilter.hour; });
+    filtered = filtered.filter(function(c) { return c.srv === hmFilter.server && c.hr === hmFilter.hour; });
   }
 
   var wrap = el('div', 'height:100%;overflow-y:auto;display:flex;flex-direction:column;');
@@ -755,21 +765,14 @@ function buildAllChecksBody(body) {
   var grid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;overflow-y:auto;align-content:start;padding:4px;');
   for (var i = 0; i < filtered.length; i++) {
     var c = filtered[i];
-    var isOpen = c.status === 'OPEN';
-    var statusColor = isOpen ? C.verm : C.green;
-    var borderColor = isOpen ? C.verm : C.border;
-    var numColor = isOpen ? C.mint : C.pink;
-
-    var tile = el('div', 'background:' + C.dark + ';border:2px solid ' + borderColor + ';padding:8px 10px;font-family:' + FONT + ';cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:70px;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px);' + (isOpen ? '' : 'opacity:0.7;'));
+    var tile = el('div', 'background:' + C.dark + ';border:2px solid ' + C.mint + ';padding:8px 10px;font-family:' + FONT + ';cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:70px;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px);');
     // Check number
-    tile.appendChild(el('div', 'font-size:20px;color:' + numColor + ';white-space:nowrap;', c.id));
+    tile.appendChild(el('div', 'font-size:20px;color:' + C.mint + ';white-space:nowrap;', c.id));
     // Server + table
     tile.appendChild(el('div', 'font-size:18px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', c.srv + (c.tbl ? ' \u00B7 ' + c.tbl : '')));
-    // Type
-    tile.appendChild(el('div', 'font-size:18px;color:' + C.dim + ';white-space:nowrap;', c.type));
-    // Status + total
+    // Type + total
     var botRow = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-top:auto;white-space:nowrap;');
-    botRow.appendChild(el('span', 'font-size:18px;color:' + statusColor + ';font-weight:bold;', c.status));
+    botRow.appendChild(el('span', 'font-size:18px;color:#ffffff;', c.type));
     botRow.appendChild(el('span', 'font-size:20px;color:' + C.gold + ';font-weight:bold;', fmt(c.total)));
     tile.appendChild(botRow);
     grid.appendChild(tile);
@@ -809,71 +812,50 @@ function buildAllChecksOverlay(panel) {
   panel.appendChild(wrap);
 }
 
-// Card 3 — Server Checkouts (horizontal overlapping bars per server)
+// Card 3 — Server Checkouts (active servers only, individual cards)
 function buildServerCheckoutsBody(body) {
   var maxCount = 5;
-  var wrap = el('div', 'height:100%;display:flex;flex-direction:column;gap:4px;overflow-y:auto;padding:4px;');
+  var wrap = el('div', 'height:100%;display:flex;flex-direction:column;gap:6px;overflow-y:auto;padding:4px;');
 
   for (var s = 0; s < D_SERVERS.length; s++) {
     var srv = D_SERVERS[s];
+    if (!srv.active) continue; // Only show clocked-in servers
     var oc = srv.openChecks.length;
     var ut = 0; for (var j = 0; j < srv.tips.length; j++) if (srv.tips[j].tip === null) ut++;
-    var isActive = srv.active;
 
-    var row = el('div', 'flex-shrink:0;');
-    // Server name + status
-    var hdr = el('div', 'display:flex;align-items:center;gap:6px;margin-bottom:2px;');
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + (isActive ? C.mint : '#444') + ';letter-spacing:1px;font-weight:bold;', srv.name));
-    hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + (isActive ? C.verm : '#333') + ';', '\u25CF ' + (isActive ? 'ACTIVE' : 'OFFLINE')));
-    row.appendChild(hdr);
+    var card = el('div', 'background:' + C.dark + ';border:2px solid ' + C.border + ';padding:6px 8px;flex-shrink:0;');
+    // Name large + white
+    card.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:#ffffff;font-weight:bold;margin-bottom:4px;', srv.name));
 
     // Bar track
-    var track = el('div', 'position:relative;height:20px;background:' + (isActive ? C.dark : '#161616') + ';border:1px solid #2a2a2a;');
-    if (isActive) {
-      track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / maxCount * 100).toFixed(0) + '%;background:' + C.mint + ';'));
-      track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / maxCount * 100).toFixed(0) + '%;background:' + C.verm + ';z-index:1;'));
-      if (oc > 0) {
-        var ckEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.verm + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:1px 5px;');
-        ckEl.style.left = Math.max(2, (oc / maxCount * 100) - 12) + '%';
-        ckEl.textContent = oc;
-        track.appendChild(ckEl);
-      }
-      if (ut > 0) {
-        var tpEl = el('div', 'position:absolute;top:2px;z-index:2;background:#333;color:' + C.mint + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:1px 5px;');
-        tpEl.style.left = Math.max(2, (ut / maxCount * 100) - 12) + '%';
-        track.appendChild(tpEl);
-        tpEl.textContent = ut;
-      }
-    } else {
-      track.appendChild(el('div', 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:18px;color:#2a2a2a;', 'NOT CLOCKED IN'));
-    }
-    row.appendChild(track);
+    var track = el('div', 'position:relative;height:18px;background:#111;border:1px solid #2a2a2a;');
+    track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / maxCount * 100).toFixed(0) + '%;background:' + C.mint + ';'));
+    track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / maxCount * 100).toFixed(0) + '%;background:' + C.verm + ';z-index:1;'));
+    card.appendChild(track);
 
-    if (isActive) {
-      var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:18px;margin-top:2px;');
-      labels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
-      labels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
-      row.appendChild(labels);
-    }
+    // Labels
+    var labels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:18px;margin-top:2px;white-space:nowrap;');
+    labels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open'));
+    labels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadj tips'));
+    card.appendChild(labels);
 
-    wrap.appendChild(row);
-    if (s < D_SERVERS.length - 1) wrap.appendChild(el('div', 'height:1px;background:#2a2a2a;flex-shrink:0;'));
+    wrap.appendChild(card);
   }
 
   // Legend
-  var leg = el('div', 'display:flex;gap:12px;margin-top:auto;padding-top:4px;font-family:' + FONT + ';font-size:18px;');
-  leg.innerHTML = '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.verm + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.verm + '">OPEN CHECKS</span></span>' +
-    '<span><span style="display:inline-block;width:7px;height:5px;background:' + C.mint + ';vertical-align:middle;margin-right:2px;"></span><span style="color:' + C.mint + '">UNADJ TIPS</span></span>';
+  var leg = el('div', 'display:flex;gap:12px;margin-top:auto;padding-top:4px;font-family:' + FONT + ';font-size:18px;flex-shrink:0;white-space:nowrap;');
+  leg.innerHTML = '<span style="color:' + C.verm + '">\u25A0 OPEN CHECKS</span><span style="color:' + C.mint + '">\u25A0 UNADJ TIPS</span>';
   wrap.appendChild(leg);
   body.appendChild(wrap);
 }
 
 function buildServerCheckoutsOverlay(panel) {
-  // Compute totals
-  var serversOn = 0, totalOpen = 0, totalUnadj = 0, totalTips = 0;
+  // Only active servers
+  var activeServers = [];
+  var totalUnadj = 0, totalTips = 0;
   for (var i = 0; i < D_SERVERS.length; i++) {
-    if (D_SERVERS[i].active) serversOn++;
-    totalOpen += D_SERVERS[i].openChecks.length;
+    if (!D_SERVERS[i].active) continue;
+    activeServers.push(i);
     for (var j = 0; j < D_SERVERS[i].tips.length; j++) {
       if (D_SERVERS[i].tips[j].tip === null) totalUnadj++;
       else totalTips += D_SERVERS[i].tips[j].tip;
@@ -882,122 +864,132 @@ function buildServerCheckoutsOverlay(panel) {
 
   // Stat strip
   panel.appendChild(buildStatStrip([
-    { label:'SERVERS ON', value:''+serversOn, color:C.lime },
-    { label:'OPEN CHECKS', value:''+totalOpen, color:C.verm },
+    { label:'SERVERS', value:''+activeServers.length, color:C.lime },
     { label:'UNADJ TIPS', value:''+totalUnadj, color:C.mint },
     { label:'TOTAL TIPS', value:fmt(totalTips), color:C.gold },
   ]));
 
+  var expandedSrv = {}; // track which server accordions are open
   var wrap = el('div', 'padding:8px;');
 
   function renderServerSections() {
     wrap.innerHTML = '';
-    for (var s = 0; s < D_SERVERS.length; s++) {
-      var srv = D_SERVERS[s];
-      var oc = srv.openChecks.length;
-      var ut = 0; for (var j2 = 0; j2 < srv.tips.length; j2++) if (srv.tips[j2].tip === null) ut++;
-      var hasFlags = oc > 0 || ut > 0;
+    for (var si = 0; si < activeServers.length; si++) {
+      (function(srvIdx) {
+        var srv = D_SERVERS[srvIdx];
+        var ut = 0; for (var j2 = 0; j2 < srv.tips.length; j2++) if (srv.tips[j2].tip === null) ut++;
+        var allAdjusted = ut === 0;
+        var isOpen = expandedSrv[srvIdx];
 
-      var section = el('div', 'background:#161616;border:2px solid ' + (hasFlags ? '#ffdd44' : '#2a2a2a') + ';margin-bottom:8px;');
+        var section = el('div', 'background:#161616;border:3px solid ' + C.mint + ';margin-bottom:10px;');
 
-      // Server header
-      var sHdr = el('div', 'background:' + (hasFlags ? '#2a1800' : '#2a2a2a') + ';padding:5px 10px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden;');
-      sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;flex-shrink:0;', srv.name));
-      if (!srv.active) {
-        sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:#444;border:1px solid #333;padding:1px 6px;', '\u25CF OFFLINE'));
-      } else {
-        if (oc > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.verm + ';border:1px solid ' + C.verm + ';padding:1px 6px;', '\u25CF ' + oc + ' OPEN'));
-        if (ut > 0) sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';border:1px solid ' + C.mint + ';padding:1px 6px;', '\u26A0 ' + ut + ' UNADJ TIPS'));
-      }
-      section.appendChild(sHdr);
-
-      if (!srv.active) {
-        // Offline server — empty bar + disabled button
-        var offBar = el('div', 'padding:6px 10px;');
-        var offTrack = el('div', 'height:14px;background:#161616;border:1px solid #222;');
-        offBar.appendChild(offTrack);
-        offBar.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:#333;margin-top:2px;', 'not clocked in'));
-        section.appendChild(offBar);
-        var offAction = el('div', 'border-top:1px solid #2a2a2a;background:#111;padding:6px 10px;');
-        offAction.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:#333;text-align:center;padding:5px;background:#1a1a1a;letter-spacing:2px;', 'NO ACTIVE SESSION'));
-        section.appendChild(offAction);
-      } else {
-        // Overlapping bar (large version)
-        var barRow = el('div', 'padding:6px 10px;');
-        var scale = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:18px;color:#333;padding:0 0 2px;');
-        for (var k = 0; k <= 5; k++) scale.appendChild(el('span', '', '' + k));
-        barRow.appendChild(scale);
-        var track = el('div', 'position:relative;height:18px;background:' + C.dark + ';border:1px solid #2a2a2a;');
-        track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / 5 * 100) + '%;background:' + C.mint + ';'));
-        track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / 5 * 100) + '%;background:' + C.verm + ';z-index:1;'));
-        barRow.appendChild(track);
-        var barLabels = el('div', 'display:flex;justify-content:space-between;font-family:' + FONT + ';font-size:18px;margin-top:2px;');
-        barLabels.appendChild(el('span', 'color:' + C.verm + ';', oc + ' open checks'));
-        barLabels.appendChild(el('span', 'color:' + C.mint + ';', ut + ' unadjusted tips'));
-        barRow.appendChild(barLabels);
-        section.appendChild(barRow);
-
-        // Two-column detail grid
-        var detailGrid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2a2a2a;border-top:1px solid #2a2a2a;');
-
-        // Left — Open Checks
-        var leftCol = el('div', 'background:#161616;padding:8px 10px;');
-        leftCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'OPEN CHECKS'));
-        for (var j = 0; j < srv.openChecks.length; j++) {
-          var ck = srv.openChecks[j];
-          var ckRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';white-space:nowrap;');
-          ckRow.appendChild(el('span', 'font-size:18px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', ck.id));
-          ckRow.appendChild(el('span', 'font-size:18px;color:#555;flex:1;', '\u00D7' + ck.cvr + ' CVR \u00B7 ' + ck.time));
-          ckRow.appendChild(el('span', 'font-size:18px;color:' + C.gold + ';text-align:right;', fmt(ck.total)));
-          leftCol.appendChild(ckRow);
+        // Header — tap to expand/collapse
+        var sHdr = el('div', 'background:#2a2a2a;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;');
+        sHdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:24px;color:#ffffff;font-weight:bold;', srv.name));
+        var badge = el('span', 'font-family:' + FONT + ';font-size:18px;padding:2px 8px;border:2px solid;');
+        if (allAdjusted) {
+          badge.style.color = C.green; badge.style.borderColor = C.green;
+          badge.textContent = '\u2713 ALL ADJUSTED';
+        } else {
+          badge.style.color = C.mint; badge.style.borderColor = C.mint;
+          badge.textContent = '\u26A0 ' + ut + ' UNADJ';
         }
-        detailGrid.appendChild(leftCol);
-
-        // Right — Tip Status
-        var rightCol = el('div', 'background:#161616;padding:8px 10px;');
-        rightCol.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;border-bottom:1px solid #2a2a2a;padding-bottom:4px;margin-bottom:6px;', 'TIP STATUS'));
-        for (var j = 0; j < srv.tips.length; j++) {
-          (function(tipIdx, srvIdx) {
-            var tip = D_SERVERS[srvIdx].tips[tipIdx];
-            var tRow = el('div', 'display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1e1e1e;gap:4px;font-family:' + FONT + ';cursor:pointer;white-space:nowrap;');
-            tRow.appendChild(el('span', 'font-size:18px;color:' + C.lime + ';letter-spacing:1px;min-width:44px;', tip.id));
-            if (tip.tip === null) {
-              tRow.appendChild(el('span', 'font-size:18px;color:' + C.mint + ';flex:1;', '\u26A0 UNADJUSTED'));
-              tRow.appendChild(el('span', 'font-size:18px;color:#555;', '\u2014'));
-              tRow.style.background = '#1a2e1a';
-              tRow.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showTipNumpad(function(val) {
-                  D_SERVERS[srvIdx].tips[tipIdx].tip = val;
-                  renderServerSections();
-                  refreshCloseDay();
-                });
-              });
-            } else {
-              tRow.appendChild(el('span', 'font-size:18px;color:' + C.green + ';flex:1;', '\u2713 ADJUSTED'));
-              tRow.appendChild(el('span', 'font-size:18px;color:' + C.gold + ';', fmt(tip.tip)));
-            }
-            rightCol.appendChild(tRow);
-          })(j, s);
-        }
-        detailGrid.appendChild(rightCol);
-        section.appendChild(detailGrid);
-
-        // Action row
-        var actionRow = el('div', 'border-top:1px solid #2a2a2a;background:#111;padding:6px 10px;');
-        var coBtn = el('div', 'font-family:' + FONT + ';font-size:18px;letter-spacing:2px;text-align:center;padding:6px;cursor:pointer;' +
-          'color:' + C.mint + ';border:1px solid ' + C.mint + ';background:#0a1a0e;' +
-          'clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);',
-          'CHECKOUT ' + srv.name + '  \u25B6');
-        coBtn.addEventListener('pointerup', function() {
-          showToast('Server checked out', { bg: C.green, duration: 2000 });
+        sHdr.appendChild(badge);
+        sHdr.addEventListener('click', function(e) {
+          e.stopPropagation();
+          expandedSrv[srvIdx] = !expandedSrv[srvIdx];
+          renderServerSections();
         });
-        actionRow.appendChild(coBtn);
-        section.appendChild(actionRow);
-      }
+        section.appendChild(sHdr);
 
-      wrap.appendChild(section);
+        // Expanded content
+        if (isOpen) {
+          var content = el('div', 'padding:10px;');
+
+          // Tip cards
+          content.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:2px;margin-bottom:6px;', 'UNADJUSTED TIPS'));
+          for (var j = 0; j < srv.tips.length; j++) {
+            (function(tipIdx) {
+              var tip = D_SERVERS[srvIdx].tips[tipIdx];
+              var tipCard = el('div', 'background:#111;border:3px solid ' + (tip.tip === null ? C.mint : C.green) + ';padding:10px 12px;margin-bottom:8px;font-family:' + FONT + ';');
+
+              // Row 1: Check # + time
+              var r1 = el('div', 'display:flex;justify-content:space-between;margin-bottom:4px;white-space:nowrap;');
+              r1.appendChild(el('span', 'font-size:20px;color:#ffffff;font-weight:bold;', tip.id));
+              r1.appendChild(el('span', 'font-size:18px;color:#aaaaaa;', tip.time || ''));
+              tipCard.appendChild(r1);
+
+              // Row 2: Check amount
+              var r2 = el('div', 'display:flex;justify-content:space-between;margin-bottom:4px;white-space:nowrap;');
+              r2.appendChild(el('span', 'font-size:18px;color:#ffffff;', 'Check Total'));
+              r2.appendChild(el('span', 'font-size:20px;color:' + C.gold + ';font-weight:bold;', fmt(tip.amt)));
+              tipCard.appendChild(r2);
+
+              // Row 3: Tip + final total
+              if (tip.tip !== null) {
+                var r3 = el('div', 'display:flex;justify-content:space-between;margin-bottom:2px;white-space:nowrap;');
+                r3.appendChild(el('span', 'font-size:18px;color:#ffffff;', 'Tip'));
+                r3.appendChild(el('span', 'font-size:20px;color:' + C.green + ';font-weight:bold;', fmt(tip.tip)));
+                tipCard.appendChild(r3);
+                var r4 = el('div', 'display:flex;justify-content:space-between;border-top:1px solid #333;padding-top:4px;white-space:nowrap;');
+                r4.appendChild(el('span', 'font-size:18px;color:#ffffff;font-weight:bold;', 'Final Total'));
+                r4.appendChild(el('span', 'font-size:22px;color:' + C.gold + ';font-weight:bold;', fmt(tip.amt + tip.tip)));
+                tipCard.appendChild(r4);
+              } else {
+                // Tap to adjust
+                tipCard.style.cursor = 'pointer';
+                tipCard.appendChild(el('div', 'font-size:18px;color:' + C.mint + ';text-align:center;margin-top:4px;', '\u26A0 TAP TO ADJUST TIP'));
+                tipCard.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  showTipNumpad(function(val) {
+                    D_SERVERS[srvIdx].tips[tipIdx].tip = val;
+                    renderServerSections();
+                    refreshCloseDay();
+                  });
+                });
+              }
+              content.appendChild(tipCard);
+            })(j);
+          }
+
+          // "Adjust Remaining to $0" shortcut
+          if (!allAdjusted) {
+            var zeroBtn = el('div', 'font-family:' + FONT + ';font-size:18px;letter-spacing:1px;text-align:center;padding:8px;cursor:pointer;margin-bottom:8px;' +
+              'color:' + C.gold + ';border:2px solid ' + C.gold + ';background:#1a1400;',
+              'ADJUST REMAINING TO $0.00');
+            zeroBtn.addEventListener('click', function(e) {
+              e.stopPropagation();
+              for (var k = 0; k < D_SERVERS[srvIdx].tips.length; k++) {
+                if (D_SERVERS[srvIdx].tips[k].tip === null) D_SERVERS[srvIdx].tips[k].tip = 0;
+              }
+              renderServerSections();
+              refreshCloseDay();
+              showToast('Remaining tips set to $0.00', { bg: C.gold, duration: 2000 });
+            });
+            content.appendChild(zeroBtn);
+          }
+
+          // Checkout button — gated until all tips adjusted
+          var coBtn = el('div', 'font-family:' + FONT + ';font-size:20px;letter-spacing:2px;text-align:center;padding:10px;' +
+            'width:60%;margin:0 auto;' +
+            (allAdjusted
+              ? 'cursor:pointer;color:' + C.mint + ';border:3px solid ' + C.mint + ';background:#0a1a0e;'
+              : 'color:#444;border:3px solid #333;background:#1a1a1a;pointer-events:none;') +
+            'clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);',
+            allAdjusted ? 'CHECKOUT ' + srv.name + ' \u25B6' : 'ADJUST ALL TIPS FIRST');
+          if (allAdjusted) {
+            coBtn.addEventListener('click', function(e) {
+              e.stopPropagation();
+              showToast(srv.name + ' checked out', { bg: C.green, duration: 2000 });
+            });
+          }
+          content.appendChild(coBtn);
+
+          section.appendChild(content);
+        }
+
+        wrap.appendChild(section);
+      })(activeServers[si]);
     }
   }
 
@@ -1311,9 +1303,17 @@ function buildScene(container) {
     var hmCard = buildCard('SERVER LOAD HEATMAP', function(b) { heatmapEl = b; buildHeatmapBody(b); }, null);
     hmCard.style.gridColumn = '1 / -1';
     hmCard.style.gridRow = '1';
-    hmCard._header.style.cursor = 'pointer';
-    hmCard._header.innerHTML = 'SERVER LOAD \u2014 FULL DAY <span style="float:right;font-size:18px;opacity:0.6">\u25C0\u25C0 TAP TO COLLAPSE</span>';
-    hmCard._header.addEventListener('pointerup', function(e) { e.stopPropagation(); hmExpanded = false; buildScene(container); });
+    hmCard._header.style.cssText += 'display:flex;justify-content:space-between;align-items:center;';
+    hmCard._header.textContent = 'SERVER LOAD \u2014 FULL DAY';
+    var collapseBtn = buildStyledButton(T.darkBtn);
+    collapseBtn.wrap.style.height = '28px';
+    collapseBtn.wrap.style.width = '56px';
+    collapseBtn.inner.style.fontFamily = FONT;
+    collapseBtn.inner.style.fontSize = '18px';
+    collapseBtn.inner.style.color = C.mint;
+    collapseBtn.inner.textContent = '<<<';
+    collapseBtn.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); hmExpanded = false; buildScene(container); });
+    hmCard._header.appendChild(collapseBtn.wrap);
     container.appendChild(hmCard);
 
     var salesOv = buildCard('SALES OVERVIEW', buildSalesOverviewBody, buildSalesOverviewOverlay);
@@ -1385,6 +1385,7 @@ SceneManager.register({
   name: 'manager-landing',
   mount: function(container, params) {
     curEl = container;
+    curParams = params || {};
     // Reset state
     hmFilter = null;
     hmExpanded = false;
@@ -1393,7 +1394,8 @@ SceneManager.register({
     allChecksEl = null;
     heatmapEl = null;
 
-    setSceneName('MANAGER');
+    var empName = (curParams.employeeName || curParams.emp && curParams.emp.name || 'Manager');
+    setSceneName('Welcome, ' + empName + '!');
     setHeaderBack({ x: true });
 
     buildScene(container);
