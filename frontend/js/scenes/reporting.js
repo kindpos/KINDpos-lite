@@ -234,8 +234,12 @@ function buildStatStrip(items) {
 // ── Card Builder ───────────────────────────────────
 
 function buildCard(title, bodyFn, overlayFn) {
-  var card = el('div', 'background:' + C.dark + ';border:5px solid ' + C.mint + ';display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;');
-  var header = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
+  // Beveled depth card — matching clock-in overlay style
+  var card = el('div', 'background:' + T.bgDark + ';display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;' +
+    'border-top:5px solid ' + T.numpadChassisL + ';border-left:5px solid ' + T.numpadChassisL + ';' +
+    'border-bottom:5px solid ' + T.numpadChassisD + ';border-right:5px solid ' + T.numpadChassisD + ';' +
+    'clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);');
+  var header = el('div', 'background:' + T.numpadChassis + ';color:' + T.bgDark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:4px 10px;letter-spacing:2px;flex-shrink:0;', title);
   card.appendChild(header);
   card._header = header;
   var body = el('div', 'flex:1;overflow:hidden;padding:0;min-height:0;display:flex;flex-direction:column;');
