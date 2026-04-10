@@ -570,9 +570,35 @@ export function ModifierPanel(container, opts) {
         pair.inner.appendChild(priceEl);
       }
 
-      pair.wrap.addEventListener('pointerup', function() {
-        applyOptionalMod(entry.groupKey, opt, mandKey);
-      });
+      // Special: short tap = add, long press = customize popout
+      if (opt.special && opt.includes) {
+        var _holdTimer = null;
+        var _didHold = false;
+        pair.wrap.addEventListener('pointerdown', function(e) {
+          _didHold = false;
+          _holdTimer = setTimeout(function() {
+            _didHold = true;
+            // Find existing mod or add new one, then show popout
+            var existing = _findSpecialMod(opt.id);
+            if (!existing) {
+              applyOptionalMod(entry.groupKey, opt, mandKey);
+              existing = _findSpecialMod(opt.id);
+            }
+            if (existing) showSpecialPopout(existing, opt);
+          }, 400);
+        });
+        pair.wrap.addEventListener('pointerup', function() {
+          clearTimeout(_holdTimer);
+          if (!_didHold) applyOptionalMod(entry.groupKey, opt, mandKey);
+        });
+        pair.wrap.addEventListener('pointerleave', function() {
+          clearTimeout(_holdTimer);
+        });
+      } else {
+        pair.wrap.addEventListener('pointerup', function() {
+          applyOptionalMod(entry.groupKey, opt, mandKey);
+        });
+      }
 
       grid.appendChild(pair.wrap);
     });
@@ -582,7 +608,7 @@ export function ModifierPanel(container, opts) {
 
   function applyOptionalMod(groupKey, opt, mandKey) {
     var price = _resolvePrice(opt, mandKey);
-    activeItem.optionalModifiers.push({
+    var mod = {
       prefix: activeOptPrefix,
       modifierId: opt.id || opt.label.toLowerCase().replace(/\s+/g, '-'),
       label: opt.label,
@@ -590,10 +616,127 @@ export function ModifierPanel(container, opts) {
       priceMap: opt.priceMap || null,
       groupKey: groupKey,
       placement: activePlacement,
-    });
+    };
+    // Specials carry their included toppings + exclusions
+    if (opt.special && opt.includes) {
+      mod.special = true;
+      mod.includes = opt.includes.slice();
+      mod.exclusions = [];
+    }
+    activeItem.optionalModifiers.push(mod);
     fireUpdate();
     renderTopBar();
     renderPicker();
+  }
+
+  function _findSpecialMod(modId) {
+    for (var i = activeItem.optionalModifiers.length - 1; i >= 0; i--) {
+      if (activeItem.optionalModifiers[i].modifierId === modId && activeItem.optionalModifiers[i].special) {
+        return activeItem.optionalModifiers[i];
+      }
+    }
+    return null;
+  }
+
+  // ═══ SPECIAL POPOUT (long-press customization) ═══
+  function showSpecialPopout(mod, opt) {
+    // Create overlay popout inside the picker
+    var overlay = document.createElement('div');
+    overlay.style.cssText = [
+      'position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;',
+      'background:rgba(0,0,0,0.7);',
+      'display:flex;align-items:center;justify-content:center;',
+    ].join('');
+
+    var popout = document.createElement('div');
+    popout.style.cssText = [
+      'width:85%;max-width:400px;max-height:80%;',
+      'background:' + T.bg + ';',
+      'border-top:5px solid ' + _lightenHex(T.gold, 0.2) + ';',
+      'border-left:5px solid ' + _lightenHex(T.gold, 0.2) + ';',
+      'border-bottom:5px solid ' + _darkenHex(T.gold, 0.3) + ';',
+      'border-right:5px solid ' + _darkenHex(T.gold, 0.3) + ';',
+      'display:flex;flex-direction:column;overflow:hidden;',
+    ].join('');
+    popout.style.clipPath = chamfer(8);
+
+    // Header
+    var header = document.createElement('div');
+    header.style.cssText = [
+      'background:' + T.gold + ';padding:8px 12px;flex-shrink:0;',
+      'font-family:' + T.fh + ';font-size:18px;color:' + T.bgDark + ';',
+    ].join('');
+    header.textContent = mod.label + ' — Customize';
+    popout.appendChild(header);
+
+    // Included items list
+    var listEl = document.createElement('div');
+    listEl.style.cssText = [
+      'flex:1;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
+      'padding:6px;display:flex;flex-direction:column;gap:4px;',
+    ].join('');
+
+    function renderPopoutList() {
+      listEl.innerHTML = '';
+      (mod.includes || []).forEach(function(incLabel) {
+        var isExcluded = mod.exclusions.indexOf(incLabel) !== -1;
+        var row = document.createElement('div');
+        row.style.cssText = [
+          'display:flex;align-items:center;justify-content:space-between;',
+          'padding:6px 10px;cursor:pointer;',
+          'font-family:' + T.fb + ';font-size:18px;',
+          'background:' + (isExcluded ? T.redD : T.bgDark) + ';',
+          'color:' + (isExcluded ? T.redL : T.mint) + ';',
+          'border-left:4px solid ' + (isExcluded ? T.red : T.goGreen) + ';',
+        ].join('');
+
+        var label = document.createElement('span');
+        label.textContent = isExcluded ? 'NO ' + incLabel : incLabel;
+        if (isExcluded) label.style.textDecoration = 'line-through';
+        row.appendChild(label);
+
+        var indicator = document.createElement('span');
+        indicator.style.cssText = 'font-size:16px;flex-shrink:0;margin-left:8px;';
+        indicator.textContent = isExcluded ? '\u2715' : '\u2713';
+        indicator.style.color = isExcluded ? T.red : T.goGreen;
+        row.appendChild(indicator);
+
+        row.addEventListener('pointerup', function() {
+          var idx = mod.exclusions.indexOf(incLabel);
+          if (idx !== -1) { mod.exclusions.splice(idx, 1); }
+          else { mod.exclusions.push(incLabel); }
+          fireUpdate();
+          renderPopoutList();
+        });
+
+        listEl.appendChild(row);
+      });
+    }
+    renderPopoutList();
+    popout.appendChild(listEl);
+
+    // Done button
+    var donePair = buildStyledButton({ label: 'DONE', variant: 'mint', size: 'sm' });
+    donePair.wrap.style.margin = '6px';
+    donePair.wrap.addEventListener('pointerup', function() {
+      overlay.parentNode.removeChild(overlay);
+      fireUpdate();
+      renderPicker();
+    });
+    popout.appendChild(donePair.wrap);
+
+    overlay.appendChild(popout);
+
+    // Tap backdrop to close
+    overlay.addEventListener('pointerup', function(e) {
+      if (e.target === overlay) {
+        overlay.parentNode.removeChild(overlay);
+        fireUpdate();
+        renderPicker();
+      }
+    });
+
+    rootEl.appendChild(overlay);
   }
 
   // ═══ ALLERGEN TAB ═══
@@ -790,12 +933,20 @@ export function ModifierPanel(container, opts) {
     });
     activeItem.optionalModifiers.forEach(function(m) {
       var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
-      mods.push({
+      var parentMod = {
         name: m.prefix + ' ' + m.label,
         price: m.prefix === 'NO' ? 0 : m.price,
         charged: m.prefix !== 'NO' && m.price > 0,
         prefix: halfSide,
-      });
+        children: [],
+      };
+      // Special exclusions become child mods
+      if (m.special && m.exclusions && m.exclusions.length > 0) {
+        m.exclusions.forEach(function(ex) {
+          parentMod.children.push({ name: 'NO ' + ex, price: 0, charged: false });
+        });
+      }
+      mods.push(parentMod);
     });
 
     activeItem.includedRemovals.forEach(function(rid) {

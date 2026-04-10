@@ -1287,6 +1287,12 @@ function commitModifierPanelItem(originalItem, activeItem) {
       charged: charged,
       prefix: halfSide,
     });
+    // Special exclusions as child mods (indented on ticket)
+    if (m.special && m.exclusions && m.exclusions.length > 0) {
+      m.exclusions.forEach(function(ex) {
+        mods.push({ name: '  NO ' + ex, price: 0, charged: false, prefix: halfSide });
+      });
+    }
   });
 
   // Included removals
@@ -1754,6 +1760,16 @@ function renderTicket() {
       previewCard.appendChild(buildSeparator());
       pWhole.forEach(function(m) {
         previewCard.appendChild(buildModRowSized(m.name, m.price, '18px'));
+        // Child mods (special exclusions) — indented
+        if (m.children && m.children.length > 0) {
+          m.children.forEach(function(child) {
+            var childRow = buildModRowSized(child.name, child.price, '15px');
+            childRow.style.paddingLeft = '32px';
+            childRow.style.color = T.red;
+            childRow.style.fontStyle = 'italic';
+            previewCard.appendChild(childRow);
+          });
+        }
       });
     }
 
