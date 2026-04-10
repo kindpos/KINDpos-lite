@@ -233,29 +233,44 @@ function buildCard(title, bodyFn, overlayFn) {
 // ── Numpad (for tip adjustment) ────────────────────
 
 function showNumpad(callback) {
-  var ov = el('div', 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:60;display:flex;align-items:center;justify-content:center;');
-  var frame = el('div', 'border:3px solid ' + C.gold + ';background:' + C.dark + ';padding:16px;width:260px;');
-  var display = el('div', 'background:#111;padding:10px;font-family:' + FONT + ';font-size:28px;color:' + C.gold + ';text-align:right;margin-bottom:10px;min-height:36px;', '$0.00');
+  var ov = el('div', 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:center;justify-content:center;');
+  var frame = el('div', 'border:3px solid ' + C.gold + ';background:' + C.dark + ';padding:20px;width:340px;');
+
+  // Context label
+  frame.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.mint + ';letter-spacing:1px;text-align:center;margin-bottom:10px;', 'ENTER TIP AMOUNT'));
+
+  // Amount display
+  var display = el('div', 'background:#111;border:1px solid #333;padding:14px;font-family:' + FONT + ';font-size:40px;color:' + C.gold + ';text-align:right;margin-bottom:14px;min-height:50px;letter-spacing:2px;', '$0.00');
   frame.appendChild(display);
   var val = '';
   function upd() { display.textContent = '$' + (parseFloat(val || '0') / 100).toFixed(2); }
-  var grid = el('div', 'display:grid;grid-template-columns:repeat(3,1fr);gap:5px;');
+
+  // Numpad grid with mint chassis
+  var chassis = el('div', 'background:' + C.mint + ';padding:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;' +
+    'clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);');
   var keys = ['7','8','9','4','5','6','1','2','3','CLR','0','OK'];
   for (var i = 0; i < keys.length; i++) {
     (function(k) {
       var bg = k === 'OK' ? C.green : k === 'CLR' ? C.verm : '#333';
-      var fg = k === 'OK' || k === 'CLR' ? C.dark : '#fff';
-      var btn = el('div', 'background:' + bg + ';color:' + fg + ';font-family:' + FONT + ';font-size:20px;font-weight:bold;text-align:center;padding:12px 0;cursor:pointer;', k);
+      var fg = k === 'OK' || k === 'CLR' ? C.dark : C.gold;
+      var btn = el('div', 'background:' + bg + ';color:' + fg + ';font-family:' + FONT + ';font-size:28px;font-weight:bold;text-align:center;padding:16px 0;cursor:pointer;user-select:none;' +
+        'clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px);' +
+        'box-shadow:inset 2px 2px 0 #5a5a5a,inset -2px -2px 0 #151515;', k);
+      btn.addEventListener('pointerdown', function() { btn.style.transform = 'translate(2px,2px)'; btn.style.boxShadow = 'inset 2px 2px 0 #151515,inset -2px -2px 0 #5a5a5a'; });
       btn.addEventListener('pointerup', function() {
+        btn.style.transform = ''; btn.style.boxShadow = 'inset 2px 2px 0 #5a5a5a,inset -2px -2px 0 #151515';
         if (k === 'CLR') { val = ''; upd(); }
         else if (k === 'OK') { ov.parentNode && ov.parentNode.removeChild(ov); callback(parseFloat(val || '0') / 100); }
         else if (val.length < 6) { val += k; upd(); }
       });
-      grid.appendChild(btn);
+      btn.addEventListener('pointerleave', function() { btn.style.transform = ''; btn.style.boxShadow = 'inset 2px 2px 0 #5a5a5a,inset -2px -2px 0 #151515'; });
+      chassis.appendChild(btn);
     })(keys[i]);
   }
-  frame.appendChild(grid);
-  var dismiss = el('div', 'text-align:center;margin-top:10px;font-family:' + FONT + ';font-size:18px;color:' + C.dim + ';cursor:pointer;', 'DISMISS');
+  frame.appendChild(chassis);
+
+  // Dismiss
+  var dismiss = el('div', 'text-align:center;margin-top:12px;font-family:' + FONT + ';font-size:18px;color:' + C.dim + ';cursor:pointer;letter-spacing:2px;', 'DISMISS');
   dismiss.addEventListener('pointerup', function() { ov.parentNode && ov.parentNode.removeChild(ov); });
   frame.appendChild(dismiss);
   ov.addEventListener('click', function(e) { if (e.target === ov) { ov.parentNode && ov.parentNode.removeChild(ov); } });
@@ -936,7 +951,8 @@ function buildServerCheckoutsOverlay(panel) {
             if (tip.tip === null) {
               tRow.appendChild(el('span', 'font-size:18px;color:' + C.mint + ';flex:1;', '\u26A0 UNADJUSTED'));
               tRow.appendChild(el('span', 'font-size:18px;color:#555;', '\u2014'));
-              tRow.addEventListener('pointerup', function() {
+              tRow.addEventListener('pointerup', function(e) {
+                e.stopPropagation();
                 showNumpad(function(val) {
                   D_SERVERS[srvIdx].tips[tipIdx].tip = val;
                   renderServerSections();
