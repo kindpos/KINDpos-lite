@@ -174,8 +174,8 @@ function buildStatStrip(items) {
   var strip = el('div', 'display:flex;gap:2px;padding:8px;');
   for (var i = 0; i < items.length; i++) {
     var box = el('div', 'flex:1;background:' + C.bg + ';padding:8px 6px;text-align:center;');
-    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:15px;color:' + C.dim + ';letter-spacing:1px;margin-bottom:4px;', items[i].label));
-    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;font-weight:bold;color:' + items[i].color + ';', items[i].value));
+    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:18px;color:' + C.dim + ';letter-spacing:1px;margin-bottom:4px;', items[i].label));
+    box.appendChild(el('div', 'font-family:' + FONT + ';font-size:28px;font-weight:bold;color:' + items[i].color + ';', items[i].value));
     strip.appendChild(box);
   }
   return strip;
@@ -295,7 +295,7 @@ function buildSalesOverviewOverlay(panel) {
 
   // Chart A — Net Sales Line (large)
   var secA = el('div', 'padding:8px;');
-  secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:15px;color:' + C.mint + ';margin-bottom:4px;letter-spacing:1px;', 'NET SALES — TODAY vs LAST WEEK'));
+  secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'NET SALES — TODAY vs LAST WEEK'));
   var svgA = mk('svg', { viewBox:'0 0 660 200', width:'100%', preserveAspectRatio:'xMidYMid meet' });
   svgA.innerHTML = '';
   addDither(svgA, 'dither_soa');
@@ -333,7 +333,7 @@ function buildSalesOverviewOverlay(panel) {
 
   // Chart B — Check Average Bar + Target Line
   var secB = el('div', 'padding:8px;');
-  secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:15px;color:' + C.mint + ';margin-bottom:4px;letter-spacing:1px;', 'CHECK AVERAGE BY HOUR'));
+  secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'CHECK AVERAGE BY HOUR'));
   var svgB = mk('svg', { viewBox:'0 0 660 148', width:'100%', preserveAspectRatio:'xMidYMid meet' });
   svgB.innerHTML = '';
   var bx=44,by=12,bw=596,bh=100,bMax=7;
@@ -362,7 +362,7 @@ function buildSalesOverviewOverlay(panel) {
 
   // Chart C — Order Type Split Bars
   var secC = el('div', 'padding:8px;');
-  secC.appendChild(el('div', 'font-family:' + FONT + ';font-size:15px;color:' + C.mint + ';margin-bottom:4px;letter-spacing:1px;', 'ORDER TYPE — CASH vs CARD'));
+  secC.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'ORDER TYPE — CASH vs CARD'));
   var svgC = mk('svg', { viewBox:'0 0 660 162', width:'100%', preserveAspectRatio:'xMidYMid meet' });
   svgC.innerHTML = '';
   var ocx=88,ocy=14,ocw=500,och=110;
@@ -528,14 +528,14 @@ function buildSalesBreakdownOverlay(panel) {
     for(var c=0;c<CATS_DISPLAY.length;c++){
       var cat=CATS_DISPLAY[c];
       var isAct=activeCat===cat;
-      var chip=el('div','border:2px solid '+CAT[cat]+';color:'+CAT[cat]+';font-family:'+FONT+';font-size:14px;padding:3px 8px;cursor:pointer;opacity:'+((!activeCat||isAct)?'1':'0.2')+';',cat);
+      var chip=el('div','border:2px solid '+CAT[cat]+';color:'+CAT[cat]+';font-family:'+FONT+';font-size:20px;padding:5px 12px;cursor:pointer;opacity:'+((!activeCat||isAct)?'1':'0.2')+';',cat);
       (function(cn){chip.addEventListener('pointerup',function(){
         activeCat=activeCat===cn?null:cn;renderArea();renderChips();renderTables();
       });})(cat);
       row.appendChild(chip);
     }
     if(activeCat){
-      var clr=el('div','border:2px solid '+C.verm+';color:'+C.verm+';font-family:'+FONT+';font-size:14px;padding:3px 8px;cursor:pointer;','CLEAR');
+      var clr=el('div','border:2px solid '+C.verm+';color:'+C.verm+';font-family:'+FONT+';font-size:20px;padding:5px 12px;cursor:pointer;','CLEAR');
       clr.addEventListener('pointerup',function(){activeCat=null;renderArea();renderChips();renderTables();});
       row.appendChild(clr);
     }
@@ -547,22 +547,22 @@ function buildSalesBreakdownOverlay(panel) {
     var cats=activeCat?[activeCat]:CATS_DISPLAY;
     for(var c=0;c<cats.length;c++){
       var cat=cats[c];
-      var sec=el('div','margin-bottom:10px;');
-      var hdr=el('div','display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid '+C.border+';');
-      var dot=el('span','display:inline-block;width:10px;height:10px;background:'+CAT[cat]+';margin-right:6px;vertical-align:middle;');
-      var lbl=el('span','font-family:'+FONT+';font-size:15px;font-weight:bold;color:'+CAT[cat]+';',cat);
-      var ltotal=el('span','font-family:'+FONT+';font-size:15px;color:'+C.gold+';',fmt(catTotals[cat]));
+      var sec=el('div','margin-bottom:14px;');
+      var hdr=el('div','display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:2px solid '+C.border+';');
+      var dot=el('span','display:inline-block;width:12px;height:12px;background:'+CAT[cat]+';margin-right:8px;vertical-align:middle;');
+      var lbl=el('span','font-family:'+FONT+';font-size:22px;font-weight:bold;color:'+CAT[cat]+';',cat);
+      var ltotal=el('span','font-family:'+FONT+';font-size:22px;font-weight:bold;color:'+C.gold+';',fmt(catTotals[cat]));
       var left2=el('span','');left2.appendChild(dot);left2.appendChild(lbl);
       hdr.appendChild(left2);hdr.appendChild(ltotal);sec.appendChild(hdr);
 
       // Column headers
-      var colH=el('div','display:flex;padding:2px 0;font-family:'+FONT+';font-size:13px;color:'+C.dim+';');
+      var colH=el('div','display:flex;padding:4px 0;font-family:'+FONT+';font-size:18px;color:'+C.dim+';');
       colH.innerHTML='<span style="flex:2">ITEM</span><span style="flex:1;text-align:center">QTY</span><span style="flex:1;text-align:right">UNIT</span><span style="flex:1;text-align:right">TOTAL</span>';
       sec.appendChild(colH);
 
       var items=D_ITEMS[cat];
       for(var j=0;j<items.length;j++){
-        var row2=el('div','display:flex;padding:2px 0;font-family:'+FONT+';font-size:14px;color:'+C.label+';');
+        var row2=el('div','display:flex;padding:4px 0;font-family:'+FONT+';font-size:20px;color:#ffffff;');
         row2.innerHTML='<span style="flex:2">'+items[j].n+'</span><span style="flex:1;text-align:center">'+items[j].q+'</span><span style="flex:1;text-align:right">'+fmt(items[j].p)+'</span><span style="flex:1;text-align:right;color:'+C.gold+'">'+fmt(items[j].q*items[j].p)+'</span>';
         sec.appendChild(row2);
       }
@@ -592,13 +592,13 @@ function buildHeatmapBody(body) {
   // Hour header row
   var hdrRow = el('div', 'display:flex;gap:2px;padding-left:50px;');
   for (var h = 0; h < 8; h++) {
-    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:14px;color:' + C.label + ';', HOURS[h]));
+    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:16px;color:#ffffff;', HOURS[h]));
   }
   wrap.appendChild(hdrRow);
 
   for (var s = 0; s < servers.length; s++) {
     var row = el('div', 'display:flex;gap:2px;flex:1;align-items:stretch;');
-    row.appendChild(el('div', 'width:50px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:' + FONT + ';font-size:14px;color:' + C.mint + ';font-weight:bold;', servers[s]));
+    row.appendChild(el('div', 'width:50px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:' + FONT + ';font-size:20px;color:' + C.mint + ';font-weight:bold;', servers[s]));
     for (var h = 0; h < 8; h++) {
       (function(srv, hr, val) {
         var intensity = val / maxVal;
@@ -637,8 +637,8 @@ function buildAllChecksBody(body) {
   // Filter badge
   if (hmFilter) {
     var badge = el('div', 'display:flex;justify-content:space-between;align-items:center;padding:3px 6px;background:' + C.bg + ';margin-bottom:4px;');
-    badge.appendChild(el('span', 'font-family:' + FONT + ';font-size:14px;color:' + C.lime + ';', 'SERVER: ' + hmFilter.server + '  HOUR: ' + hmFilter.hour));
-    var clrBtn = el('span', 'font-family:' + FONT + ';font-size:14px;color:' + C.verm + ';cursor:pointer;', 'CLEAR');
+    badge.appendChild(el('span', 'font-family:' + FONT + ';font-size:20px;color:' + C.lime + ';', 'SERVER: ' + hmFilter.server + '  HOUR: ' + hmFilter.hour));
+    var clrBtn = el('span', 'font-family:' + FONT + ';font-size:20px;color:' + C.verm + ';cursor:pointer;', 'CLEAR');
     clrBtn.addEventListener('pointerup', function(e) {
       e.stopPropagation();
       hmFilter = null;
@@ -654,20 +654,20 @@ function buildAllChecksBody(body) {
     var statusColor = c.status === 'OPEN' ? C.verm : C.green;
     var row = el('div', 'display:flex;justify-content:space-between;padding:4px 6px;border-bottom:1px solid ' + C.border + ';font-family:' + FONT + ';font-size:14px;cursor:pointer;');
     row.innerHTML = '<span style="color:' + C.mint + '">' + c.id + '</span>' +
-      '<span style="color:' + C.label + '">' + c.srv + '</span>' +
-      '<span style="color:' + (c.tbl ? C.label : C.dim) + '">' + (c.tbl || c.type) + '</span>' +
+      '<span style="color:#ffffff">' + c.srv + '</span>' +
+      '<span style="color:' + (c.tbl ? '#ffffff' : C.dim) + '">' + (c.tbl || c.type) + '</span>' +
       '<span style="color:' + statusColor + '">' + c.status + '</span>' +
       '<span style="color:' + C.gold + '">' + fmt(c.total) + '</span>';
     wrap.appendChild(row);
   }
   if (filtered.length === 0) {
-    wrap.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.dim + ';text-align:center;padding:20px;', 'No checks match filter'));
+    wrap.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.dim + ';text-align:center;padding:20px;', 'No checks match filter'));
   }
   body.appendChild(wrap);
 }
 
 function buildAllChecksOverlay(panel) {
-  var title = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:8px 12px;letter-spacing:2px;', 'ALL CHECKS — DETAIL');
+  var title = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:24px;font-weight:bold;padding:8px 14px;letter-spacing:2px;', 'ALL CHECKS — DETAIL');
   panel.appendChild(title);
 
   var wrap = el('div', 'padding:8px;max-height:500px;overflow-y:auto;');
@@ -676,19 +676,19 @@ function buildAllChecksOverlay(panel) {
     var statusColor = c.status === 'OPEN' ? C.verm : C.green;
     var card = el('div', 'background:' + C.bg + ';border:1px solid ' + C.border + ';padding:8px;margin-bottom:6px;');
     var hdr = el('div', 'display:flex;justify-content:space-between;margin-bottom:4px;');
-    hdr.innerHTML = '<span style="font-family:' + FONT + ';font-size:14px;font-weight:bold;color:' + C.mint + '">' + c.id + '</span>' +
-      '<span style="font-family:' + FONT + ';font-size:14px;font-weight:bold;color:' + statusColor + '">' + c.status + '</span>';
+    hdr.innerHTML = '<span style="font-family:' + FONT + ';font-size:20px;font-weight:bold;color:' + C.mint + '">' + c.id + '</span>' +
+      '<span style="font-family:' + FONT + ';font-size:20px;font-weight:bold;color:' + statusColor + '">' + c.status + '</span>';
     card.appendChild(hdr);
 
-    var meta = el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.label + ';margin-bottom:4px;');
+    var meta = el('div', 'font-family:' + FONT + ';font-size:18px;color:#ffffff;margin-bottom:4px;');
     meta.textContent = 'Server: ' + c.srv + ' | Hour: ' + c.hr + ' | ' + (c.tbl || 'N/A') + ' | ' + c.type;
     card.appendChild(meta);
 
-    var itemList = el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.dim + ';margin-bottom:4px;');
+    var itemList = el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.dim + ';margin-bottom:4px;');
     itemList.textContent = c.items.join(', ');
     card.appendChild(itemList);
 
-    card.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;font-weight:bold;color:' + C.gold + ';text-align:right;', fmt(c.total)));
+    card.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;font-weight:bold;color:' + C.gold + ';text-align:right;', fmt(c.total)));
     wrap.appendChild(card);
   }
   panel.appendChild(wrap);
@@ -748,7 +748,7 @@ function buildServerCheckoutsBody(body) {
 }
 
 function buildServerCheckoutsOverlay(panel) {
-  var title = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:8px 12px;letter-spacing:2px;', 'SERVER CHECKOUTS');
+  var title = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:24px;font-weight:bold;padding:8px 14px;letter-spacing:2px;', 'SERVER CHECKOUTS');
   panel.appendChild(title);
 
   var wrap = el('div', 'padding:8px;');
@@ -760,7 +760,7 @@ function buildServerCheckoutsOverlay(panel) {
       var section = el('div', 'border:1px solid ' + C.border + ';margin-bottom:8px;');
 
       // Server header
-      var sHdr = el('div', 'background:' + C.bg + ';padding:6px 10px;font-family:' + FONT + ';font-size:14px;font-weight:bold;color:' + srv.color + ';display:flex;justify-content:space-between;align-items:center;');
+      var sHdr = el('div', 'background:' + C.bg + ';padding:6px 10px;font-family:' + FONT + ';font-size:20px;font-weight:bold;color:' + srv.color + ';display:flex;justify-content:space-between;align-items:center;');
       sHdr.appendChild(el('span', '', srv.name));
 
       // Checkout button
@@ -780,14 +780,14 @@ function buildServerCheckoutsOverlay(panel) {
 
       // Left — Open Checks
       var leftP = el('div', 'flex:1;');
-      leftP.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.verm + ';margin-bottom:4px;font-weight:bold;', 'OPEN CHECKS (' + srv.openChecks.length + ')'));
+      leftP.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.verm + ';margin-bottom:4px;font-weight:bold;', 'OPEN CHECKS (' + srv.openChecks.length + ')'));
       if (srv.openChecks.length === 0) {
-        leftP.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.green + ';', '\u2713 All checks closed'));
+        leftP.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.green + ';', '\u2713 All checks closed'));
       }
       for (var j = 0; j < srv.openChecks.length; j++) {
         var ck = srv.openChecks[j];
         var row = el('div', 'display:flex;justify-content:space-between;padding:3px 0;font-family:' + FONT + ';font-size:14px;border-bottom:1px solid ' + C.border + ';');
-        row.innerHTML = '<span style="color:' + C.verm + '">' + ck.id + '</span><span style="color:' + C.label + '">' + ck.table + '</span><span style="color:' + C.gold + '">' + fmt(ck.total) + '</span>';
+        row.innerHTML = '<span style="color:' + C.verm + '">' + ck.id + '</span><span style="color:#ffffff">' + ck.table + '</span><span style="color:' + C.gold + '">' + fmt(ck.total) + '</span>';
         leftP.appendChild(row);
       }
       if (srv.openChecks.length > 0) {
@@ -798,12 +798,12 @@ function buildServerCheckoutsOverlay(panel) {
       // Right — Tip Status
       var rightP = el('div', 'flex:1;');
       var utCount = 0; for (var j2 = 0; j2 < srv.tips.length; j2++) if (srv.tips[j2].tip === null) utCount++;
-      rightP.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.mint + ';margin-bottom:4px;font-weight:bold;', 'TIP STATUS (' + utCount + ' unadjusted)'));
+      rightP.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.mint + ';margin-bottom:4px;font-weight:bold;', 'TIP STATUS (' + utCount + ' unadjusted)'));
       for (var j = 0; j < srv.tips.length; j++) {
         (function(tipIdx, srvIdx) {
           var tip = D_SERVERS[srvIdx].tips[tipIdx];
           var row = el('div', 'display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-family:' + FONT + ';font-size:14px;border-bottom:1px solid ' + C.border + ';cursor:pointer;');
-          var left2 = el('span', 'color:' + C.label, tip.id + ' ' + fmt(tip.amt));
+          var left2 = el('span', 'color:#ffffff', tip.id + ' ' + fmt(tip.amt));
           var right2;
           if (tip.tip === null) {
             right2 = el('span', 'color:' + C.verm + ';font-weight:bold;', '\u26A0 UNADJUSTED');
@@ -907,7 +907,7 @@ function buildLaborCobOverlay(panel) {
 
   // Chart A — Hourly COB% Bars + Target Line
   var secA = el('div', 'padding:8px;');
-  secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:15px;color:' + C.mint + ';margin-bottom:4px;letter-spacing:1px;', 'HOURLY COB% — BAR + TARGET'));
+  secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'HOURLY COB% — BAR + TARGET'));
   var svgA = mk('svg', { viewBox: '0 0 660 162', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
   svgA.innerHTML = '';
   var ax = 44, ay = 12, aw = 596, ah = 110;
@@ -945,7 +945,7 @@ function buildLaborCobOverlay(panel) {
 
   // Chart B — Labor Cost by Employee
   var secB = el('div', 'padding:8px;');
-  secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:15px;color:' + C.mint + ';margin-bottom:4px;letter-spacing:1px;', 'LABOR COST BY EMPLOYEE'));
+  secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'LABOR COST BY EMPLOYEE'));
   var svgB = mk('svg', { viewBox: '0 0 660 148', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
   svgB.innerHTML = '';
   var ditherUrl = addDither(svgB, 'dither_lcb');
@@ -1048,11 +1048,11 @@ function buildCloseDayBody(body) {
 function buildCloseDayOverlay(panel) {
   var gate = getGate();
   if (gate.resolved < gate.total) {
-    panel.appendChild(el('div', 'padding:20px;text-align:center;font-family:' + FONT + ';font-size:14px;color:' + C.verm + ';', 'Resolve all gate items before closing day'));
+    panel.appendChild(el('div', 'padding:20px;text-align:center;font-family:' + FONT + ';font-size:20px;color:' + C.verm + ';', 'Resolve all gate items before closing day'));
     return;
   }
 
-  var title = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:18px;font-weight:bold;padding:8px 12px;letter-spacing:2px;', 'CLOSE DAY');
+  var title = el('div', 'background:' + C.mint + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:24px;font-weight:bold;padding:8px 14px;letter-spacing:2px;', 'CLOSE DAY');
   panel.appendChild(title);
 
   // Stat strip
@@ -1071,11 +1071,11 @@ function buildCloseDayOverlay(panel) {
   var badge1Bg = closeState.settled ? C.green : '#ffdd44';
   var badge1Text = closeState.settled ? '\u2713 SETTLED' : 'PENDING';
   ac1Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closeState.settled ? C.green : C.mint) + ';font-family:' + FONT + ';font-size:12px;font-weight:bold;color:' + (closeState.settled ? C.green : C.mint) + ';', closeState.settled ? '\u2713' : '1'));
-  ac1Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:14px;font-weight:bold;color:#fff;', 'SETTLE BATCH'));
+  ac1Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:20px;font-weight:bold;color:#fff;', 'SETTLE BATCH'));
   ac1Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:13px;padding:2px 8px;background:' + badge1Bg + ';color:' + C.dark + ';font-weight:bold;', badge1Text));
   ac1.appendChild(ac1Hdr);
 
-  ac1.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.label + ';margin-bottom:6px;', '4 card transactions  \u00B7  $35.85 total  \u00B7  Dejavoo P8'));
+  ac1.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:#ffffff;margin-bottom:6px;', '4 card transactions  \u00B7  $35.85 total  \u00B7  Dejavoo P8'));
 
   if (!closeState.settled) {
     var settleBtn = el('div', 'background:transparent;border:2px solid ' + C.mint + ';color:' + C.mint + ';font-family:' + FONT + ';font-size:15px;font-weight:bold;text-align:center;padding:8px;cursor:pointer;letter-spacing:2px;', 'SETTLE BATCH \u25B6');
@@ -1086,7 +1086,7 @@ function buildCloseDayOverlay(panel) {
     });
     ac1.appendChild(settleBtn);
   } else {
-    ac1.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.green + ';', '\u2713 $35.85 SETTLED TO DEJAVOO P8'));
+    ac1.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.green + ';', '\u2713 $35.85 SETTLED TO DEJAVOO P8'));
   }
   wrap.appendChild(ac1);
 
@@ -1098,15 +1098,15 @@ function buildCloseDayOverlay(panel) {
   var badge2Bg = closed ? C.green : locked ? C.dim : '#ffdd44';
   var badge2Text = closed ? '\u2713 CLOSED' : locked ? 'LOCKED' : 'READY';
   ac2Hdr.appendChild(el('span', 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid ' + (closed ? C.green : locked ? C.dim : C.mint) + ';font-family:' + FONT + ';font-size:12px;font-weight:bold;color:' + (closed ? C.green : locked ? C.dim : C.mint) + ';', closed ? '\u2713' : '2'));
-  ac2Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:14px;font-weight:bold;color:#fff;', 'FINALIZE CLOSE DAY'));
+  ac2Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:20px;font-weight:bold;color:#fff;', 'FINALIZE CLOSE DAY'));
   ac2Hdr.appendChild(el('span', 'font-family:' + FONT + ';font-size:13px;padding:2px 8px;background:' + badge2Bg + ';color:' + C.dark + ';font-weight:bold;', badge2Text));
   ac2.appendChild(ac2Hdr);
 
   if (locked) {
-    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.dim + ';', 'SETTLE BATCH FIRST'));
+    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.dim + ';', 'SETTLE BATCH FIRST'));
     ac2.appendChild(el('div', 'background:' + C.dark + ';color:' + C.dim + ';font-family:' + FONT + ';font-size:15px;text-align:center;padding:8px;letter-spacing:2px;', 'FINALIZE CLOSE DAY'));
   } else if (!closed) {
-    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.label + ';margin-bottom:4px;', 'Net: $219.47  \u00B7  Cash to safe: $183.62  \u00B7  Tips: $35.85'));
+    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:#ffffff;margin-bottom:4px;', 'Net: $219.47  \u00B7  Cash to safe: $183.62  \u00B7  Tips: $35.85'));
     ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:13px;color:#ffdd44;margin-bottom:6px;', 'MGR AUTHORIZED \u00B7 IRREVERSIBLE'));
     var finalBtn = el('div', 'background:' + C.gold + ';color:' + C.dark + ';font-family:' + FONT + ';font-size:16px;font-weight:bold;text-align:center;padding:10px;cursor:pointer;letter-spacing:4px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);', 'FINALIZE CLOSE DAY');
     finalBtn.addEventListener('pointerup', function() {
@@ -1118,7 +1118,7 @@ function buildCloseDayOverlay(panel) {
     });
     ac2.appendChild(finalBtn);
   } else {
-    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:14px;color:' + C.green + ';', '\u2713 LEDGER SEALED \u00B7 HASH CHAIN CLOSED'));
+    ac2.appendChild(el('div', 'font-family:' + FONT + ';font-size:20px;color:' + C.green + ';', '\u2713 LEDGER SEALED \u00B7 HASH CHAIN CLOSED'));
   }
   wrap.appendChild(ac2);
   panel.appendChild(wrap);
