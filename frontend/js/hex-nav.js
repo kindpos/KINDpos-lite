@@ -178,7 +178,7 @@ export function HexNav(container, opts) {
       text.setAttribute('y', h.y + offset);
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'central');
-      text.setAttribute('font-family', T.fb);
+      text.setAttribute('font-family', h.type === 'cat' ? T.fh : T.fb);
       text.setAttribute('font-size', fontSize);
       text.setAttribute('font-weight', 'bold');
       text.setAttribute('fill', h.locked ? h.textColor : h.color);
