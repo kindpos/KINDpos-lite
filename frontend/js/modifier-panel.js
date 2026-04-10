@@ -9,16 +9,16 @@
 import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
 import { showKeyboard } from './keyboard.js';
 
-// ── Standard allergen list ──
+// ── Standard allergen list (color-coded) ──
 var ALLERGENS = [
-  { id: 'nuts',      label: 'Nuts' },
-  { id: 'shellfish', label: 'Shellfish' },
-  { id: 'gluten',    label: 'Gluten' },
-  { id: 'dairy',     label: 'Dairy' },
-  { id: 'soy',       label: 'Soy' },
-  { id: 'eggs',      label: 'Eggs' },
-  { id: 'fish',      label: 'Fish' },
-  { id: 'other',     label: 'Other / Note' },
+  { id: 'nuts',      label: 'Nuts',      color: '#8B4513' },
+  { id: 'shellfish', label: 'Shellfish', color: '#FF6347' },
+  { id: 'gluten',    label: 'Gluten',    color: '#DAA520' },
+  { id: 'dairy',     label: 'Dairy',     color: '#87CEEB' },
+  { id: 'soy',       label: 'Soy',       color: '#9ACD32' },
+  { id: 'eggs',      label: 'Eggs',      color: '#FFD700' },
+  { id: 'fish',      label: 'Fish',      color: '#4682B4' },
+  { id: 'other',     label: 'Other / Note', color: '#CC44FF' },
 ];
 
 // ── Prefix definitions for optional tabs ──
@@ -109,7 +109,7 @@ export function ModifierPanel(container, opts) {
     tabs.push({ type: 'optional', key: '_prep', label: 'PREP', tabColor: T.mint, groups: prepGroups });
   }
   tabs.push({ type: 'note', key: '_note', label: 'NOTE', tabColor: T.gold });
-  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALRG', tabColor: T.red });
+  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALRG', tabColor: T.red, tabTextInactive: '#ffffff' });
 
   var activeTabKey = tabs.length > 0 ? tabs[0].key : null;
   var activeOptPrefix = 'ADD';
@@ -266,7 +266,7 @@ export function ModifierPanel(container, opts) {
         pair.wrap.style.background = tab.tabColor;
         pair.inner.style.color = T.bgDark;
       } else {
-        pair.inner.style.color = tab.tabColor;
+        pair.inner.style.color = tab.tabTextInactive || tab.tabColor;
       }
 
       pair.wrap.addEventListener('pointerup', function() {
@@ -601,10 +601,15 @@ export function ModifierPanel(container, opts) {
     ALLERGENS.forEach(function(a) {
       if (a.id === 'other') {
         var isActive = activeItem.allergenNote.length > 0;
-        var pair = buildStyledButton({ label: a.label, variant: isActive ? 'vermillion' : 'dark', size: 'md' });
+        var pair = buildStyledButton({ label: a.label, variant: 'dark', size: 'md' });
         pair.wrap.style.width = '100%';
         pair.wrap.style.minWidth = '0';
         pair.inner.style.fontSize = '11px';
+        pair.inner.style.color = a.color;
+        if (isActive) {
+          pair.wrap.style.background = a.color;
+          pair.inner.style.color = T.bgDark;
+        }
         pair.wrap.addEventListener('pointerup', function() {
           showKeyboard({
             placeholder: 'Describe allergen...',
@@ -624,10 +629,15 @@ export function ModifierPanel(container, opts) {
       }
 
       var selected = activeItem.allergens.indexOf(a.id) !== -1;
-      var pair = buildStyledButton({ label: a.label, variant: selected ? 'vermillion' : 'dark', size: 'md' });
+      var pair = buildStyledButton({ label: a.label, variant: 'dark', size: 'md' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '11px';
+      pair.inner.style.color = a.color;
+      if (selected) {
+        pair.wrap.style.background = a.color;
+        pair.inner.style.color = T.bgDark;
+      }
 
       pair.wrap.addEventListener('pointerup', function() {
         var idx = activeItem.allergens.indexOf(a.id);
