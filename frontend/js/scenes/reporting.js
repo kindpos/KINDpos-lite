@@ -1351,7 +1351,7 @@ function buildScene(container) {
 // ═══════════════════════════════════════════════════
 
 SceneManager.register({
-  name: 'reporting',
+  name: 'manager-landing',
   mount: function(container, params) {
     curEl = container;
     // Reset state
@@ -1363,15 +1363,7 @@ SceneManager.register({
     heatmapEl = null;
 
     setSceneName('MANAGER');
-    setHeaderBack({
-      back: true,
-      x: true,
-      onBack: function() {
-        var role = params && params.role;
-        if (role === 'server') SceneManager.mountWorking('server-landing', params);
-        else SceneManager.mountWorking('manager-landing', params);
-      },
-    });
+    setHeaderBack({ x: true });
 
     buildScene(container);
   },

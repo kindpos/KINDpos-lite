@@ -16,14 +16,14 @@ import './scenes/receipt-review.js?v=2';
 import './scenes/payment.js?v=2';
 import './scenes/change-due.js?v=2';
 import './scenes/tip-adjustment.js?v=3';
-import './scenes/reporting.js?v=3';
+import './scenes/reporting.js?v=4';
 import './scenes/server-checkout.js?v=2';
 import './scenes/close-day.js?v=2';
 import './scenes/sales-summary.js?v=2';
 import './scenes/landing.js?v=2';
 import './scenes/server-landing.js?v=2';
 import './scenes/clock-in.js?v=2';
-import './scenes/manager-landing.js?v=2';
+// manager-landing now provided by reporting.js (registered as 'manager-landing')
 
 // ── Header state ──────────────────────────────────
 let _sceneName = null;

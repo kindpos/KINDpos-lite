@@ -100,7 +100,7 @@ SceneManager.register({
 
 // Role → landing scene mapping. Checked in priority order.
 var ROLE_LANDING_MAP = [
-  { role: 'manager',    scene: 'reporting' },
+  { role: 'manager',    scene: 'manager-landing' },
   { role: 'bartender',  scene: 'server-landing'  },
   { role: 'host',       scene: 'server-landing'  },
   { role: 'server',     scene: 'server-landing'  },
