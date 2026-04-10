@@ -227,7 +227,8 @@ function buildCard(title, bodyFn, overlayFn) {
   card.appendChild(body);
   card._body = body;
   if (overlayFn) {
-    body.addEventListener('pointerup', function() { openOverlay(overlayFn); });
+    body.addEventListener('click', function(e) { e.stopPropagation(); openOverlay(overlayFn); });
+    body.style.cursor = 'pointer';
   }
   return card;
 }
@@ -286,7 +287,7 @@ function showTipNumpad(callback) {
 
 // Card 1 — Sales Overview
 function buildSalesOverviewBody(body) {
-  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block' });
+  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block;pointer-events:none' });
   addDefs(svg, 'card');
   var x0 = 28, y0 = 10, W = 256, H = 106;
   var bot = y0 + H;
@@ -447,7 +448,7 @@ function buildSalesOverviewOverlay(panel) {
 
 // Card 2 — Sales Breakdown
 function buildSalesBreakdownBody(body) {
-  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block' });
+  var svg = mk('svg', { viewBox:'0 0 300 148', width:'100%', height:'100%', preserveAspectRatio:'none', style:'display:block;pointer-events:none' });
   addDefs(svg, 'sb');
   var cx=28, cy=10, cw=256, ch=108, maxY=65;
   function tx(i){return cx+(i/7)*cw;} function ty(v){return cy+ch-(v/maxY)*ch;}
@@ -1010,7 +1011,7 @@ function buildLaborCobBody(body) {
   var cobPct = (totalLab / totalSales * 100);
   var tgtPct = 25;
 
-  var svg = mk('svg', { viewBox: '0 0 300 148', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
+  var svg = mk('svg', { viewBox: '0 0 300 148', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: 'pointer-events:none' });
   var cxA = 150, cyA = 106, R = 72;
 
   function arcPath(pStart, pEnd) {
@@ -1164,7 +1165,7 @@ function buildCloseDayBody(body) {
 
   if (unlocked && !closeState.closed) {
     // Show CLOSE DAY button state
-    var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
+    var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: 'pointer-events:none' });
     // Filled hex
     svg.appendChild(mk('polygon', { points: '150,20 200,50 200,100 150,130 100,100 100,50', fill: C.mint }));
     svg.appendChild(mk('text', { x: 150, y: 68, fill: C.dark, 'font-size': '18', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, 'CLOSE'));
@@ -1187,7 +1188,7 @@ function buildCloseDayBody(body) {
   }
 
   // Hex ring state
-  var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' });
+  var svg = mk('svg', { viewBox: '0 0 300 130', width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet', style: 'pointer-events:none' });
   var hexPath = 'M55,27 L87.9,46 L87.9,84 L55,103 L22.1,84 L22.1,46 Z';
   var perim = 228;
   var progress = gate.resolved / gate.total;
