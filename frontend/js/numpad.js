@@ -49,6 +49,8 @@ export function buildNumpad(opts) {
   var chassisChamfer = o.chassisChamfer != null ? o.chassisChamfer : null;
   var chassisBevel   = o.chassisBevel   != null ? o.chassisBevel   : null;
 
+  var onCancel    = o.onCancel    || null;
+
   var pin = '';
   var _submitCooldown = false;
 
@@ -58,6 +60,20 @@ export function buildNumpad(opts) {
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
   container.style.gap = gap + 'px';
+  container.style.position = 'relative';
+
+  // ── X dismiss button (top-right corner, only if onCancel provided) ──
+  if (onCancel) {
+    var xBtn = document.createElement('div');
+    xBtn.style.cssText = 'position:absolute;top:-14px;right:-14px;z-index:10;width:36px;height:36px;' +
+      'background:#333;border:2px solid ' + T.vermillion + ';color:' + T.vermillion + ';' +
+      'font-family:' + T.fb + ';font-size:20px;font-weight:bold;' +
+      'display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+      'clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px);';
+    xBtn.textContent = 'X';
+    xBtn.addEventListener('pointerup', function() { onCancel(); });
+    container.appendChild(xBtn);
+  }
 
   // ── Digit Display (mint shadow wrap + sunken inner) ──
   var displayShadow = document.createElement('div');

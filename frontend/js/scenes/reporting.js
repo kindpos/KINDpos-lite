@@ -262,6 +262,9 @@ SceneManager.register({
         var amount = cents / 100;
         if (params.onConfirm) params.onConfirm(amount);
       },
+      onCancel: function() {
+        if (params.onCancel) params.onCancel();
+      },
     });
     container.appendChild(numpad);
   },
