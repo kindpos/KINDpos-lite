@@ -173,7 +173,7 @@ export function HexNav(container, opts) {
     }
     lines.forEach(function(line, i) {
       var text = document.createElementNS(svgNS, 'text');
-      var offset = (i - (lines.length - 1) / 2) * (fontSize * 1.3);
+      var offset = (i - (lines.length - 1) / 2) * (fontSize * 1.05);
       text.setAttribute('x', h.x);
       text.setAttribute('y', h.y + offset);
       text.setAttribute('text-anchor', 'middle');
