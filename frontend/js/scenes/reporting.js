@@ -748,22 +748,27 @@ function buildAllChecksBody(body) {
     wrap.appendChild(badge);
   }
 
-  // Grid of check tiles
-  var grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;flex:1;overflow-y:auto;align-content:start;');
+  // Grid of check tiles — manager card style with chamfered corners
+  var grid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;overflow-y:auto;align-content:start;padding:4px;');
   for (var i = 0; i < filtered.length; i++) {
     var c = filtered[i];
-    var statusColor = c.status === 'OPEN' ? C.verm : C.green;
-    var borderColor = c.status === 'OPEN' ? C.verm : C.border;
-    var tile = el('div', 'background:' + C.dark + ';border:1px solid ' + borderColor + ';padding:5px 6px;font-family:' + FONT + ';cursor:pointer;overflow:hidden;');
-    // Top row: ID + status
-    var top = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;white-space:nowrap;');
-    top.appendChild(el('span', 'font-size:18px;color:' + C.mint + ';letter-spacing:1px;', c.id));
-    top.appendChild(el('span', 'font-size:18px;color:' + statusColor + ';font-weight:bold;', c.status));
-    tile.appendChild(top);
-    // Middle: server + table
-    tile.appendChild(el('div', 'font-size:18px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', c.srv + ' \u00B7 ' + (c.tbl || c.type)));
-    // Bottom: total
-    tile.appendChild(el('div', 'font-size:18px;color:' + C.gold + ';font-weight:bold;text-align:right;margin-top:2px;', fmt(c.total)));
+    var isOpen = c.status === 'OPEN';
+    var statusColor = isOpen ? C.verm : C.green;
+    var borderColor = isOpen ? C.verm : C.border;
+    var numColor = isOpen ? C.mint : C.pink;
+
+    var tile = el('div', 'background:' + C.dark + ';border:2px solid ' + borderColor + ';padding:8px 10px;font-family:' + FONT + ';cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:70px;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px);' + (isOpen ? '' : 'opacity:0.7;'));
+    // Check number
+    tile.appendChild(el('div', 'font-size:20px;color:' + numColor + ';white-space:nowrap;', c.id));
+    // Server + table
+    tile.appendChild(el('div', 'font-size:18px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', c.srv + (c.tbl ? ' \u00B7 ' + c.tbl : '')));
+    // Type
+    tile.appendChild(el('div', 'font-size:18px;color:' + C.dim + ';white-space:nowrap;', c.type));
+    // Status + total
+    var botRow = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-top:auto;white-space:nowrap;');
+    botRow.appendChild(el('span', 'font-size:18px;color:' + statusColor + ';font-weight:bold;', c.status));
+    botRow.appendChild(el('span', 'font-size:20px;color:' + C.gold + ';font-weight:bold;', fmt(c.total)));
+    tile.appendChild(botRow);
     grid.appendChild(tile);
   }
   if (filtered.length === 0) {
