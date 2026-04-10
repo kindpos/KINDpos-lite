@@ -315,7 +315,6 @@ function buildSalesOverviewBody(body) {
 
   // Net callout top-right
   svg.appendChild(mk('text', { x:282, y:20, fill:C.lime, 'font-size':'18', 'font-weight':'bold', 'font-family':FONT, 'text-anchor':'end' }, fmt(sum(D_TODAY))));
-  svg.appendChild(mk('text', { x:282, y:30, fill:'#aaaaaa', 'font-size':'18', 'font-family':FONT, 'text-anchor':'end' }, 'NET SALES TODAY'));
 
   // Legend
   svg.appendChild(mk('rect', { x:x0+30, y:bot+22, width:'8', height:'8', fill:C.lime }));
