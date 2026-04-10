@@ -33,6 +33,7 @@ var PIZZA_INCLUDED = [
 var PIZZA_TOPPINGS = {
   key: 'toppings', label: 'TOPPINGS',
   options: [
+    // Regular toppings
     { id: 'banana-peppers',  label: 'Banana Peppers',  price: 1.00 },
     { id: 'beef',            label: 'Beef',             price: 1.50 },
     { id: 'black-olives',    label: 'Black Olives',     price: 1.00 },
@@ -52,6 +53,22 @@ var PIZZA_TOPPINGS = {
     { id: 'sausage',         label: 'Sausage',          price: 1.50 },
     { id: 'spinach',         label: 'Spinach',          price: 1.00 },
     { id: 'tomatoe',         label: 'Tomatoe',          price: 1.00 },
+    // Specials (yellow border)
+    { id: 'bianco',          label: 'Bianco',          price: 0, special: true },
+    { id: 'breakfast-bacon', label: 'Breakfast Bacon', price: 0, special: true },
+    { id: 'cheeseburger',    label: 'Cheeseburger',   price: 0, special: true },
+    { id: 'chicken-alfredo', label: 'Chicken Alfredo', price: 0, special: true },
+    { id: 'crew',            label: 'Crew',            price: 0, special: true },
+    { id: 'hawaiian',        label: 'Hawaiian',        price: 0, special: true },
+    { id: 'house',           label: 'House',           price: 0, special: true },
+    { id: 'kosher',          label: 'Kosher',          price: 0, special: true },
+    { id: 'mac-n-cheese',    label: 'Mac N Cheese',    price: 0, special: true },
+    { id: 'moccho',          label: 'Moccho',          price: 0, special: true },
+    { id: 'nick-special',    label: 'Nick Special',    price: 0, special: true },
+    { id: 'primo',           label: 'Primo',           price: 0, special: true },
+    { id: 'sammys-special',  label: "Sammy's Special", price: 0, special: true },
+    { id: 'taco',            label: 'Taco',            price: 0, special: true },
+    { id: 'veggie',          label: 'Veggie',          price: 0, special: true },
   ],
 };
 
@@ -70,26 +87,7 @@ var PIZZA_PREP = {
   ],
 };
 
-var PIZZA_SPECIALS = {
-  key: 'specials', label: 'SPECIALS',
-  options: [
-    { id: 'bianco',          label: 'Bianco',          price: 0 },
-    { id: 'breakfast-bacon', label: 'Breakfast Bacon', price: 0 },
-    { id: 'cheeseburger',    label: 'Cheeseburger',   price: 0 },
-    { id: 'chicken-alfredo', label: 'Chicken Alfredo', price: 0 },
-    { id: 'crew',            label: 'Crew',            price: 0 },
-    { id: 'hawaiian',        label: 'Hawaiian',        price: 0 },
-    { id: 'house',           label: 'House',           price: 0 },
-    { id: 'kosher',          label: 'Kosher',          price: 0 },
-    { id: 'mac-n-cheese',    label: 'Mac N Cheese',    price: 0 },
-    { id: 'moccho',          label: 'Moccho',          price: 0 },
-    { id: 'nick-special',    label: 'Nick Special',    price: 0 },
-    { id: 'primo',           label: 'Primo',           price: 0 },
-    { id: 'sammys-special',  label: "Sammy's Special", price: 0 },
-    { id: 'taco',            label: 'Taco',            price: 0 },
-    { id: 'veggie',          label: 'Veggie',          price: 0 },
-  ],
-};
+// PIZZA_SPECIALS merged into PIZZA_TOPPINGS with special: true flag
 
 var PIZZA_SIZE = {
   key: 'size', label: 'SIZE',
@@ -109,7 +107,7 @@ var MODIFIER_CONFIGS = {
   'Pizza': {
     mandatoryGroups: [PIZZA_SIZE, PIZZA_CRUST],
     includedItems: PIZZA_INCLUDED,
-    optionalGroups: [PIZZA_TOPPINGS, PIZZA_PREP, PIZZA_SPECIALS],
+    optionalGroups: [PIZZA_TOPPINGS, PIZZA_PREP],
   },
 
   // ── Buffalo Wings ──

@@ -86,7 +86,8 @@ export function ModifierPanel(container, opts) {
   var includedItems = config.includedItems || [];
   var optionalGroups = config.optionalGroups || [];
 
-  // ── Build tab list per spec order ──
+  // ── Build tab list ──
+  // Order: Mandatory → Included → Optional (non-prep) → Prep → Note → Allergen
   var tabs = [];
   mandatoryGroups.forEach(function(g) {
     tabs.push({ type: 'mandatory', key: g.key, label: g.label, group: g });
@@ -94,11 +95,20 @@ export function ModifierPanel(container, opts) {
   if (includedItems.length > 0) {
     tabs.push({ type: 'included', key: '_included', label: 'INCL' });
   }
-  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALLRG' });
-  tabs.push({ type: 'note', key: '_note', label: 'NOTE' });
+  // Optional groups: non-prep first, then prep
+  var prepGroups = [];
   optionalGroups.forEach(function(g) {
+    if (g.key === 'prep') {
+      prepGroups.push(g);
+    } else {
+      tabs.push({ type: 'optional', key: g.key, label: g.label, group: g });
+    }
+  });
+  prepGroups.forEach(function(g) {
     tabs.push({ type: 'optional', key: g.key, label: g.label, group: g });
   });
+  tabs.push({ type: 'note', key: '_note', label: 'NOTE' });
+  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALLRG' });
 
   var activeTabKey = tabs.length > 0 ? tabs[0].key : null;
   var activeOptPrefix = 'ADD';
@@ -406,7 +416,7 @@ export function ModifierPanel(container, opts) {
   // ═══ MANDATORY TAB ═══
   function renderMandatory(tab) {
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
 
     var group = tab.group;
     var currentKey = activeItem.mandatorySelections[group.key]
@@ -462,7 +472,7 @@ export function ModifierPanel(container, opts) {
   // ═══ INCLUDED TAB ═══
   function renderIncluded(tab) {
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
 
     includedItems.forEach(function(incl) {
       var isRemoved = activeItem.includedRemovals.indexOf(incl.id) !== -1;
@@ -490,19 +500,33 @@ export function ModifierPanel(container, opts) {
   function renderOptional(tab) {
     var group = tab.group;
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
 
     var mandKey = _currentMandatoryKey();
 
-    (group.options || []).forEach(function(opt) {
+    // Sort options alphabetically
+    var sorted = (group.options || []).slice().sort(function(a, b) {
+      return a.label.localeCompare(b.label);
+    });
+
+    sorted.forEach(function(opt) {
       var price = _resolvePrice(opt, mandKey);
       var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
+      pair.inner.style.fontSize = '9px';
+      pair.inner.style.padding = '3px 2px';
+      pair.inner.style.lineHeight = '1.1';
+
+      // Specials get yellow border to stand out
+      if (opt.special) {
+        pair.wrap.style.outline = '2px solid ' + T.gold;
+        pair.wrap.style.outlineOffset = '-2px';
+      }
 
       if (price > 0) {
         var priceEl = document.createElement('div');
-        priceEl.style.cssText = 'font-size:9px;color:' + T.gold + ';margin-top:1px;';
+        priceEl.style.cssText = 'font-size:8px;color:' + T.gold + ';margin-top:1px;';
         priceEl.textContent = '+$' + price.toFixed(2);
         pair.inner.appendChild(priceEl);
       }
@@ -536,7 +560,7 @@ export function ModifierPanel(container, opts) {
   // ═══ ALLERGEN TAB ═══
   function renderAllergen(tab) {
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:6px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
 
     ALLERGENS.forEach(function(a) {
       if (a.id === 'other') {
