@@ -75,7 +75,7 @@ var D_CHECKS = [
 ];
 var D_HEAT = {
   servers:['ALEX','JAMIE'],
-  data:{ALEX:[0,32,40,24,18,20,19,10],JAMIE:[18,18.5,25,19,16,19.5,19,7.75]},
+  data:{ALEX:[0,3,4,2,2,2,1,1],JAMIE:[2,2,3,2,1,2,2,1]},
 };
 
 // ── Module State ───────────────────────────────────
@@ -83,6 +83,7 @@ var D_HEAT = {
 var curEl = null;
 var activeOverlay = null;
 var hmFilter = null; // {server,hour} or null — heatmap→allchecks filter
+var hmExpanded = false; // heatmap full-width across top
 var closeDayEl = null;
 var allChecksEl = null;
 var heatmapEl = null;
@@ -592,6 +593,18 @@ function buildSalesBreakdownOverlay(panel) {
 }
 
 // Center — Server Load Heatmap
+// Collapsed: shows last 2 hours + current (3 columns)
+// Expanded: full width across top, all 8 hours
+function getCurrentHourIdx() {
+  var now = new Date();
+  var h = now.getHours();
+  // Map to HOURS index: 11A=0, 12P=1, 1P=2, 2P=3, 3P=4, 4P=5, 5P=6, 6P=7
+  var hourMap = [11,12,13,14,15,16,17,18];
+  var idx = 0;
+  for (var i = 0; i < hourMap.length; i++) { if (h >= hourMap[i]) idx = i; }
+  return Math.min(idx, 7);
+}
+
 function buildHeatmapBody(body) {
   var servers = D_HEAT.servers;
   var data = D_HEAT.data;
@@ -600,37 +613,48 @@ function buildHeatmapBody(body) {
     for (var h = 0; h < 8; h++) { var v = data[servers[s]][h]; if (v > maxVal) maxVal = v; }
   if (maxVal === 0) maxVal = 1;
 
+  // Determine visible hours
+  var visibleHours;
+  if (hmExpanded) {
+    visibleHours = [0,1,2,3,4,5,6,7];
+  } else {
+    var cur = getCurrentHourIdx();
+    var start = Math.max(0, cur - 2);
+    visibleHours = [];
+    for (var i = start; i <= Math.min(start + 2, 7); i++) visibleHours.push(i);
+  }
+
   var wrap = el('div', 'display:flex;flex-direction:column;gap:2px;height:100%;');
+
   // Hour header row
-  var hdrRow = el('div', 'display:flex;gap:2px;padding-left:50px;');
-  for (var h = 0; h < 8; h++) {
-    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:16px;color:#ffffff;', HOURS[h]));
+  var hdrRow = el('div', 'display:flex;gap:2px;padding-left:44px;');
+  for (var h = 0; h < visibleHours.length; h++) {
+    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:10px;color:#ffffff;letter-spacing:1px;', HOURS[visibleHours[h]]));
   }
   wrap.appendChild(hdrRow);
 
   for (var s = 0; s < servers.length; s++) {
     var row = el('div', 'display:flex;gap:2px;flex:1;align-items:stretch;');
-    row.appendChild(el('div', 'width:50px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:' + FONT + ';font-size:20px;color:' + C.mint + ';font-weight:bold;', servers[s]));
-    for (var h = 0; h < 8; h++) {
-      (function(srv, hr, val) {
+    row.appendChild(el('div', 'width:42px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:10px;color:' + C.mint + ';font-weight:bold;letter-spacing:1px;', servers[s]));
+    for (var h = 0; h < visibleHours.length; h++) {
+      (function(srv, hrIdx, val) {
         var intensity = val / maxVal;
         var bg = 'rgba(135,247,156,' + (intensity * 0.8 + 0.05).toFixed(2) + ')';
-        var isActive = hmFilter && hmFilter.server === srv && hmFilter.hour === HOURS[hr];
-        var cell = el('div', 'flex:1;background:' + bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:15px;color:' + C.dark + ';font-weight:bold;' + (isActive ? 'outline:2px solid ' + C.lime + ';outline-offset:-2px;' : ''));
-        if (val > 0) cell.textContent = '$' + Math.round(val);
+        var isActive = hmFilter && hmFilter.server === srv && hmFilter.hour === HOURS[hrIdx];
+        var cell = el('div', 'flex:1;background:' + bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:12px;color:' + C.dark + ';font-weight:bold;' + (isActive ? 'outline:2px solid ' + C.lime + ';outline-offset:-2px;' : ''));
+        if (val > 0) cell.textContent = val;
         cell.addEventListener('pointerup', function(e) {
           e.stopPropagation();
-          if (hmFilter && hmFilter.server === srv && hmFilter.hour === HOURS[hr]) {
+          if (hmFilter && hmFilter.server === srv && hmFilter.hour === HOURS[hrIdx]) {
             hmFilter = null;
           } else {
-            hmFilter = { server: srv, hour: HOURS[hr] };
+            hmFilter = { server: srv, hour: HOURS[hrIdx] };
           }
-          // Re-render heatmap highlight + allchecks
           if (heatmapEl) { heatmapEl.innerHTML = ''; buildHeatmapBody(heatmapEl); }
           refreshAllChecks();
         });
         row.appendChild(cell);
-      })(servers[s], h, data[servers[s]][h]);
+      })(servers[s], visibleHours[h], data[servers[s]][visibleHours[h]]);
     }
     wrap.appendChild(row);
   }
@@ -1138,28 +1162,70 @@ function buildCloseDayOverlay(panel) {
 
 function buildScene(container) {
   container.innerHTML = '';
-  container.style.cssText = 'display:flex;gap:6px;padding:6px;height:100%;box-sizing:border-box;';
+  container.style.cssText = 'display:grid;gap:6px;padding:6px;height:100%;box-sizing:border-box;' +
+    (hmExpanded
+      ? 'grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto 1fr 1fr;'
+      : 'grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;');
 
-  // Left column
-  var left = el('div', 'display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;');
-  left.appendChild(buildCard('SALES OVERVIEW', buildSalesOverviewBody, buildSalesOverviewOverlay));
-  left.appendChild(buildCard('SALES BREAKDOWN', buildSalesBreakdownBody, buildSalesBreakdownOverlay));
-  container.appendChild(left);
+  // Heatmap card — when expanded, spans full width across top
+  var hmCard = buildCard('SERVER LOAD HEATMAP', function(b) { heatmapEl = b; buildHeatmapBody(b); }, null);
+  if (hmExpanded) {
+    hmCard.style.gridColumn = '1 / -1';
+    hmCard.style.gridRow = '1';
+  } else {
+    hmCard.style.gridColumn = '2';
+    hmCard.style.gridRow = '1';
+  }
+  // Tap header to toggle expand/collapse
+  hmCard._header.style.cursor = 'pointer';
+  hmCard._header.textContent = hmExpanded ? 'SERVER LOAD HEATMAP \u25BC' : 'SERVER LOAD HEATMAP \u25B6';
+  hmCard._header.addEventListener('pointerup', function(e) {
+    e.stopPropagation();
+    hmExpanded = !hmExpanded;
+    buildScene(container);
+  });
+  container.appendChild(hmCard);
 
-  // Center column
-  var center = el('div', 'display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;');
-  center.appendChild(buildCard('SERVER LOAD HEATMAP', function(b) { heatmapEl = b; buildHeatmapBody(b); }, null));
-  center.appendChild(buildCard('ALL CHECKS', function(b) { allChecksEl = b; buildAllChecksBody(b); }, buildAllChecksOverlay));
-  container.appendChild(center);
+  // Left column cards
+  var salesOv = buildCard('SALES OVERVIEW', buildSalesOverviewBody, buildSalesOverviewOverlay);
+  salesOv.style.gridColumn = '1';
+  salesOv.style.gridRow = hmExpanded ? '2' : '1';
+  container.appendChild(salesOv);
 
-  // Right column
-  var right = el('div', 'display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;');
-  right.appendChild(buildCard('SERVER CHECKOUTS', buildServerCheckoutsBody, buildServerCheckoutsOverlay));
-  right.appendChild(buildCard('LABOR COB%', buildLaborCobBody, buildLaborCobOverlay));
+  var salesBd = buildCard('SALES BREAKDOWN', buildSalesBreakdownBody, buildSalesBreakdownOverlay);
+  salesBd.style.gridColumn = '1';
+  salesBd.style.gridRow = hmExpanded ? '3' : '2';
+  container.appendChild(salesBd);
+
+  // Center — All Checks
+  var allCk = buildCard('ALL CHECKS', function(b) { allChecksEl = b; buildAllChecksBody(b); }, buildAllChecksOverlay);
+  allCk.style.gridColumn = '2';
+  allCk.style.gridRow = hmExpanded ? '2 / 4' : '2';
+  container.appendChild(allCk);
+
+  // Right column cards
+  var srvCo = buildCard('SERVER CHECKOUTS', buildServerCheckoutsBody, buildServerCheckoutsOverlay);
+  srvCo.style.gridColumn = '3';
+  srvCo.style.gridRow = hmExpanded ? '2' : '1';
+  container.appendChild(srvCo);
+
+  var labCob = buildCard('LABOR COB%', buildLaborCobBody, buildLaborCobOverlay);
+  labCob.style.gridColumn = '3';
+  labCob.style.gridRow = hmExpanded ? '3' : '2 / 3';
+  container.appendChild(labCob);
+
   var cdCard = buildCard('CLOSE DAY', function(b) { closeDayEl = b; buildCloseDayBody(b); }, null);
   cdCard._cdCard = true;
-  right.appendChild(cdCard);
-  container.appendChild(right);
+  if (!hmExpanded) {
+    // In collapsed mode, close day shares row 2 with labor cob in right col
+    // Use a wrapper to stack labor+closeday in the right column
+    labCob.style.gridRow = '2';
+    cdCard.style.gridColumn = '3';
+    cdCard.style.gridRow = '3';
+  } else {
+    cdCard.style.display = 'none'; // hide in expanded mode to save space
+  }
+  container.appendChild(cdCard);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1172,6 +1238,7 @@ SceneManager.register({
     curEl = container;
     // Reset state
     hmFilter = null;
+    hmExpanded = false;
     closeState = { settled: false, closed: false };
     closeDayEl = null;
     allChecksEl = null;
