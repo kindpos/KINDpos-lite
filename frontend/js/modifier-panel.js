@@ -144,10 +144,10 @@ export function ModifierPanel(container, opts) {
     card.style.cssText = [
       'width:100%;height:100%;',
       'background:' + T.bg + ';',
-      'border-top:7px solid ' + _lightenHex(T.mint, 0.2) + ';',
-      'border-left:7px solid ' + _lightenHex(T.mint, 0.2) + ';',
-      'border-bottom:7px solid ' + _darkenHex(T.mint, 0.3) + ';',
-      'border-right:7px solid ' + _darkenHex(T.mint, 0.3) + ';',
+      'border-top:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-left:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-bottom:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'border-right:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'display:flex;flex-direction:column;',
       'box-sizing:border-box;overflow:hidden;',
     ].join('');
@@ -165,7 +165,7 @@ export function ModifierPanel(container, opts) {
       'gap:4px;padding:6px;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
       'background:' + T.bgDark + ';',
-      'border-right:3px solid ' + _darkenHex(T.mint, 0.3) + ';',
+      'border-right:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
     ].join('');
     body.appendChild(tabBarEl);
 
@@ -179,7 +179,7 @@ export function ModifierPanel(container, opts) {
       'flex-shrink:0;padding:6px;',
       'display:flex;flex-direction:column;gap:4px;',
       'background:' + T.bgDark + ';',
-      'border-bottom:3px solid ' + _darkenHex(T.mint, 0.3) + ';',
+      'border-bottom:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
     ].join('');
     rightArea.appendChild(topBarEl);
 
@@ -200,7 +200,7 @@ export function ModifierPanel(container, opts) {
     actionBar.style.cssText = [
       'display:flex;gap:8px;flex-shrink:0;',
       'padding:6px 8px 8px 8px;',
-      'border-top:3px solid ' + _darkenHex(T.mint, 0.3) + ';',
+      'border-top:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'background:' + T.bgDark + ';',
     ].join('');
 
