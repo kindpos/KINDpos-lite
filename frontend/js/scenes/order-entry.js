@@ -1505,11 +1505,11 @@ function renderTicket() {
         iRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:' + (active ? '5px 8px' : '3px 8px') + ';';
 
         var iName = document.createElement('span');
-        iName.style.cssText = 'font-family:' + T.fb + ';font-size:' + fsName + ';font-weight:bold;color:' + fg + ';';
+        iName.style.cssText = 'font-family:' + T.fb + ';font-size:' + fsName + ';font-weight:bold;color:' + fg + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
         iName.textContent = (inst.sent ? '\u2713 ' : '') + (active ? '\u25cf ' : '') + inst.name;
 
         var iPrice = document.createElement('span');
-        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + fsName + ';font-weight:bold;color:' + fg + ';';
+        iPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + fsName + ';font-weight:bold;color:' + fg + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
         var total = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
         iPrice.textContent = '$' + total.toFixed(2);
 
