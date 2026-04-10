@@ -341,48 +341,43 @@ function buildSalesOverviewOverlay(panel) {
   // Chart A — Net Sales Line (large)
   var secA = el('div', 'padding:8px;');
   secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'NET SALES — TODAY vs LAST WEEK'));
-  var svgA = mk('svg', { viewBox:'0 0 660 200', width:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var svgA = mk('svg', { viewBox:'0 0 660 220', width:'100%', preserveAspectRatio:'xMidYMid meet' });
   addDefs(svgA, 'soa');
-  var ax=44,ay=12,aw=596,ah=150,aMax=65;
+  var ax=50,ay=12,aw=580,ah=150,aMax=65;
   function atx(i){return ax+(i/7)*aw;} function aty(v){return ay+ah-(v/aMax)*ah;}
   chartFrame(svgA,ax,ay,aw,ah,'soa');
-  xLabels(svgA,ax,aw,ay+ah, '18');
+  xLabels(svgA,ax,aw,ay+ah, '11');
 
   // Last week
-  var lwP=[];for(var i=0;i<8;i++)lwP.push(atx(i).toFixed(1)+','+aty(D_LASTW[i]).toFixed(1));
-  svgA.appendChild(mk('polyline',{points:lwP.join(' '),fill:'none',stroke:C.pink,'stroke-width':'1.5','stroke-dasharray':'5,3'}));
-  for(var i=0;i<8;i++)svgA.appendChild(mk('rect',{x:atx(i)-3,y:aty(D_LASTW[i])-3,width:'6',height:'6',fill:C.pink}));
-
+  drawLineSeries(svgA, D_LASTW, ax, aw, ay+ah, ah, aMax, C.pink, true, 5);
   // Today
   var areaA='M'+atx(0).toFixed(1)+','+(ay+ah);
   for(var i=0;i<8;i++)areaA+=' L'+atx(i).toFixed(1)+','+aty(D_TODAY[i]).toFixed(1);
   areaA+=' L'+atx(7).toFixed(1)+','+(ay+ah)+' Z';
   svgA.appendChild(mk('path',{d:areaA,fill:C.lime,opacity:'0.08'}));
-  var tP=[];for(var i=0;i<8;i++)tP.push(atx(i).toFixed(1)+','+aty(D_TODAY[i]).toFixed(1));
-  svgA.appendChild(mk('polyline',{points:tP.join(' '),fill:'none',stroke:C.lime,'stroke-width':'4','stroke-opacity':'0.3'}));
-  svgA.appendChild(mk('polyline',{points:tP.join(' '),fill:'none',stroke:C.lime,'stroke-width':'2'}));
-  for(var i=0;i<8;i++)svgA.appendChild(mk('rect',{x:atx(i)-3,y:aty(D_TODAY[i])-3,width:'6',height:'6',fill:C.lime}));
+  drawLineSeries(svgA, D_TODAY, ax, aw, ay+ah, ah, aMax, C.lime, false, 6);
 
   // Peak hour label
-  svgA.appendChild(mk('text',{x:atx(2),y:aty(65)-8,fill:C.lime,'font-size':'18','font-weight':'bold','font-family':FONT,'text-anchor':'middle'},'$65'));
+  svgA.appendChild(mk('text',{x:atx(2),y:aty(65)-10,fill:C.lime,'font-size':'11','font-weight':'bold','font-family':FONT,'text-anchor':'middle'},'$65'));
 
   // Legend
-  svgA.appendChild(mk('rect',{x:ax+160,y:ah+30,width:'8',height:'8',fill:C.lime}));
-  svgA.appendChild(mk('text',{x:ax+172,y:ah+38,fill:C.label,'font-size':'18','font-family':FONT},'TODAY '+fmt(netT)));
-  svgA.appendChild(mk('rect',{x:ax+320,y:ah+30,width:'8',height:'8',fill:C.pink}));
-  svgA.appendChild(mk('text',{x:ax+332,y:ah+38,fill:C.label,'font-size':'18','font-family':FONT},'LAST WEEK '+fmt(netLW)));
+  var lyA=ay+ah+30;
+  svgA.appendChild(mk('rect',{x:ax+100,y:lyA-4,width:'10',height:'10',fill:C.lime}));
+  svgA.appendChild(mk('text',{x:ax+114,y:lyA+5,fill:C.lime,'font-size':'10','font-family':FONT},'TODAY '+fmt(netT)));
+  svgA.appendChild(mk('rect',{x:ax+300,y:lyA-4,width:'10',height:'10',fill:C.pink}));
+  svgA.appendChild(mk('text',{x:ax+314,y:lyA+5,fill:C.pink,'font-size':'10','font-family':FONT},'LAST WEEK '+fmt(netLW)));
   secA.appendChild(svgA);
   panel.appendChild(secA);
 
   // Chart B — Check Average Bar + Target Line
   var secB = el('div', 'padding:8px;');
   secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'CHECK AVERAGE BY HOUR'));
-  var svgB = mk('svg', { viewBox:'0 0 660 148', width:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var svgB = mk('svg', { viewBox:'0 0 660 170', width:'100%', preserveAspectRatio:'xMidYMid meet' });
   addDefs(svgB, 'sob');
-  var bx=44,by=12,bw=596,bh=100,bMax=7;
+  var bx=50,by=12,bw=570,bh=100,bMax=7;
   var target = sum(D_CAVG)/D_CAVG.length;
   chartFrame(svgB,bx,by,bw,bh,'sob');
-  xLabels(svgB,bx,bw,by+bh, '18');
+  xLabels(svgB,bx,bw,by+bh, '11');
   var barW = bw/8*0.55;
   for(var i=0;i<8;i++){
     var bx2=bx+(i/7)*bw-barW/2;
@@ -390,29 +385,32 @@ function buildSalesOverviewOverlay(panel) {
     var barY=by+bh-barH;
     var above=D_CAVG[i]>=target;
     svgB.appendChild(mk('rect',{x:bx2,y:barY,width:barW,height:barH,fill:C.gold,opacity:above?'1':'0.38'}));
-    svgB.appendChild(mk('text',{x:bx+(i/7)*bw,y:barY-4,fill:C.gold,'font-size':'18','font-family':FONT,'text-anchor':'middle',opacity:above?'1':'0.5'},fmt(D_CAVG[i])));
+    svgB.appendChild(mk('text',{x:bx+(i/7)*bw,y:barY-4,fill:C.gold,'font-size':'9','font-family':FONT,'text-anchor':'middle',opacity:above?'1':'0.5'},fmt(D_CAVG[i])));
   }
   // Target line
   var tgtY=by+bh-(target/bMax)*bh;
   svgB.appendChild(mk('line',{x1:bx,y1:tgtY,x2:bx+bw,y2:tgtY,stroke:C.lime,'stroke-width':'1.5','stroke-dasharray':'5,3'}));
-  svgB.appendChild(mk('text',{x:bx+bw+4,y:tgtY+4,fill:C.lime,'font-size':'18','font-family':FONT},'AVG '+fmt(target)));
+  svgB.appendChild(mk('text',{x:bx+bw+4,y:tgtY+4,fill:C.lime,'font-size':'9','font-family':FONT},'AVG '+fmt(target)));
   // Legend
-  svgB.appendChild(mk('rect',{x:bx+100,y:bh+28,width:'8',height:'8',fill:C.gold}));
-  svgB.appendChild(mk('text',{x:bx+112,y:bh+36,fill:C.label,'font-size':'18','font-family':FONT},'CHECK AVG \u2014 dimmed bars below daily target'));
+  var lyB=by+bh+30;
+  svgB.appendChild(mk('rect',{x:bx+60,y:lyB-4,width:'10',height:'10',fill:C.gold}));
+  svgB.appendChild(mk('text',{x:bx+74,y:lyB+5,fill:C.label,'font-size':'9','font-family':FONT},'CHECK AVG'));
+  svgB.appendChild(mk('line',{x1:bx+260,y1:lyB,x2:bx+280,y2:lyB,stroke:C.lime,'stroke-width':'1.5','stroke-dasharray':'5,3'}));
+  svgB.appendChild(mk('text',{x:bx+284,y:lyB+5,fill:C.lime,'font-size':'9','font-family':FONT},'TARGET '+fmt(target)));
   secB.appendChild(svgB);
   panel.appendChild(secB);
 
   // Chart C — Order Type Split Bars
   var secC = el('div', 'padding:8px;');
   secC.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'ORDER TYPE — CASH vs CARD'));
-  var svgC = mk('svg', { viewBox:'0 0 660 162', width:'100%', preserveAspectRatio:'xMidYMid meet' });
-  var ocx=88,ocy=14,ocw=500,och=110;
+  var svgC = mk('svg', { viewBox:'0 0 660 180', width:'100%', preserveAspectRatio:'xMidYMid meet' });
+  var ocx=100,ocy=14,ocw=480,och=110;
   var oMax=156; // max order type total
   // Vertical grid
   for(var g=1;g<=4;g++){
     var gx=ocx+(g/4)*ocw;
     svgC.appendChild(mk('line',{x1:gx,y1:ocy,x2:gx,y2:ocy+och,stroke:C.grid,'stroke-width':'1'}));
-    svgC.appendChild(mk('text',{x:gx,y:ocy-3,fill:C.label,'font-size':'18','font-family':FONT,'text-anchor':'middle'},fmt(oMax*g/4)));
+    svgC.appendChild(mk('text',{x:gx,y:ocy-3,fill:C.label,'font-size':'9','font-family':FONT,'text-anchor':'middle'},fmt(oMax*g/4)));
   }
   var rowH=och/3;
   for(var i=0;i<D_ORD.length;i++){
@@ -423,23 +421,24 @@ function buildSalesOverviewOverlay(panel) {
     var cashW=totalW*o.cashPct;
     var cardW=totalW*(1-o.cashPct);
     // Label
-    svgC.appendChild(mk('text',{x:ocx-6,y:ry+bH/2+4,fill:o.color,'font-size':'20','font-weight':'bold','font-family':FONT,'text-anchor':'end'},o.name));
+    svgC.appendChild(mk('text',{x:ocx-6,y:ry+bH/2+4,fill:o.color,'font-size':'10','font-weight':'bold','font-family':FONT,'text-anchor':'end'},o.name));
     // Cash segment
     svgC.appendChild(mk('rect',{x:ocx,y:ry,width:cashW,height:bH,fill:C.gold}));
-    if(cashW>=32) svgC.appendChild(mk('text',{x:ocx+cashW/2,y:ry+bH/2+4,fill:C.dark,'font-size':'18','font-family':FONT,'text-anchor':'middle'},Math.round(o.cashPct*100)+'%'));
+    if(cashW>=40) svgC.appendChild(mk('text',{x:ocx+cashW/2,y:ry+bH/2+4,fill:C.dark,'font-size':'9','font-family':FONT,'text-anchor':'middle'},Math.round(o.cashPct*100)+'%'));
     // Card segment
     svgC.appendChild(mk('rect',{x:ocx+cashW,y:ry,width:cardW,height:bH,fill:C.pink}));
-    if(cardW>=32) svgC.appendChild(mk('text',{x:ocx+cashW+cardW/2,y:ry+bH/2+4,fill:C.dark,'font-size':'18','font-family':FONT,'text-anchor':'middle'},Math.round((1-o.cashPct)*100)+'%'));
+    if(cardW>=40) svgC.appendChild(mk('text',{x:ocx+cashW+cardW/2,y:ry+bH/2+4,fill:C.dark,'font-size':'9','font-family':FONT,'text-anchor':'middle'},Math.round((1-o.cashPct)*100)+'%'));
     // Divider
     svgC.appendChild(mk('line',{x1:ocx+cashW,y1:ry,x2:ocx+cashW,y2:ry+bH,stroke:C.dark,'stroke-width':'1'}));
     // Total after bar
-    svgC.appendChild(mk('text',{x:ocx+totalW+6,y:ry+bH/2+4,fill:o.color,'font-size':'20','font-weight':'bold','font-family':FONT},fmt(o.total)));
+    svgC.appendChild(mk('text',{x:ocx+totalW+6,y:ry+bH/2+4,fill:o.color,'font-size':'10','font-weight':'bold','font-family':FONT},fmt(o.total)));
   }
   // Legend
-  svgC.appendChild(mk('rect',{x:ocx+120,y:och+26,width:'8',height:'8',fill:C.gold}));
-  svgC.appendChild(mk('text',{x:ocx+132,y:och+34,fill:C.label,'font-size':'18','font-family':FONT},'CASH'));
-  svgC.appendChild(mk('rect',{x:ocx+200,y:och+26,width:'8',height:'8',fill:C.pink}));
-  svgC.appendChild(mk('text',{x:ocx+212,y:och+34,fill:C.label,'font-size':'18','font-family':FONT},'CARD'));
+  var lyC=ocy+och+16;
+  svgC.appendChild(mk('rect',{x:ocx+100,y:lyC-4,width:'10',height:'10',fill:C.gold}));
+  svgC.appendChild(mk('text',{x:ocx+114,y:lyC+5,fill:C.label,'font-size':'10','font-family':FONT},'CASH'));
+  svgC.appendChild(mk('rect',{x:ocx+200,y:lyC-4,width:'10',height:'10',fill:C.pink}));
+  svgC.appendChild(mk('text',{x:ocx+214,y:lyC+5,fill:C.label,'font-size':'10','font-family':FONT},'CARD'));
   secC.appendChild(svgC);
   panel.appendChild(secC);
 }
@@ -1065,16 +1064,16 @@ function buildLaborCobOverlay(panel) {
   // Chart A — Hourly COB% Bars + Target Line
   var secA = el('div', 'padding:8px;');
   secA.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'HOURLY COB% — BAR + TARGET'));
-  var svgA = mk('svg', { viewBox: '0 0 660 162', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
+  var svgA = mk('svg', { viewBox: '0 0 660 190', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
   addDefs(svgA, 'lca');
-  var ax = 44, ay = 12, aw = 596, ah = 110;
-  var cobMax = 60; // max Y for COB%
+  var ax = 50, ay = 14, aw = 580, ah = 110;
+  var cobMax = 60;
   chartFrame(svgA, ax, ay, aw, ah, 'lca');
-  xLabels(svgA, ax, aw, ay + ah, '18');
+  xLabels(svgA, ax, aw, ay + ah, '11');
   // Y labels
   for (var g = 0; g <= 4; g++) {
     var gy = ay + ah - (g / 4) * ah;
-    svgA.appendChild(mk('text', { x: ax - 4, y: gy + 3, fill: C.label, 'font-size': '14', 'font-family': FONT, 'text-anchor': 'end' }, Math.round(cobMax * g / 4) + '%'));
+    svgA.appendChild(mk('text', { x: ax - 4, y: gy + 3, fill: C.label, 'font-size': '9', 'font-family': FONT, 'text-anchor': 'end' }, Math.round(cobMax * g / 4) + '%'));
   }
 
   var barW2 = aw / 8 * 0.55;
@@ -1085,32 +1084,36 @@ function buildLaborCobOverlay(panel) {
     var bY = ay + ah - bH;
     var above = hCob > tgtPct;
     svgA.appendChild(mk('rect', { x: bx2, y: bY, width: barW2, height: bH, fill: above ? C.gold : C.verm }));
-    svgA.appendChild(mk('text', { x: ax + (i / 7) * aw, y: bY - 4, fill: above ? C.gold : C.verm, 'font-size': '8', 'font-family': FONT, 'text-anchor': 'middle' }, hCob.toFixed(1) + '%'));
+    svgA.appendChild(mk('rect', { x: bx2, y: bY, width: barW2, height: bH, fill: 'url(#dit_lca)' }));
+    svgA.appendChild(mk('text', { x: ax + (i / 7) * aw, y: bY - 5, fill: above ? C.gold : C.verm, 'font-size': '9', 'font-weight': 'bold', 'font-family': FONT, 'text-anchor': 'middle' }, hCob.toFixed(1) + '%'));
   }
   // Target line
   var tgtY = ay + ah - (tgtPct / cobMax) * ah;
   svgA.appendChild(mk('line', { x1: ax, y1: tgtY, x2: ax + aw, y2: tgtY, stroke: C.lime, 'stroke-width': '1.5', 'stroke-dasharray': '5,3' }));
-  svgA.appendChild(mk('text', { x: ax + aw + 4, y: tgtY + 4, fill: C.lime, 'font-size': '14', 'font-family': FONT }, 'TARGET 25%'));
+  svgA.appendChild(mk('text', { x: ax + aw + 4, y: tgtY + 4, fill: C.lime, 'font-size': '9', 'font-family': FONT }, 'TGT ' + tgtPct + '%'));
   // Legend
-  svgA.appendChild(mk('rect', { x: ax + 80, y: ah + 32, width: '8', height: '8', fill: C.gold }));
-  svgA.appendChild(mk('text', { x: ax + 92, y: ah + 40, fill: C.label, 'font-size': '8', 'font-family': FONT }, 'ABOVE TARGET'));
-  svgA.appendChild(mk('rect', { x: ax + 220, y: ah + 32, width: '8', height: '8', fill: C.verm }));
-  svgA.appendChild(mk('text', { x: ax + 232, y: ah + 40, fill: C.label, 'font-size': '8', 'font-family': FONT }, 'AT / BELOW TARGET'));
+  var lyLA = ay + ah + 30;
+  svgA.appendChild(mk('rect', { x: ax + 40, y: lyLA - 4, width: '10', height: '10', fill: C.verm }));
+  svgA.appendChild(mk('text', { x: ax + 54, y: lyLA + 5, fill: C.verm, 'font-size': '9', 'font-family': FONT }, 'AT / BELOW TARGET'));
+  svgA.appendChild(mk('rect', { x: ax + 230, y: lyLA - 4, width: '10', height: '10', fill: C.gold }));
+  svgA.appendChild(mk('text', { x: ax + 244, y: lyLA + 5, fill: C.gold, 'font-size': '9', 'font-family': FONT }, 'ABOVE TARGET'));
+  svgA.appendChild(mk('line', { x1: ax + 390, y1: lyLA, x2: ax + 410, y2: lyLA, stroke: C.lime, 'stroke-width': '1.5', 'stroke-dasharray': '5,3' }));
+  svgA.appendChild(mk('text', { x: ax + 414, y: lyLA + 5, fill: C.lime, 'font-size': '9', 'font-family': FONT }, 'TARGET ' + tgtPct + '%'));
   secA.appendChild(svgA);
   panel.appendChild(secA);
 
   // Chart B — Labor Cost by Employee
   var secB = el('div', 'padding:8px;');
   secB.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:' + C.mint + ';margin-bottom:6px;letter-spacing:1px;', 'LABOR COST BY EMPLOYEE'));
-  var svgB = mk('svg', { viewBox: '0 0 660 148', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
+  var svgB = mk('svg', { viewBox: '0 0 660 180', width: '100%', preserveAspectRatio: 'xMidYMid meet' });
   addDefs(svgB, 'lcb');
-  var ebx = 88, eby = 14, ebw = 500, ebh = 80;
-  var empMax = 63; // max employee cost
+  var ebx = 100, eby = 14, ebw = 480, ebh = 120;
+  var empMax = 63;
   // Vertical grid
   for (var g = 1; g <= 4; g++) {
     var gx = ebx + (g / 4) * ebw;
     svgB.appendChild(mk('line', { x1: gx, y1: eby, x2: gx, y2: eby + ebh, stroke: C.grid, 'stroke-width': '1' }));
-    svgB.appendChild(mk('text', { x: gx, y: eby - 3, fill: C.label, 'font-size': '8', 'font-family': FONT, 'text-anchor': 'middle' }, fmt(empMax * g / 4)));
+    svgB.appendChild(mk('text', { x: gx, y: eby - 3, fill: C.label, 'font-size': '9', 'font-family': FONT, 'text-anchor': 'middle' }, fmt(empMax * g / 4)));
   }
   var eRowH = ebh / D_EMP.length;
   for (var i = 0; i < D_EMP.length; i++) {
