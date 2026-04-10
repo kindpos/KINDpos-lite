@@ -109,6 +109,7 @@ export const T = {
   // Layer z-indexes
   zWorking:         10,
   zTransactional:   20,
+  zSummary:         25,
   zInterrupt:       30,
   zGate:            100,
 

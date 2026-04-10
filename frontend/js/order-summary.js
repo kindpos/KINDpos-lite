@@ -221,12 +221,11 @@ export var OrderSummary = {
     _renderSummary(params);
     _renderPrices(params);
 
-    el.style.display = 'flex';
+    SceneManager.showSummary();
   },
 
   hide: function() {
-    var el = _container();
-    if (el) el.style.display = 'none';
+    SceneManager.hideSummary();
   },
 
   update: function(params) {

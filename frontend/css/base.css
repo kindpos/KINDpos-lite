@@ -69,14 +69,14 @@ html, body {
   gap: 8px;
 }
 
-/* ── Persistent order summary panel ──────────────── */
+/* ── Persistent order summary layer ──────────────── */
 #order-summary {
   position: absolute;
   top: 52px;
   left: 0;
   width: 280px;
   height: calc(100% - 52px);
-  z-index: 25;
+  /* z-index applied by SceneManager from T.zSummary */
   pointer-events: auto;
   display: none;
 }
