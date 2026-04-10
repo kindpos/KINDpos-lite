@@ -444,27 +444,82 @@ export function HexNav(container, opts) {
 
   function showSubcats(catHex) {
     resize();
-    state.level = 1; state.cat = catHex;
-    catHex.locked = true;
-    state.hexes = buildGrid([catHex], catHex.data.subcats, sSubcatR, 'subcat');
+    state.level = 1;
+    connectorLines = [];
+    var cat = catHex.data;
+    var subcats = cat.subcats;
+    var r = adaptiveR(sSubcatR, subcats.length + 1, svgW, svgH);
+    var positions = honeycombLayout(new Array(subcats.length + 1), r);
+    var parentHex = {
+      id: cat.id, label: cat.label,
+      x: positions[0].x, y: positions[0].y, r: r,
+      color: catHex.color, textColor: catHex.textColor || '#1a1a1a',
+      locked: true, type: 'cat', data: cat,
+    };
+    state.cat = parentHex;
+    state.subcat = null;
+    state.hexes = [parentHex];
+    subcats.forEach(function(sub, i) {
+      state.hexes.push({
+        id: sub.id, label: sub.label || sub,
+        x: positions[i + 1].x, y: positions[i + 1].y, r: r,
+        color: catHex.color, textColor: catHex.textColor || '#1a1a1a',
+        locked: false, type: 'subcat', data: sub,
+      });
+    });
     render();
   }
 
   function showItems(subcatHex) {
     resize();
-    state.level = 2; state.subcat = subcatHex;
-    subcatHex.locked = true;
-    state.cat.locked = true;
-    state.hexes = buildGrid([state.cat, subcatHex], subcatHex.data.items, sItemR, 'item');
+    state.level = 2;
+    connectorLines = [];
+    var items = subcatHex.data.items;
+    var r = adaptiveR(sItemR, items.length + 1, svgW, svgH);
+    var positions = honeycombLayout(new Array(items.length + 1), r);
+    var parentHex = {
+      id: subcatHex.id, label: subcatHex.label,
+      x: positions[0].x, y: positions[0].y, r: r,
+      color: state.cat.color, textColor: state.cat.textColor || '#1a1a1a',
+      locked: true, type: 'subcat', data: subcatHex.data,
+    };
+    state.subcat = parentHex;
+    state.hexes = [parentHex];
+    items.forEach(function(item, i) {
+      state.hexes.push({
+        id: item.id || item, label: item.label || item,
+        x: positions[i + 1].x, y: positions[i + 1].y, r: r,
+        color: state.cat.color, textColor: state.cat.textColor || '#1a1a1a',
+        locked: false, type: 'item', data: item,
+      });
+    });
     render();
   }
 
   function showItemsDirect(catHex) {
     resize();
-    state.level = 2; state.cat = catHex; state.subcat = null;
-    catHex.locked = true;
+    state.level = 2;
+    connectorLines = [];
+    state.subcat = null;
     var items = (catHex.data.subcats && catHex.data.subcats[0]) ? catHex.data.subcats[0].items : [];
-    state.hexes = buildGrid([catHex], items, sSubcatR, 'item');
+    var r = adaptiveR(sSubcatR, items.length + 1, svgW, svgH);
+    var positions = honeycombLayout(new Array(items.length + 1), r);
+    var parentHex = {
+      id: catHex.data.id || catHex.id, label: catHex.data.label || catHex.label,
+      x: positions[0].x, y: positions[0].y, r: r,
+      color: catHex.color, textColor: catHex.textColor || '#1a1a1a',
+      locked: true, type: 'cat', data: catHex.data,
+    };
+    state.cat = parentHex;
+    state.hexes = [parentHex];
+    items.forEach(function(item, i) {
+      state.hexes.push({
+        id: item.id || item, label: item.label || item,
+        x: positions[i + 1].x, y: positions[i + 1].y, r: r,
+        color: catHex.color, textColor: catHex.textColor || '#1a1a1a',
+        locked: false, type: 'item', data: item,
+      });
+    });
     render();
   }
 
