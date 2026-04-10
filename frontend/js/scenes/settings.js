@@ -1491,47 +1491,7 @@ function buildScene(container) {
     'overflow:hidden;',
   ].join('');
 
-  // ── Header bar (34px, mint) ──
-  var header = document.createElement('div');
-  header.style.cssText = [
-    'width:100%;height:34px;flex-shrink:0;',
-    'background:' + T.mint + ';',
-    'display:flex;align-items:center;justify-content:space-between;',
-    'padding:0 12px;',
-    'box-sizing:border-box;',
-  ].join('');
-
-  // Left: date/time
-  var clockEl = document.createElement('span');
-  clockEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.bgDark + ';';
-  header.appendChild(clockEl);
-
-  function updateClock() {
-    var now = new Date();
-    var mm = String(now.getMonth() + 1).padStart(2, '0');
-    var dd = String(now.getDate()).padStart(2, '0');
-    var yy = String(now.getFullYear()).slice(2);
-    var h = now.getHours();
-    var ampm = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    var min = String(now.getMinutes()).padStart(2, '0');
-    clockEl.textContent = mm + '/' + dd + '/' + yy + ' // ' + h + ':' + min + ampm;
-  }
-  updateClock();
-  _clockIv = setInterval(updateClock, 1000);
-
-  // Right: X close button
-  var xBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'X' });
-  xBtn.wrap.style.height = '26px';
-  xBtn.wrap.style.minWidth = '36px';
-  xBtn.inner.style.fontSize = '12px';
-  xBtn.inner.style.color = T.mint;
-  xBtn.wrap.addEventListener('pointerup', function() {
-    SceneManager.closeTransactional('settings');
-  });
-  header.appendChild(xBtn.wrap);
-
-  container.appendChild(header);
+  // Header handled by global #header via setSceneName/setHeaderBack
 
   // ── Tab cards row ──
   var tabRow = document.createElement('div');
