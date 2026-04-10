@@ -255,7 +255,6 @@ var _mainArea    = null;  // DOM ref for right panel
 // ── Modifier Panel (item-level modifier builder) ──
 var _modPanel      = null;   // ModifierPanel instance
 var _modPanelItem  = null;   // ticket preview item for active panel
-var _modPanelWrap  = null;   // DOM wrapper for modifier panel
 
 // ── Batch Modifier Session ───────────────────────
 var modifierSession = {
@@ -305,7 +304,6 @@ SceneManager.register({
     _mainArea      = null;
     _modPanel      = null;
     _modPanelItem  = null;
-    _modPanelWrap  = null;
 
     container.style.cssText = [
       'width:100%;height:100%;',
@@ -1200,25 +1198,11 @@ function openModifierPanel(item, modConfig) {
   // Close any existing modifier panel
   if (_modPanel) closeModifierPanel();
 
-  // Hide hex canvas (spec: panel overlaps HexNav card)
-  if (_tabCanvas) _tabCanvas.style.display = 'none';
-
-  // Create wrapper that sits where HexNav was
-  _modPanelWrap = document.createElement('div');
-  _modPanelWrap.style.cssText = [
-    'flex:1;display:flex;flex-direction:column;overflow:hidden;',
-    'margin-bottom:0;',
-  ].join('');
-
-  if (_mainArea && _bottomBar) {
-    _mainArea.insertBefore(_modPanelWrap, _bottomBar);
-  }
-
-  // Mount the modifier panel inside the wrapper
-  _modPanel = new ModifierPanel(_modPanelWrap, {
+  // Mount the modifier panel as an absolute overlay inside hex-canvas
+  // HexNav stays mounted underneath — no display:none needed
+  _modPanel = new ModifierPanel(_tabCanvas, {
     item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
     onUpdate: function(outputItem) {
-      // Live ticket preview
       _modPanelItem = outputItem;
       renderTicket();
     },
@@ -1239,19 +1223,12 @@ function closeModifierPanel() {
     _modPanel.destroy();
     _modPanel = null;
   }
-  if (_modPanelWrap && _modPanelWrap.parentNode) {
-    _modPanelWrap.parentNode.removeChild(_modPanelWrap);
-  }
-  _modPanelWrap = null;
   _modPanelItem = null;
 
-  // Restore hex canvas
-  if (_tabCanvas) _tabCanvas.style.display = '';
   // Restore bottom bar
   if (_bottomBar) _bottomBar.style.display = '';
   rebuildBottomBar();
   renderTicket();
-  if (hexNav) hexNav.reset();
 }
 
 function commitModifierPanelItem(originalItem, activeItem) {
@@ -1708,19 +1685,19 @@ function renderTicket() {
     var previewCard = document.createElement('div');
     previewCard.style.cssText = [
       'flex-shrink:0;',
-      'background:#2a3320;',
-      'border:4px solid ' + T.gold + ';',
-      'margin-bottom:2px;',
+      'background:' + T.bg + ';',
+      'border:4px solid ' + T.mint + ';',
+      'margin-bottom:2px;border-radius:5px;',
     ].join('');
 
     // Item header row
     var pRow = document.createElement('div');
-    pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
+    pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:3px 8px;';
     var pName = document.createElement('span');
-    pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+    pName.style.cssText = 'font-family:' + T.fb + ';font-size:26px;font-weight:bold;color:' + T.mint + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
     pName.textContent = '\u270E ' + _modPanelItem.itemLabel;
     var pPrice = document.createElement('span');
-    pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
+    pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:26px;font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
     var previewTotal = _modPanelItem.basePrice + (_modPanelItem.mods || []).reduce(function(s, m) { return s + m.price; }, 0);
     pPrice.textContent = '$' + previewTotal.toFixed(2);
     pRow.appendChild(pName);
@@ -1733,14 +1710,15 @@ function renderTicket() {
       modEl.style.cssText = [
         'display:flex;justify-content:space-between;',
         'padding:1px 8px 1px 16px;',
-        'font-family:' + T.fb + ';font-size:' + T.fsMod + ';font-weight:bold;',
-        'color:' + T.gold + ';',
+        'font-family:' + T.fb + ';font-size:24px;',
+        'color:' + T.textPrimary + ';',
       ].join('');
       var mName = document.createElement('span');
       mName.textContent = m.name;
       modEl.appendChild(mName);
       if (m.price > 0) {
         var mPrice = document.createElement('span');
+        mPrice.style.color = T.gold;
         mPrice.textContent = '+$' + m.price.toFixed(2);
         modEl.appendChild(mPrice);
       }
