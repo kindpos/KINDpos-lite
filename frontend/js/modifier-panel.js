@@ -299,8 +299,8 @@ export function ModifierPanel(container, opts) {
       topBarEl.appendChild(prefixRow);
     }
 
-    // Placement bar — only for optional tabs
-    if (tab.type !== 'optional') return;
+    // Placement bar — for optional and mandatory tabs
+    if (tab.type !== 'optional' && tab.type !== 'mandatory') return;
 
     var placeWrap = buildStyledButton(T.darkBtn);
     placeWrap.wrap.style.width = '100%';
