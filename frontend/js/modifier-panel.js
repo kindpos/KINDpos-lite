@@ -8,6 +8,7 @@
 
 import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
 import { showKeyboard } from './keyboard.js';
+import { SceneManager } from './scene-manager.js';
 
 // ── Standard allergen list (FDA/industry standard colors) ──
 var ALLERGENS = [
@@ -722,103 +723,17 @@ export function ModifierPanel(container, opts) {
 
   // ═══ SPECIAL POPOUT (long-press customization) ═══
   function showSpecialPopout(mod, opt) {
-    // Create overlay popout inside the picker
-    var overlay = document.createElement('div');
-    overlay.style.cssText = [
-      'position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;',
-      'background:rgba(0,0,0,0.7);',
-      'display:flex;align-items:center;justify-content:center;',
-    ].join('');
-
-    var popout = document.createElement('div');
-    popout.style.cssText = [
-      'width:85%;max-width:400px;max-height:80%;',
-      'background:' + T.bg + ';',
-      'border-top:5px solid ' + _lightenHex(T.gold, 0.2) + ';',
-      'border-left:5px solid ' + _lightenHex(T.gold, 0.2) + ';',
-      'border-bottom:5px solid ' + _darkenHex(T.gold, 0.3) + ';',
-      'border-right:5px solid ' + _darkenHex(T.gold, 0.3) + ';',
-      'display:flex;flex-direction:column;overflow:hidden;',
-    ].join('');
-    popout.style.clipPath = chamfer(8);
-
-    // Header
-    var header = document.createElement('div');
-    header.style.cssText = [
-      'background:' + T.gold + ';padding:8px 12px;flex-shrink:0;',
-      'font-family:' + T.fh + ';font-size:18px;color:' + T.bgDark + ';',
-    ].join('');
-    header.textContent = mod.label + ' — Customize';
-    popout.appendChild(header);
-
-    // Included items list
-    var listEl = document.createElement('div');
-    listEl.style.cssText = [
-      'flex:1;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      'padding:6px;display:flex;flex-direction:column;gap:4px;',
-    ].join('');
-
-    function renderPopoutList() {
-      listEl.innerHTML = '';
-      (mod.includes || []).forEach(function(incLabel) {
-        var isExcluded = mod.exclusions.indexOf(incLabel) !== -1;
-        var row = document.createElement('div');
-        row.style.cssText = [
-          'display:flex;align-items:center;justify-content:space-between;',
-          'padding:6px 10px;cursor:pointer;',
-          'font-family:' + T.fb + ';font-size:18px;',
-          'background:' + (isExcluded ? T.redD : T.bgDark) + ';',
-          'color:' + (isExcluded ? T.redL : T.mint) + ';',
-          'border-left:4px solid ' + (isExcluded ? T.red : T.goGreen) + ';',
-        ].join('');
-
-        var label = document.createElement('span');
-        label.textContent = isExcluded ? 'NO ' + incLabel : incLabel;
-        if (isExcluded) label.style.textDecoration = 'line-through';
-        row.appendChild(label);
-
-        var indicator = document.createElement('span');
-        indicator.style.cssText = 'font-size:16px;flex-shrink:0;margin-left:8px;';
-        indicator.textContent = isExcluded ? '\u2715' : '\u2713';
-        indicator.style.color = isExcluded ? T.red : T.goGreen;
-        row.appendChild(indicator);
-
-        row.addEventListener('pointerup', function() {
-          var idx = mod.exclusions.indexOf(incLabel);
-          if (idx !== -1) { mod.exclusions.splice(idx, 1); }
-          else { mod.exclusions.push(incLabel); }
-          fireUpdate();
-          renderPopoutList();
-        });
-
-        listEl.appendChild(row);
-      });
-    }
-    renderPopoutList();
-    popout.appendChild(listEl);
-
-    // Done button
-    var donePair = buildStyledButton({ label: 'DONE', variant: 'mint', size: 'sm' });
-    donePair.wrap.style.margin = '6px';
-    donePair.wrap.addEventListener('pointerup', function() {
-      overlay.parentNode.removeChild(overlay);
-      fireUpdate();
-      renderPicker();
-    });
-    popout.appendChild(donePair.wrap);
-
-    overlay.appendChild(popout);
-
-    // Tap backdrop to close
-    overlay.addEventListener('pointerup', function(e) {
-      if (e.target === overlay) {
-        overlay.parentNode.removeChild(overlay);
+    SceneManager.interrupt('special-customize', {
+      onConfirm: function() {
         fireUpdate();
         renderPicker();
-      }
+      },
+      onCancel: function() {
+        fireUpdate();
+        renderPicker();
+      },
+      params: { mod: mod, fireUpdate: fireUpdate },
     });
-
-    rootEl.appendChild(overlay);
   }
 
   // ═══ ALLERGEN TAB ═══
@@ -1067,4 +982,113 @@ export function ModifierPanel(container, opts) {
   build();
   fireUpdate();
 }
+
+// ═══════════════════════════════════════════════════
+//  SPECIAL CUSTOMIZE — Interrupt Scene
+//  Long-press a special to toggle its included toppings
+// ═══════════════════════════════════════════════════
+
+function _lightenH(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return '#' + [
+    Math.min(255, Math.round(r + (255 - r) * pct)),
+    Math.min(255, Math.round(g + (255 - g) * pct)),
+    Math.min(255, Math.round(b + (255 - b) * pct)),
+  ].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+function _darkenH(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  var f = 1 - pct;
+  return '#' + [Math.round(r * f), Math.round(g * f), Math.round(b * f)]
+    .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+
+SceneManager.register({
+  name: 'special-customize',
+  mount: function(container, params) {
+    var mod = params.mod;
+    var fireUpdate = params.fireUpdate;
+    var onConfirm = params.onConfirm;
+
+    var panel = document.createElement('div');
+    panel.style.cssText = [
+      'width:90%;max-width:600px;',
+      'background:' + T.bg + ';',
+      'border-top:7px solid ' + _lightenH(T.gold, 0.2) + ';',
+      'border-left:7px solid ' + _lightenH(T.gold, 0.2) + ';',
+      'border-bottom:7px solid ' + _darkenH(T.gold, 0.3) + ';',
+      'border-right:7px solid ' + _darkenH(T.gold, 0.3) + ';',
+      'display:flex;flex-direction:column;overflow:hidden;',
+      'max-height:90%;',
+    ].join('');
+    panel.style.clipPath = chamfer(10);
+
+    // Header
+    var header = document.createElement('div');
+    header.style.cssText = [
+      'background:' + T.gold + ';padding:12px 16px;flex-shrink:0;',
+      'font-family:' + T.fh + ';font-size:22px;color:' + T.bgDark + ';',
+    ].join('');
+    header.textContent = mod.label;
+    panel.appendChild(header);
+
+    // Grid of included items — same style as INCL tab
+    var gridWrap = document.createElement('div');
+    gridWrap.style.cssText = [
+      'flex:1;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
+      'padding:8px;',
+    ].join('');
+
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
+
+    function renderGrid() {
+      grid.innerHTML = '';
+      (mod.includes || []).forEach(function(incLabel) {
+        var isExcluded = mod.exclusions.indexOf(incLabel) !== -1;
+        var variant = isExcluded ? 'vermillion' : 'dark';
+        var label = isExcluded ? 'NO ' + incLabel : incLabel;
+        var pair = buildStyledButton({ label: label, variant: variant, size: 'md' });
+        pair.wrap.style.width = '100%';
+        pair.wrap.style.minWidth = '0';
+        pair.inner.style.fontSize = '18px';
+        pair.inner.style.fontFamily = T.fb;
+
+        pair.wrap.addEventListener('pointerup', function() {
+          var idx = mod.exclusions.indexOf(incLabel);
+          if (idx !== -1) { mod.exclusions.splice(idx, 1); }
+          else { mod.exclusions.push(incLabel); }
+          if (fireUpdate) fireUpdate();
+          renderGrid();
+        });
+
+        grid.appendChild(pair.wrap);
+      });
+    }
+    renderGrid();
+    gridWrap.appendChild(grid);
+    panel.appendChild(gridWrap);
+
+    // Done button
+    var actionBar = document.createElement('div');
+    actionBar.style.cssText = [
+      'flex-shrink:0;padding:8px;',
+      'border-top:3px solid ' + _darkenH(T.gold, 0.3) + ';',
+      'background:' + T.bgDark + ';',
+    ].join('');
+    var donePair = buildStyledButton({ label: 'DONE', variant: 'mint', size: 'md',
+      onClick: function() { onConfirm(); },
+    });
+    donePair.wrap.style.width = '100%';
+    actionBar.appendChild(donePair.wrap);
+    panel.appendChild(actionBar);
+
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
 
