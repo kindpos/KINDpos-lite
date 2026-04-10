@@ -1,86 +1,86 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Theme — Tiki Bar
-//  Polynesian Noir: ember, palm, lagoon on koa wood
+//  KINDpos Theme — Rooftop Bar
+//  Urban Sunset: rose, dusk orange, horizon on night
 // ═══════════════════════════════════════════════════
 
-export var TikiBar = {
+export var RooftopBar = {
   // ── Surface colors ─────────────────────────────
-  bg:        '#1a0d00',      // koa dark wood
-  bgDark:    '#0e0700',
-  bgLight:   '#261500',
-  bgEdge:    '#120800',
-  bg2:       '#1e1004',
-  bg3:       '#2a1808',
-  bg4:       '#221408',
-  bg5:       '#1c0e02',
-  border:    '#3a2410',
-  dimText:   '#7a5830',
-  mutedText: '#9a7848',
-  subtleText:'#6a4c28',
+  bg:        '#0a0510',      // night sky
+  bgDark:    '#050208',
+  bgLight:   '#14081e',
+  bgEdge:    '#1e0e30',
+  bg2:       '#0e0818',
+  bg3:       '#120a20',
+  bg4:       '#10081c',
+  bg5:       '#0c0614',
+  border:    '#2a1848',
+  dimText:   '#5a3878',
+  mutedText: '#7a58a0',
+  subtleText:'#4a2e68',
 
   // ── Button base ────────────────────────────────
-  darkBtn:   '#2a1808',      // dark koa
-  darkBtnL:  '#3e2c18',
-  darkBtnD:  '#140a00',
+  darkBtn:   '#120820',      // deep night
+  darkBtnL:  '#221438',
+  darkBtnD:  '#080410',
 
-  // ── Accent: Palm (structural — replaces mint) ──
-  mint:      '#5cff8f',      // palm green
-  mintEdgeL: '#88ffb0',
-  mintEdgeD: '#38b060',
+  // ── Accent: Rose (structural — replaces mint) ──
+  mint:      '#ff7eb3',      // rose
+  mintEdgeL: '#ffa0cc',
+  mintEdgeD: '#c05a85',
 
   // ── Card / Cyan ────────────────────────────────
-  cyan:      '#00b4d8',      // lagoon
-  cyanL:     '#40d0f0',
-  cyanD:     '#007a98',
+  cyan:      '#ff9a3c',      // dusk orange
+  cyanL:     '#ffb868',
+  cyanD:     '#c07028',
 
   // ── Misc ───────────────────────────────────────
-  grayBtn:   '#3a2a18',
-  grayBtnL:  '#584030',
-  grayBtnD:  '#221408',
-  yellow:    '#ffdd44',      // pineapple
-  mintB:     '#70ff9a',
-  redB:      '#ff6040',
+  grayBtn:   '#1e0e30',
+  grayBtnL:  '#301848',
+  grayBtnD:  '#100820',
+  yellow:    '#ffe066',      // horizon
+  mintB:     '#e06898',
+  redB:      '#ff5588',
 
   // ── Numpad / Login chassis ─────────────────────
-  numpadChassis:  '#ff8c42',  // ember
-  numpadChassisL: '#ffaa6a',
-  numpadChassisD: '#c06428',
-  pinFieldBg:     '#120800',
+  numpadChassis:  '#ff7eb3',  // rose
+  numpadChassisL: '#ffa0cc',
+  numpadChassisD: '#c05a85',
+  pinFieldBg:     '#0e0818',
 
   // ── Typography ─────────────────────────────────
-  textPrimary:   '#ffe8cc',   // warm sand
-  textSecondary: '#c0a070',
+  textPrimary:   '#f5eef8',   // warm white-pink
+  textSecondary: '#b898d0',
 
   // ── Scrims ─────────────────────────────────────
-  scrimWorking:   'rgba(26, 13, 0, 0.60)',
-  scrimInterrupt: 'rgba(26, 13, 0, 0.85)',
-  scrimGate:      'rgba(26, 13, 0, 1.00)',
+  scrimWorking:   'rgba(10, 5, 16, 0.60)',
+  scrimInterrupt: 'rgba(10, 5, 16, 0.85)',
+  scrimGate:      'rgba(10, 5, 16, 1.00)',
 
   // ── Overlay frames ─────────────────────────────
-  frameTransactional:      '#5cff8f',
+  frameTransactional:      '#ff7eb3',
   frameInterruptDecision:  '#fbb03b',
-  frameInterruptCritical:  '#ff8c42',
+  frameInterruptCritical:  '#ff7eb3',
 
   // ── Embossed button system ─────────────────────
-  embDarkBg:     '#2a1808',
+  embDarkBg:     '#120820',
   embGoldBg:     '#c07800',
-  embMintBg:     '#3a9a50',
+  embMintBg:     '#c05a85',
   embVermBg:     '#aa1a00',
-  embGhostBg:    '#1a0d00',
-  embGoldLabel:  '#1a0d00',
-  embMintLabel:  '#1a0d00',
+  embGhostBg:    '#14081e',
+  embGoldLabel:  '#ffffff',
+  embMintLabel:  '#ffffff',
   embVermLabel:  '#ffffff',
-  embEdge:       '#0e0700',
+  embEdge:       '#050208',
   embGoldEdge:   '#7a4400',
-  embMintEdge:   '#226830',
+  embMintEdge:   '#803858',
   embVermEdge:   '#5a0800',
 
   // ── Category palette ───────────────────────────
   categoryPalette: {
-    'PIZZA':  '#ff8c42',
-    'APPS':   '#5cff8f',
-    'SUBS':   '#00b4d8',
-    'SIDES':  '#ffdd44',
-    'DRINKS': '#ff8c42',
+    'PIZZA':  '#ff7eb3',
+    'APPS':   '#ff9a3c',
+    'SUBS':   '#5c3fa8',
+    'SIDES':  '#ffe066',
+    'DRINKS': '#c070ff',
   },
 };
