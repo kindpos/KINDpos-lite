@@ -106,13 +106,44 @@ function fmtHours() {
   return Math.floor(ms / 3600000) + 'h ' + Math.floor((ms % 3600000) / 60000) + 'm';
 }
 
+// ── Color Helpers (match clock-in bevel) ─────────
+
+function _darkenHex(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  var f = 1 - pct;
+  return '#' + [Math.round(r * f), Math.round(g * f), Math.round(b * f)]
+    .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+
+function _lightenHex(hex, pct) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return '#' + [
+    Math.min(255, Math.round(r + (255 - r) * pct)),
+    Math.min(255, Math.round(g + (255 - g) * pct)),
+    Math.min(255, Math.round(b + (255 - b) * pct)),
+  ].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+}
+
 // ── Card UI Builders ──────────────────────────────
 
 var CHROME = T.numpadChassis;
-var CARD_SHADOW = 'inset 0 2px 0 rgba(255,255,255,0.08),inset 0 -2px 0 rgba(0,0,0,0.50),inset 2px 0 0 rgba(255,255,255,0.04),inset -2px 0 0 rgba(0,0,0,0.25),inset 0 4px 8px rgba(0,0,0,0.40),0 2px 8px rgba(0,0,0,0.50)';
+var BEVEL_W = 7;
+var BEVEL_LIGHT = _lightenHex(CHROME, 0.2);
+var BEVEL_DARK = _darkenHex(CHROME, 0.3);
+var CARD_DROP = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 12px rgba(135,247,156,0.12))';
 
 function applyCardStyle(el) {
-  el.style.cssText = 'background:' + T.bgDark + ';border:5px solid ' + CHROME + ';display:flex;flex-direction:column;flex:0 0 auto;box-shadow:' + CARD_SHADOW + ';';
+  el.style.cssText = 'background:' + T.bg + ';display:flex;flex-direction:column;flex:0 0 auto;box-sizing:border-box;'
+    + 'border-top:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
+    + 'border-left:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
+    + 'border-right:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';';
+  el.style.clipPath = chamfer(8);
+  el.style.filter = CARD_DROP;
 }
 
 function buildCardHeader(label) {
@@ -123,6 +154,16 @@ function buildCardHeader(label) {
   txt.textContent = label;
   bar.appendChild(txt);
   return bar;
+}
+
+function applyInterruptCardStyle(el, frameColor) {
+  var lt = _lightenHex(frameColor, 0.25);
+  var dk = _darkenHex(frameColor, 0.35);
+  el.style.cssText = 'background:' + T.bg + ';padding:24px 32px;text-align:center;max-width:420px;box-sizing:border-box;'
+    + 'border-top:5px solid ' + lt + ';border-left:5px solid ' + lt + ';'
+    + 'border-bottom:5px solid ' + dk + ';border-right:5px solid ' + dk + ';';
+  el.style.clipPath = chamfer(10);
+  el.style.filter = 'drop-shadow(0 0 12px ' + frameColor + ')';
 }
 
 function statRow(label, value, color) {
@@ -511,11 +552,17 @@ function buildLeftColumn(emp) {
 
 function buildCenterColumn(emp) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;background:' + T.bgDark + ';border:5px solid ' + CHROME + ';box-shadow:' + CARD_SHADOW + ';';
+  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;background:' + T.bg + ';box-sizing:border-box;'
+    + 'border-top:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
+    + 'border-left:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
+    + 'border-right:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';';
+  col.style.clipPath = chamfer(8);
+  col.style.filter = CARD_DROP;
 
   // ── Check Grid ──
   var gridFrame = document.createElement('div');
-  gridFrame.style.cssText = 'flex:1;overflow:hidden;margin:8px;border:2px solid ' + CHROME + ';';
+  gridFrame.style.cssText = 'flex:1;overflow:hidden;margin:8px;border:2px solid ' + BEVEL_DARK + ';';
   _centerGrid = document.createElement('div');
   _centerGrid.style.cssText = 'width:100%;height:100%;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
   gridFrame.appendChild(_centerGrid);
@@ -612,7 +659,10 @@ function buildCheckTile(order, emp) {
   var isVoid = _activeTab === 'void';
 
   var tile = document.createElement('div');
-  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + CHROME + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
+  tile.style.cssText = 'background:' + T.bgDark + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;'
+    + 'border-top:3px solid ' + BEVEL_LIGHT + ';border-left:3px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:3px solid ' + BEVEL_DARK + ';border-right:3px solid ' + BEVEL_DARK + ';';
+  tile.style.clipPath = chamfer(4);
   if (isClosed) tile.style.opacity = '0.7';
   if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
 
@@ -1046,7 +1096,14 @@ function showDrillDown() {
   var emp = (_params || {}).emp || _params || {};
 
   _drillEl = document.createElement('div');
-  _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';border:5px solid ' + CHROME + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;box-shadow:' + CARD_SHADOW + ';';
+  _drillEl.style.cssText = 'position:absolute;background:' + T.bg + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;box-sizing:border-box;'
+    + 'border-top:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
+    + 'border-left:' + BEVEL_W + 'px solid ' + BEVEL_LIGHT + ';'
+    + 'border-bottom:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
+    + 'border-right:' + BEVEL_W + 'px solid ' + BEVEL_DARK + ';'
+    + 'transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;';
+  _drillEl.style.clipPath = chamfer(8);
+  _drillEl.style.filter = CARD_DROP;
 
   // Start at card's position
   if (rect) {
@@ -1367,8 +1424,7 @@ SceneManager.register({
   name: 'sl-reopen-confirm',
   mount: function(container, params) {
     var card = document.createElement('div');
-    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:400px;';
-    card.style.clipPath = chamfer(10);
+    applyInterruptCardStyle(card, T.frameInterruptDecision);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1397,8 +1453,7 @@ SceneManager.register({
   name: 'sl-void-gate',
   mount: function(container, params) {
     var card = document.createElement('div');
-    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptCritical + ';padding:24px 32px;text-align:center;max-width:420px;';
-    card.style.clipPath = chamfer(10);
+    applyInterruptCardStyle(card, T.frameInterruptCritical);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1430,8 +1485,7 @@ SceneManager.register({
     var frameColor = isWarning ? T.frameInterruptDecision : T.frameInterruptCritical;
 
     var card = document.createElement('div');
-    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + frameColor + ';padding:24px 32px;text-align:center;max-width:420px;';
-    card.style.clipPath = chamfer(10);
+    applyInterruptCardStyle(card, frameColor);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
@@ -1472,8 +1526,7 @@ SceneManager.register({
   name: 'sl-manager-gate',
   mount: function(container, params) {
     var card = document.createElement('div');
-    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:400px;';
-    card.style.clipPath = chamfer(10);
+    applyInterruptCardStyle(card, T.frameInterruptDecision);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1502,8 +1555,7 @@ SceneManager.register({
   name: 'sl-transfer-choice',
   mount: function(container, params) {
     var card = document.createElement('div');
-    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:400px;';
-    card.style.clipPath = chamfer(10);
+    applyInterruptCardStyle(card, T.frameInterruptDecision);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:20px;';
@@ -1540,8 +1592,7 @@ SceneManager.register({
   name: 'sl-merge-choice',
   mount: function(container, params) {
     var card = document.createElement('div');
-    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:24px 32px;text-align:center;max-width:420px;';
-    card.style.clipPath = chamfer(10);
+    applyInterruptCardStyle(card, T.frameInterruptDecision);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:8px;';
@@ -1595,7 +1646,9 @@ SceneManager.register({
     for (var i = 0; i < checks.length; i++) {
       var order = checks[i];
       var col = document.createElement('div');
-      col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';border:1px solid ' + CHROME + ';display:flex;flex-direction:column;overflow-y:auto;';
+      col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';display:flex;flex-direction:column;overflow-y:auto;box-sizing:border-box;'
+        + 'border-top:3px solid ' + BEVEL_LIGHT + ';border-left:3px solid ' + BEVEL_LIGHT + ';'
+        + 'border-bottom:3px solid ' + BEVEL_DARK + ';border-right:3px solid ' + BEVEL_DARK + ';';
       col.style.clipPath = chamfer(6);
 
       var colHeader = document.createElement('div');
@@ -1650,8 +1703,9 @@ SceneManager.register({
 
 function buildNumpadInterrupt(container, params, titlePrefix) {
   var card = document.createElement('div');
-  card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:20px 24px;text-align:center;max-width:360px;width:90%;';
-  card.style.clipPath = chamfer(10);
+  applyInterruptCardStyle(card, T.frameInterruptDecision);
+  card.style.maxWidth = '360px';
+  card.style.width = '90%';
 
   var title = document.createElement('div');
   title.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.mint + ';margin-bottom:8px;letter-spacing:1px;';
