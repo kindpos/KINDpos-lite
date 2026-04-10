@@ -168,34 +168,58 @@ function buildReceiptPanel(params) {
   });
   col.appendChild(itemScroll);
 
-  // ── Summary footer ──
-  var footer = document.createElement('div');
-  footer.style.cssText = [
-    'flex-shrink:0;padding:6px 10px;',
-    'border-top:2px solid ' + T.bg3 + ';',
+  // ── Bottom: [Summary | Split] row ──
+  var summaryRow = document.createElement('div');
+  summaryRow.style.cssText = [
+    'flex-shrink:0;display:flex;gap:6px;',
+    'padding:4px 6px;',
   ].join('');
 
-  footer.appendChild(footerRow('Subtotal:', '$' + (params.subtotal || 0).toFixed(2), T.mint));
-  footer.appendChild(footerRow('Discount:', '$' + (params.discount || 0).toFixed(2), T.mint));
-  footer.appendChild(footerRow('Tax:', '$' + (params.tax || 0).toFixed(2), T.mint));
+  // Summary mini-box (bordered)
+  var summaryBox = document.createElement('div');
+  summaryBox.style.cssText = [
+    'flex:1;padding:4px 8px;',
+    'background:' + T.bgDark + ';',
+  ].join('');
+  applySunkenStyle(summaryBox);
+  summaryBox.appendChild(footerRow('Subtotal:', '$' + (params.subtotal || 0).toFixed(2), T.mint));
+  if (params.discount && params.discount > 0) {
+    summaryBox.appendChild(footerRow('Discount:', '$' + params.discount.toFixed(2), T.mint));
+  }
+  summaryBox.appendChild(footerRow('Tax:', '$' + (params.tax || 0).toFixed(2), T.mint));
+  summaryRow.appendChild(summaryBox);
 
-  var hr = document.createElement('hr');
-  hr.style.cssText = 'border:none;border-top:1px dashed ' + T.bgLight + ';margin:4px 0;';
-  footer.appendChild(hr);
+  // Split button (next to summary)
+  var splitBtn = buildButton('Split', {
+    fill: T.darkBtn, color: T.vermillion, fontSize: T.fsBtnSm,
+    onTap: function() { showSplitPopup(); },
+  });
+  splitBtn.style.cssText += 'flex-shrink:0;width:90px;';
+  splitBtn.style.outline = '3px solid ' + T.vermillion;
+  splitBtn.style.outlineOffset = '-1px';
+  summaryRow.appendChild(splitBtn);
+  col.appendChild(summaryRow);
 
-  footer.appendChild(footerRow('Card Price:', '$' + (params.cardTotal || 0).toFixed(2), T.gold, true));
-  footer.appendChild(footerRow('Cash Price:', '$' + (params.cashPrice || 0).toFixed(2), T.gold, true));
+  // ── Prices box (bordered) ──
+  var pricesBox = document.createElement('div');
+  pricesBox.style.cssText = [
+    'flex-shrink:0;padding:4px 8px;margin:0 6px 4px;',
+    'background:' + T.bgDark + ';',
+  ].join('');
+  applySunkenStyle(pricesBox);
+  pricesBox.appendChild(footerRow('Card Price:', '$' + (params.cardTotal || 0).toFixed(2), T.gold, true));
+  pricesBox.appendChild(footerRow('Cash Price:', '$' + (params.cashPrice || 0).toFixed(2), T.gold, true));
 
   // Dynamic split-progress rows (hidden until partial payment)
   _footerPaidRow = footerRow('Paid:', '$0.00', T.cyan);
   _footerPaidRow.style.display = 'none';
-  footer.appendChild(_footerPaidRow);
+  pricesBox.appendChild(_footerPaidRow);
 
   _footerRemainRow = footerRow('Remaining:', '$' + baseTotal.toFixed(2), T.cyan);
   _footerRemainRow.style.display = 'none';
-  footer.appendChild(_footerRemainRow);
+  pricesBox.appendChild(_footerRemainRow);
 
-  col.appendChild(footer);
+  col.appendChild(pricesBox);
   return col;
 }
 
@@ -247,17 +271,6 @@ function buildCenterColumn(params) {
   grid.appendChild(btn100);
 
   col.appendChild(grid);
-
-  // ── Split button (vermillion accent) ──
-  var splitBtn = buildButton('Split', {
-    fill: T.darkBtn, color: T.vermillion, fontSize: T.fsBtnSm,
-    height: 44,
-    onTap: function() { showSplitPopup(); },
-  });
-  splitBtn.style.flexShrink = '0';
-  splitBtn.style.outline = '3px solid ' + T.vermillion;
-  splitBtn.style.outlineOffset = '-1px';
-  col.appendChild(splitBtn);
 
   // ── Exact button (yellow accent) ──
   var exactBtn = buildButton('Exact', {
