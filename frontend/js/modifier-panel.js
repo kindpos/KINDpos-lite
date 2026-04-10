@@ -228,9 +228,63 @@ export function ModifierPanel(container, opts) {
       'background:' + T.bgDark + ';',
     ].join('');
 
-    var undoPair = buildStyledButton({ label: '<<<', variant: 'dark', size: 'md', onClick: function() { onCancel(); } });
-    undoPair.inner.style.color = T.textPrimary;
+    var undoPair = buildStyledButton({ label: '<<<', variant: 'vermillion', size: 'md' });
+    undoPair.inner.style.color = '#ffffff';
     undoPair.wrap.style.flex = '1';
+
+    // Short tap = undo last modifier, long press = cancel all
+    var _backTimer = null;
+    var _backDidHold = false;
+
+    // Hold fill indicator
+    var holdFill = document.createElement('div');
+    holdFill.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,0.25);pointer-events:none;z-index:1;transition:none;';
+    undoPair.wrap.style.position = 'relative';
+    undoPair.wrap.style.overflow = 'hidden';
+    undoPair.wrap.appendChild(holdFill);
+
+    undoPair.wrap.addEventListener('pointerdown', function(e) {
+      e.stopPropagation();
+      _backDidHold = false;
+      holdFill.style.transition = 'width 600ms linear';
+      holdFill.style.width = '100%';
+      _backTimer = setTimeout(function() {
+        _backDidHold = true;
+        holdFill.style.transition = 'none';
+        holdFill.style.width = '0';
+        onCancel();
+      }, 600);
+    });
+    undoPair.wrap.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      clearTimeout(_backTimer);
+      holdFill.style.transition = 'none';
+      holdFill.style.width = '0';
+      if (!_backDidHold) {
+        // Short tap — undo last modifier
+        if (activeItem.optionalModifiers.length > 0) {
+          activeItem.optionalModifiers.pop();
+        } else if (activeItem.includedRemovals.length > 0) {
+          activeItem.includedRemovals.pop();
+        } else if (activeItem.allergens.length > 0) {
+          activeItem.allergens.pop();
+        } else if (activeItem.allergenNote) {
+          activeItem.allergenNote = '';
+        } else if (activeItem.note) {
+          activeItem.note = '';
+        }
+        fireUpdate();
+        renderTabs();
+        renderTopBar();
+        renderPrefixBar();
+        renderPicker();
+      }
+    });
+    undoPair.wrap.addEventListener('pointerleave', function() {
+      clearTimeout(_backTimer);
+      holdFill.style.transition = 'none';
+      holdFill.style.width = '0';
+    });
     var confirmPair = buildStyledButton({ label: 'CONFIRM', variant: 'mint', size: 'md', onClick: function() { handleSend(); } });
     confirmPair.wrap.style.flex = '2';
 

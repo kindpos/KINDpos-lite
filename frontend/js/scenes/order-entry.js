@@ -1226,7 +1226,12 @@ function endModifierSession() {
 function openModifierPanel(item, modConfig, catColor) {
   if (_modPanel) closeModifierPanel();
 
-  _modPanel = new ModifierPanel(_tabCanvas, {
+  // Hide bottom bar — panel covers entire right column
+  if (_bottomBar) _bottomBar.style.display = 'none';
+
+  // Mount on mainArea (not tabCanvas) so it covers the bottom bar too
+  _mainArea.style.position = 'relative';
+  _modPanel = new ModifierPanel(_mainArea, {
     item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
     catColor: catColor || T.mint,
     onUpdate: function(outputItem) {
@@ -1248,6 +1253,10 @@ function closeModifierPanel() {
     _modPanel = null;
   }
   _modPanelItem = null;
+
+  // Restore bottom bar
+  if (_bottomBar) _bottomBar.style.display = '';
+  rebuildBottomBar();
   renderTicket();
   requestAnimationFrame(function() {
     if (hexNav) hexNav.reset();
