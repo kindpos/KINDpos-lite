@@ -1362,7 +1362,7 @@ SceneManager.register({
     allChecksEl = null;
     heatmapEl = null;
 
-    setSceneName('REPORTING');
+    setSceneName('MANAGER');
     setHeaderBack({
       back: true,
       x: true,
