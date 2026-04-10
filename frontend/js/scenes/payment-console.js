@@ -732,14 +732,14 @@ SceneManager.register({
     icon.style.cssText = [
       'width:24px;height:24px;background:' + T.gold + ';',
       'display:flex;align-items:center;justify-content:center;',
-      'font-size:40px;font-weight:bold;color:' + T.bgDark + ';',
+      'font-size:' + T.fsMed + ';font-weight:bold;color:' + T.bgDark + ';',
       'clip-path:' + chamfer(3) + ';',
     ].join('');
     icon.textContent = '\u25C8';
 
     var titleText = document.createElement('span');
     titleText.style.cssText = [
-      'font-family:' + T.fb + ';font-size:40px;',
+      'font-family:' + T.fb + ';font-size:' + T.fsMed + ';',
       'color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;',
     ].join('');
     titleText.textContent = 'Card Payment \u2014 $' + amount.toFixed(2);
@@ -754,7 +754,7 @@ SceneManager.register({
 
     _procStatusEl = document.createElement('div');
     _procStatusEl.style.cssText = [
-      'font-family:' + T.fb + ';font-size:40px;',
+      'font-family:' + T.fb + ';font-size:' + T.fsMed + ';',
       'color:' + T.mint + ';min-height:24px;',
     ].join('');
     _procStatusEl.textContent = statusMessages[0];

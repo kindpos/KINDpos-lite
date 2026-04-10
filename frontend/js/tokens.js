@@ -85,6 +85,7 @@ export const T = {
   fsBtn:    '35px',
   fsBtnSm:  '30px',
   fsDenom:  '42px',
+  fsMed:    '40px',
   fsCon:    '20px',
   fsConSm:  '18px',
   appW:     1024,
