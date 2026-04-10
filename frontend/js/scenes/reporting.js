@@ -1231,70 +1231,79 @@ function buildCloseDayOverlay(panel) {
 
 function buildScene(container) {
   container.innerHTML = '';
-  container.style.cssText = 'display:grid;gap:6px;padding:6px;height:100%;box-sizing:border-box;' +
-    (hmExpanded
-      ? 'grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto 1fr 1fr;'
-      : 'grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;');
 
-  // Heatmap card — when expanded, spans full width across top
-  var hmCard = buildCard('SERVER LOAD HEATMAP', function(b) { heatmapEl = b; buildHeatmapBody(b); }, null);
   if (hmExpanded) {
+    // Expanded: heatmap full top, 3 cols below, 2 content rows
+    container.style.cssText = 'display:grid;gap:6px;padding:6px;height:100%;box-sizing:border-box;' +
+      'grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto 1fr 1fr;';
+
+    var hmCard = buildCard('SERVER LOAD HEATMAP', function(b) { heatmapEl = b; buildHeatmapBody(b); }, null);
     hmCard.style.gridColumn = '1 / -1';
     hmCard.style.gridRow = '1';
+    hmCard._header.style.cursor = 'pointer';
+    hmCard._header.textContent = 'SERVER LOAD HEATMAP \u25BC';
+    hmCard._header.addEventListener('pointerup', function(e) { e.stopPropagation(); hmExpanded = false; buildScene(container); });
+    container.appendChild(hmCard);
+
+    var salesOv = buildCard('SALES OVERVIEW', buildSalesOverviewBody, buildSalesOverviewOverlay);
+    salesOv.style.gridColumn = '1'; salesOv.style.gridRow = '2';
+    container.appendChild(salesOv);
+
+    var salesBd = buildCard('SALES BREAKDOWN', buildSalesBreakdownBody, buildSalesBreakdownOverlay);
+    salesBd.style.gridColumn = '1'; salesBd.style.gridRow = '3';
+    container.appendChild(salesBd);
+
+    var allCk = buildCard('ALL CHECKS', function(b) { allChecksEl = b; buildAllChecksBody(b); }, buildAllChecksOverlay);
+    allCk.style.gridColumn = '2'; allCk.style.gridRow = '2 / 4';
+    container.appendChild(allCk);
+
+    var srvCo = buildCard('SERVER CHECKOUTS', buildServerCheckoutsBody, buildServerCheckoutsOverlay);
+    srvCo.style.gridColumn = '3'; srvCo.style.gridRow = '2';
+    container.appendChild(srvCo);
+
+    var labCob = buildCard('LABOR COB%', buildLaborCobBody, buildLaborCobOverlay);
+    labCob.style.gridColumn = '3'; labCob.style.gridRow = '3';
+    container.appendChild(labCob);
   } else {
-    hmCard.style.gridColumn = '2';
-    hmCard.style.gridRow = '1';
+    // Collapsed: 3 cols, left/center have 2 rows each filling 50%, right has 3 rows
+    container.style.cssText = 'display:grid;gap:6px;padding:6px;height:100%;box-sizing:border-box;' +
+      'grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;';
+
+    // Left col: Sales Overview (row 1-2 top half), Sales Breakdown (row 2-3 bottom half)
+    var salesOv = buildCard('SALES OVERVIEW', buildSalesOverviewBody, buildSalesOverviewOverlay);
+    salesOv.style.gridColumn = '1'; salesOv.style.gridRow = '1 / 2';
+    container.appendChild(salesOv);
+
+    var salesBd = buildCard('SALES BREAKDOWN', buildSalesBreakdownBody, buildSalesBreakdownOverlay);
+    salesBd.style.gridColumn = '1'; salesBd.style.gridRow = '2 / 4';
+    container.appendChild(salesBd);
+
+    // Center col: Heatmap (row 1), All Checks (row 2-3)
+    var hmCard = buildCard('SERVER LOAD HEATMAP', function(b) { heatmapEl = b; buildHeatmapBody(b); }, null);
+    hmCard.style.gridColumn = '2'; hmCard.style.gridRow = '1';
+    hmCard._header.style.cursor = 'pointer';
+    hmCard._header.textContent = 'SERVER LOAD HEATMAP \u25B6';
+    hmCard._header.addEventListener('pointerup', function(e) { e.stopPropagation(); hmExpanded = true; buildScene(container); });
+    container.appendChild(hmCard);
+
+    var allCk = buildCard('ALL CHECKS', function(b) { allChecksEl = b; buildAllChecksBody(b); }, buildAllChecksOverlay);
+    allCk.style.gridColumn = '2'; allCk.style.gridRow = '2 / 4';
+    container.appendChild(allCk);
+
+    // Right col: Server Checkouts (row 1), Labor COB% (row 2), Close Day (row 3)
+    var srvCo = buildCard('SERVER CHECKOUTS', buildServerCheckoutsBody, buildServerCheckoutsOverlay);
+    srvCo.style.gridColumn = '3'; srvCo.style.gridRow = '1';
+    container.appendChild(srvCo);
+
+    var labCob = buildCard('LABOR COB%', buildLaborCobBody, buildLaborCobOverlay);
+    labCob.style.gridColumn = '3'; labCob.style.gridRow = '2';
+    container.appendChild(labCob);
+
+    var cdCard = buildCard('CLOSE DAY', function(b) { closeDayEl = b; buildCloseDayBody(b); }, null);
+    cdCard._cdCard = true;
+    cdCard.style.gridColumn = '3'; cdCard.style.gridRow = '3';
+    container.appendChild(cdCard);
   }
-  // Tap header to toggle expand/collapse
-  hmCard._header.style.cursor = 'pointer';
-  hmCard._header.textContent = hmExpanded ? 'SERVER LOAD HEATMAP \u25BC' : 'SERVER LOAD HEATMAP \u25B6';
-  hmCard._header.addEventListener('pointerup', function(e) {
-    e.stopPropagation();
-    hmExpanded = !hmExpanded;
-    buildScene(container);
-  });
-  container.appendChild(hmCard);
-
-  // Left column cards
-  var salesOv = buildCard('SALES OVERVIEW', buildSalesOverviewBody, buildSalesOverviewOverlay);
-  salesOv.style.gridColumn = '1';
-  salesOv.style.gridRow = hmExpanded ? '2' : '1';
-  container.appendChild(salesOv);
-
-  var salesBd = buildCard('SALES BREAKDOWN', buildSalesBreakdownBody, buildSalesBreakdownOverlay);
-  salesBd.style.gridColumn = '1';
-  salesBd.style.gridRow = hmExpanded ? '3' : '2';
-  container.appendChild(salesBd);
-
-  // Center — All Checks
-  var allCk = buildCard('ALL CHECKS', function(b) { allChecksEl = b; buildAllChecksBody(b); }, buildAllChecksOverlay);
-  allCk.style.gridColumn = '2';
-  allCk.style.gridRow = hmExpanded ? '2 / 4' : '2';
-  container.appendChild(allCk);
-
-  // Right column cards
-  var srvCo = buildCard('SERVER CHECKOUTS', buildServerCheckoutsBody, buildServerCheckoutsOverlay);
-  srvCo.style.gridColumn = '3';
-  srvCo.style.gridRow = hmExpanded ? '2' : '1';
-  container.appendChild(srvCo);
-
-  var labCob = buildCard('LABOR COB%', buildLaborCobBody, buildLaborCobOverlay);
-  labCob.style.gridColumn = '3';
-  labCob.style.gridRow = hmExpanded ? '3' : '2 / 3';
-  container.appendChild(labCob);
-
-  var cdCard = buildCard('CLOSE DAY', function(b) { closeDayEl = b; buildCloseDayBody(b); }, null);
-  cdCard._cdCard = true;
-  if (!hmExpanded) {
-    // In collapsed mode, close day shares row 2 with labor cob in right col
-    // Use a wrapper to stack labor+closeday in the right column
-    labCob.style.gridRow = '2';
-    cdCard.style.gridColumn = '3';
-    cdCard.style.gridRow = '3';
-  } else {
-    cdCard.style.display = 'none'; // hide in expanded mode to save space
-  }
-  container.appendChild(cdCard);
 }
 
 // ═══════════════════════════════════════════════════
