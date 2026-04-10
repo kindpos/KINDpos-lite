@@ -647,7 +647,6 @@ function buildHeatmapBody(body) {
     for (var h = 0; h < 8; h++) { var v = data[servers[s]][h]; if (v > maxVal) maxVal = v; }
   if (maxVal === 0) maxVal = 1;
 
-  // Determine visible hours
   var visibleHours;
   if (hmExpanded) {
     visibleHours = [0,1,2,3,4,5,6,7];
@@ -658,26 +657,33 @@ function buildHeatmapBody(body) {
     for (var i = start; i <= Math.min(start + 2, 7); i++) visibleHours.push(i);
   }
 
+  // Scale fonts based on mode
+  var hdrFs = hmExpanded ? '20px' : '18px';
+  var nameFs = hmExpanded ? '22px' : '18px';
+  var cellFs = hmExpanded ? '28px' : '18px';
+  var nameW = hmExpanded ? '80px' : '58px';
+  var namePL = hmExpanded ? '82px' : '60px';
+
   var wrap = el('div', 'display:flex;flex-direction:column;gap:1px;height:100%;background:#111;');
 
   // Hour header row
-  var hdrRow = el('div', 'display:flex;gap:1px;padding-left:60px;');
+  var hdrRow = el('div', 'display:flex;gap:1px;padding-left:' + namePL + ';flex-shrink:0;');
   for (var h = 0; h < visibleHours.length; h++) {
-    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:18px;color:rgba(255,255,255,0.5);letter-spacing:1px;padding:2px 0;', HOURS[visibleHours[h]]));
+    hdrRow.appendChild(el('div', 'flex:1;text-align:center;font-family:' + FONT + ';font-size:' + hdrFs + ';color:rgba(255,255,255,0.5);letter-spacing:1px;padding:2px 0;', HOURS[visibleHours[h]]));
   }
   wrap.appendChild(hdrRow);
 
   // Server rows
   for (var s = 0; s < servers.length; s++) {
-    var row = el('div', 'display:flex;gap:1px;flex:1;align-items:stretch;');
-    var nameEl = el('div', 'width:58px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-family:' + FONT + ';font-size:18px;font-style:italic;color:' + C.mint + ';');
+    var row = el('div', 'display:flex;gap:1px;flex:1;align-items:stretch;min-height:0;');
+    var nameEl = el('div', 'width:' + nameW + ';display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:' + FONT + ';font-size:' + nameFs + ';font-style:italic;color:' + C.mint + ';flex-shrink:0;');
     nameEl.textContent = servers[s];
     row.appendChild(nameEl);
     for (var h = 0; h < visibleHours.length; h++) {
       (function(srv, hrIdx, val) {
         var hc = heatColor(val, maxVal);
         var isActive = hmFilter && hmFilter.server === srv && hmFilter.hour === HOURS[hrIdx];
-        var cell = el('div', 'flex:1;background:' + hc.bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:18px;color:' + hc.fg + ';font-weight:bold;' + (isActive ? 'outline:2px solid #fff;outline-offset:-2px;' : ''));
+        var cell = el('div', 'flex:1;background:' + hc.bg + ';cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:' + FONT + ';font-size:' + cellFs + ';color:' + hc.fg + ';font-weight:bold;min-height:0;' + (isActive ? 'outline:2px solid #fff;outline-offset:-2px;' : ''));
         if (val > 0) cell.textContent = val;
         cell.addEventListener('pointerup', function(e) {
           e.stopPropagation();
@@ -1288,9 +1294,9 @@ function buildScene(container) {
   container.innerHTML = '';
 
   if (hmExpanded) {
-    // Expanded: heatmap full top, 3 cols below, 2 content rows
+    // Expanded: heatmap full top (40% height), 3 cols below
     container.style.cssText = 'display:grid;gap:6px;padding:6px;height:100%;box-sizing:border-box;' +
-      'grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto 1fr 1fr;';
+      'grid-template-columns:1fr 1fr 1fr;grid-template-rows:3fr 2fr 2fr;';
 
     var hmCard = buildCard('SERVER LOAD HEATMAP', function(b) { heatmapEl = b; buildHeatmapBody(b); }, null);
     hmCard.style.gridColumn = '1 / -1';
