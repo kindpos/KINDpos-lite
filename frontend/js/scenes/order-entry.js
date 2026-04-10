@@ -1758,12 +1758,12 @@ function renderTicket() {
     if (pWhole.length > 0) {
       previewCard.appendChild(buildSeparator());
       pWhole.forEach(function(m) {
-        previewCard.appendChild(buildModRowSized(m.name, m.price, '24px'));
+        previewCard.appendChild(buildModRowSized(m.name, m.price, '18px'));
       });
     }
 
     if (pLeft.length > 0 || pRight.length > 0) {
-      previewCard.appendChild(buildHalfTable(pLeft, pRight, '24px'));
+      previewCard.appendChild(buildHalfTable(pLeft, pRight, '18px'));
     }
 
     list.appendChild(previewCard);

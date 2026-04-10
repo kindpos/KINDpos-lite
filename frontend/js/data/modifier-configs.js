@@ -30,29 +30,37 @@ var PIZZA_INCLUDED = [
   { id: 'sauce',  label: 'Sauce' },
 ];
 
+// ── Price maps by size key for toppings ──
+var PM_STD  = { SLICE: 0.50, SM: 0.75, MED: 1.00, LG: 1.00, XL: 1.50, CALZONE: 1.00, default: 1.00 };
+var PM_PREM = { SLICE: 0.75, SM: 1.00, MED: 1.50, LG: 1.50, XL: 2.00, CALZONE: 1.50, default: 1.50 };
+var PM_LUX  = { SLICE: 1.00, SM: 1.50, MED: 2.00, LG: 2.00, XL: 2.50, CALZONE: 2.00, default: 2.00 };
+var PM_HALF = { SLICE: 0.25, SM: 0.50, MED: 0.50, LG: 0.50, XL: 0.75, CALZONE: 0.50, default: 0.50 };
+
 var PIZZA_TOPPINGS = {
   key: 'toppings', label: 'TOPPINGS',
   options: [
-    // Regular toppings
-    { id: 'banana-peppers',  label: 'Banana Peppers',  price: 1.00 },
-    { id: 'beef',            label: 'Beef',             price: 1.50 },
-    { id: 'black-olives',    label: 'Black Olives',     price: 1.00 },
-    { id: 'canadian-bacon',  label: 'Canadian Bacon',   price: 1.50 },
-    { id: 'cheddar',         label: 'Cheddar',          price: 1.50 },
-    { id: 'chicken',         label: 'Chicken',          price: 2.00 },
-    { id: 'garlic',          label: 'Garlic',           price: 0.50 },
-    { id: 'green-olives',    label: 'Green Olives',     price: 1.00 },
-    { id: 'green-peppers',   label: 'Green Peppers',    price: 1.00 },
-    { id: 'ground-beef',     label: 'Ground Beef',      price: 1.50 },
-    { id: 'jalapenos',       label: 'Jalape\u00f1os',   price: 1.00 },
-    { id: 'mozzarella',      label: 'Mozzarella',       price: 1.50 },
-    { id: 'mushroom',        label: 'Mushroom',         price: 1.00 },
-    { id: 'onion',           label: 'Onion',            price: 1.00 },
-    { id: 'pepperoni',       label: 'Pepperoni',        price: 1.50 },
-    { id: 'pineapple',       label: 'Pineapple',       price: 1.00 },
-    { id: 'sausage',         label: 'Sausage',          price: 1.50 },
-    { id: 'spinach',         label: 'Spinach',          price: 1.00 },
-    { id: 'tomatoe',         label: 'Tomatoe',          price: 1.00 },
+    // Regular toppings — standard pricing
+    { id: 'banana-peppers',  label: 'Banana Peppers',  price: 1.00, priceMap: PM_STD },
+    { id: 'black-olives',    label: 'Black Olives',     price: 1.00, priceMap: PM_STD },
+    { id: 'garlic',          label: 'Garlic',           price: 0.50, priceMap: PM_HALF },
+    { id: 'green-olives',    label: 'Green Olives',     price: 1.00, priceMap: PM_STD },
+    { id: 'green-peppers',   label: 'Green Peppers',    price: 1.00, priceMap: PM_STD },
+    { id: 'jalapenos',       label: 'Jalape\u00f1os',   price: 1.00, priceMap: PM_STD },
+    { id: 'mushroom',        label: 'Mushroom',         price: 1.00, priceMap: PM_STD },
+    { id: 'onion',           label: 'Onion',            price: 1.00, priceMap: PM_STD },
+    { id: 'pineapple',       label: 'Pineapple',       price: 1.00, priceMap: PM_STD },
+    { id: 'spinach',         label: 'Spinach',          price: 1.00, priceMap: PM_STD },
+    { id: 'tomatoe',         label: 'Tomatoe',          price: 1.00, priceMap: PM_STD },
+    // Premium toppings
+    { id: 'beef',            label: 'Beef',             price: 1.50, priceMap: PM_PREM },
+    { id: 'canadian-bacon',  label: 'Canadian Bacon',   price: 1.50, priceMap: PM_PREM },
+    { id: 'cheddar',         label: 'Cheddar',          price: 1.50, priceMap: PM_PREM },
+    { id: 'ground-beef',     label: 'Ground Beef',      price: 1.50, priceMap: PM_PREM },
+    { id: 'mozzarella',      label: 'Mozzarella',       price: 1.50, priceMap: PM_PREM },
+    { id: 'pepperoni',       label: 'Pepperoni',        price: 1.50, priceMap: PM_PREM },
+    { id: 'sausage',         label: 'Sausage',          price: 1.50, priceMap: PM_PREM },
+    // Luxury toppings
+    { id: 'chicken',         label: 'Chicken',          price: 2.00, priceMap: PM_LUX },
     // Specials (yellow border)
     { id: 'bianco',          label: 'Bianco',          price: 0, special: true },
     { id: 'breakfast-bacon', label: 'Breakfast Bacon', price: 0, special: true },
@@ -76,14 +84,15 @@ var PIZZA_PREP = {
   key: 'prep', label: 'PREP',
   options: [
     { id: 'bbq-sauce',    label: 'BBQ Sauce',    price: 0 },
-    { id: 'extra-sauce',  label: 'Extra Sauce',  price: 0 },
-    { id: 'light-sauce',  label: 'Light Sauce',  price: 0 },
-    { id: 'no-sauce',     label: 'No Sauce',     price: 0 },
-    { id: 'white-sauce',  label: 'White Sauce',  price: 0 },
-    { id: 'light-bake',   label: 'Light Bake',   price: 0 },
-    { id: 'well-done',    label: 'Well Done',    price: 0 },
     { id: 'cut-square',   label: 'Cut Square',   price: 0 },
+    { id: 'extra-sauce',  label: 'Extra Sauce',  price: 0 },
+    { id: 'light-bake',   label: 'Light Bake',   price: 0 },
+    { id: 'light-sauce',  label: 'Light Sauce',  price: 0 },
     { id: 'no-cut',       label: 'No Cut',       price: 0 },
+    { id: 'no-sauce',     label: 'No Sauce',     price: 0 },
+    { id: 'sub-gf-crust', label: 'Sub GF Crust', price: 3.00 },
+    { id: 'well-done',    label: 'Well Done',    price: 0 },
+    { id: 'white-sauce',  label: 'White Sauce',  price: 0 },
   ],
 };
 

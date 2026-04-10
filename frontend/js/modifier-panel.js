@@ -249,7 +249,7 @@ export function ModifierPanel(container, opts) {
       var pair = buildStyledButton({ label: letterText, variant: variant, size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '18px';
+      pair.inner.style.fontSize = '24px';
       pair.inner.style.letterSpacing = '0';
       pair.inner.style.padding = '6px 4px';
 
@@ -490,13 +490,22 @@ export function ModifierPanel(container, opts) {
       key: newSelection.key, label: newSelection.label, price: newSelection.price || 0,
     };
 
-    // Reprice optional modifiers
+    // Reprice optional modifiers against ALL mandatory selections
     activeItem.optionalModifiers = activeItem.optionalModifiers.map(function(mod) {
       if (mod.priceMap) {
-        var newPrice = mod.priceMap[newSelection.key];
-        if (newPrice === undefined) newPrice = mod.priceMap['default'];
-        if (newPrice === undefined) newPrice = mod.price;
-        return Object.assign({}, mod, { price: newPrice });
+        var resolved;
+        // Try each mandatory selection key against the priceMap
+        var mandKeys = Object.keys(activeItem.mandatorySelections);
+        for (var i = 0; i < mandKeys.length; i++) {
+          var mk = activeItem.mandatorySelections[mandKeys[i]].key;
+          if (mod.priceMap[mk] !== undefined) {
+            resolved = mod.priceMap[mk];
+            break;
+          }
+        }
+        if (resolved === undefined) resolved = mod.priceMap['default'];
+        if (resolved === undefined) resolved = mod.price;
+        return Object.assign({}, mod, { price: resolved });
       }
       return mod;
     });
