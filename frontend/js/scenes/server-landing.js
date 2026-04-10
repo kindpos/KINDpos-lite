@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Server Landing Scene
-//  3-column shift command center: Sales | Checks | Shift
+//  3-column shift command center: Sales | Checks | Tips+Checkout
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
@@ -8,6 +8,24 @@ import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+
+// ── SVG Namespace ────────────────────────────────
+var SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgCreate(w, h) {
+  var svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+  svg.style.display = 'block';
+  return svg;
+}
+
+function svgEl(tag, attrs) {
+  var el = document.createElementNS(SVG_NS, tag);
+  for (var k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
 
 // ── Module State ──────────────────────────────────
 var _el = null;
@@ -20,6 +38,13 @@ var _clockedInAt = null;
 var _expandedCard = null;
 var _expandOrigin = null;
 var _tipoutRate = 0;
+
+// New panel data
+var _salesByCategory = [];
+var _tableStats = null;
+var _checkoutStatus = null;
+var _drillCategory = null;  // for item-level drill in pareto
+var _tipsFilter = 'unadjusted'; // 'all' | 'adjusted' | 'unadjusted'
 
 // DOM refs for partial re-renders
 var _centerGrid = null;
@@ -142,6 +167,12 @@ function fetchAllData(emp) {
       .then(function(r) { return r.json(); }).catch(function() { return { staff: [] }; }),
     fetch('/api/v1/config/tipout')
       .then(function(r) { return r.json(); }).catch(function() { return []; }),
+    fetch('/api/v1/server/shift/sales-by-category?server_id=' + sid)
+      .then(function(r) { return r.json(); }).catch(function() { return []; }),
+    fetch('/api/v1/server/shift/table-stats?server_id=' + sid)
+      .then(function(r) { return r.json(); }).catch(function() { return null; }),
+    fetch('/api/v1/server/shift/checkout-status?server_id=' + sid)
+      .then(function(r) { return r.json(); }).catch(function() { return { openChecks: 0, unadjustedTips: 0 }; }),
   ]).then(function(results) {
     _salesData = results[0];
     _allOrders = Array.isArray(results[1]) ? results[1] : [];
@@ -154,6 +185,9 @@ function fetchAllData(emp) {
     }
     var rules = Array.isArray(results[3]) ? results[3] : [];
     _tipoutRate = rules.reduce(function(sum, r) { return sum + (r.percentage || 0); }, 0) / 100;
+    _salesByCategory = Array.isArray(results[4]) ? results[4] : [];
+    _tableStats = results[5] || { guestCount: 0, tableCount: 0, checkAvg: 0, avgTurnMinutes: 0, byPartySize: [] };
+    _checkoutStatus = results[6] || { openChecks: 0, unadjustedTips: 0 };
   });
 }
 
@@ -164,59 +198,307 @@ function refreshData(emp) {
 var _onTransactionalClosed = null;
 
 // ═══════════════════════════════════════════════════
-//  LEFT COLUMN
+//  WIN98 DITHER PATTERN (SVG)
+//  Top band: white checkerboard 55% opacity, 25% of bar height
+//  Bottom band: black checkerboard 55% opacity, 25% of bar height
+// ═══════════════════════════════════════════════════
+
+function injectDitherDefs(svg) {
+  var defs = svg.querySelector('defs') || svgEl('defs', {});
+  if (!svg.querySelector('defs')) svg.appendChild(defs);
+
+  // White checkerboard highlight
+  if (!svg.getElementById('dither-hi')) {
+    var phi = svgEl('pattern', { id: 'dither-hi', patternUnits: 'userSpaceOnUse', width: '2', height: '2' });
+    phi.appendChild(svgEl('rect', { width: '2', height: '2', fill: 'transparent' }));
+    phi.appendChild(svgEl('rect', { x: '0', y: '0', width: '1', height: '1', fill: 'white', opacity: '0.55' }));
+    phi.appendChild(svgEl('rect', { x: '1', y: '1', width: '1', height: '1', fill: 'white', opacity: '0.55' }));
+    defs.appendChild(phi);
+  }
+
+  // Black checkerboard shadow
+  if (!svg.getElementById('dither-lo')) {
+    var plo = svgEl('pattern', { id: 'dither-lo', patternUnits: 'userSpaceOnUse', width: '2', height: '2' });
+    plo.appendChild(svgEl('rect', { width: '2', height: '2', fill: 'transparent' }));
+    plo.appendChild(svgEl('rect', { x: '0', y: '0', width: '1', height: '1', fill: 'black', opacity: '0.55' }));
+    plo.appendChild(svgEl('rect', { x: '1', y: '1', width: '1', height: '1', fill: 'black', opacity: '0.55' }));
+    defs.appendChild(plo);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  SALES OVERVIEW — Horizontal Pareto Chart
+// ═══════════════════════════════════════════════════
+
+function drawParetoChart(container, data, opts) {
+  var W = opts.width || 280;
+  var H = opts.height || 180;
+  var padL = 6, padR = 55, padT = 6, padB = 6;
+  var chartW = W - padL - padR;
+  var chartH = H - padT - padB;
+  var n = data.length;
+  if (n === 0) {
+    var emptyEl = document.createElement('div');
+    emptyEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';text-align:center;padding:20px;';
+    emptyEl.textContent = 'No sales data';
+    container.appendChild(emptyEl);
+    return;
+  }
+
+  var svg = svgCreate(W, H);
+  injectDitherDefs(svg);
+
+  // Max revenue
+  var maxRev = 0;
+  var grandTotal = 0;
+  for (var i = 0; i < n; i++) {
+    var tot = (data[i].cash || 0) + (data[i].card || 0);
+    if (tot > maxRev) maxRev = tot;
+    grandTotal += tot;
+  }
+  if (maxRev === 0) maxRev = 1;
+
+  var barH = Math.max(12, Math.floor(chartH / n) - 4);
+  var gap = Math.max(2, Math.floor((chartH - barH * n) / (n + 1)));
+
+  var cumulative = 0;
+  var linePoints = [];
+
+  for (var i = 0; i < n; i++) {
+    var d = data[i];
+    var cash = d.cash || 0;
+    var card = d.card || 0;
+    var tot = cash + card;
+    var catColor = d.color || T.mint;
+
+    var y = padT + gap + i * (barH + gap);
+    var trackW = chartW;
+    var barW = (tot / maxRev) * trackW;
+    var cashW = tot > 0 ? (cash / tot) * barW : 0;
+    var cardW = barW - cashW;
+
+    // CASH segment with dither
+    if (cashW > 0) {
+      // Solid base
+      svg.appendChild(svgEl('rect', { x: padL, y: y, width: cashW, height: barH, fill: catColor }));
+      // Dither highlight band (top 25%)
+      var hiH = Math.round(barH * 0.25);
+      svg.appendChild(svgEl('rect', { x: padL, y: y, width: cashW, height: hiH, fill: 'url(#dither-hi)' }));
+      // Dither shadow band (bottom 25%)
+      svg.appendChild(svgEl('rect', { x: padL, y: y + barH - hiH, width: cashW, height: hiH, fill: 'url(#dither-lo)' }));
+    }
+
+    // Divider between CASH and CARD
+    if (cashW > 0 && cardW > 0) {
+      svg.appendChild(svgEl('line', { x1: padL + cashW, y1: y, x2: padL + cashW, y2: y + barH, stroke: T.bgDark, 'stroke-width': '1.5' }));
+    }
+
+    // CARD segment — solid, no dither
+    if (cardW > 0) {
+      svg.appendChild(svgEl('rect', { x: padL + cashW, y: y, width: cardW, height: barH, fill: catColor }));
+    }
+
+    // Category label inside bar
+    var labelText = d.category || '';
+    var labelFits = barW > 60;
+    if (labelFits) {
+      // Dark bg box inside bar
+      var lbl = svgEl('text', { x: padL + 4, y: y + barH / 2 + 5, fill: '#ffffff', 'font-size': '12', 'font-family': T.fb, 'font-weight': 'bold' });
+      lbl.textContent = labelText;
+      // Background rect
+      svg.appendChild(svgEl('rect', { x: padL + 2, y: y + barH / 2 - 8, width: labelText.length * 7 + 6, height: 16, fill: T.bgDark, opacity: '0.82' }));
+      svg.appendChild(lbl);
+    } else {
+      // Float label outside
+      var lbl = svgEl('text', { x: padL + barW + 3, y: y + barH / 2 + 5, fill: catColor, 'font-size': '11', 'font-family': T.fb, 'font-weight': 'bold' });
+      lbl.textContent = labelText;
+      svg.appendChild(lbl);
+    }
+
+    // Revenue value — gold, right-aligned
+    var revLabel = svgEl('text', { x: W - 4, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '12', 'font-family': T.fb, 'font-weight': 'bold', 'text-anchor': 'end' });
+    revLabel.textContent = fmt(tot);
+    svg.appendChild(revLabel);
+
+    // Cumulative % point
+    cumulative += tot;
+    var pct = grandTotal > 0 ? (cumulative / grandTotal) * 100 : 0;
+    var ptX = padL + (pct / 100) * trackW;
+    var ptY = y + barH;
+    linePoints.push({ x: ptX, y: ptY, pct: pct });
+  }
+
+  // Gold cumulative % line
+  if (linePoints.length > 1) {
+    var pathD = 'M ' + padL + ' ' + (padT + gap);
+    for (var i = 0; i < linePoints.length; i++) {
+      pathD += ' L ' + linePoints[i].x + ' ' + linePoints[i].y;
+    }
+    svg.appendChild(svgEl('path', { d: pathD, fill: 'none', stroke: T.gold, 'stroke-width': '1.5' }));
+
+    // Square data points + % labels
+    for (var i = 0; i < linePoints.length; i++) {
+      var pt = linePoints[i];
+      svg.appendChild(svgEl('rect', { x: pt.x - 3, y: pt.y - 3, width: 6, height: 6, fill: T.gold }));
+      if (i === linePoints.length - 1 || Math.abs(pt.pct - (linePoints[i - 1] || { pct: 0 }).pct) > 8) {
+        var pctLbl = svgEl('text', { x: pt.x + 6, y: pt.y + 4, fill: T.gold, 'font-size': '10', 'font-family': T.fb });
+        pctLbl.textContent = Math.round(pt.pct) + '%';
+        svg.appendChild(pctLbl);
+      }
+    }
+  }
+
+  container.appendChild(svg);
+}
+
+// ═══════════════════════════════════════════════════
+//  TABLE STATISTICS — Horizontal Histogram
+// ═══════════════════════════════════════════════════
+
+function drawTableHistogram(container, ts) {
+  if (!ts || !ts.byPartySize || ts.byPartySize.length === 0) {
+    var emptyEl = document.createElement('div');
+    emptyEl.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';text-align:center;padding:20px;';
+    emptyEl.textContent = 'No table data';
+    container.appendChild(emptyEl);
+    return;
+  }
+
+  var data = ts.byPartySize;
+  var W = 280, H = 130;
+  var padL = 36, padR = 50, padT = 6, padB = 20;
+  var chartW = W - padL - padR;
+  var chartH = H - padT - padB;
+  var n = data.length;
+
+  var svg = svgCreate(W, H);
+  injectDitherDefs(svg);
+
+  var maxAvg = 0;
+  for (var i = 0; i < n; i++) {
+    if (data[i].avgCheck > maxAvg) maxAvg = data[i].avgCheck;
+  }
+  maxAvg = maxAvg * 1.2 || 10;
+
+  var barH = Math.max(14, Math.floor(chartH / n) - 4);
+  var gap = Math.max(2, Math.floor((chartH - barH * n) / (n + 1)));
+
+  // Grid lines
+  var gridSteps = 4;
+  for (var g = 0; g <= gridSteps; g++) {
+    var gx = padL + (g / gridSteps) * chartW;
+    svg.appendChild(svgEl('line', { x1: gx, y1: padT, x2: gx, y2: H - padB, stroke: T.bg3, 'stroke-width': '1', 'stroke-dasharray': '3,3' }));
+    if (g > 0) {
+      var gVal = svgEl('text', { x: gx, y: H - 4, fill: T.gold, 'font-size': '10', 'font-family': T.fb, 'text-anchor': 'middle' });
+      gVal.textContent = '$' + Math.round(maxAvg * g / gridSteps);
+      svg.appendChild(gVal);
+    }
+  }
+
+  for (var i = 0; i < n; i++) {
+    var d = data[i];
+    var y = padT + gap + i * (barH + gap);
+    var barW = (d.avgCheck / maxAvg) * chartW;
+
+    // Y-axis label — party size
+    var sizeLabel = d.size >= 4 ? '4+' : String(d.size);
+    svg.appendChild(svgEl('text', { x: padL - 6, y: y + barH / 2 + 5, fill: '#ffffff', 'font-size': '13', 'font-family': T.fb, 'font-weight': 'bold', 'text-anchor': 'end' })).textContent = sizeLabel;
+
+    // Bar
+    svg.appendChild(svgEl('rect', { x: padL, y: y, width: Math.max(barW, 2), height: barH, fill: T.lime }));
+
+    // Dither highlight + shadow
+    var hiH = Math.round(barH * 0.25);
+    svg.appendChild(svgEl('rect', { x: padL, y: y, width: Math.max(barW, 2), height: hiH, fill: 'url(#dither-hi)' }));
+    svg.appendChild(svgEl('rect', { x: padL, y: y + barH - hiH, width: Math.max(barW, 2), height: hiH, fill: 'url(#dither-lo)' }));
+
+    // Bevel: white top edge, black bottom edge
+    svg.appendChild(svgEl('line', { x1: padL, y1: y, x2: padL + barW, y2: y, stroke: 'white', 'stroke-width': '1', opacity: '0.4' }));
+    svg.appendChild(svgEl('line', { x1: padL, y1: y + barH, x2: padL + barW, y2: y + barH, stroke: 'black', 'stroke-width': '1', opacity: '0.6' }));
+
+    // Count badge inside bar
+    if (barW > 30) {
+      var badgeW = d.tableCount.toString().length * 8 + 16;
+      svg.appendChild(svgEl('rect', { x: padL + 3, y: y + barH / 2 - 7, width: badgeW, height: 14, fill: T.bgDark, opacity: '0.85' }));
+      svg.appendChild(svgEl('text', { x: padL + 6, y: y + barH / 2 + 4, fill: '#ffffff', 'font-size': '11', 'font-family': T.fb })).textContent = '\u00d7' + d.tableCount;
+    }
+
+    // Avg value — gold, right of bar
+    svg.appendChild(svgEl('text', { x: padL + Math.max(barW, 2) + 4, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '12', 'font-family': T.fb, 'font-weight': 'bold' })).textContent = fmt(d.avgCheck);
+  }
+
+  // Axis labels
+  svg.appendChild(svgEl('text', { x: 3, y: H / 2, fill: '#ffffff', 'font-size': '9', 'font-family': T.fb, transform: 'rotate(-90,' + 3 + ',' + H / 2 + ')', 'text-anchor': 'middle' })).textContent = 'PARTY SIZE';
+  svg.appendChild(svgEl('text', { x: padL + chartW / 2, y: H - 1, fill: T.gold, 'font-size': '9', 'font-family': T.fb, 'text-anchor': 'middle' })).textContent = 'AVG CHECK';
+
+  container.appendChild(svg);
+}
+
+// ═══════════════════════════════════════════════════
+//  LEFT COLUMN — Sales Overview + Table Statistics
 // ═══════════════════════════════════════════════════
 
 function buildLeftColumn(emp) {
   var col = document.createElement('div');
   col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
-  var d = _salesData || {};
-  var guestCount = d.guest_count || 0;
-  var tableCount = d.total_checks || 0;
-  var guestAvg = guestCount > 0 ? (d.net_sales || 0) / guestCount : 0;
 
   // ── SALES OVERVIEW card ──
   var salesCard = document.createElement('div');
   applyCardStyle(salesCard);
+  salesCard.style.flex = '1';
+  salesCard.style.minHeight = '0';
   salesCard.appendChild(buildCardHeader('SALES OVERVIEW'));
-  var salesBody = document.createElement('div');
-  salesBody.style.cssText = 'padding:6px 0;';
-  salesBody.appendChild(statRow('Net Sales:', fmt(d.net_sales || 0), T.gold));
-  salesBody.appendChild(statRow('Check Avg:', fmt(d.avg_check || 0), T.gold));
-  salesCard.appendChild(salesBody);
+
+  var salesChart = document.createElement('div');
+  salesChart.style.cssText = 'flex:1;min-height:0;overflow:hidden;background:' + T.bgDark + ';padding:4px;';
+  drawParetoChart(salesChart, _salesByCategory, { width: 280, height: 180 });
+  salesCard.appendChild(salesChart);
   salesCard.appendChild(expandBtn('sales', salesCard));
   col.appendChild(salesCard);
 
   // ── TABLE STATISTICS card ──
   var tablesCard = document.createElement('div');
   applyCardStyle(tablesCard);
+  tablesCard.style.flex = '1';
+  tablesCard.style.minHeight = '0';
   tablesCard.appendChild(buildCardHeader('TABLE STATISTICS'));
-  var tablesBody = document.createElement('div');
-  tablesBody.style.cssText = 'padding:6px 0;';
-  tablesBody.appendChild(statRow('Guest Count:', String(guestCount), T.lime));
-  tablesBody.appendChild(statRow('Table Count:', String(tableCount), T.lime));
-  tablesBody.appendChild(statRow('Guest Avg:', fmt(guestAvg), T.gold));
-  tablesBody.appendChild(statRow('Top Seller:', computeTopSeller(), T.lime));
 
-  // Fetch seat capacity from floorplan and display
-  var seatRow = statRow('Total Seats:', '...', T.lime);
-  tablesBody.appendChild(seatRow);
-  fetch('/api/v1/config/floorplan')
-    .then(function(r) { return r.json(); })
-    .then(function(layout) {
-      var tables = layout.tables || [];
-      var totalSeats = tables.reduce(function(s, t) { return s + (t.seats || 0); }, 0);
-      var valEl = seatRow.querySelector('[data-stat-val]');
-      if (valEl) valEl.textContent = String(totalSeats);
-      else seatRow.lastChild.textContent = String(totalSeats);
-    })
-    .catch(function() {
-      var valEl = seatRow.querySelector('[data-stat-val]');
-      if (valEl) valEl.textContent = 'N/A';
-      else seatRow.lastChild.textContent = 'N/A';
-    });
+  // Stat row above chart
+  var ts = _tableStats || {};
+  var statsRow = document.createElement('div');
+  statsRow.style.cssText = 'display:flex;justify-content:space-around;padding:4px 6px;flex-shrink:0;';
+  var statItems = [
+    { label: 'GUESTS', value: String(ts.guestCount || 0), color: '#ffffff' },
+    { label: 'TABLES', value: String(ts.tableCount || 0), color: '#ffffff' },
+    { label: 'CHK AVG', value: fmt(ts.checkAvg || 0), color: T.gold },
+    { label: 'AVG TURN', value: (ts.avgTurnMinutes || 0) + 'm', color: T.lime },
+  ];
+  for (var s = 0; s < statItems.length; s++) {
+    var si = statItems[s];
+    var sc = document.createElement('div');
+    sc.style.cssText = 'text-align:center;';
+    var sv = document.createElement('div');
+    sv.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + si.color + ';font-weight:bold;';
+    sv.textContent = si.value;
+    var sl = document.createElement('div');
+    sl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.mutedText + ';letter-spacing:1px;';
+    sl.textContent = si.label;
+    sc.appendChild(sv);
+    sc.appendChild(sl);
+    statsRow.appendChild(sc);
+  }
+  tablesCard.appendChild(statsRow);
 
-  tablesCard.appendChild(tablesBody);
+  // Mint rule
+  var rule = document.createElement('div');
+  rule.style.cssText = 'height:1px;background:' + T.mint + ';margin:0 6px;flex-shrink:0;';
+  tablesCard.appendChild(rule);
+
+  // Histogram
+  var histChart = document.createElement('div');
+  histChart.style.cssText = 'flex:1;min-height:0;overflow:hidden;background:' + T.bgDark + ';padding:4px;';
+  drawTableHistogram(histChart, _tableStats);
+  tablesCard.appendChild(histChart);
   tablesCard.appendChild(expandBtn('tables', tablesCard));
   col.appendChild(tablesCard);
 
@@ -556,79 +838,197 @@ function renderOpsPanel(emp) {
 }
 
 // ═══════════════════════════════════════════════════
-//  RIGHT COLUMN
+//  RIGHT COLUMN — Tips Panel (top) + Checkout Panel (bottom)
 // ═══════════════════════════════════════════════════
+
+function getUnadjustedChecks() {
+  return (_salesData && _salesData.checks || []).filter(function(c) {
+    return (c.status === 'closed') && !c.adjusted;
+  });
+}
+
+function getClosedChecks() {
+  return (_salesData && _salesData.checks || []).filter(function(c) {
+    return c.status === 'closed';
+  });
+}
 
 function buildRightColumn(emp) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
+  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
   var d = _salesData || {};
+  var cs = _checkoutStatus || {};
 
-  var card = document.createElement('div');
-  applyCardStyle(card);
-  card.style.flex = '1';
-  card.appendChild(buildCardHeader('SHIFT OVERVIEW'));
+  // ═══ TIPS PANEL (top) ═══
+  var tipsCard = document.createElement('div');
+  applyCardStyle(tipsCard);
+  tipsCard.style.flex = '1';
+  tipsCard.style.minHeight = '0';
+  tipsCard.appendChild(buildCardHeader('TIPS'));
 
-  var body = document.createElement('div');
-  body.style.cssText = 'padding:8px 0;display:flex;flex-direction:column;gap:2px;flex:1;';
-  body.appendChild(statRow('Time In:', fmtClockIn(), T.gold));
-  body.appendChild(statRow('Hours:', fmtHours(), T.lime));
+  var tipsBody = document.createElement('div');
+  tipsBody.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;padding:4px 0;';
 
-  // Spacer
-  var sp1 = document.createElement('div'); sp1.style.height = '10px'; body.appendChild(sp1);
+  // Stat rows
+  tipsBody.appendChild(statRow('Total Tips:', fmt(d.total_tips || 0), T.gold));
 
-  body.appendChild(statRow('Total Tips:', fmt(d.total_tips || 0), T.gold));
+  // Tip Out row — tap triggers manager PIN gate
+  var tipOut = (d.total_tips || 0) * _tipoutRate;
+  var tipOutRow = statRow('Tip Out:', fmt(tipOut), T.gold);
+  tipOutRow.style.cursor = 'pointer';
+  tipOutRow.addEventListener('pointerup', function() {
+    SceneManager.interrupt('sl-manager-gate', {
+      onConfirm: function() {
+        SceneManager.interrupt('sl-tipout-numpad', {
+          onConfirm: function(val) {
+            fetch('/api/v1/server/shift/tipout?server_id=' + encodeURIComponent(emp.id), {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ amount: val }),
+            }).then(function() {
+              showToast('Tip out updated', { bg: T.goGreen });
+              refreshData(emp);
+            }).catch(function() {
+              showToast('Tip out update failed', { bg: T.red });
+            });
+          },
+          onCancel: function() {},
+          params: { title: 'TIP OUT AMOUNT' },
+        });
+      },
+      onCancel: function() {},
+      params: { message: 'Edit Tip Out requires manager approval.' },
+    });
+  });
+  tipsBody.appendChild(tipOutRow);
 
-  // TIP ADJUSTMENT button
-  var tipRow = document.createElement('div');
-  tipRow.style.cssText = 'padding:6px 8px;';
-  tipRow.appendChild(buildButton('TIP ADJUSTMENT', {
-    fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 32,
-    onTap: function() {
-      SceneManager.openTransactional('tip-adjustment', {
+  // Thin mint rule
+  var tipRule = document.createElement('div');
+  tipRule.style.cssText = 'height:1px;background:' + T.mint + ';margin:4px 8px;flex-shrink:0;';
+  tipsBody.appendChild(tipRule);
+
+  // Unadjusted check list — scrollable
+  var unadjChecks = getUnadjustedChecks();
+  var checkList = document.createElement('div');
+  checkList.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:2px 8px;';
+
+  if (unadjChecks.length === 0) {
+    var noChecks = document.createElement('div');
+    noChecks.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';text-align:center;padding:10px;';
+    noChecks.textContent = 'All tips adjusted';
+    checkList.appendChild(noChecks);
+  } else {
+    for (var i = 0; i < unadjChecks.length; i++) {
+      (function(check) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;padding:3px 0;cursor:pointer;';
+        var chkLabel = document.createElement('span');
+        chkLabel.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
+        chkLabel.textContent = check.checkLabel || 'CHK';
+        var amtLabel = document.createElement('span');
+        amtLabel.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;';
+        amtLabel.textContent = fmt(check.amount || 0);
+        row.appendChild(chkLabel);
+        row.appendChild(amtLabel);
+
+        // Tap → numpad interrupt for tip amount
+        row.addEventListener('pointerup', function() {
+          SceneManager.interrupt('sl-tip-numpad', {
+            onConfirm: function(tipVal) {
+              if (!check.paymentId) {
+                showToast('No card payment to adjust', { bg: T.gold });
+                return;
+              }
+              fetch('/api/v1/orders/' + check.checkId + '/adjust-tip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_id: check.paymentId, tip_amount: tipVal }),
+              }).then(function(r) {
+                if (r.ok) { showToast('Tip adjusted', { bg: T.goGreen }); refreshData(emp); }
+                else { showToast('Tip adjust failed', { bg: T.red }); }
+              }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
+            },
+            onCancel: function() {},
+            params: { title: 'TIP — ' + (check.checkLabel || ''), checkAmount: check.amount },
+          });
+        });
+        checkList.appendChild(row);
+      })(unadjChecks[i]);
+    }
+  }
+  tipsBody.appendChild(checkList);
+  tipsCard.appendChild(tipsBody);
+  tipsCard.appendChild(expandBtn('tips', tipsCard));
+  col.appendChild(tipsCard);
+
+  // ═══ CHECKOUT PANEL (bottom) ═══
+  var coCard = document.createElement('div');
+  applyCardStyle(coCard);
+  coCard.style.flexShrink = '0';
+  coCard.appendChild(buildCardHeader('CHECKOUT'));
+
+  var coBody = document.createElement('div');
+  coBody.style.cssText = 'padding:8px;display:flex;flex-direction:column;gap:6px;';
+
+  // Status: OPEN CHECKS
+  var openCount = cs.openChecks || 0;
+  var openRow = document.createElement('div');
+  openRow.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid ' + (openCount > 0 ? T.vermillion : T.bgDark) + ';';
+  var openIcon = document.createElement('span');
+  openIcon.style.cssText = 'font-size:14px;';
+  openIcon.textContent = openCount > 0 ? '\u2716' : '\u2714';
+  openIcon.style.color = openCount > 0 ? T.vermillion : T.goGreen;
+  var openLabel = document.createElement('span');
+  openLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (openCount > 0 ? T.vermillion : T.textPrimary) + ';';
+  openLabel.textContent = openCount + ' OPEN CHECK' + (openCount !== 1 ? 'S' : '');
+  openRow.appendChild(openIcon);
+  openRow.appendChild(openLabel);
+  coBody.appendChild(openRow);
+
+  // Status: UNADJUSTED TIPS
+  var unadjCount = cs.unadjustedTips || 0;
+  var unadjColor = unadjCount > 0 ? '#ffdd44' : T.textPrimary;
+  var unadjRow = document.createElement('div');
+  unadjRow.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid ' + (unadjCount > 0 ? '#ffdd44' : T.bgDark) + ';';
+  var unadjIcon = document.createElement('span');
+  unadjIcon.style.cssText = 'font-size:14px;';
+  unadjIcon.textContent = unadjCount > 0 ? '\u26a0' : '\u2714';
+  unadjIcon.style.color = unadjCount > 0 ? '#ffdd44' : T.goGreen;
+  var unadjLabel = document.createElement('span');
+  unadjLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + unadjColor + ';';
+  unadjLabel.textContent = unadjCount + ' UNADJUSTED TIP' + (unadjCount !== 1 ? 'S' : '');
+  unadjRow.appendChild(unadjIcon);
+  unadjRow.appendChild(unadjLabel);
+  coBody.appendChild(unadjRow);
+
+  // CHECKOUT button — Style D via buildStyledButton
+  var hasBlockers = openCount > 0;
+  var hasWarnings = unadjCount > 0;
+  var coBtnVariant = hasBlockers ? 'vermillion' : (hasWarnings ? 'gold' : 'mint');
+
+  var coPair = buildStyledButton({ variant: coBtnVariant, size: 'lg', label: 'CHECKOUT', disabled: hasBlockers, onClick: function() {
+    if (hasBlockers) return;
+    if (hasWarnings) {
+      SceneManager.interrupt('sl-checkout-gate', {
+        onConfirm: function() {
+          SceneManager.mountWorking('server-checkout', {
+            pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+          });
+        },
+        onCancel: function() {},
+        params: { reasons: [unadjCount + ' unadjusted tip' + (unadjCount !== 1 ? 's' : '')] },
+      });
+    } else {
+      SceneManager.mountWorking('server-checkout', {
         pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
       });
-    },
-  }));
-  body.appendChild(tipRow);
+    }
+  }});
+  coPair.wrap.style.width = '100%';
+  coBody.appendChild(coPair.wrap);
 
-  // Spacer
-  var sp2 = document.createElement('div'); sp2.style.height = '10px'; body.appendChild(sp2);
-
-  var tipOut = (d.total_tips || 0) * _tipoutRate;
-  body.appendChild(statRow('Tip Out:', fmt(tipOut), T.gold));
-
-  // CHECKOUT — red outline gate
-  var coRow = document.createElement('div');
-  coRow.style.cssText = 'padding:6px 8px;margin-top:auto;';
-  var coBtn = buildButton('CHECKOUT', {
-    fill: T.darkBtn, color: T.mint, fontSize: '18px', fontFamily: T.fh, height: 36,
-    onTap: function() {
-      var openCount = d.open_orders || 0;
-      var unadj = d.unadjusted_tips || 0;
-      if (openCount > 0 || unadj > 0) {
-        var reasons = [];
-        if (openCount > 0) reasons.push(openCount + ' open check' + (openCount > 1 ? 's' : ''));
-        if (unadj > 0) reasons.push(unadj + ' unadjusted tip' + (unadj > 1 ? 's' : ''));
-        SceneManager.interrupt('sl-checkout-gate', {
-          onConfirm: function() {},
-          onCancel: function() {},
-          params: { reasons: reasons },
-        });
-      } else {
-        SceneManager.mountWorking('server-checkout', {
-          pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
-        });
-      }
-    },
-  });
-  coBtn.style.border = '2px solid ' + T.vermillion;
-  coBtn.style.width = '100%';
-  coRow.appendChild(coBtn);
-  body.appendChild(coRow);
-
-  card.appendChild(body);
-  col.appendChild(card);
+  coCard.appendChild(coBody);
+  col.appendChild(coCard);
   return col;
 }
 
@@ -643,6 +1043,7 @@ function showDrillDown() {
   var d = _salesData || {};
   var rect = _expandOrigin;
   var parentRect = _el.getBoundingClientRect();
+  var emp = (_params || {}).emp || _params || {};
 
   _drillEl = document.createElement('div');
   _drillEl.style.cssText = 'position:absolute;background:' + T.bgDark + ';border:5px solid ' + CHROME + ';display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:top 220ms ease-out,left 220ms ease-out,width 220ms ease-out,height 220ms ease-out;box-shadow:' + CARD_SHADOW + ';';
@@ -660,7 +1061,7 @@ function showDrillDown() {
 
   // Header
   var headerLabel = _expandedCard === 'sales' ? 'SALES OVERVIEW'
-    : _expandedCard === 'tables' ? 'TABLE STATISTICS' : 'SHIFT OVERVIEW';
+    : _expandedCard === 'tables' ? 'TABLE STATISTICS' : 'TIPS';
   _drillEl.appendChild(buildCardHeader(headerLabel));
 
   // Expanded content
@@ -668,33 +1069,166 @@ function showDrillDown() {
   content.style.cssText = 'flex:1;padding:12px;overflow-y:auto;';
 
   if (_expandedCard === 'sales') {
+    // Expanded Pareto — larger canvas, tap for drill
+    var chartWrap = document.createElement('div');
+    chartWrap.style.cssText = 'width:100%;';
+    drawParetoChart(chartWrap, _salesByCategory, { width: 600, height: 350 });
+    content.appendChild(chartWrap);
+
+    // Summary stats below
     content.appendChild(statRow('Net Sales:', fmt(d.net_sales || 0), T.gold));
-    content.appendChild(statRow('Gross Sales:', fmt(d.gross_sales || 0), T.gold));
-    content.appendChild(statRow('Check Avg:', fmt(d.avg_check || 0), T.gold));
     content.appendChild(statRow('Cash Sales:', fmt(d.cash_total || 0), T.gold));
     content.appendChild(statRow('Card Sales:', fmt(d.card_total || 0), T.gold));
     content.appendChild(statRow('Discounts:', fmt(d.discount_total || 0), T.vermillion));
-    content.appendChild(statRow('Voids:', fmt(d.void_total || 0), T.vermillion));
-    content.appendChild(statRow('Tax:', fmt(d.tax_total || 0), T.gold));
+
   } else if (_expandedCard === 'tables') {
-    var gc = d.guest_count || 0;
-    var tc = d.total_checks || 0;
-    content.appendChild(statRow('Guest Count:', String(gc), T.lime));
-    content.appendChild(statRow('Table Count:', String(tc), T.lime));
-    content.appendChild(statRow('Guest Avg:', gc > 0 ? fmt((d.net_sales || 0) / gc) : '--', T.gold));
-    content.appendChild(statRow('Top Seller:', computeTopSeller(), T.lime));
-    content.appendChild(statRow('Open Checks:', String(d.open_orders || 0), T.lime));
-    content.appendChild(statRow('Closed Checks:', String(d.closed_orders || 0), T.lime));
-    content.appendChild(statRow('Voided:', String(d.voided_orders || 0), T.vermillion));
-  } else {
-    content.appendChild(statRow('Time In:', fmtClockIn(), T.gold));
-    content.appendChild(statRow('Hours:', fmtHours(), T.lime));
-    content.appendChild(statRow('Total Tips:', fmt(d.total_tips || 0), T.gold));
-    content.appendChild(statRow('Card Tips:', fmt(d.card_tips || 0), T.gold));
-    content.appendChild(statRow('Cash Tips:', fmt(d.cash_tips || 0), T.gold));
-    content.appendChild(statRow('Unadjusted:', String(d.unadjusted_tips || 0),
-      (d.unadjusted_tips || 0) > 0 ? T.vermillion : T.lime));
+    // Full check list: CHK# · GUESTS · TOTAL · TURN TIME
+    var allChecks = (_salesData && _salesData.checks || []).filter(function(c) { return c.status === 'closed'; });
+
+    // Column header bar
+    var colHeader = document.createElement('div');
+    colHeader.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:6px 8px;background:' + T.mint + ';margin-bottom:4px;';
+    var colLabels = ['CHK#', 'GUESTS', 'TOTAL', 'TURN'];
+    for (var c = 0; c < colLabels.length; c++) {
+      var cl = document.createElement('div');
+      cl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.bgDark + ';letter-spacing:1px;';
+      cl.textContent = colLabels[c];
+      colHeader.appendChild(cl);
+    }
+    content.appendChild(colHeader);
+
+    for (var i = 0; i < allChecks.length; i++) {
+      var chk = allChecks[i];
+      var row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:4px 8px;background:' + (i % 2 === 0 ? T.bgDark : T.bg3) + ';';
+
+      var chkNum = document.createElement('div');
+      chkNum.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mint + ';';
+      chkNum.textContent = chk.checkLabel || '--';
+      row.appendChild(chkNum);
+
+      var guests = document.createElement('div');
+      guests.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:#ffffff;';
+      guests.textContent = '--';
+      row.appendChild(guests);
+
+      var total = document.createElement('div');
+      total.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.gold + ';';
+      total.textContent = fmt(chk.amount || 0);
+      row.appendChild(total);
+
+      var turn = document.createElement('div');
+      turn.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.lime + ';';
+      turn.textContent = chk.time || '--';
+      row.appendChild(turn);
+
+      content.appendChild(row);
+    }
+    if (allChecks.length === 0) {
+      var noData = document.createElement('div');
+      noData.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';text-align:center;padding:20px;';
+      noData.textContent = 'No closed checks';
+      content.appendChild(noData);
+    }
+
+  } else if (_expandedCard === 'tips') {
+    // Filter tabs: ALL / ADJUSTED / UNADJUSTED
+    var tabBar = document.createElement('div');
+    tabBar.style.cssText = 'display:flex;margin-bottom:8px;flex-shrink:0;';
+    var tabs = ['ALL', 'ADJUSTED', 'UNADJUSTED'];
+    var tabKeys = ['all', 'adjusted', 'unadjusted'];
+
+    function renderTipsList(filterKey) {
+      var listEl = _drillEl.querySelector('[data-tiplist]');
+      if (listEl) listEl.innerHTML = '';
+      else return;
+      var allChecks = getClosedChecks();
+      var filtered = allChecks;
+      if (filterKey === 'adjusted') filtered = allChecks.filter(function(c) { return c.adjusted; });
+      if (filterKey === 'unadjusted') filtered = allChecks.filter(function(c) { return !c.adjusted; });
+
+      for (var i = 0; i < filtered.length; i++) {
+        (function(chk) {
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;cursor:pointer;border-bottom:1px solid ' + T.bg3 + ';';
+          var lbl = document.createElement('span');
+          lbl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
+          lbl.textContent = chk.checkLabel || 'CHK';
+          var amt = document.createElement('span');
+          amt.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;';
+          amt.textContent = fmt(chk.amount || 0);
+          var tip = document.createElement('span');
+          tip.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + (chk.adjusted ? T.gold : T.mutedText) + ';';
+          tip.textContent = chk.adjusted ? fmt(chk.tip || 0) : 'unadj';
+          row.appendChild(lbl);
+          row.appendChild(amt);
+          row.appendChild(tip);
+
+          if (!chk.adjusted) {
+            row.addEventListener('pointerup', function() {
+              SceneManager.interrupt('sl-tip-numpad', {
+                onConfirm: function(tipVal) {
+                  if (!chk.paymentId) { showToast('No card payment to adjust', { bg: T.gold }); return; }
+                  fetch('/api/v1/orders/' + chk.checkId + '/adjust-tip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payment_id: chk.paymentId, tip_amount: tipVal }),
+                  }).then(function(r) {
+                    if (r.ok) { showToast('Tip adjusted', { bg: T.goGreen }); refreshData(emp); hideDrillDown(); }
+                    else { showToast('Tip adjust failed', { bg: T.red }); }
+                  }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
+                },
+                onCancel: function() {},
+                params: { title: 'TIP — ' + (chk.checkLabel || ''), checkAmount: chk.amount },
+              });
+            });
+          }
+          listEl.appendChild(row);
+        })(filtered[i]);
+      }
+      if (filtered.length === 0) {
+        var noData = document.createElement('div');
+        noData.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';text-align:center;padding:20px;';
+        noData.textContent = 'No checks';
+        listEl.appendChild(noData);
+      }
+    }
+
+    for (var t = 0; t < tabs.length; t++) {
+      (function(idx) {
+        var tab = document.createElement('div');
+        tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:14px;letter-spacing:1px;';
+        tab.textContent = tabs[idx];
+        if (tabKeys[idx] === _tipsFilter) {
+          tab.style.color = T.bgDark;
+          tab.style.background = T.mint;
+        } else {
+          tab.style.color = T.mutedText;
+          tab.style.background = T.bgDark;
+        }
+        tab.addEventListener('pointerup', function() {
+          _tipsFilter = tabKeys[idx];
+          // Re-style tabs
+          var allTabs = tabBar.children;
+          for (var j = 0; j < allTabs.length; j++) {
+            if (j === idx) { allTabs[j].style.color = T.bgDark; allTabs[j].style.background = T.mint; }
+            else { allTabs[j].style.color = T.mutedText; allTabs[j].style.background = T.bgDark; }
+          }
+          renderTipsList(tabKeys[idx]);
+        });
+        tabBar.appendChild(tab);
+      })(t);
+    }
+    content.appendChild(tabBar);
+
+    var listContainer = document.createElement('div');
+    listContainer.dataset.tiplist = '1';
+    content.appendChild(listContainer);
+
+    // Initial render after DOM is in place
+    setTimeout(function() { renderTipsList(_tipsFilter); }, 0);
   }
+
   _drillEl.appendChild(content);
 
   // <<< close button
@@ -815,6 +1349,11 @@ SceneManager.register({
     _clockedInAt = null;
     _expandedCard = null;
     _tipoutRate = 0;
+    _salesByCategory = [];
+    _tableStats = null;
+    _checkoutStatus = null;
+    _drillCategory = null;
+    _tipsFilter = 'unadjusted';
   },
 });
 
@@ -887,28 +1426,37 @@ SceneManager.register({
 SceneManager.register({
   name: 'sl-checkout-gate',
   mount: function(container, params) {
+    var isWarning = !!(params.onConfirm); // warning mode allows proceeding
+    var frameColor = isWarning ? T.frameInterruptDecision : T.frameInterruptCritical;
+
     var card = document.createElement('div');
-    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptCritical + ';padding:24px 32px;text-align:center;max-width:420px;';
+    card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + frameColor + ';padding:24px 32px;text-align:center;max-width:420px;';
     card.style.clipPath = chamfer(10);
 
     var msg = document.createElement('div');
     msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:12px;';
-    msg.textContent = 'Cannot checkout:';
+    msg.textContent = isWarning ? 'Warning:' : 'Cannot checkout:';
     card.appendChild(msg);
 
     var reasons = params.reasons || [];
     for (var i = 0; i < reasons.length; i++) {
       var line = document.createElement('div');
-      line.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.vermillion + ';margin-bottom:4px;';
-      line.textContent = '• ' + reasons[i];
+      line.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + (isWarning ? '#ffdd44' : T.vermillion) + ';margin-bottom:4px;';
+      line.textContent = '\u2022 ' + reasons[i];
       card.appendChild(line);
     }
 
     var sp = document.createElement('div'); sp.style.height = '16px'; card.appendChild(sp);
 
     var btns = document.createElement('div');
-    btns.style.cssText = 'display:flex;justify-content:center;';
-    btns.appendChild(buildButton('OK', {
+    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+    if (isWarning) {
+      btns.appendChild(buildButton('PROCEED', {
+        fill: T.darkBtn, color: T.gold, fontSize: T.fsBtn, width: 140, height: 44,
+        onTap: function() { params.onConfirm(); },
+      }));
+    }
+    btns.appendChild(buildButton(isWarning ? 'CANCEL' : 'OK', {
       fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 44,
       onTap: function() { params.onCancel(); },
     }));
@@ -1092,6 +1640,97 @@ SceneManager.register({
       },
     }));
     container.appendChild(actionBar);
+  },
+  unmount: function() {},
+});
+
+// ── Tip Numpad Interrupt ─────────────────────────
+// Full-screen numpad for entering tip amount on a check
+// Frame color: gold (decision)
+
+function buildNumpadInterrupt(container, params, titlePrefix) {
+  var card = document.createElement('div');
+  card.style.cssText = 'background:' + T.bg + ';border:3px solid ' + T.frameInterruptDecision + ';padding:20px 24px;text-align:center;max-width:360px;width:90%;';
+  card.style.clipPath = chamfer(10);
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.mint + ';margin-bottom:8px;letter-spacing:1px;';
+  title.textContent = params.title || titlePrefix || 'ENTER AMOUNT';
+  card.appendChild(title);
+
+  if (params.checkAmount) {
+    var chkAmt = document.createElement('div');
+    chkAmt.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';margin-bottom:12px;';
+    chkAmt.textContent = 'Check: ' + fmt(params.checkAmount);
+    card.appendChild(chkAmt);
+  }
+
+  // Display
+  var display = document.createElement('div');
+  display.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';background:' + T.bgDark + ';padding:10px;margin-bottom:12px;min-height:52px;';
+  display.textContent = '$0.00';
+  card.appendChild(display);
+
+  var buffer = '';
+  function updateDisplay() {
+    var cents = parseInt(buffer || '0', 10);
+    var dollars = (cents / 100).toFixed(2);
+    display.textContent = '$' + dollars;
+  }
+
+  // Numpad grid
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;';
+  var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'CLR', '0', 'DEL'];
+  for (var k = 0; k < keys.length; k++) {
+    (function(key) {
+      var btn = buildButton(key, {
+        fill: key === 'CLR' ? T.darkBtn : T.darkBtn,
+        color: key === 'CLR' ? T.vermillion : (key === 'DEL' ? T.gold : T.mint),
+        fontSize: '22px', fontFamily: T.fb, height: 44,
+        onTap: function() {
+          if (key === 'CLR') { buffer = ''; }
+          else if (key === 'DEL') { buffer = buffer.slice(0, -1); }
+          else { if (buffer.length < 8) buffer += key; }
+          updateDisplay();
+        },
+      });
+      grid.appendChild(btn);
+    })(keys[k]);
+  }
+  card.appendChild(grid);
+
+  // Action buttons
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+  btns.appendChild(buildButton('CONFIRM', {
+    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44,
+    onTap: function() {
+      var cents = parseInt(buffer || '0', 10);
+      var val = cents / 100;
+      params.onConfirm(val);
+    },
+  }));
+  btns.appendChild(buildButton('CANCEL', {
+    fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtn, width: 130, height: 44,
+    onTap: function() { params.onCancel(); },
+  }));
+  card.appendChild(btns);
+  container.appendChild(card);
+}
+
+SceneManager.register({
+  name: 'sl-tip-numpad',
+  mount: function(container, params) {
+    buildNumpadInterrupt(container, params, 'ENTER TIP');
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'sl-tipout-numpad',
+  mount: function(container, params) {
+    buildNumpadInterrupt(container, params, 'TIP OUT AMOUNT');
   },
   unmount: function() {},
 });
