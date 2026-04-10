@@ -1223,11 +1223,12 @@ function endModifierSession() {
 }
 
 // ── MODIFIER PANEL (overlay on hex-canvas) ───────
-function openModifierPanel(item, modConfig) {
+function openModifierPanel(item, modConfig, catColor) {
   if (_modPanel) closeModifierPanel();
 
   _modPanel = new ModifierPanel(_tabCanvas, {
     item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
+    catColor: catColor || T.mint,
     onUpdate: function(outputItem) {
       _modPanelItem = outputItem;
       renderTicket();
@@ -1425,7 +1426,9 @@ function handleItemSelect(item) {
   // ── Modifier panel: item with modifierConfig opens the panel ──
   var modConfig = getModifierConfig(item.label);
   if (modConfig) {
-    openModifierPanel(item, modConfig);
+    var catId = hexNav ? hexNav.getCatId() : null;
+    var catColor = catId ? T.catColor(catId.toUpperCase()) : T.mint;
+    openModifierPanel(item, modConfig, catColor);
     return;
   }
 

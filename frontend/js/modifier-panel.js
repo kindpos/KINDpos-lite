@@ -58,6 +58,7 @@ export function ModifierPanel(container, opts) {
   var onUpdate = opts.onUpdate || function() {};
   var onSend = opts.onSend || function() {};
   var onCancel = opts.onCancel || function() {};
+  var catColor = opts.catColor || T.mint;
 
   // ── Active item state (ephemeral until SEND) ──
   var activeItem = {
@@ -87,16 +88,14 @@ export function ModifierPanel(container, opts) {
   var optionalGroups = config.optionalGroups || [];
 
   // ── Build tab list ──
-  // Single-letter tabs: M I O P N A
-  // All mandatory groups live under the M tab as expandable cards
+  // Tabs: MAND, INCL, OPT, PREP, NOTE, ALRG
   var tabs = [];
   if (mandatoryGroups.length > 0) {
-    tabs.push({ type: 'mandatory', key: '_mandatory', letter: 'M', label: 'Mandatory' });
+    tabs.push({ type: 'mandatory', key: '_mandatory', label: 'MAND', tabColor: catColor });
   }
   if (includedItems.length > 0) {
-    tabs.push({ type: 'included', key: '_included', letter: 'I', label: 'Included' });
+    tabs.push({ type: 'included', key: '_included', label: 'INCL', tabColor: _lightenHex(catColor, 0.3) });
   }
-  // Optional groups: non-prep grouped under O, prep under P
   var nonPrepGroups = [];
   var prepGroups = [];
   optionalGroups.forEach(function(g) {
@@ -104,13 +103,13 @@ export function ModifierPanel(container, opts) {
     else { nonPrepGroups.push(g); }
   });
   if (nonPrepGroups.length > 0) {
-    tabs.push({ type: 'optional', key: '_optional', letter: 'O', label: 'Optional', groups: nonPrepGroups });
+    tabs.push({ type: 'optional', key: '_optional', label: 'OPT', tabColor: T.mint, groups: nonPrepGroups });
   }
   if (prepGroups.length > 0) {
-    tabs.push({ type: 'optional', key: '_prep', letter: 'P', label: 'Prep', groups: prepGroups });
+    tabs.push({ type: 'optional', key: '_prep', label: 'PREP', tabColor: T.mint, groups: prepGroups });
   }
-  tabs.push({ type: 'note', key: '_note', letter: 'N', label: 'Note' });
-  tabs.push({ type: 'allergen', key: '_allergen', letter: 'A', label: 'Allergen' });
+  tabs.push({ type: 'note', key: '_note', label: 'NOTE', tabColor: T.gold });
+  tabs.push({ type: 'allergen', key: '_allergen', label: 'ALRG', tabColor: T.red });
 
   var activeTabKey = tabs.length > 0 ? tabs[0].key : null;
   var activeOptPrefix = 'ADD';
@@ -122,6 +121,7 @@ export function ModifierPanel(container, opts) {
   var tabBarEl = null;
   var topBarEl = null;
   var pickerEl = null;
+  var prefixBarEl = null;
   var _allergenNoteInput = null;
 
   // ── Bevel helpers (match clock-in card pattern) ──
@@ -167,14 +167,14 @@ export function ModifierPanel(container, opts) {
     card.style.clipPath = chamfer(10);
     rootEl.appendChild(card);
 
-    // ── Main body: tabs | content | summary ──
+    // ── Main body: tabs | top+picker | prefixes ──
     var body = document.createElement('div');
     body.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
 
     // Vertical tab bar (left)
     tabBarEl = document.createElement('div');
     tabBarEl.style.cssText = [
-      'width:50px;flex-shrink:0;display:flex;flex-direction:column;',
+      'width:80px;flex-shrink:0;display:flex;flex-direction:column;',
       'gap:4px;padding:6px;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
       'background:' + T.bgDark + ';',
@@ -186,7 +186,7 @@ export function ModifierPanel(container, opts) {
     var centerArea = document.createElement('div');
     centerArea.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
 
-    // Top bar (prefixes + placement)
+    // Top bar (placement only now)
     topBarEl = document.createElement('div');
     topBarEl.style.cssText = [
       'flex-shrink:0;padding:6px;',
@@ -206,6 +206,17 @@ export function ModifierPanel(container, opts) {
     centerArea.appendChild(pickerEl);
 
     body.appendChild(centerArea);
+
+    // Prefix bar (right side — only visible for optional tabs)
+    prefixBarEl = document.createElement('div');
+    prefixBarEl.style.cssText = [
+      'width:70px;flex-shrink:0;display:flex;flex-direction:column;',
+      'gap:4px;padding:6px;',
+      'background:' + T.bgDark + ';',
+      'border-left:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+    ].join('');
+    body.appendChild(prefixBarEl);
+
     card.appendChild(body);
 
     // ── Bottom action bar: CANCEL + SEND ──
@@ -230,6 +241,7 @@ export function ModifierPanel(container, opts) {
     container.appendChild(rootEl);
     renderTabs();
     renderTopBar();
+    renderPrefixBar();
     renderPicker();
   }
 
@@ -239,21 +251,22 @@ export function ModifierPanel(container, opts) {
     tabs.forEach(function(tab) {
       var isActive = tab.key === activeTabKey;
 
-      // Single-letter label; dot indicator for note
-      var letterText = tab.letter;
+      var labelText = tab.label;
       if (tab.type === 'note' && activeItem.note.length > 0) {
-        letterText = 'N\u2022';
+        labelText = 'NOTE\u2022';
       }
 
-      var pair = buildStyledButton({ label: letterText, variant: 'ghost', size: 'sm' });
+      var pair = buildStyledButton({ label: labelText, variant: 'ghost', size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '24px';
-      pair.inner.style.letterSpacing = '0';
+      pair.inner.style.fontSize = '12px';
+      pair.inner.style.letterSpacing = '1px';
       pair.inner.style.padding = '6px 4px';
       if (isActive) {
-        pair.wrap.style.background = T.numpadChassis;
+        pair.wrap.style.background = tab.tabColor;
         pair.inner.style.color = T.bgDark;
+      } else {
+        pair.inner.style.color = tab.tabColor;
       }
 
       pair.wrap.addEventListener('pointerup', function() {
@@ -262,6 +275,7 @@ export function ModifierPanel(container, opts) {
         if (tab.type === 'optional') activeOptPrefix = 'ADD';
         renderTabs();
         renderTopBar();
+        renderPrefixBar();
         renderPicker();
       });
 
@@ -269,35 +283,11 @@ export function ModifierPanel(container, opts) {
     });
   }
 
-  // ═══ TOP BAR (prefixes + placement) ═══
+  // ═══ TOP BAR (placement only) ═══
   function renderTopBar() {
     topBarEl.innerHTML = '';
     var tab = _activeTab();
     if (!tab) return;
-
-    // Prefix row — shown on optional and included tabs
-    if (tab.type === 'optional') {
-      var prefixRow = document.createElement('div');
-      prefixRow.style.cssText = 'display:flex;gap:3px;';
-
-      OPT_PREFIXES.forEach(function(pfx) {
-        var isActive = activeOptPrefix === pfx.id;
-        var v = isActive ? pfx.variant : 'dark';
-        var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
-        pair.wrap.style.flex = '1';
-        pair.wrap.style.minWidth = '0';
-        pair.inner.style.fontSize = '12px';
-        pair.inner.style.padding = '4px';
-
-        pair.wrap.addEventListener('pointerup', function() {
-          activeOptPrefix = pfx.id;
-          renderTopBar();
-        });
-
-        prefixRow.appendChild(pair.wrap);
-      });
-      topBarEl.appendChild(prefixRow);
-    }
 
     // Placement bar — for optional and mandatory tabs
     if (tab.type !== 'optional' && tab.type !== 'mandatory') return;
@@ -351,6 +341,37 @@ export function ModifierPanel(container, opts) {
       var isActive = activePlacement === pl.id;
       seg.style.background = isActive ? T.numpadChassis : 'transparent';
       seg.style.color = isActive ? T.bgDark : T.mutedText;
+    });
+  }
+
+  // ═══ PREFIX BAR (right side — optional tabs only) ═══
+  function renderPrefixBar() {
+    prefixBarEl.innerHTML = '';
+    var tab = _activeTab();
+
+    // Only show for optional tabs
+    if (!tab || tab.type !== 'optional') {
+      prefixBarEl.style.display = 'none';
+      return;
+    }
+    prefixBarEl.style.display = '';
+
+    OPT_PREFIXES.forEach(function(pfx) {
+      var isActive = activeOptPrefix === pfx.id;
+      var v = isActive ? pfx.variant : 'dark';
+      var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
+      pair.wrap.style.width = '100%';
+      pair.wrap.style.minWidth = '0';
+      pair.inner.style.fontSize = '10px';
+      pair.inner.style.letterSpacing = '1px';
+      pair.inner.style.padding = '6px 2px';
+
+      pair.wrap.addEventListener('pointerup', function() {
+        activeOptPrefix = pfx.id;
+        renderPrefixBar();
+      });
+
+      prefixBarEl.appendChild(pair.wrap);
     });
   }
 
