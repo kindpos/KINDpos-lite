@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Clock-In Scene (SM2)
-//  Transactional overlay: staff role selection + clock-in
+//  Transactional overlay: staff role selection + clock-in/out
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
@@ -44,6 +44,7 @@ defineScene({
 
   state: {
     selectedRole: null,
+    isClockedIn: false,
   },
 
   render: function(el, params, state) {
@@ -138,7 +139,7 @@ defineScene({
           rb._selected = (rb._roleName === selectedRole);
           rb._resetVisual();
         });
-        _updateClockInBtn();
+        _updateActionBtn();
       });
       btn.style.width = '380px';
       btn.style.height = '90px';
@@ -152,22 +153,36 @@ defineScene({
       roleArea.appendChild(btn);
     });
 
-    // ── BOTTOM ROW — CLOCK IN ──
+    // ── BOTTOM ROW — ACTION BUTTON ──────────
     var bottomRow = document.createElement('div');
     bottomRow.style.cssText = 'display:flex;justify-content:flex-end;flex-shrink:0;margin-top:8px;';
     panel.appendChild(bottomRow);
 
-    var clockPair = buildStyledButton({ label: 'CLOCK IN', variant: 'gold', size: 'lg', disabled: true });
-    var clockBtn = clockPair.wrap;
+    // Clock-in button (default)
+    var clockInPair = buildStyledButton({ label: 'CLOCK IN', variant: 'gold', size: 'lg', disabled: true });
+    var clockInBtn = clockInPair.wrap;
 
-    function _updateClockInBtn() {
-      clockBtn.setDisabled(!state.selectedRole);
+    // Clock-out button (shown when already clocked in)
+    var clockOutPair = buildStyledButton({ label: 'CLOCK OUT', variant: 'vermillion', size: 'lg' });
+    var clockOutBtn = clockOutPair.wrap;
+    clockOutBtn.style.display = 'none';
+
+    function _updateActionBtn() {
+      clockInBtn.setDisabled(!state.selectedRole);
     }
 
-    clockBtn.addEventListener('pointerup', function() {
-      if (!state.selectedRole) return;
+    function _switchToClockOut() {
+      state.isClockedIn = true;
+      greetSub.textContent = 'You are currently clocked in';
+      roleArea.style.display = 'none';
+      clockInBtn.style.display = 'none';
+      clockOutBtn.style.display = '';
+    }
 
-      clockBtn.setDisabled(true);
+    // ── Clock-in action ─────────────────────
+    clockInBtn.addEventListener('pointerup', function() {
+      if (!state.selectedRole) return;
+      clockInBtn.setDisabled(true);
 
       fetch(API + '/servers/clock-in', {
         method: 'POST',
@@ -189,11 +204,50 @@ defineScene({
       })
       .catch(function(err) {
         showToast(err.message || 'Clock-in failed', { bg: T.red, duration: 4000 });
-        clockBtn.setDisabled(false);
+        clockInBtn.setDisabled(false);
       });
     });
 
-    bottomRow.appendChild(clockBtn);
+    // ── Clock-out action ────────────────────
+    clockOutBtn.addEventListener('pointerup', function() {
+      clockOutBtn.setDisabled(true);
+
+      fetch(API + '/servers/clock-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: emp.id,
+          employee_name: emp.name,
+          pin: emp.pin,
+        }),
+      })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(d) { throw new Error(d.detail || 'Clock-out failed'); });
+        return r.json();
+      })
+      .then(function() {
+        showToast(emp.name + ' clocked out', { bg: T.goGreen, duration: 3000 });
+        SceneManager.closeTransactional('clock-in');
+        SceneManager.openGate('login');
+      })
+      .catch(function(err) {
+        showToast(err.message || 'Clock-out failed', { bg: T.red, duration: 4000 });
+        clockOutBtn.setDisabled(false);
+      });
+    });
+
+    bottomRow.appendChild(clockInBtn);
+    bottomRow.appendChild(clockOutBtn);
+
+    // ── Check clocked-in status ─────────────
+    fetch(API + '/servers/clocked-in')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var staff = data.staff || [];
+        var match = staff.find(function(s) { return s.employee_id === emp.id; });
+        if (match) _switchToClockOut();
+      })
+      .catch(function() { /* default to clock-in mode */ });
 
     // ── Fetch Hours ─────────────────────────
     var today = new Date();
