@@ -1013,6 +1013,8 @@ SceneManager.register({
     var mod = params.mod;
     var fireUpdate = params.fireUpdate;
     var onConfirm = params.onConfirm;
+    var onCancel = params.onCancel;
+    var savedExclusions = mod.exclusions.slice();
 
     var panel = document.createElement('div');
     panel.style.cssText = [
@@ -1073,17 +1075,29 @@ SceneManager.register({
     gridWrap.appendChild(grid);
     panel.appendChild(gridWrap);
 
-    // Done button
+    // Action bar with Cancel and Done
     var actionBar = document.createElement('div');
     actionBar.style.cssText = [
       'flex-shrink:0;padding:8px;',
       'border-top:3px solid ' + _darkenH(T.gold, 0.3) + ';',
       'background:' + T.bgDark + ';',
+      'display:flex;gap:8px;',
     ].join('');
+    var cancelPair = buildStyledButton({ label: 'CANCEL', variant: 'vermillion', size: 'md',
+      onClick: function() {
+        mod.exclusions.length = 0;
+        for (var i = 0; i < savedExclusions.length; i++) {
+          mod.exclusions.push(savedExclusions[i]);
+        }
+        onCancel();
+      },
+    });
+    cancelPair.wrap.style.flex = '1';
+    actionBar.appendChild(cancelPair.wrap);
     var donePair = buildStyledButton({ label: 'DONE', variant: 'mint', size: 'md',
       onClick: function() { onConfirm(); },
     });
-    donePair.wrap.style.width = '100%';
+    donePair.wrap.style.flex = '1';
     actionBar.appendChild(donePair.wrap);
     panel.appendChild(actionBar);
 
