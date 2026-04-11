@@ -301,6 +301,11 @@ function buildCard(title, bodyFn, overlayFn) {
   bodyFn(body);
   card.appendChild(body);
   card._body = body;
+  // Tap anywhere on card to expand
+  if (overlayFn) {
+    card.style.cursor = 'pointer';
+    card.addEventListener('pointerup', function() { openOverlay(overlayFn); });
+  }
   return card;
 }
 
