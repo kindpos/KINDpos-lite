@@ -11,7 +11,7 @@ import { OrderSummary } from './order-summary.js';
 
 // Import scenes (self-registering)
 import './scenes/login.js?v=3';  // SM2 format
-import './scenes/settings.js?v=8';
+import './scenes/settings.js?v=9';
 import './scenes/order-entry.js?v=7';
 import './scenes/payment-console.js?v=2';
 import './scenes/change-due.js?v=2';

@@ -4,11 +4,12 @@
 //  Nice. Dependable. Yours.
 // =======================================================
 
-import { T, chamfer, buildStyledButton, shadowColor, setTheme, resetTheme } from '../tokens.js';
+import { T, chamfer, buildStyledButton, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-import { THEMES } from '../themes/index.js';
+// Theme picker disabled — venue themes deferred to Overseer settings
+// import { THEMES } from '../themes/index.js';
 
 // == Helpers ============================================
 
@@ -77,9 +78,7 @@ var _tabBtns = {};            // { terminal: {wrap,card,label}, hardware: {wrap,
 var _rootEl = null;
 var _clockIv = null;
 
-// Theme state
-var _currentThemeId = 'terminal-glow';
-var _previewThemeId = null;
+// Theme state — deferred to Overseer settings
 
 // Data state (carried over for later chunks)
 var _savedDevices = [];
@@ -764,19 +763,7 @@ function renderDisplaySettings(body) {
   var resolution = '1024x600';
   var orientation = 'landscape';
 
-  // Theme row — shows current theme name, tapping opens picker
-  var themeLabel = THEMES.find(function(t) { return t.id === _currentThemeId; });
-  var themeName = themeLabel ? themeLabel.label : 'Terminal Glow';
-  var themeVal = buildValueLabel(themeName);
-  themeVal.style.cursor = 'pointer';
-  var themeRow = buildSettingRow('Theme', themeVal);
-  themeRow.style.cursor = 'pointer';
-  themeRow.addEventListener('pointerup', function() {
-    renderThemePicker(body);
-  });
-
   var grid = buildSettingsGrid([
-    themeRow,
     buildSettingRow('Brightness', buildValueLabel(brightness + '%')),
     buildSettingRow('Resolution', buildPresetButtons([
       { label: '1024×600', value: '1024x600' },
@@ -796,147 +783,6 @@ function renderDisplaySettings(body) {
 
   body.innerHTML = '';
   body.appendChild(grid);
-}
-
-// == THEME PICKER GRID =================================
-
-// Swatch colors for each theme tile (primary accent + bg)
-var _THEME_SWATCHES = {
-  'terminal-glow': { accent: '#87f79c', bg: '#333333', bg2: '#1a1a1a' },
-  'pizza-palace':  { accent: '#CC2200', bg: '#F0E8D5', bg2: '#e4d8c2' },
-  'neon-diner':    { accent: '#ff2d78', bg: '#0a0a1a', bg2: '#14142a' },
-  'steakhouse':    { accent: '#c9943a', bg: '#2a1800', bg2: '#151515' },
-  'tiki-bar':      { accent: '#5cff8f', bg: '#1a0d00', bg2: '#120800' },
-  'ramen-shop':    { accent: '#ff3a3a', bg: '#0d0d12', bg2: '#16161e' },
-  'bbq-pit':       { accent: '#ff6b1a', bg: '#181818', bg2: '#0f0f0f' },
-  'seafood-shack': { accent: '#00cfcf', bg: '#0d1a1f', bg2: '#061012' },
-  'speakeasy':     { accent: '#b39ddb', bg: '#1a1228', bg2: '#100e14' },
-  'farm-table':    { accent: '#d4a84b', bg: '#161410', bg2: '#0e0c08' },
-  'rooftop-bar':   { accent: '#ff7eb3', bg: '#0a0510', bg2: '#060208' },
-  'atomic-purple': { accent: '#9b59ff', bg: '#0d0d0f', bg2: '#141418' },
-  'rainbow':       { accent: '#ff3333', bg: '#1a1a2e', bg2: '#0f0f1a' },
-};
-
-function renderThemePicker(body) {
-  _previewThemeId = _currentThemeId;
-  body.innerHTML = '';
-
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex;flex-direction:column;height:100%;gap:8px;';
-
-  // Grid of theme tiles (3 columns)
-  var grid = document.createElement('div');
-  grid.style.cssText = [
-    'flex:1;display:grid;',
-    'grid-template-columns:1fr 1fr 1fr;',
-    'gap:8px;overflow-y:auto;',
-    'scrollbar-width:none;',
-    'align-content:start;',
-  ].join('');
-
-  THEMES.forEach(function(themeEntry) {
-    var tile = _buildThemeTile(themeEntry, grid, body);
-    grid.appendChild(tile);
-  });
-
-  wrap.appendChild(grid);
-
-  // Bottom bar: Cancel + Confirm
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'flex-shrink:0;display:flex;gap:8px;padding-top:4px;';
-
-  var cancelBtn = buildButton('CANCEL', {
-    fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 40,
-    onTap: function() {
-      // Revert preview
-      if (_previewThemeId !== _currentThemeId) {
-        _applyThemeById(_currentThemeId);
-      }
-      renderDisplaySettings(body);
-    },
-  });
-  cancelBtn.style.flex = '1';
-
-  var confirmBtn = buildButton('CONFIRM', {
-    fill: T.darkBtn, color: T.mint, fontSize: '22px', fontFamily: T.fh, height: 40,
-    onTap: function() {
-      _currentThemeId = _previewThemeId || _currentThemeId;
-      renderDisplaySettings(body);
-    },
-  });
-  confirmBtn.style.flex = '1';
-  confirmBtn.style.outline = '2px solid ' + T.mint;
-  confirmBtn.style.outlineOffset = '-1px';
-
-  btnRow.appendChild(cancelBtn);
-  btnRow.appendChild(confirmBtn);
-  wrap.appendChild(btnRow);
-
-  body.appendChild(wrap);
-}
-
-function _buildThemeTile(themeEntry, grid, body) {
-  var sw = _THEME_SWATCHES[themeEntry.id] || { accent: '#888', bg: '#333', bg2: '#222' };
-  var isActive = themeEntry.id === (_previewThemeId || _currentThemeId);
-
-  var tile = document.createElement('div');
-  tile.style.cssText = [
-    'display:flex;flex-direction:column;',
-    'background:' + sw.bg2 + ';',
-    'border:3px solid ' + (isActive ? sw.accent : T.border) + ';',
-    'clip-path:' + chamfer(6) + ';',
-    'cursor:pointer;padding:6px;gap:4px;',
-    'transition:border-color 80ms;',
-  ].join('');
-
-  // Color swatches row
-  var swatchRow = document.createElement('div');
-  swatchRow.style.cssText = 'display:flex;gap:3px;height:18px;';
-
-  var accentDot = document.createElement('div');
-  accentDot.style.cssText = 'flex:2;background:' + sw.accent + ';border-radius:2px;';
-  var bgDot = document.createElement('div');
-  bgDot.style.cssText = 'flex:1;background:' + sw.bg + ';border-radius:2px;';
-  var goldDot = document.createElement('div');
-  goldDot.style.cssText = 'flex:1;background:#fbb03b;border-radius:2px;';
-
-  swatchRow.appendChild(accentDot);
-  swatchRow.appendChild(bgDot);
-  swatchRow.appendChild(goldDot);
-  tile.appendChild(swatchRow);
-
-  // Label
-  var lbl = document.createElement('div');
-  lbl.style.cssText = [
-    'font-family:' + T.fh + ';font-size:13px;',
-    'color:' + sw.accent + ';',
-    'text-align:center;letter-spacing:0.04em;',
-    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
-  ].join('');
-  lbl.textContent = themeEntry.label;
-  tile.appendChild(lbl);
-
-  tile.addEventListener('pointerup', function() {
-    _previewThemeId = themeEntry.id;
-    _applyThemeById(themeEntry.id);
-    // Re-render grid to update active border
-    renderThemePicker(body);
-  });
-
-  return tile;
-}
-
-function _applyThemeById(id) {
-  if (id === 'terminal-glow') {
-    resetTheme();
-    return;
-  }
-  var entry = THEMES.find(function(t) { return t.id === id; });
-  if (!entry || !entry.loader) return;
-  entry.loader().then(function(themeObj) {
-    resetTheme();
-    setTheme(themeObj);
-  });
 }
 
 // == TERMINAL: NETWORK =================================
