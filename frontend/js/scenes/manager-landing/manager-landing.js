@@ -1643,4 +1643,3 @@ SceneManager.register({
     _closeDayData = null;
   },
 });
-
