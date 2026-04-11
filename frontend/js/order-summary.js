@@ -94,10 +94,10 @@ function _build() {
 
   _summaryBox = document.createElement('div');
   _summaryBox.style.cssText = [
-    'flex:1;padding:4px 8px;',
+    'flex:1;padding:8px 10px;',
     'background:' + T.bgDark + ';',
   ].join('');
-  applyCardBevel(_summaryBox, T.numpadChassis, 3);
+  applyCardBevel(_summaryBox, T.numpadChassis, 5);
   _summaryBox.style.clipPath = chamfer();
   summaryRow.appendChild(_summaryBox);
 
@@ -115,10 +115,10 @@ function _build() {
   // ── Prices box ──
   _pricesBox = document.createElement('div');
   _pricesBox.style.cssText = [
-    'flex-shrink:0;padding:4px 8px;margin:0 6px 4px;',
+    'flex-shrink:0;padding:8px 10px;margin:0 6px 4px;',
     'background:' + T.bgDark + ';',
   ].join('');
-  applyCardBevel(_pricesBox, T.numpadChassis, 3);
+  applyCardBevel(_pricesBox, T.numpadChassis, 5);
   _pricesBox.style.clipPath = chamfer();
   el.appendChild(_pricesBox);
 }
@@ -130,8 +130,8 @@ function _build() {
 function _summaryRow(label, value, color, bold) {
   var row = document.createElement('div');
   row.style.cssText = [
-    'display:flex;justify-content:space-between;padding:1px 0;',
-    'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';',
+    'display:flex;justify-content:space-between;padding:2px 0;',
+    'font-family:' + T.fb + ';font-size:' + T.fsCon + ';',
     'color:' + (color || T.mint) + ';',
     bold ? 'font-weight:bold;' : '',
   ].join('');
@@ -182,7 +182,7 @@ function _renderSummary(params) {
   }
   _summaryBox.appendChild(_summaryRow('Tax:', '$' + (params.tax || 0).toFixed(2), T.mint));
   // Re-apply beveled border since innerHTML cleared the borders
-  applyCardBevel(_summaryBox, T.numpadChassis, 3);
+  applyCardBevel(_summaryBox, T.numpadChassis, 5);
   _summaryBox.style.clipPath = chamfer();
 }
 
@@ -202,7 +202,7 @@ function _renderPrices(params) {
   _pricesBox.appendChild(_remainRow);
 
   // Re-apply beveled border
-  applyCardBevel(_pricesBox, T.numpadChassis, 3);
+  applyCardBevel(_pricesBox, T.numpadChassis, 5);
   _pricesBox.style.clipPath = chamfer();
 }
 
