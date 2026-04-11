@@ -4,11 +4,11 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton } from '../../tokens.js';
-import { buildButton, showToast } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
-import { buildNumpad } from '../../numpad.js';
+import { T, chamfer, buildStyledButton } from '../tokens.js';
+import { buildButton, showToast } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
+import { buildNumpad } from '../numpad.js';
 
 // ── SVG Namespace ────────────────────────────────
 var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -56,11 +56,11 @@ var _drillEl = null;
 
 // ── Helpers ───────────────────────────────────────
 
-export function fmt(n) {
+function fmt(n) {
   return '$' + Math.abs(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-export function checkNum(order) {
+function checkNum(order) {
   return order.check_number || ('C-' + String(order.order_id).slice(0, 3).toUpperCase());
 }
 
@@ -99,7 +99,7 @@ function fmtHours() {
 // Matches manager landing (reporting.js) buildCard() pattern:
 // 5px bevel using T.numpadChassisL/D, 8px chamfer, no drop-shadow on cards
 
-export var CHROME = T.numpadChassis;
+var CHROME = T.numpadChassis;
 var BEVEL_LIGHT = T.numpadChassisL;
 var BEVEL_DARK = T.numpadChassisD;
 var OVERLAY_FILTER = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15))';
@@ -111,7 +111,7 @@ function applyCardStyle(el) {
     + 'clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);';
 }
 
-export function buildCardHeader(label) {
+function buildCardHeader(label) {
   var bar = document.createElement('div');
   bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
   var txt = document.createElement('div');
@@ -121,7 +121,7 @@ export function buildCardHeader(label) {
   return bar;
 }
 
-export function applyInterruptCardStyle(el) {
+function applyInterruptCardStyle(el) {
   // Matches manager landing tip-numpad frame: 7px bevel, 10px chamfer, drop-shadow
   el.style.cssText = 'background:' + T.bgDark + ';padding:24px 32px;text-align:center;max-width:420px;'
     + 'border-top:7px solid ' + BEVEL_LIGHT + ';border-left:7px solid ' + BEVEL_LIGHT + ';'
@@ -1838,7 +1838,7 @@ SceneManager.register({
 // Full-screen numpad for entering tip amount on a check
 // Frame color: gold (decision)
 
-export function buildNumpadInterrupt(container, params, titlePrefix) {
+function buildNumpadInterrupt(container, params, titlePrefix) {
   var card = document.createElement('div');
   applyInterruptCardStyle(card);
   card.style.maxWidth = '360px';

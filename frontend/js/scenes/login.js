@@ -4,10 +4,10 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton } from '../../tokens.js';
-import { buildNumpad } from '../../numpad.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
+import { T, buildStyledButton } from '../tokens.js';
+import { buildNumpad } from '../numpad.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
 
 var employees = [];
 var _numpadRef = null;

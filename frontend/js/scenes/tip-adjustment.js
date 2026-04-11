@@ -4,11 +4,11 @@
 //  Nice. Dependable. Yours.
 // =======================================================
 
-import { T, chamfer, buildStyledButton, bevelEdges } from '../../tokens.js';
-import { buildButton, showToast } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
-import { buildNumpad } from '../../numpad.js';
+import { T, chamfer, buildStyledButton, bevelEdges } from '../tokens.js';
+import { buildButton, showToast } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
+import { buildNumpad } from '../numpad.js';
 
 // == State =============================================
 var checks = [];

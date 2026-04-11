@@ -6,10 +6,11 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton, applySunkenStyle } from '../../tokens.js';
-import { buildGap, showToast } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
+import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
+import { buildButton, buildGap, showToast } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
+import { buildNumpad } from '../numpad.js';
 
 // ── Layout ────────────────────────────────────────
 var RECEIPT_W  = 280;
@@ -21,7 +22,7 @@ var ACTION_H   = 48;
 var BANNER_H   = 36;
 var BEVEL      = 4;
 var CHAM       = 8;
-export var RED        = '#ff3355';
+var RED        = '#ff3355';
 
 // ── Scene state ───────────────────────────────────
 var _state         = null;
@@ -38,7 +39,7 @@ var _pinUnlocked   = false;
 //  HELPERS
 // ─────────────────────────────────────────────────
 
-export function fmt(n) {
+function fmt(n) {
   return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
@@ -964,3 +965,114 @@ SceneManager.register({
   timeoutMs: 0,
 });
 
+// ═══════════════════════════════════════════════════
+//  INLINE INTERRUPT / OVERLAY SCENE REGISTRATIONS
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'closeday-zero-confirm',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:20px;min-width:280px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + RED + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// ZERO ALL TIPS //';
+    panel.appendChild(lbl);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+    msg.textContent = 'Set ' + (params.count || 0) + ' unadjusted tip(s) to $0.00?';
+    panel.appendChild(msg);
+
+    var confirmBtn = buildButton('CONFIRM', {
+      fill: T.darkBtn, color: RED, fontSize: '26px', height: 44,
+      onTap: function() { params.onConfirm(); },
+    });
+    confirmBtn.style.width = '240px';
+    panel.appendChild(confirmBtn);
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'closeday-manager-pin',
+  mount: function(container, params) {
+    container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+    var numpad = buildNumpad({
+      maxDigits: 4,
+      masked: true,
+      onSubmit: function(pin) {
+        fetch('/api/v1/auth/verify-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: pin }),
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.valid) {
+              params.onConfirm(data);
+            } else {
+              numpad.setError('Invalid PIN');
+            }
+          })
+          .catch(function() { numpad.setError('PIN check failed'); });
+      },
+      onCancel: function() { params.onCancel(); },
+    });
+    container.appendChild(numpad);
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'batch-settlement',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:300px;';
+
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// SUBMIT BATCH //';
+    panel.appendChild(lbl);
+
+    var info = document.createElement('div');
+    info.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+    info.textContent = (params.batchTransactions || 0) + ' transactions — ' + fmt(params.batchTotal || 0);
+    panel.appendChild(info);
+
+    var submitBtn = buildButton('SETTLE', {
+      fill: T.darkBtn, color: T.gold, fontSize: '26px', height: 44,
+      onTap: function() {
+        fetch('/api/v1/payments/batch-settle', { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function() {
+            if (params.onSettled) params.onSettled();
+            SceneManager.closeTransactional('batch-settlement');
+          })
+          .catch(function(err) {
+            console.error('[KINDpos] Batch settle failed:', err);
+            showToast('Batch settle failed');
+          });
+      },
+    });
+    submitBtn.style.width = '240px';
+    panel.appendChild(submitBtn);
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { SceneManager.closeTransactional('batch-settlement'); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});

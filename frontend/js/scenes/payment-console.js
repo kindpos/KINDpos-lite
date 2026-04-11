@@ -4,14 +4,12 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, applySunkenStyle, buildStyledButton } from '../../tokens.js';
-import { buildButton, showToast } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
-import { buildNumpad } from '../../numpad.js';
-import { OrderSummary } from '../../order-summary.js';
-import { showProcessingOverlay } from './pc-card-processing.js';
-import './split-select.js';
+import { T, chamfer, applySunkenStyle, buildStyledButton } from '../tokens.js';
+import { buildButton, showToast } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
+import { buildNumpad } from '../numpad.js';
+import { OrderSummary } from '../order-summary.js';
 
 var PAD     = T.scenePad;
 var GAP     = T.colGapSm;
@@ -34,6 +32,10 @@ var dotTimer          = null;
 // DOM refs
 var _modeButtons      = {};
 
+// Card processing overlay state
+var _procStatusEl     = null;
+var _procAnimTimer    = null;
+
 // Split tap handler (bound to event bus)
 function _onSplitTap() { showSplitPopup(); }
 
@@ -55,6 +57,9 @@ SceneManager.register({
     numpadRef         = null;
     dotTimer          = null;
     _modeButtons      = {};
+    _procStatusEl     = null;
+    _procAnimTimer    = null;
+
     setSceneName(params.checkId || 'ORDER');
     setHeaderBack({
       back: true,
@@ -79,6 +84,7 @@ SceneManager.register({
   unmount: function() {
     SceneManager.off('split:tap', _onSplitTap);
     if (dotTimer) { clearInterval(dotTimer); dotTimer = null; }
+    if (_procAnimTimer) { clearInterval(_procAnimTimer); _procAnimTimer = null; }
   },
 });
 
@@ -445,3 +451,225 @@ function showSplitPopup() {
   });
 }
 
+SceneManager.register({
+  name: 'split-select',
+
+  mount: function(container, params) {
+    params = params || {};
+    var remaining = params.remaining || 0;
+    var onConfirm = params.onConfirm || function() {};
+    var onCancel = params.onCancel || function() {};
+
+    container.style.cssText = [
+      'display:flex;flex-direction:column;align-items:center;gap:16px;',
+      'padding:28px 40px;',
+      'background:' + T.bgDark + ';',
+      'min-width:360px;',
+    ].join('');
+    applySunkenStyle(container);
+
+    // Title
+    var title = document.createElement('div');
+    title.style.cssText = [
+      'font-family:' + T.fh + ';font-size:' + T.fsBtnSm + ';',
+      'color:' + T.gold + ';letter-spacing:0.1em;',
+    ].join('');
+    title.textContent = 'SPLIT PAYMENT';
+    container.appendChild(title);
+
+    // Remaining display
+    var sub = document.createElement('div');
+    sub.style.cssText = [
+      'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';',
+      'color:' + T.mint + ';',
+    ].join('');
+    sub.textContent = 'Remaining: $' + remaining.toFixed(2);
+    container.appendChild(sub);
+
+    // Fraction buttons
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:12px;';
+
+    [2, 3, 4].forEach(function(divisor) {
+      var amt = Math.ceil(remaining / divisor * 100) / 100;
+      var btn = buildButton('1/' + divisor + '\n$' + amt.toFixed(2), {
+        fill: T.darkBtn, color: T.mint, fontSize: T.fsCon,
+        width: 100, height: 64,
+        onTap: function() { onConfirm(amt); },
+      });
+      btnRow.appendChild(btn);
+    });
+    container.appendChild(btnRow);
+
+    // Cancel
+    var cancelBtn = buildButton('Cancel', {
+      fill: T.darkBtn, color: T.vermillion, fontSize: T.fsCon,
+      width: 120, height: 40,
+      onTap: function() { onCancel(); },
+    });
+    container.appendChild(cancelBtn);
+  },
+
+  unmount: function() {},
+});
+
+
+// ═══════════════════════════════════════════════════
+//  CARD PROCESSING OVERLAY (Win98-style)
+// ═══════════════════════════════════════════════════
+
+function showProcessingOverlay(amount) {
+  SceneManager.openTransactional('pc-card-processing', { amount: amount });
+  return {
+    updateStatus: function(msg) { if (_procStatusEl) _procStatusEl.textContent = msg; },
+    dismiss: function() {
+      if (_procAnimTimer) clearInterval(_procAnimTimer);
+      _procAnimTimer = null;
+      _procStatusEl = null;
+      SceneManager.closeTransactional('pc-card-processing');
+    },
+  };
+}
+
+SceneManager.register({
+  name: 'pc-card-processing',
+
+  mount: function(container, params) {
+    params = params || {};
+    var amount = params.amount || 0;
+    var TOTAL_SEGS = 22;
+    var segments = [];
+    var segIdx = 0;
+    var msgIdx = 0;
+
+    var statusMessages = [
+      'Connecting to terminal...',
+      'Waiting for card...',
+      'Reading card data...',
+      'Contacting processor...',
+      'Awaiting authorization...',
+    ];
+
+    container.style.cssText = [
+      'width:100%;height:100%;',
+      'display:flex;align-items:center;justify-content:center;',
+    ].join('');
+
+    // Gold frame
+    var frame = document.createElement('div');
+    frame.style.cssText = [
+      'background:' + T.gold + ';padding:7px;',
+      'clip-path:' + chamfer(12) + ';',
+      'filter:drop-shadow(4px 6px 0px rgba(0,0,0,0.7));',
+    ].join('');
+
+    // Dialog body
+    var dialog = document.createElement('div');
+    dialog.style.cssText = [
+      'background:' + T.bg + ';width:420px;',
+      'border-top:2px solid ' + T.bgLight + ';',
+      'border-left:2px solid ' + T.bgLight + ';',
+      'border-bottom:2px solid ' + T.bgEdge + ';',
+      'border-right:2px solid ' + T.bgEdge + ';',
+      'font-family:' + T.fb + ';',
+    ].join('');
+
+    // Title bar
+    var titleBar = document.createElement('div');
+    titleBar.style.cssText = [
+      'background:linear-gradient(to right,' + T.bgDark + ',' + T.bg3 + ');',
+      'padding:5px 8px;display:flex;align-items:center;gap:8px;',
+    ].join('');
+
+    var icon = document.createElement('div');
+    icon.style.cssText = [
+      'width:24px;height:24px;background:' + T.gold + ';',
+      'display:flex;align-items:center;justify-content:center;',
+      'font-size:' + T.fsMed + ';font-weight:bold;color:' + T.bgDark + ';',
+      'clip-path:' + chamfer(3) + ';',
+    ].join('');
+    icon.textContent = '\u25C8';
+
+    var titleText = document.createElement('span');
+    titleText.style.cssText = [
+      'font-family:' + T.fb + ';font-size:' + T.fsMed + ';',
+      'color:' + T.mint + ';font-weight:bold;letter-spacing:0.05em;',
+    ].join('');
+    titleText.textContent = 'Card Payment \u2014 $' + amount.toFixed(2);
+
+    titleBar.appendChild(icon);
+    titleBar.appendChild(titleText);
+    dialog.appendChild(titleBar);
+
+    // Body
+    var body = document.createElement('div');
+    body.style.cssText = 'padding:16px 20px 14px;display:flex;flex-direction:column;gap:10px;';
+
+    _procStatusEl = document.createElement('div');
+    _procStatusEl.style.cssText = [
+      'font-family:' + T.fb + ';font-size:' + T.fsMed + ';',
+      'color:' + T.mint + ';min-height:24px;',
+    ].join('');
+    _procStatusEl.textContent = statusMessages[0];
+    body.appendChild(_procStatusEl);
+
+    // Progress bar
+    var progContainer = document.createElement('div');
+    progContainer.style.cssText = [
+      'border-top:2px solid ' + T.bgEdge + ';',
+      'border-left:2px solid ' + T.bgEdge + ';',
+      'border-bottom:2px solid ' + T.bgLight + ';',
+      'border-right:2px solid ' + T.bgLight + ';',
+      'height:26px;background:' + T.bgDark + ';',
+      'padding:3px;overflow:hidden;',
+    ].join('');
+    var progFill = document.createElement('div');
+    progFill.style.cssText = 'height:100%;display:flex;gap:2px;align-items:stretch;';
+
+    for (var i = 0; i < TOTAL_SEGS; i++) {
+      var seg = document.createElement('div');
+      seg.style.cssText = [
+        'width:14px;flex-shrink:0;',
+        'background:' + T.gold + ';opacity:0;transition:opacity 0.05s;',
+      ].join('');
+      progFill.appendChild(seg);
+      segments.push(seg);
+    }
+    progContainer.appendChild(progFill);
+    body.appendChild(progContainer);
+
+    var hint = document.createElement('div');
+    hint.style.cssText = [
+      'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';',
+      'color:' + T.mutedText + ';text-align:center;',
+    ].join('');
+    hint.textContent = 'Present card on terminal...';
+    body.appendChild(hint);
+
+    dialog.appendChild(body);
+    frame.appendChild(dialog);
+    container.appendChild(frame);
+
+    // Animate progress
+    _procAnimTimer = setInterval(function() {
+      if (segIdx < TOTAL_SEGS) {
+        segments[segIdx].style.opacity = '1';
+        segIdx++;
+      }
+      if (segIdx % 4 === 0 && msgIdx < statusMessages.length - 1) {
+        msgIdx++;
+        if (_procStatusEl) _procStatusEl.textContent = statusMessages[msgIdx];
+      }
+      if (segIdx >= TOTAL_SEGS) {
+        segIdx = 0;
+        segments.forEach(function(s) { s.style.opacity = '0'; });
+      }
+    }, 200);
+  },
+
+  unmount: function() {
+    if (_procAnimTimer) clearInterval(_procAnimTimer);
+    _procAnimTimer = null;
+    _procStatusEl = null;
+  },
+});

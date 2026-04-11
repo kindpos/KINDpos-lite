@@ -4,10 +4,10 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, chamfer, shadowColor } from '../../tokens.js';
-import { showToast } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
+import { T, buildStyledButton, chamfer, shadowColor } from '../tokens.js';
+import { showToast } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
 
 var API = '/api/v1';
 var _selectedRole = null;

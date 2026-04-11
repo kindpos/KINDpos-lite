@@ -4,10 +4,10 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton } from '../../tokens.js';
-import { buildButton, showToast } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
+import { T, chamfer, buildStyledButton } from '../tokens.js';
+import { buildButton, showToast } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
 
 var PAD   = 16;
 var GAP   = 12;

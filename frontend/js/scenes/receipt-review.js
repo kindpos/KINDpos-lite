@@ -4,10 +4,10 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, applySunkenStyle, buildStyledButton, shadowColor, bevelEdges } from '../../tokens.js';
-import { buildButton } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
+import { T, chamfer, applySunkenStyle, buildStyledButton, shadowColor, bevelEdges } from '../tokens.js';
+import { buildButton } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
 
 var PAD = T.scenePad;
 var GAP = T.colGap;

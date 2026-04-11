@@ -6,16 +6,16 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton } from '../../tokens.js';
-import { buildButton } from '../../components.js';
-import { SceneManager } from '../../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../../app.js';
-import { buildChartGrid } from '../../chart-helpers.js';
+import { T, buildStyledButton } from '../tokens.js';
+import { buildButton } from '../components.js';
+import { SceneManager } from '../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../app.js';
+import { buildChartGrid } from '../chart-helpers.js';
 import {
   fetchReportData, buildLeftCard, buildLeftCardButtons, buildRightCard, buildCardWrap,
   buildServerShiftPanels, buildServerHoursPanels,
   buildManagerSalesPanels, buildManagerLaborPanels,
-} from '../reporting/reporting.js';
+} from './reporting.js';
 
 var SCENE_PAD = 10;
 
