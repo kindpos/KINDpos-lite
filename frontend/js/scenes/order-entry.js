@@ -506,31 +506,13 @@ function buildMain(parentEl, params) {
   canvas.id = 'hex-canvas';
   canvas.style.cssText = [
     'flex:1;background:' + T.bg5 + ';',
-    'border:7px solid ' + T.mint + ';',
-    'margin-bottom:0;padding-bottom:' + OVERLAP + 'px;',
     'position:relative;overflow:hidden;',
   ].join('');
+  _applyCardBevel(canvas, 7);
   main.appendChild(canvas);
-
-  var bottom = document.createElement('div');
-  bottom.id = 'bottom-bar';
-  bottom.style.cssText = [
-    'display:grid;',
-    'grid-template-columns:1fr 1fr 1fr 1fr 1fr;',
-    'grid-template-rows:40px 40px;',
-    'gap:6px;padding:9px;padding-top:0;padding-bottom:10px;row-gap:6px;',
-    'position:relative;z-index:2;flex-shrink:0;',
-    'margin-top:-' + OVERLAP + 'px;',
-  ].join('');
-  _bottomBar = bottom;
 
   // Store refs
   _tabCanvas   = canvas;
-
-  // Build bottom bar initial state (idle)
-  rebuildBottomBar(params);
-
-  main.appendChild(bottom);
 
   requestAnimationFrame(function() {
     hexNav = new HexNav(canvas, {
