@@ -96,7 +96,7 @@ function fmtHours() {
 }
 
 // ── Card UI Builders ──────────────────────────────
-// Matches manager landing (reporting.js) buildCard() pattern:
+// Matches manager landing (dashboard-charts.js) buildCard() pattern:
 // 5px bevel using T.numpadChassisL/D, 8px chamfer, no drop-shadow on cards
 
 var CHROME = T.numpadChassis;

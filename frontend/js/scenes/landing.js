@@ -15,7 +15,7 @@ import {
   fetchReportData, buildLeftCard, buildLeftCardButtons, buildRightCard, buildCardWrap,
   buildServerShiftPanels, buildServerHoursPanels,
   buildManagerSalesPanels, buildManagerLaborPanels,
-} from './reporting.js';
+} from './dashboard-charts.js';
 
 var SCENE_PAD = 10;
 
