@@ -4,11 +4,11 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, applySunkenStyle } from '../tokens.js';
-import { buildButton } from '../components.js';
-import { SceneManager } from '../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../app.js';
-import { OrderSummary } from '../order-summary.js';
+import { T, chamfer, applySunkenStyle } from '../../tokens.js';
+import { buildButton } from '../../components.js';
+import { SceneManager } from '../../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../../app.js';
+import { OrderSummary } from '../../order-summary.js';
 
 var returned = false;
 var sceneEl  = null;

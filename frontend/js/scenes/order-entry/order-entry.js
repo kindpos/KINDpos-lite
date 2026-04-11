@@ -4,19 +4,19 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
-import { buildButton, showToast } from '../components.js';
-import { SceneManager } from '../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../app.js';
-import { OrderSummary } from '../order-summary.js';
-import { HexNav } from '../hex-nav.js';
-import { buildNumpad } from '../numpad.js';
-import { showKeyboard } from '../keyboard.js';
-import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
-import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
-import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
-import { ModifierPanel } from '../modifier-panel.js';
-import { getModifierConfig } from '../data/modifier-configs.js';
+import { T, buildStyledButton, applySunkenStyle } from '../../tokens.js';
+import { buildButton, showToast } from '../../components.js';
+import { SceneManager } from '../../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../../app.js';
+import { OrderSummary } from '../../order-summary.js';
+import { HexNav } from '../../hex-nav.js';
+import { buildNumpad } from '../../numpad.js';
+import { showKeyboard } from '../../keyboard.js';
+import { showHalfPlacementOverlay } from '../../half-placement-overlay.js';
+import { showPizzaBuilderOverlay } from '../../pizza-builder-overlay.js';
+import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../../data/universal-modifiers.js';
+import { ModifierPanel } from '../../modifier-panel.js';
+import { getModifierConfig } from '../../data/modifier-configs.js';
 
 // ── Beveled depth card helpers (match clock-in card pattern) ──
 function _lightenHex(hex, pct) {
@@ -39,7 +39,7 @@ function _darkenHex(hex, pct) {
 }
 var _bevelL = _lightenHex(T.numpadChassis, 0.2);
 var _bevelD = _darkenHex(T.numpadChassis, 0.3);
-function _applyCardBevel(el, width) {
+export function _applyCardBevel(el, width) {
   var w = width || 4;
   el.style.borderTop    = w + 'px solid ' + _bevelL;
   el.style.borderLeft   = w + 'px solid ' + _bevelL;
@@ -270,7 +270,7 @@ var ticket       = [];    // [{ id, name, unitPrice, mods:[{name,price,charged}]
 var ticketSeq    = 0;     // monotonic ID counter
 var sceneParams  = {};
 var prefixCard   = null;  // DOM ref for show/hide
-var savedTabs    = [];    // [{ id, checkNum, label, ticket }] — in-memory for pilot
+export var savedTabs    = [];    // [{ id, checkNum, label, ticket }] — in-memory for pilot
 var saveSeq      = 0;     // saved tab ID counter
 var saveBtn      = null;  // DOM ref for SAVE button state
 var customerName = '';    // current tab's customer name (from save/recall)
@@ -298,7 +298,7 @@ var modifierSession = {
 };
 
 // ── Void reasons ─────────────────────────────────
-var VOID_REASONS = ['Mistake', 'Kitchen Error', 'Customer Request', 'Manager Comp', 'Other'];
+export var VOID_REASONS = ['Mistake', 'Kitchen Error', 'Customer Request', 'Manager Comp', 'Other'];
 
 // ── Prefix definitions ────────────────────────────
 var PREFIXES = [
@@ -1971,7 +1971,7 @@ function showVoidReasons(targets, isFullVoid, approvedBy) {
 }
 
 // ── DISCOUNT OVERLAY ─────────────────────────────
-var DISCOUNT_OPTIONS = ['10%', '15%', '20%', '25%', '50%', 'Comp (100%)'];
+export var DISCOUNT_OPTIONS = ['10%', '15%', '20%', '25%', '50%', 'Comp (100%)'];
 
 function handleDiscount() {
   if (ticket.length === 0) return;
@@ -2031,7 +2031,7 @@ function showDiscountOptions(targets, approvedBy, isCheckLevel) {
 }
 
 // ── PIN OVERLAY ───────────────────────────────────
-function buildPinOverlay(el, cb) {
+export function buildPinOverlay(el, cb) {
   // Child panel — never override el positioning styles
   var panel = document.createElement('div');
   panel.style.cssText = [
@@ -2299,7 +2299,7 @@ function handleRecall() {
   SceneManager.openTransactional('recall');
 }
 
-function recallTabInterrupt(tab) {
+export function recallTabInterrupt(tab) {
   var doLoad = function() {
     ticket = deepCopyTicket(tab.ticket);
     savedTabs = savedTabs.filter(function(t) { return t.id !== tab.id; });

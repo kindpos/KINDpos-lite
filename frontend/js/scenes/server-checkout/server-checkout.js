@@ -5,11 +5,11 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
-import { buildButton, buildGap, showToast } from '../components.js';
-import { SceneManager } from '../scene-manager.js';
-import { setSceneName, setHeaderBack } from '../app.js';
-import { buildNumpad } from '../numpad.js';
+import { T, chamfer, buildStyledButton, applySunkenStyle } from '../../tokens.js';
+import { buildButton, buildGap, showToast } from '../../components.js';
+import { SceneManager } from '../../scene-manager.js';
+import { setSceneName, setHeaderBack } from '../../app.js';
+import { buildNumpad } from '../../numpad.js';
 
 // ── Layout ────────────────────────────────────────
 var RECEIPT_W   = 280;
