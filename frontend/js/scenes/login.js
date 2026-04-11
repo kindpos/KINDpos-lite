@@ -54,17 +54,11 @@ defineScene({
     var SIDE_BTN_H = '120px';
     var SIDE_BTN_FS = '26px';
 
-    // ── LEFT COLUMN — stacked buttons ──────
+    // ── LEFT COLUMN — Clock In/Out above Config ─────
     var leftCol = document.createElement('div');
     leftCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
 
-    var configPair = buildStyledButton({ label: 'CONFIG', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
-    configPair.wrap.style.width = SIDE_BTN_W;
-    configPair.wrap.style.height = SIDE_BTN_H;
-    configPair.inner.style.fontSize = SIDE_BTN_FS;
-    leftCol.appendChild(configPair.wrap);
-
-    var quickOrderPair = buildStyledButton({ label: 'QUICK\nORDER', variant: 'mint', size: 'lg', onClick: function() {
+    var clockPair = buildStyledButton({ label: 'CLOCK\nIN/OUT', variant: 'gold', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
         if (state.numpadRef) state.numpadRef.setError('Enter PIN');
@@ -78,12 +72,19 @@ defineScene({
       var empRoles = emp.roles || [emp.role || 'server'];
       var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
       SceneManager.closeGate('login');
-      SceneManager.mountWorking('order-entry', { emp: empData });
+      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+      SceneManager.openTransactional('clock-in', { emp: empData });
     } });
-    quickOrderPair.wrap.style.width = SIDE_BTN_W;
-    quickOrderPair.wrap.style.height = SIDE_BTN_H;
-    quickOrderPair.inner.style.fontSize = SIDE_BTN_FS;
-    leftCol.appendChild(quickOrderPair.wrap);
+    clockPair.wrap.style.width = SIDE_BTN_W;
+    clockPair.wrap.style.height = SIDE_BTN_H;
+    clockPair.inner.style.fontSize = SIDE_BTN_FS;
+    leftCol.appendChild(clockPair.wrap);
+
+    var configPair = buildStyledButton({ label: 'CONFIG', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
+    configPair.wrap.style.width = SIDE_BTN_W;
+    configPair.wrap.style.height = SIDE_BTN_H;
+    configPair.inner.style.fontSize = SIDE_BTN_FS;
+    leftCol.appendChild(configPair.wrap);
 
     container.appendChild(leftCol);
 
@@ -112,34 +113,11 @@ defineScene({
     });
     container.appendChild(state.numpadRef);
 
-    // ── RIGHT COLUMN — stacked buttons ─────
+    // ── RIGHT COLUMN — Quick Order ─────────
     var rightCol = document.createElement('div');
     rightCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
 
-    var clockInPair = buildStyledButton({ label: 'CLOCK\nIN', variant: 'gold', size: 'lg', onClick: function() {
-      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
-      if (currentPin.length > 0) {
-        var emp = state.employees.find(function(e) { return e.pin === currentPin; });
-        if (!emp) {
-          if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
-          return;
-        }
-        var empRoles = emp.roles || [emp.role || 'server'];
-        var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-        SceneManager.closeGate('login');
-        SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-        SceneManager.openTransactional('clock-in', { emp: empData });
-        return;
-      }
-      state.clockInMode = !state.clockInMode;
-      if (state.clockInMode && state.numpadRef) state.numpadRef.clear();
-    } });
-    clockInPair.wrap.style.width = SIDE_BTN_W;
-    clockInPair.wrap.style.height = SIDE_BTN_H;
-    clockInPair.inner.style.fontSize = SIDE_BTN_FS;
-    rightCol.appendChild(clockInPair.wrap);
-
-    var clockOutPair = buildStyledButton({ label: 'CLOCK\nOUT', variant: 'vermillion', size: 'lg', onClick: function() {
+    var quickOrderPair = buildStyledButton({ label: 'QUICK\nORDER', variant: 'mint', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
         if (state.numpadRef) state.numpadRef.setError('Enter PIN');
@@ -153,13 +131,12 @@ defineScene({
       var empRoles = emp.roles || [emp.role || 'server'];
       var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
       SceneManager.closeGate('login');
-      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-      SceneManager.openTransactional('clock-in', { emp: empData });
+      SceneManager.mountWorking('order-entry', { emp: empData });
     } });
-    clockOutPair.wrap.style.width = SIDE_BTN_W;
-    clockOutPair.wrap.style.height = SIDE_BTN_H;
-    clockOutPair.inner.style.fontSize = SIDE_BTN_FS;
-    rightCol.appendChild(clockOutPair.wrap);
+    quickOrderPair.wrap.style.width = SIDE_BTN_W;
+    quickOrderPair.wrap.style.height = SIDE_BTN_H;
+    quickOrderPair.inner.style.fontSize = SIDE_BTN_FS;
+    rightCol.appendChild(quickOrderPair.wrap);
 
     container.appendChild(rightCol);
 
