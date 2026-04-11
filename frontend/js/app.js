@@ -22,7 +22,7 @@ import './scenes/close-day.js?v=2';
 import './scenes/sales-summary.js?v=2';
 import './scenes/landing.js?v=2';
 import './scenes/server-landing.js?v=2';
-import './scenes/clock-in.js?v=2';
+import './scenes/clock-in.js?v=3';  // SM2 format
 // manager-landing now provided by reporting.js (registered as 'manager-landing')
 
 // ── Header state ──────────────────────────────────
