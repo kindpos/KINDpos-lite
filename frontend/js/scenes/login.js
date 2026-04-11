@@ -118,15 +118,23 @@ defineScene({
       var empRoles = emp.roles || [emp.role || 'server'];
       var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
 
-      if (state.clockInMode) {
-        SceneManager.closeGate('login');
-        SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-        SceneManager.openTransactional('clock-in', { emp: empData });
-      } else {
-        state.lastValidEmp = empData;
-        SceneManager.closeGate('login');
-        SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-      }
+      SceneManager.closeGate('login');
+      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+
+      // Always check clock-in status — force clock-in overlay if not clocked in
+      fetch('/api/v1/servers/clocked-in')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var staff = data.staff || [];
+          var isClockedIn = staff.some(function(s) { return s.employee_id === empData.id; });
+          if (!isClockedIn) {
+            SceneManager.openTransactional('clock-in', { emp: empData });
+          }
+        })
+        .catch(function() {
+          // On network error, open clock-in to be safe
+          SceneManager.openTransactional('clock-in', { emp: empData });
+        });
     }
   },
 
