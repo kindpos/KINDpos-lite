@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Terminal — Login Scene
+//  KINDpos Terminal — Login Scene (SM2)
 //  PIN entry → Gate layer → closes gate on success
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
@@ -7,26 +7,45 @@
 import { T, buildStyledButton } from '../tokens.js';
 import { buildNumpad } from '../numpad.js';
 import { SceneManager } from '../scene-manager.js';
+import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
-var employees = [];
-var _numpadRef = null;
-var _clockInMode = false;
-var _lastValidEmp = null;
+// ── Constants (immutable — no state reset needed) ──
+var ROLE_LANDING_MAP = [
+  { role: 'manager',    scene: 'manager-landing' },
+  { role: 'bartender',  scene: 'server-landing'  },
+  { role: 'host',       scene: 'server-landing'  },
+  { role: 'server',     scene: 'server-landing'  },
+];
 
-SceneManager.register({
+function landingScene(empRoles) {
+  for (var i = 0; i < ROLE_LANDING_MAP.length; i++) {
+    if (empRoles.indexOf(ROLE_LANDING_MAP[i].role) !== -1) {
+      return ROLE_LANDING_MAP[i].scene;
+    }
+  }
+  return 'server-landing';
+}
+
+// ═══════════════════════════════════════════════════
+
+defineScene({
   name: 'login',
 
-  mount: function(container, params) {
+  state: {
+    employees: [],
+    numpadRef: null,
+    clockInMode: false,
+    lastValidEmp: null,
+  },
+
+  render: function(container, params, state) {
     setSceneName(null);
     setHeaderBack();
-    _numpadRef = null;
-    _clockInMode = false;
-    _lastValidEmp = null;
 
     fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
-      employees = data.servers || [];
-    }).catch(function() { employees = []; });
+      state.employees = data.servers || [];
+    }).catch(function() { state.employees = []; });
 
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:space-evenly;position:relative;background:' + T.bg + ';';
 
@@ -38,7 +57,7 @@ SceneManager.register({
     // CENTER — numpad
     var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
       ? window.KINDpos.maskPinDigits : true;
-    _numpadRef = buildNumpad({
+    state.numpadRef = buildNumpad({
       maxDigits: 6,
       masked: maskSetting,
       displayH: 60,
@@ -58,30 +77,26 @@ SceneManager.register({
       digitFont: T.fhr,
       onSubmit: function(pin) { handlePinSubmit(pin); },
     });
-    container.appendChild(_numpadRef);
+    container.appendChild(state.numpadRef);
 
     // RIGHT — CLOCK IN button
     var clockInPair = buildStyledButton({ label: 'CLOCK IN', variant: 'dark', size: 'md', onClick: function() {
-      // If PIN already typed in the numpad, validate and clock in directly
-      var currentPin = _numpadRef ? _numpadRef.getPin() : '';
+      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length > 0) {
-        var emp = employees.find(function(e) { return e.pin === currentPin; });
+        var emp = state.employees.find(function(e) { return e.pin === currentPin; });
         if (!emp) {
-          if (_numpadRef) _numpadRef.setError('Invalid PIN');
+          if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
           return;
         }
         var empRoles = emp.roles || [emp.role || 'server'];
         var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-        _clockInMode = false;
-        _lastValidEmp = null;
         SceneManager.closeGate('login');
         SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
         SceneManager.openTransactional('clock-in', { emp: empData });
         return;
       }
-      // No PIN yet — toggle clock-in mode so next >>> submit routes to clock-in
-      _clockInMode = !_clockInMode;
-      if (_clockInMode && _numpadRef) _numpadRef.clear();
+      state.clockInMode = !state.clockInMode;
+      if (state.clockInMode && state.numpadRef) state.numpadRef.clear();
     } });
     clockInPair.wrap.style.marginTop = '76px';
     container.appendChild(clockInPair.wrap);
@@ -91,51 +106,29 @@ SceneManager.register({
     version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;right:12px;';
     version.textContent = 'KINDpos/lite_Vz1.2';
     container.appendChild(version);
-  },
 
-  unmount: function() {
-    _numpadRef = null;
-  },
-});
+    // ── PIN submit handler (closes over state) ──
+    function handlePinSubmit(pin) {
+      var emp = state.employees.find(function(e) { return e.pin === pin; });
+      if (!emp) {
+        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
+        return;
+      }
 
-// Role → landing scene mapping. Checked in priority order.
-var ROLE_LANDING_MAP = [
-  { role: 'manager',    scene: 'manager-landing' },
-  { role: 'bartender',  scene: 'server-landing'  },
-  { role: 'host',       scene: 'server-landing'  },
-  { role: 'server',     scene: 'server-landing'  },
-];
+      var empRoles = emp.roles || [emp.role || 'server'];
+      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
 
-function landingScene(empRoles) {
-  for (var i = 0; i < ROLE_LANDING_MAP.length; i++) {
-    if (empRoles.indexOf(ROLE_LANDING_MAP[i].role) !== -1) {
-      return ROLE_LANDING_MAP[i].scene;
+      if (state.clockInMode) {
+        SceneManager.closeGate('login');
+        SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+        SceneManager.openTransactional('clock-in', { emp: empData });
+      } else {
+        state.lastValidEmp = empData;
+        SceneManager.closeGate('login');
+        SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+      }
     }
-  }
-  return 'server-landing'; // default fallback
-}
+  },
 
-function handlePinSubmit(pin) {
-  var emp = employees.find(function(e) { return e.pin === pin; });
-  if (!emp) {
-    if (_numpadRef) _numpadRef.setError('Invalid PIN');
-    return;
-  }
-
-  var empRoles = emp.roles || [emp.role || 'server'];
-  var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-
-  if (_clockInMode) {
-    // Clock-in mode active — go straight to clock-in
-    _clockInMode = false;
-    _lastValidEmp = null;
-    SceneManager.closeGate('login');
-    SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-    SceneManager.openTransactional('clock-in', { emp: empData });
-  } else {
-    // Normal flow — store emp so CLOCK IN button can use it after
-    _lastValidEmp = empData;
-    SceneManager.closeGate('login');
-    SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-  }
-}
+  // No unmount needed — state auto-resets via SM2
+});

@@ -10,7 +10,7 @@ import { showToast } from './components.js';
 import { OrderSummary } from './order-summary.js';
 
 // Import scenes (self-registering)
-import './scenes/login.js?v=2';
+import './scenes/login.js?v=3';  // SM2 format
 import './scenes/settings.js?v=8';
 import './scenes/order-entry.js?v=7';
 import './scenes/payment-console.js?v=2';
