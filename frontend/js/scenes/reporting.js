@@ -184,6 +184,26 @@ function getGate() {
 function refreshCloseDay() { if (closeDayEl) { closeDayEl.innerHTML = ''; buildCloseDayBody(closeDayEl); } }
 function refreshAllChecks() { if (allChecksEl) { allChecksEl.innerHTML = ''; buildAllChecksBody(allChecksEl); } }
 
+// ── Line Series Helper ────────────────────────────
+
+function drawLineSeries(svg, data, x0, W, bot, H, max, color, dashed, ptSize) {
+  var n = data.length;
+  var step = W / (n - 1);
+  function tx(i) { return x0 + i * step; }
+  function ty(v) { return bot - (v / max) * H; }
+
+  var pts = [];
+  for (var i = 0; i < n; i++) pts.push(tx(i).toFixed(1) + ',' + ty(data[i]).toFixed(1));
+  var lineAttrs = { points: pts.join(' '), fill: 'none', stroke: color, 'stroke-width': dashed ? '1.5' : '2' };
+  if (dashed) lineAttrs['stroke-dasharray'] = '5,3';
+  // Glow layer for solid lines
+  if (!dashed) svg.appendChild(mk('polyline', { points: pts.join(' '), fill: 'none', stroke: color, 'stroke-width': '4', 'stroke-opacity': '0.3' }));
+  svg.appendChild(mk('polyline', lineAttrs));
+  // Square data points
+  var half = (ptSize || 4) / 2;
+  for (var j = 0; j < n; j++) svg.appendChild(mk('rect', { x: tx(j) - half, y: ty(data[j]) - half, width: ptSize || 4, height: ptSize || 4, fill: color }));
+}
+
 // ── Overlay System ─────────────────────────────────
 
 var _overlayPanel = null;
