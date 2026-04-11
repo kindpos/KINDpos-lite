@@ -3,7 +3,8 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton } from './tokens.js';
+import { T, buildStyledButton, chamfer, shadowColor } from './tokens.js';
+import { lightenHex, darkenHex, hexToRgba } from './theme-manager.js';
 
 export function buildButton(label, opts) {
   var o = opts || {};
@@ -63,4 +64,82 @@ export function buildGap(px) {
   gap.style.height = px + 'px';
   gap.style.flexShrink = '0';
   return gap;
+}
+
+// ═══════════════════════════════════════════════════
+//  Role Button — selectable role chip with glow
+//  Used by: clock-in, settings
+// ═══════════════════════════════════════════════════
+
+export function buildRoleButton(roleName, roleColor, onSelect) {
+  var borderW = 10;
+  var glowDefault = hexToRgba(roleColor, 0.5);
+  var baseShadow = shadowColor(T.bg);
+
+  var wrap = document.createElement('div');
+  wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 8px ' + glowDefault + ')';
+  wrap.style.transition = 'transform 50ms, filter 50ms';
+  wrap.style.cursor = 'pointer';
+  wrap.style.userSelect = 'none';
+  wrap.style.webkitUserSelect = 'none';
+  wrap.style.touchAction = 'manipulation';
+
+  var inner = document.createElement('div');
+  inner.style.background = T.bg;
+  inner.style.border = borderW + 'px solid ' + roleColor;
+  inner.style.clipPath = chamfer();
+  inner.style.width = '100%';
+  inner.style.height = '100%';
+  inner.style.display = 'flex';
+  inner.style.alignItems = 'center';
+  inner.style.justifyContent = 'center';
+  inner.style.boxSizing = 'border-box';
+  inner.style.padding = '8px 16px';
+  inner.style.fontFamily = T.fhr;
+  inner.style.fontSize = '40px';
+  inner.style.color = T.textPrimary;
+  inner.style.textTransform = 'uppercase';
+  inner.style.letterSpacing = '3px';
+  inner.textContent = roleName.toUpperCase();
+
+  wrap.appendChild(inner);
+  wrap._roleName = roleName;
+  wrap._selected = false;
+
+  function _applyDefault() {
+    inner.style.background = T.bg;
+    inner.style.color = T.textPrimary;
+    inner.style.border = borderW + 'px solid ' + roleColor;
+    wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 8px ' + glowDefault + ')';
+    wrap.style.transform = 'translate(0,0)';
+  }
+
+  function _applySelected() {
+    var glowFull = hexToRgba(roleColor, 1.0);
+    inner.style.background = roleColor;
+    inner.style.color = T.bgDark;
+    inner.style.border = borderW + 'px solid ' + lightenHex(roleColor, 0.3);
+    wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 12px ' + glowFull + ')';
+    wrap.style.transform = 'translate(0,0)';
+  }
+
+  wrap._resetVisual = function() {
+    if (wrap._selected) _applySelected();
+    else _applyDefault();
+  };
+
+  wrap.addEventListener('pointerdown', function() {
+    wrap.style.filter = 'drop-shadow(0px 0px 0px transparent)';
+    wrap.style.transform = 'translate(' + T.shadowX + 'px, ' + T.shadowY + 'px)';
+  });
+
+  wrap.addEventListener('pointerup', function() {
+    onSelect(roleName);
+  });
+
+  wrap.addEventListener('pointerleave', function() {
+    wrap._resetVisual();
+  });
+
+  return wrap;
 }

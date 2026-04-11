@@ -4,8 +4,9 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, chamfer, shadowColor } from '../tokens.js';
-import { showToast } from '../components.js';
+import { T, buildStyledButton } from '../tokens.js';
+import { showToast, buildRoleButton } from '../components.js';
+import { buildCard } from '../theme-manager.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
@@ -36,108 +37,6 @@ function _payPeriodRange() {
   return fmt(start) + ' \u2013 ' + fmt(end);
 }
 
-function _hexToRgba(hex, alpha) {
-  var r = parseInt(hex.slice(1, 3), 16);
-  var g = parseInt(hex.slice(3, 5), 16);
-  var b = parseInt(hex.slice(5, 7), 16);
-  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-}
-
-function _darkenHex(hex, pct) {
-  var r = parseInt(hex.slice(1, 3), 16);
-  var g = parseInt(hex.slice(3, 5), 16);
-  var b = parseInt(hex.slice(5, 7), 16);
-  var f = 1 - pct;
-  return '#' + [Math.round(r * f), Math.round(g * f), Math.round(b * f)]
-    .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
-}
-
-function _lightenHex(hex, pct) {
-  var r = parseInt(hex.slice(1, 3), 16);
-  var g = parseInt(hex.slice(3, 5), 16);
-  var b = parseInt(hex.slice(5, 7), 16);
-  return '#' + [
-    Math.min(255, Math.round(r + (255 - r) * pct)),
-    Math.min(255, Math.round(g + (255 - g) * pct)),
-    Math.min(255, Math.round(b + (255 - b) * pct)),
-  ].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
-}
-
-// ── Role Button Builder ─────────────────────────
-
-function _buildRoleButton(roleName, roleColor, onSelect) {
-  var borderW = 10;
-  var glowDefault = _hexToRgba(roleColor, 0.5);
-  var baseShadow = shadowColor(T.bg);
-
-  var wrap = document.createElement('div');
-  wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 8px ' + glowDefault + ')';
-  wrap.style.transition = 'transform 50ms, filter 50ms';
-  wrap.style.cursor = 'pointer';
-  wrap.style.userSelect = 'none';
-  wrap.style.webkitUserSelect = 'none';
-  wrap.style.touchAction = 'manipulation';
-
-  var inner = document.createElement('div');
-  inner.style.background = T.bg;
-  inner.style.border = borderW + 'px solid ' + roleColor;
-  inner.style.clipPath = chamfer();
-  inner.style.width = '100%';
-  inner.style.height = '100%';
-  inner.style.display = 'flex';
-  inner.style.alignItems = 'center';
-  inner.style.justifyContent = 'center';
-  inner.style.boxSizing = 'border-box';
-  inner.style.padding = '8px 16px';
-  inner.style.fontFamily = T.fhr;
-  inner.style.fontSize = '40px';
-  inner.style.color = T.textPrimary;
-  inner.style.textTransform = 'uppercase';
-  inner.style.letterSpacing = '3px';
-  inner.textContent = roleName.toUpperCase();
-
-  wrap.appendChild(inner);
-  wrap._roleName = roleName;
-  wrap._selected = false;
-
-  function _applyDefault() {
-    inner.style.background = T.bg;
-    inner.style.color = T.textPrimary;
-    inner.style.border = borderW + 'px solid ' + roleColor;
-    wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 8px ' + glowDefault + ')';
-    wrap.style.transform = 'translate(0,0)';
-  }
-
-  function _applySelected() {
-    var glowFull = _hexToRgba(roleColor, 1.0);
-    inner.style.background = roleColor;
-    inner.style.color = T.bgDark;
-    inner.style.border = borderW + 'px solid ' + _lightenHex(roleColor, 0.3);
-    wrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px ' + baseShadow + ') drop-shadow(0 0 12px ' + glowFull + ')';
-    wrap.style.transform = 'translate(0,0)';
-  }
-
-  wrap._resetVisual = function() {
-    if (wrap._selected) _applySelected();
-    else _applyDefault();
-  };
-
-  wrap.addEventListener('pointerdown', function() {
-    wrap.style.filter = 'drop-shadow(0px 0px 0px transparent)';
-    wrap.style.transform = 'translate(' + T.shadowX + 'px, ' + T.shadowY + 'px)';
-  });
-
-  wrap.addEventListener('pointerup', function() {
-    onSelect(roleName);
-  });
-
-  wrap.addEventListener('pointerleave', function() {
-    wrap._resetVisual();
-  });
-
-  return wrap;
-}
-
 // ═══════════════════════════════════════════════════
 //  SCENE REGISTRATION
 // ═══════════════════════════════════════════════════
@@ -158,25 +57,13 @@ SceneManager.register({
 
     el.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:' + T.bg + ';';
 
-    // ── Main Panel ──────────────────────────
-    var panelWrap = document.createElement('div');
-    panelWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(135,247,156,0.15))';
-
-    var panel = document.createElement('div');
-    panel.style.cssText = [
-      'width:960px;height:500px;',
-      'background:' + T.bg + ';',
-      'border-top:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
-      'border-left:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
-      'border-bottom:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'border-right:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'display:flex;flex-direction:column;',
-      'box-sizing:border-box;padding:20px;',
-      'position:relative;',
-    ].join('');
-    panel.style.clipPath = chamfer(10);
-    panelWrap.appendChild(panel);
-    el.appendChild(panelWrap);
+    // ── Main Panel ──────────────────────��───
+    var mainCard = buildCard({ width: '960px', height: '500px' });
+    mainCard.card.style.display = 'flex';
+    mainCard.card.style.flexDirection = 'column';
+    mainCard.card.style.position = 'relative';
+    var panel = mainCard.card;
+    el.appendChild(mainCard.wrap);
 
     // ── TOP ROW ─────────────────────────────
     var topRow = document.createElement('div');
@@ -200,20 +87,12 @@ SceneManager.register({
     topRow.appendChild(greetWrap);
 
     // Right: Pay Period Card
-    var payWrap = document.createElement('div');
-    payWrap.style.filter = 'drop-shadow(' + T.shadowX + 'px ' + T.shadowY + 'px 0px rgba(0,0,0,0.5))';
-
-    var payCard = document.createElement('div');
-    payCard.style.cssText = [
-      'background:' + T.bg + ';',
-      'border-top:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
-      'border-left:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
-      'border-bottom:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'border-right:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'padding:20px 32px;',
-      'display:flex;flex-direction:column;gap:12px;',
-    ].join('');
-    payCard.style.clipPath = chamfer(8);
+    var payPair = buildCard({ chamferSize: 8, padding: '20px 32px', glow: false });
+    var payWrap = payPair.wrap;
+    var payCard = payPair.card;
+    payCard.style.display = 'flex';
+    payCard.style.flexDirection = 'column';
+    payCard.style.gap = '12px';
 
     var payLine = document.createElement('div');
     payLine.style.cssText = 'font-family:' + T.fb + ';font-size:32px;';
@@ -239,7 +118,6 @@ SceneManager.register({
     hoursLine.appendChild(hoursValue);
     payCard.appendChild(hoursLine);
 
-    payWrap.appendChild(payCard);
     topRow.appendChild(payWrap);
 
     // ── MIDDLE — Role Buttons ───────────────
@@ -253,7 +131,7 @@ SceneManager.register({
 
     roles.forEach(function(role, i) {
       var roleColor = T.roles[role] || T.mint;
-      var btn = _buildRoleButton(role, roleColor, function(selectedRole) {
+      var btn = buildRoleButton(role, roleColor, function(selectedRole) {
         _selectedRole = selectedRole;
         roleBtns.forEach(function(rb) {
           rb._selected = (rb._roleName === selectedRole);
