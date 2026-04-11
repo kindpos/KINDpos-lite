@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Terminal — Clock-In Scene
+//  KINDpos Terminal — Clock-In Scene (SM2)
 //  Transactional overlay: staff role selection + clock-in
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
@@ -8,12 +8,12 @@ import { T, buildStyledButton } from '../tokens.js';
 import { showToast, buildRoleButton } from '../components.js';
 import { buildCard } from '../theme-manager.js';
 import { SceneManager } from '../scene-manager.js';
+import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var API = '/api/v1';
-var _selectedRole = null;
 
-// ── Helpers ──────────────────────────────────────
+// ── Helpers (pure — no state dependency) ─────────
 
 function _greeting() {
   var h = new Date().getHours();
@@ -38,16 +38,17 @@ function _payPeriodRange() {
 }
 
 // ═══════════════════════════════════════════════════
-//  SCENE REGISTRATION
-// ═══════════════════════════════════════════════════
 
-SceneManager.register({
+defineScene({
   name: 'clock-in',
 
-  mount: function(el, params) {
+  state: {
+    selectedRole: null,
+  },
+
+  render: function(el, params, state) {
     params = params || {};
     var emp = params.emp || {};
-    _selectedRole = null;
 
     setSceneName('Clock In');
     setHeaderBack({
@@ -57,7 +58,7 @@ SceneManager.register({
 
     el.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:' + T.bg + ';';
 
-    // ── Main Panel ──────────────────────��───
+    // ── Main Panel ──────────────────────────
     var mainCard = buildCard({ width: '960px', height: '500px' });
     mainCard.card.style.display = 'flex';
     mainCard.card.style.flexDirection = 'column';
@@ -132,7 +133,7 @@ SceneManager.register({
     roles.forEach(function(role, i) {
       var roleColor = T.roles[role] || T.mint;
       var btn = buildRoleButton(role, roleColor, function(selectedRole) {
-        _selectedRole = selectedRole;
+        state.selectedRole = selectedRole;
         roleBtns.forEach(function(rb) {
           rb._selected = (rb._roleName === selectedRole);
           rb._resetVisual();
@@ -160,12 +161,11 @@ SceneManager.register({
     var clockBtn = clockPair.wrap;
 
     function _updateClockInBtn() {
-      clockBtn.setDisabled(!_selectedRole);
+      clockBtn.setDisabled(!state.selectedRole);
     }
 
-    // Clock-in action
     clockBtn.addEventListener('pointerup', function() {
-      if (!_selectedRole) return;
+      if (!state.selectedRole) return;
 
       clockBtn.setDisabled(true);
 
@@ -183,7 +183,7 @@ SceneManager.register({
         return r.json();
       })
       .then(function() {
-        showToast(emp.name + ' clocked in as ' + _selectedRole.toUpperCase(), { bg: T.goGreen, duration: 3000 });
+        showToast(emp.name + ' clocked in as ' + state.selectedRole.toUpperCase(), { bg: T.goGreen, duration: 3000 });
         SceneManager.closeTransactional('clock-in');
         SceneManager.openGate('login');
       })
@@ -209,10 +209,7 @@ SceneManager.register({
       .catch(function() {
         hoursValue.textContent = '0.00';
       });
-
   },
 
-  unmount: function() {
-    _selectedRole = null;
-  },
+  // No unmount needed — state auto-resets via SM2
 });
