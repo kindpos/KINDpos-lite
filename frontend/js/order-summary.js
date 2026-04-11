@@ -4,9 +4,10 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, applySunkenStyle } from './tokens.js';
+import { T, applySunkenStyle, chamfer } from './tokens.js';
 import { buildButton } from './components.js';
 import { SceneManager } from './scene-manager.js';
+import { applyCardBevel } from './theme-manager.js';
 
 var _el = null;         // #order-summary container
 var _itemScroll = null;  // scrollable item list
@@ -36,7 +37,8 @@ function _build() {
     'flex-direction:column;',
     'background:' + T.bgDark + ';',
   ].join('');
-  applySunkenStyle(el);
+  applyCardBevel(el, T.numpadChassis);
+  el.style.clipPath = chamfer();
 
   // ── Header ──
   var header = document.createElement('div');

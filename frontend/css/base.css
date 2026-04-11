@@ -55,10 +55,10 @@ html, body {
   color: #333333;
   position: relative;
   z-index: 10;
-  border-top: 7px solid #151515;
-  border-left: 7px solid #151515;
-  border-bottom: 7px solid #5a5a5a;
-  border-right: 7px solid #5a5a5a;
+  border-top: 7px solid #9ff9b0;
+  border-left: 7px solid #9ff9b0;
+  border-bottom: 7px solid #5fad6d;
+  border-right: 7px solid #5fad6d;
   clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
 }
 
