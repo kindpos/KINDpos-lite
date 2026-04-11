@@ -96,8 +96,8 @@ function _build() {
   _summaryBox.style.cssText = [
     'flex:1;padding:4px 8px;',
     'background:' + T.bgDark + ';',
-    'border:2px solid ' + T.mint + ';',
   ].join('');
+  applyCardBevel(_summaryBox, T.numpadChassis, 3);
   _summaryBox.style.clipPath = chamfer();
   summaryRow.appendChild(_summaryBox);
 
@@ -117,8 +117,8 @@ function _build() {
   _pricesBox.style.cssText = [
     'flex-shrink:0;padding:4px 8px;margin:0 6px 4px;',
     'background:' + T.bgDark + ';',
-    'border:2px solid ' + T.mint + ';',
   ].join('');
+  applyCardBevel(_pricesBox, T.numpadChassis, 3);
   _pricesBox.style.clipPath = chamfer();
   el.appendChild(_pricesBox);
 }
@@ -181,8 +181,8 @@ function _renderSummary(params) {
     _summaryBox.appendChild(_summaryRow('Discount:', '$' + params.discount.toFixed(2), T.mint));
   }
   _summaryBox.appendChild(_summaryRow('Tax:', '$' + (params.tax || 0).toFixed(2), T.mint));
-  // Re-apply mint border since innerHTML cleared the borders
-  _summaryBox.style.border = '2px solid ' + T.mint;
+  // Re-apply beveled border since innerHTML cleared the borders
+  applyCardBevel(_summaryBox, T.numpadChassis, 3);
   _summaryBox.style.clipPath = chamfer();
 }
 
@@ -201,8 +201,8 @@ function _renderPrices(params) {
   _remainRow.style.display = 'none';
   _pricesBox.appendChild(_remainRow);
 
-  // Re-apply mint border
-  _pricesBox.style.border = '2px solid ' + T.mint;
+  // Re-apply beveled border
+  applyCardBevel(_pricesBox, T.numpadChassis, 3);
   _pricesBox.style.clipPath = chamfer();
 }
 
