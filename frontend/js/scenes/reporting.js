@@ -1510,38 +1510,6 @@ function buildScene(container) {
 }
 
 // ═══════════════════════════════════════════════════
-//  SCENE REGISTRATION
-// ═══════════════════════════════════════════════════
-
-SceneManager.register({
-  name: 'manager-landing',
-  mount: function(container, params) {
-    curEl = container;
-    curParams = params || {};
-    // Reset state
-    hmFilter = null;
-    hmExpanded = false;
-    closeState = { settled: false, closed: false };
-    closeDayEl = null;
-    allChecksEl = null;
-    heatmapEl = null;
-
-    var empName = (curParams.employeeName || curParams.emp && curParams.emp.name || 'Manager');
-    setSceneName('Welcome, ' + empName + '!');
-    setHeaderBack({ x: true });
-
-    buildScene(container);
-  },
-  unmount: function() {
-    if (activeOverlay) closeOverlay();
-    curEl = null;
-    closeDayEl = null;
-    allChecksEl = null;
-    heatmapEl = null;
-  },
-});
-
-// ═══════════════════════════════════════════════════
 //  LEGACY EXPORTS — used by landing.js
 // ═══════════════════════════════════════════════════
 
