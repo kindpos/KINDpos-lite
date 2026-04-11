@@ -170,6 +170,7 @@ defineScene({
     container.appendChild(version);
 
     // ── PIN submit handler (closes over state) ──
+    // >>> goes straight to landing — clock-in/out handled by dedicated buttons
     function handlePinSubmit(pin) {
       var emp = state.employees.find(function(e) { return e.pin === pin; });
       if (!emp) {
@@ -182,21 +183,6 @@ defineScene({
 
       SceneManager.closeGate('login');
       SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-
-      // Always check clock-in status — force clock-in overlay if not clocked in
-      fetch('/api/v1/servers/clocked-in')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var staff = data.staff || [];
-          var isClockedIn = staff.some(function(s) { return s.employee_id === empData.id; });
-          if (!isClockedIn) {
-            SceneManager.openTransactional('clock-in', { emp: empData });
-          }
-        })
-        .catch(function() {
-          // On network error, open clock-in to be safe
-          SceneManager.openTransactional('clock-in', { emp: empData });
-        });
     }
   },
 
