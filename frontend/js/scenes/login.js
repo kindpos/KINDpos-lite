@@ -47,14 +47,47 @@ defineScene({
       state.employees = data.servers || [];
     }).catch(function() { state.employees = []; });
 
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:space-evenly;position:relative;background:' + T.bg + ';';
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';padding:0 20px;';
 
-    // LEFT — CONFIGURATION button
-    var configPair = buildStyledButton({ label: 'CONFIGURATION', variant: 'dark', size: 'md', onClick: function() { SceneManager.openTransactional('settings'); } });
-    configPair.wrap.style.marginTop = '76px';
-    container.appendChild(configPair.wrap);
+    // ── Shared side-button style ────────────
+    var SIDE_BTN_W = '180px';
+    var SIDE_BTN_H = '120px';
+    var SIDE_BTN_FS = '26px';
 
-    // CENTER — numpad
+    // ── LEFT COLUMN — stacked buttons ──────
+    var leftCol = document.createElement('div');
+    leftCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
+
+    var configPair = buildStyledButton({ label: 'CONFIG', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
+    configPair.wrap.style.width = SIDE_BTN_W;
+    configPair.wrap.style.height = SIDE_BTN_H;
+    configPair.inner.style.fontSize = SIDE_BTN_FS;
+    leftCol.appendChild(configPair.wrap);
+
+    var quickOrderPair = buildStyledButton({ label: 'QUICK\nORDER', variant: 'mint', size: 'lg', onClick: function() {
+      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
+      if (currentPin.length === 0) {
+        if (state.numpadRef) state.numpadRef.setError('Enter PIN');
+        return;
+      }
+      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
+      if (!emp) {
+        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
+        return;
+      }
+      var empRoles = emp.roles || [emp.role || 'server'];
+      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
+      SceneManager.closeGate('login');
+      SceneManager.mountWorking('order-entry', { emp: empData });
+    } });
+    quickOrderPair.wrap.style.width = SIDE_BTN_W;
+    quickOrderPair.wrap.style.height = SIDE_BTN_H;
+    quickOrderPair.inner.style.fontSize = SIDE_BTN_FS;
+    leftCol.appendChild(quickOrderPair.wrap);
+
+    container.appendChild(leftCol);
+
+    // ── CENTER — numpad ────────────────────
     var maskSetting = window.KINDpos && window.KINDpos.maskPinDigits !== undefined
       ? window.KINDpos.maskPinDigits : true;
     state.numpadRef = buildNumpad({
@@ -79,8 +112,11 @@ defineScene({
     });
     container.appendChild(state.numpadRef);
 
-    // RIGHT — CLOCK IN button
-    var clockInPair = buildStyledButton({ label: 'CLOCK IN', variant: 'dark', size: 'md', onClick: function() {
+    // ── RIGHT COLUMN — stacked buttons ─────
+    var rightCol = document.createElement('div');
+    rightCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
+
+    var clockInPair = buildStyledButton({ label: 'CLOCK\nIN', variant: 'gold', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length > 0) {
         var emp = state.employees.find(function(e) { return e.pin === currentPin; });
@@ -98,8 +134,34 @@ defineScene({
       state.clockInMode = !state.clockInMode;
       if (state.clockInMode && state.numpadRef) state.numpadRef.clear();
     } });
-    clockInPair.wrap.style.marginTop = '76px';
-    container.appendChild(clockInPair.wrap);
+    clockInPair.wrap.style.width = SIDE_BTN_W;
+    clockInPair.wrap.style.height = SIDE_BTN_H;
+    clockInPair.inner.style.fontSize = SIDE_BTN_FS;
+    rightCol.appendChild(clockInPair.wrap);
+
+    var clockOutPair = buildStyledButton({ label: 'CLOCK\nOUT', variant: 'vermillion', size: 'lg', onClick: function() {
+      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
+      if (currentPin.length === 0) {
+        if (state.numpadRef) state.numpadRef.setError('Enter PIN');
+        return;
+      }
+      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
+      if (!emp) {
+        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
+        return;
+      }
+      var empRoles = emp.roles || [emp.role || 'server'];
+      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
+      SceneManager.closeGate('login');
+      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+      SceneManager.openTransactional('clock-in', { emp: empData });
+    } });
+    clockOutPair.wrap.style.width = SIDE_BTN_W;
+    clockOutPair.wrap.style.height = SIDE_BTN_H;
+    clockOutPair.inner.style.fontSize = SIDE_BTN_FS;
+    rightCol.appendChild(clockOutPair.wrap);
+
+    container.appendChild(rightCol);
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
