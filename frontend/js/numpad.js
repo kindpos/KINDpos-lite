@@ -217,6 +217,7 @@ export function buildNumpad(opts) {
       pair.wrap.addEventListener('pointerup', function() {
         if (key.type === 'digit') {
           if (pin.length < maxDigits) {
+            container._clearHint();
             pin += key.label;
             render();
             if (onChange) onChange(pin);
@@ -254,6 +255,19 @@ export function buildNumpad(opts) {
       display.style.color = displayColor;
       pin = ''; render();
     }, 1200);
+  };
+
+  var _hintActive = false;
+  container.setHint = function(msg, color) {
+    display.textContent = msg || '';
+    display.style.color = color || T.mint;
+    _hintActive = true;
+  };
+  container._clearHint = function() {
+    if (_hintActive) {
+      _hintActive = false;
+      display.style.color = displayColor;
+    }
   };
 
   render();

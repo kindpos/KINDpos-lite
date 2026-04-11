@@ -61,7 +61,7 @@ defineScene({
     var clockPair = buildStyledButton({ label: 'CLOCK\nIN/OUT', variant: 'gold', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
-        if (state.numpadRef) state.numpadRef.setError('Enter PIN');
+        if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
         return;
       }
       var emp = state.employees.find(function(e) { return e.pin === currentPin; });
@@ -120,7 +120,7 @@ defineScene({
     var quickOrderPair = buildStyledButton({ label: 'QUICK\nORDER', variant: 'mint', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
-        if (state.numpadRef) state.numpadRef.setError('Enter PIN');
+        if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
         return;
       }
       var emp = state.employees.find(function(e) { return e.pin === currentPin; });
