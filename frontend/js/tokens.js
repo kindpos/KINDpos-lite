@@ -385,13 +385,17 @@ export function applyRaisedStyle(el, fillColor) {
 //  Snapshot defaults, apply overrides, notify listeners
 // ═══════════════════════════════════════════════════
 
-// Snapshot of every T key at load time (flat values only)
+// Snapshot of every T key at load time (flat + object values)
 var _defaults = {};
+var _defaultObjects = {};
 (function() {
   var keys = Object.keys(T);
   for (var i = 0; i < keys.length; i++) {
     var v = T[keys[i]];
-    if (typeof v !== 'function' && typeof v !== 'object') {
+    if (typeof v === 'function') continue;
+    if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+      _defaultObjects[keys[i]] = JSON.parse(JSON.stringify(v));
+    } else {
       _defaults[keys[i]] = v;
     }
   }
@@ -432,9 +436,14 @@ export function resetTheme() {
   for (var i = 0; i < keys.length; i++) {
     T[keys[i]] = _defaults[keys[i]];
   }
+  // Restore object properties (categoryPalette, roles, etc.)
+  var oKeys = Object.keys(_defaultObjects);
+  for (var j = 0; j < oKeys.length; j++) {
+    T[oKeys[j]] = JSON.parse(JSON.stringify(_defaultObjects[oKeys[j]]));
+  }
   _recomputeEmbossed();
-  for (var j = 0; j < _themeListeners.length; j++) {
-    _themeListeners[j](T);
+  for (var k = 0; k < _themeListeners.length; k++) {
+    _themeListeners[k](T);
   }
 }
 

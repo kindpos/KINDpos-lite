@@ -934,6 +934,7 @@ function _applyThemeById(id) {
   var entry = THEMES.find(function(t) { return t.id === id; });
   if (!entry || !entry.loader) return;
   entry.loader().then(function(themeObj) {
+    resetTheme();
     setTheme(themeObj);
   });
 }
