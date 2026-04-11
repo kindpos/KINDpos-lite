@@ -60,13 +60,10 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
   // X  logout / reset button
   if (x && logout) {
     logout.style.display = 'flex';
-    const logoutPair = buildStyledButton(T.darkBtn);
+    const logoutPair = buildStyledButton({ label: 'X', variant: 'vermillion', size: 'sm' });
     logoutPair.wrap.style.height = '40px';
-    logoutPair.wrap.style.width = '47px';
-    logoutPair.inner.style.fontFamily = T.fb;
-    logoutPair.inner.style.fontSize = T.fsBtnSm;
-    logoutPair.inner.style.color = T.mint;
-    logoutPair.inner.textContent = 'X';
+    logoutPair.wrap.style.width = '40px';
+    logoutPair.wrap.style.minWidth = '40px';
     logoutPair.wrap.addEventListener('pointerup', onClose || function() {
       SceneManager.closeAllTransactional();
       SceneManager.unmountWorking(SceneManager.getActiveWorking());
