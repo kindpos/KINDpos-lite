@@ -10,21 +10,20 @@ import { showToast } from './components.js';
 import { OrderSummary } from './order-summary.js';
 
 // Import scenes (self-registering)
-import './scenes/login/index.js?v=2';
-import './scenes/clock-in/index.js?v=2';
-import './scenes/landing/index.js?v=2';
-import './scenes/order-entry/index.js?v=7';
+import './scenes/login.js?v=2';
+import './scenes/settings.js?v=8';
+import './scenes/order-entry.js?v=7';
 import './scenes/payment-console/index.js?v=3';
-import './scenes/change-due/index.js?v=2';
-import './scenes/receipt-review/index.js?v=2';
-import './scenes/tip-adjustment/index.js?v=3';
-import './scenes/settings/index.js?v=8';
-import './scenes/reporting/index.js?v=4';
-import './scenes/server-landing/index.js?v=2';
-import './scenes/server-checkout/index.js?v=2';
-import './scenes/manager-landing/index.js?v=2';
+import './scenes/change-due.js?v=2';
+import './scenes/tip-adjustment.js?v=3';
+import './scenes/reporting.js?v=4';
+import './scenes/server-checkout.js?v=2';
 import './scenes/close-day/index.js?v=2';
-import './scenes/sales-summary/index.js?v=2';
+import './scenes/sales-summary.js?v=2';
+import './scenes/landing.js?v=2';
+import './scenes/server-landing.js?v=2';
+import './scenes/clock-in.js?v=2';
+// manager-landing now provided by reporting.js (registered as 'manager-landing')
 
 // ── Header state ──────────────────────────────────
 let _sceneName = null;
