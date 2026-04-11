@@ -51,7 +51,7 @@ function _build() {
   var hTitle = document.createElement('div');
   hTitle.style.cssText = [
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';',
-    'color:' + T.gold + ';letter-spacing:0.08em;',
+    'color:' + T.textPrimary + ';letter-spacing:0.08em;',
   ].join('');
   hTitle.textContent = 'ORDER RECAP';
   _checkIdEl = document.createElement('div');
@@ -68,7 +68,7 @@ function _build() {
   colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
     'padding:4px 10px;',
-    'font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.gold + ';letter-spacing:0.06em;',
+    'font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';letter-spacing:0.06em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
   ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
@@ -132,10 +132,10 @@ function _summaryRow(label, value, color, bold) {
   row.style.cssText = [
     'display:flex;justify-content:space-between;padding:2px 0;',
     'font-family:' + T.fb + ';font-size:' + T.fsCon + ';',
-    'color:' + (color || T.mint) + ';',
     bold ? 'font-weight:bold;' : '',
   ].join('');
   var l = document.createElement('span');
+  l.style.color = T.textPrimary;
   l.textContent = label;
   var v = document.createElement('span');
   v.style.color = T.gold;
@@ -154,7 +154,7 @@ function _renderItems(items) {
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
       'padding:3px 0;',
-      'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.mint + ';',
+      'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var name = document.createElement('div');
