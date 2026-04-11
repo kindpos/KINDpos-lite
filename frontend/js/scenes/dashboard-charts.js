@@ -20,15 +20,15 @@ var FONT = T.fb;
 var HOURS = ['11A','12P','1P','2P','3P','4P','5P','6P'];
 
 var C = {
-  mint:'#87f79c', gold:'#fbb03b', lime:'#ccff33', pink:'#ff66cc',
-  verm:'#ff4422', green:'#39b54a', dim:'#555555',
-  bg:'#222222', dark:'#1a1a1a', border:'#333333',
-  well:'#111111', wellBrd:'#2a2a2a',
+  mint:T.numpadChassis, gold:T.gold, lime:T.lime, pink:T.electricPink,
+  verm:T.vermillion, green:T.green, dim:T.dimText,
+  bg:T.bg2, dark:T.bgDark, border:T.bg,
+  well:T.bgEdge, wellBrd:T.bg3,
   axis:'rgba(255,255,255,0.7)', grid:'rgba(255,255,255,0.1)',
-  label:'rgba(255,255,255,0.65)', overlay:'rgba(18,18,18,0.94)',
+  label:T.sage, overlay:'rgba(18,18,18,0.94)',
 };
 
-var CAT = {PIZZA:'#ff5533',SUBS:'#4499ff',GENERAL:'#bb44ff',DRINKS:'#ff9900',SPECIALS:'#00bbcc'};
+var CAT = {PIZZA:T.catProteins,SUBS:T.mint,GENERAL:T.lavender,DRINKS:T.catBeverages,SPECIALS:T.cyan};
 var CATS_STACK = ['SPECIALS','DRINKS','GENERAL','SUBS','PIZZA']; // bottom→top
 var CATS_DISPLAY = ['PIZZA','SUBS','GENERAL','DRINKS','SPECIALS'];
 
@@ -123,16 +123,16 @@ function addDefs(svg, uid) {
   var defs = mk('defs');
   // dot-grid background
   var bg = mk('pattern', { id:'bg_'+uid, width:'4', height:'4', patternUnits:'userSpaceOnUse' });
-  bg.appendChild(mk('rect', { width:'4', height:'4', fill:'#111' }));
+  bg.appendChild(mk('rect', { width:'4', height:'4', fill:C.well }));
   var corners = [[0,0],[4,0],[0,4],[4,4]];
   for (var i = 0; i < corners.length; i++)
-    bg.appendChild(mk('circle', { cx:corners[i][0], cy:corners[i][1], r:'0.5', fill:'#1c1c1c' }));
-  bg.appendChild(mk('circle', { cx:'2', cy:'2', r:'0.4', fill:'#181818' }));
+    bg.appendChild(mk('circle', { cx:corners[i][0], cy:corners[i][1], r:'0.5', fill:C.wellBrd }));
+  bg.appendChild(mk('circle', { cx:'2', cy:'2', r:'0.4', fill:C.wellBrd }));
   defs.appendChild(bg);
-  // win98 dither
+  // win98 dither — subtle texture, not dimming
   var dit = mk('pattern', { id:'dit_'+uid, width:'2', height:'2', patternUnits:'userSpaceOnUse' });
-  dit.appendChild(mk('rect', { x:'0', y:'0', width:'1', height:'1', fill:'rgba(0,0,0,0.22)' }));
-  dit.appendChild(mk('rect', { x:'1', y:'1', width:'1', height:'1', fill:'rgba(0,0,0,0.22)' }));
+  dit.appendChild(mk('rect', { x:'0', y:'0', width:'1', height:'1', fill:'rgba(0,0,0,0.08)' }));
+  dit.appendChild(mk('rect', { x:'1', y:'1', width:'1', height:'1', fill:'rgba(0,0,0,0.08)' }));
   defs.appendChild(dit);
   svg.appendChild(defs);
 }
@@ -140,7 +140,7 @@ function addDefs(svg, uid) {
 function chartFrame(svg, x0, y0, W, H, uid) {
   // chart well with dot-grid bg
   svg.appendChild(mk('rect', { x:x0, y:y0, width:W, height:H,
-    fill:'url(#bg_'+uid+')', stroke:'#2a2a2a', 'stroke-width':'1' }));
+    fill:'url(#bg_'+uid+')', stroke:C.wellBrd, 'stroke-width':'1' }));
   // horizontal grid at 25/50/75%
   for (var f = 1; f <= 3; f++) {
     svg.appendChild(mk('line', { x1:x0, y1:y0+H-f*H/4, x2:x0+W, y2:y0+H-f*H/4,
@@ -157,7 +157,7 @@ function xLabels(svg, x0, W, bot, fs) {
   var step = W / (HOURS.length - 1);
   for (var i = 0; i < HOURS.length; i++) {
     svg.appendChild(mk('text', { x:(x0+i*step).toFixed(1), y:bot+12,
-      'text-anchor':'middle', fill:'#bbbbbb', 'font-size':fs||'18', 'font-family':FONT }, HOURS[i]));
+      'text-anchor':'middle', fill:C.label, 'font-size':fs||'18', 'font-family':FONT }, HOURS[i]));
   }
 }
 
@@ -165,7 +165,7 @@ function xLabelsCentered(svg, x0, W, n, bot, fs) {
   var step = W / n;
   for (var i = 0; i < HOURS.length; i++) {
     svg.appendChild(mk('text', { x:(x0+i*step+step/2).toFixed(1), y:bot+12,
-      'text-anchor':'middle', fill:'#bbbbbb', 'font-size':fs||'18', 'font-family':FONT }, HOURS[i]));
+      'text-anchor':'middle', fill:C.label, 'font-size':fs||'18', 'font-family':FONT }, HOURS[i]));
   }
 }
 
@@ -450,7 +450,7 @@ function buildSalesOverviewBody(body) {
   // Today glow + solid
   var tPts = [];
   for (var i = 0; i < 8; i++) tPts.push(tx(i).toFixed(1) + ',' + ty(D_TODAY[i]).toFixed(1));
-  svg.appendChild(mk('polyline', { points:tPts.join(' '), fill:'none', stroke:C.lime, 'stroke-width':'4', 'stroke-opacity':'0.3' }));
+  svg.appendChild(mk('polyline', { points:tPts.join(' '), fill:'none', stroke:C.lime, 'stroke-width':'4', 'stroke-opacity':'0.5' }));
   svg.appendChild(mk('polyline', { points:tPts.join(' '), fill:'none', stroke:C.lime, 'stroke-width':'2' }));
   for (var i = 0; i < 8; i++) svg.appendChild(mk('rect', { x:tx(i)-2.5, y:ty(D_TODAY[i])-2.5, width:'5', height:'5', fill:C.lime }));
 
@@ -494,7 +494,7 @@ function buildSalesOverviewOverlay(panel) {
   var areaA='M'+atx(0).toFixed(1)+','+(ay+ah);
   for(var i=0;i<8;i++)areaA+=' L'+atx(i).toFixed(1)+','+aty(D_TODAY[i]).toFixed(1);
   areaA+=' L'+atx(7).toFixed(1)+','+(ay+ah)+' Z';
-  svgA.appendChild(mk('path',{d:areaA,fill:C.lime,opacity:'0.08'}));
+  svgA.appendChild(mk('path',{d:areaA,fill:C.lime,opacity:'0.25'}));
   drawLineSeries(svgA, D_TODAY, ax, aw, ay+ah, ah, aMax, C.lime, false, 6);
 
   // Peak hour label
@@ -662,10 +662,10 @@ function buildSalesBreakdownOverlay(panel) {
       for(var i=1;i<8;i++)d+=' L'+tx2(i).toFixed(1)+','+ty2(cum2[i]).toFixed(1);
       for(var i=7;i>=0;i--)d+=' L'+tx2(i).toFixed(1)+','+ty2(bottom[i]).toFixed(1);
       d+=' Z';
-      svg.appendChild(mk('path',{d:d,fill:CAT[cat],opacity:isActive?'0.75':'0.12'}));
+      svg.appendChild(mk('path',{d:d,fill:CAT[cat],opacity:isActive?'0.85':'0.35'}));
       if(isActive)svg.appendChild(mk('path',{d:d,fill:'url(#dit_sba)'}));
       var tp=[];for(var i=0;i<8;i++)tp.push(tx2(i).toFixed(1)+','+ty2(cum2[i]).toFixed(1));
-      svg.appendChild(mk('polyline',{points:tp.join(' '),fill:'none',stroke:CAT[cat],'stroke-width':'1',opacity:isActive?'1':'0.3'}));
+      svg.appendChild(mk('polyline',{points:tp.join(' '),fill:'none',stroke:CAT[cat],'stroke-width':'1',opacity:isActive?'1':'0.5'}));
       // Clickable transparent overlay
       (function(catName){
         var hit=mk('path',{d:d,fill:'transparent',cursor:'pointer'});
@@ -704,7 +704,7 @@ function buildSalesBreakdownOverlay(panel) {
     for(var c=0;c<CATS_DISPLAY.length;c++){
       var cat=CATS_DISPLAY[c];
       var isAct=activeCat===cat;
-      var chip=el('div','border:2px solid '+CAT[cat]+';color:'+CAT[cat]+';font-family:'+FONT+';font-size:20px;padding:5px 12px;cursor:pointer;opacity:'+((!activeCat||isAct)?'1':'0.2')+';',cat);
+      var chip=el('div','border:2px solid '+CAT[cat]+';color:'+CAT[cat]+';font-family:'+FONT+';font-size:20px;padding:5px 12px;cursor:pointer;opacity:'+((!activeCat||isAct)?'1':'0.5')+';',cat);
       (function(cn){chip.addEventListener('pointerup',function(){
         activeCat=activeCat===cn?null:cn;renderArea();renderChips();renderTables();
       });})(cat);
@@ -812,7 +812,7 @@ function buildHeatmapBody(body) {
   var nameW = hmExpanded ? '80px' : '58px';
   var namePL = hmExpanded ? '82px' : '60px';
 
-  var wrap = el('div', 'display:flex;flex-direction:column;gap:1px;height:100%;background:#111;');
+  var wrap = el('div', 'display:flex;flex-direction:column;gap:1px;height:100%;background:' + C.well + ';');
 
   // Hour header row
   var hdrRow = el('div', 'display:flex;gap:1px;padding-left:' + namePL + ';flex-shrink:0;');
@@ -964,7 +964,7 @@ function buildServerCheckoutsBody(body) {
     card.appendChild(el('div', 'font-family:' + FONT + ';font-size:22px;color:#ffffff;font-weight:bold;margin-bottom:4px;', srv.name));
 
     // Bar track
-    var track = el('div', 'position:relative;height:18px;background:#111;border:1px solid #2a2a2a;');
+    var track = el('div', 'position:relative;height:18px;background:' + C.well + ';border:1px solid #2a2a2a;');
     track.appendChild(el('div', 'position:absolute;top:0;left:0;height:100%;width:' + (ut / maxCount * 100).toFixed(0) + '%;background:' + C.mint + ';'));
     track.appendChild(el('div', 'position:absolute;top:3px;left:0;height:calc(100% - 6px);width:' + (oc / maxCount * 100).toFixed(0) + '%;background:' + C.verm + ';z-index:1;'));
     card.appendChild(track);
@@ -1047,7 +1047,7 @@ function buildServerCheckoutsOverlay(panel) {
           for (var j = 0; j < srv.tips.length; j++) {
             (function(tipIdx) {
               var tip = D_SERVERS[srvIdx].tips[tipIdx];
-              var tipCard = el('div', 'background:#111;border:3px solid ' + (tip.tip === null ? C.mint : C.green) + ';padding:10px 12px;margin-bottom:8px;font-family:' + FONT + ';');
+              var tipCard = el('div', 'background:' + C.well + ';border:3px solid ' + (tip.tip === null ? C.mint : C.green) + ';padding:10px 12px;margin-bottom:8px;font-family:' + FONT + ';');
 
               // Row 1: Check # + time
               var r1 = el('div', 'display:flex;justify-content:space-between;margin-bottom:4px;white-space:nowrap;');
@@ -1389,7 +1389,7 @@ function buildCloseDayOverlay(panel) {
   // Action Card 2 — Finalize Close Day
   var locked = !closeState.settled;
   var closed = closeState.closed;
-  var ac2 = el('div', 'border:1px solid ' + (closed ? C.green : locked ? C.dim : C.border) + ';padding:10px;' + (locked ? 'opacity:0.4;pointer-events:none;' : '') + (closed ? '' : ''));
+  var ac2 = el('div', 'border:1px solid ' + (closed ? C.green : locked ? C.dim : C.border) + ';padding:10px;' + (locked ? 'opacity:0.6;pointer-events:none;' : '') + (closed ? '' : ''));
   var ac2Hdr = el('div', 'display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:nowrap;overflow:hidden;');
   var badge2Bg = closed ? C.green : locked ? C.dim : '#ffdd44';
   var badge2Text = closed ? '\u2713 CLOSED' : locked ? 'LOCKED' : 'READY';
