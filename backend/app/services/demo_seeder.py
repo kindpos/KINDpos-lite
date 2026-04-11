@@ -25,6 +25,7 @@ async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
         # Employees exist — but check if menu or sample orders need seeding
         await seed_menu_if_empty(ledger)
         await seed_sample_orders_if_empty(ledger)
+        await ensure_test_charge_item(ledger)
         return
 
     seed_path = os.path.normpath(_SEED_PATH)
@@ -150,3 +151,25 @@ async def seed_menu_if_empty(ledger: EventLedger) -> None:
         await ledger.append(event)
 
     print(f"Menu seed complete — {len(categories)} categories, {len(items)} items, {len(mod_groups)} modifier groups")
+
+
+async def ensure_test_charge_item(ledger: EventLedger) -> None:
+    """Ensure the $0.01 Test Charge menu item exists (for existing systems)."""
+    item_events = await ledger.get_events_by_type(EventType.MENU_ITEM_CREATED)
+    for e in item_events:
+        if e.payload.get("item_id") == "test_charge":
+            return  # already exists
+
+    event = create_event(
+        event_type=EventType.MENU_ITEM_CREATED,
+        terminal_id="SEED",
+        payload={
+            "item_id": "test_charge",
+            "name": "Test Charge",
+            "price": 0.01,
+            "category": "Drinks",
+            "display_order": 99,
+        },
+    )
+    await ledger.append(event)
+    print("  seeded Test Charge ($0.01) menu item")

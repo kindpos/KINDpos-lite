@@ -97,7 +97,8 @@
     { "item_id": "bottled_water",  "name": "Bottled Water",  "price": 2.00, "category": "Drinks", "display_order": 2 },
     { "item_id": "iced_tea",       "name": "Iced Tea",       "price": 2.75, "category": "Drinks", "display_order": 3 },
     { "item_id": "lemonade",       "name": "Lemonade",       "price": 3.00, "category": "Drinks", "display_order": 4 },
-    { "item_id": "espresso",       "name": "Espresso",       "price": 3.50, "category": "Drinks", "display_order": 5 }
+    { "item_id": "espresso",       "name": "Espresso",       "price": 3.50, "category": "Drinks", "display_order": 5 },
+    { "item_id": "test_charge",    "name": "Test Charge",    "price": 0.01, "category": "Drinks", "display_order": 99 }
   ],
   "modifier_groups": [
     {
