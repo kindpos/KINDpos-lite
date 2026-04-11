@@ -8,12 +8,12 @@ import { T, chamfer, buildStyledButton, applySunkenStyle, applyRaisedStyle, shad
 
 var PAD = {
   width:    332,
-  displayH: 75,
-  gap:      20,
-  cardPad:  20,
+  displayH: 60,
+  gap:      16,
+  cardPad:  18,
   keyW:     88,
-  keyH:     80,
-  keyGap:   14,
+  keyH:     84,
+  keyGap:   12,
 };
 PAD.cardW = PAD.keyW * 3 + PAD.keyGap * 2 + PAD.cardPad * 2;
 PAD.cardH = PAD.keyH * 4 + PAD.keyGap * 3 + PAD.cardPad * 2 + 14;
@@ -33,21 +33,22 @@ export function buildNumpad(opts) {
   var keyGap   = o.keyGap   != null ? o.keyGap : PAD.keyGap;
   var cardPad  = o.cardPad  != null ? o.cardPad : PAD.cardPad;
   var width    = o.width    || PAD.width;
-  var _bevel   = keyBevel != null ? keyBevel : T.bevel;
-  var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2 + _bevel * 2;
 
-  var digitColor  = o.digitColor  || T.mint;
-  var clearColor  = o.clearColor  || T.mint;
-  var submitColor = o.submitColor || T.mint;
-  var displayColor = o.displayColor || T.gold;
-  var displayBg    = o.displayBg   || T.bg;
-  var chassisColor = o.chassisColor || T.mint;
-  var maskChar     = o.maskChar    || '\u25CF';
-  var digitFont    = o.digitFont   || T.fh;
+  var digitColor  = o.digitColor  || T.digitColor;
+  var clearColor  = o.clearColor  || T.clrColor;
+  var submitColor = o.submitColor || T.submitColor;
+  var displayColor = o.displayColor || T.pinDot;
+  var displayBg    = o.displayBg   || T.pinFieldBg;
+  var chassisColor = o.chassisColor || T.numpadChassis;
+  var maskChar     = o.maskChar    || '\u25C6';
+  var digitFont    = o.digitFont   || T.fhr;
   var keyChamfer   = o.chamfer     != null ? o.chamfer : null;
   var keyBevel     = o.bevel       != null ? o.bevel   : null;
-  var chassisChamfer = o.chassisChamfer != null ? o.chassisChamfer : null;
-  var chassisBevel   = o.chassisBevel   != null ? o.chassisBevel   : null;
+  var chassisChamfer = o.chassisChamfer != null ? o.chassisChamfer : 6;
+  var chassisBevel   = o.chassisBevel   != null ? o.chassisBevel   : 5;
+
+  var _bevel   = keyBevel != null ? keyBevel : T.bevel;
+  var cardH    = keyH * 4 + keyGap * 3 + cardPad * 2 + _bevel * 2;
 
   var onCancel    = o.onCancel    || null;
   var submitLabel = o.submitLabel || '>>>';

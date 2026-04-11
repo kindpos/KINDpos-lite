@@ -1005,8 +1005,10 @@ SceneManager.register({
 SceneManager.register({
   name: 'closeday-manager-pin',
   mount: function(container, params) {
-    buildNumpad(container, {
-      title: 'MANAGER PIN',
+    container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+    var numpad = buildNumpad({
+      maxDigits: 4,
+      masked: true,
       onSubmit: function(pin) {
         fetch('/api/v1/auth/verify-pin', {
           method: 'POST',
@@ -1018,13 +1020,14 @@ SceneManager.register({
             if (data.valid) {
               params.onConfirm(data);
             } else {
-              showToast('Invalid PIN');
+              numpad.setError('Invalid PIN');
             }
           })
-          .catch(function() { showToast('PIN check failed'); });
+          .catch(function() { numpad.setError('PIN check failed'); });
       },
       onCancel: function() { params.onCancel(); },
     });
+    container.appendChild(numpad);
   },
   unmount: function() {},
 });

@@ -202,7 +202,7 @@ function buildRightColumn() {
     cardPad:        18,
     keyH:           84,
     keyGap:         12,
-    gap:            14,
+    gap:            16,
     submitLabel:    'ent',
     chassisColor:   T.numpadChassis,
     chassisChamfer: 6,
