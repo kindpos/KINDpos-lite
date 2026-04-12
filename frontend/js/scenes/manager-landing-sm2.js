@@ -10,7 +10,7 @@ import { SceneManager } from '../scene-manager.js';
 import { defineScene } from '../scene-manager-2.js';
 import { buildCard, applyCardBevel, hexToRgba } from '../theme-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-import { createSVG, drawTrendLine } from '../chart-helpers.js';
+import { createSVG, drawTrendLine, drawStackedAreaMulti } from '../chart-helpers.js';
 
 // ── Constants (immutable) ────────────────────────
 
@@ -122,7 +122,7 @@ function fetchAllData(state) {
     var hourlyCompare = results[5] || {};
 
     wireSalesData(state, daySummary, orders, laborSummary);
-    wireBreakdownData(state, daySummary);
+    wireBreakdownData(state, daySummary, orders);
     wireOrders(state, orders);
     wireStaffData(state, staffResult, orders);
     wireHeatmap(state, staffResult, orders);
@@ -156,7 +156,7 @@ function wireSalesData(state, daySummary, orders, laborSummary) {
   };
 }
 
-function wireBreakdownData(state, daySummary) {
+function wireBreakdownData(state, daySummary, orders) {
   var cats = daySummary.categories || [];
   var catList = [];
   if (Array.isArray(cats)) {
@@ -173,12 +173,75 @@ function wireBreakdownData(state, daySummary) {
   var hourlyData = (daySummary.hourly_breakdown || daySummary.hourly_sales || []).map(function(h) {
     return { label: h.hour || h.label || '', value: h.total || h.value || h.net_sales || 0 };
   });
+
+  // Compute hourly-per-category from orders for stacked area chart
+  var hourlyCats = computeHourlyCats(orders || [], catList);
+
   state.breakdownData = {
     categories: catList,
     cash: daySummary.cash_total || 0,
     card: daySummary.card_total || 0,
     hourly: hourlyData,
+    hourlyCats: hourlyCats,
   };
+}
+
+function computeHourlyCats(orders, catList) {
+  // Build hour labels (6a-11p)
+  var hours = [];
+  for (var h = 6; h < 24; h++) {
+    var ampm = h >= 12 ? 'p' : 'a';
+    hours.push((h > 12 ? h - 12 : h) + ampm);
+  }
+
+  // Get category names from catList
+  var catNames = {};
+  for (var i = 0; i < catList.length; i++) catNames[catList[i].name] = true;
+
+  // Bucket item revenue by hour + category
+  var buckets = {}; // { catName: [hourlyValues] }
+  for (var cn in catNames) {
+    buckets[cn] = [];
+    for (var hi = 0; hi < hours.length; hi++) buckets[cn].push(0);
+  }
+
+  for (var oi = 0; oi < orders.length; oi++) {
+    var order = orders[oi];
+    if (order.status === 'voided') continue;
+    // Parse hour from created_at or use current hour
+    var orderHour = 12; // default noon
+    if (order.created_at) {
+      var d = new Date(order.created_at);
+      if (!isNaN(d.getTime())) orderHour = d.getHours();
+    }
+    var hourIdx = orderHour - 6;
+    if (hourIdx < 0 || hourIdx >= hours.length) continue;
+
+    var items = order.items || [];
+    for (var ii = 0; ii < items.length; ii++) {
+      var item = items[ii];
+      var cat = (item.category || '').toUpperCase();
+      if (!buckets[cat]) {
+        // New category not in catList — add it
+        catNames[cat] = true;
+        buckets[cat] = [];
+        for (var hi = 0; hi < hours.length; hi++) buckets[cat].push(0);
+      }
+      buckets[cat][hourIdx] += (item.price || 0) * (item.quantity || 1);
+    }
+  }
+
+  // Build series for drawStackedAreaMulti
+  var series = [];
+  for (var cn in buckets) {
+    series.push({
+      name: cn,
+      color: T.catColor(cn),
+      data: buckets[cn],
+    });
+  }
+
+  return { hours: hours, series: series };
 }
 
 function wireOrders(state, orders) {
@@ -637,7 +700,7 @@ function buildSalesOverviewExpanded(state, content) {
 
 function buildSalesBreakdownCard(state) {
   var bd = state.breakdownData || {};
-  var cats = bd.categories || [];
+  var hc = bd.hourlyCats || { hours: [], series: [] };
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
   var card = pair.card;
@@ -646,21 +709,46 @@ function buildSalesBreakdownCard(state) {
 
   card.appendChild(buildCardHeader('SALES BREAKDOWN'));
 
-  var body = document.createElement('div');
-  body.style.cssText = 'padding:6px 0;';
-
-  for (var i = 0; i < cats.length; i++) {
-    var catColor = T.catColor(cats[i].name);
-    body.appendChild(statRow(cats[i].name + ':', fmt(cats[i].value), catColor));
+  // ── Stacked area sparkline ──
+  var chartWrap = document.createElement('div');
+  chartWrap.style.cssText = 'padding:4px 6px 0;';
+  if (hc.series.length > 0) {
+    var svg = createSVG(T.chartW, T.chartHSm);
+    drawStackedAreaMulti(svg, hc.series, {
+      width: T.chartW,
+      height: T.chartHSm,
+      labels: hc.hours,
+      hideLabels: true,
+      hideAxis: true,
+    });
+    chartWrap.appendChild(svg);
   }
+  card.appendChild(chartWrap);
 
-  var divider = document.createElement('div');
-  divider.style.cssText = 'height:1px;background:' + T.bgDark + ';margin:4px 8px;border-top:1px solid ' + T.border + ';';
-  body.appendChild(divider);
-
-  body.appendChild(statRow('Cash:', fmt(bd.cash), T.gold));
-  body.appendChild(statRow('Card:', fmt(bd.card), T.gold));
-  card.appendChild(body);
+  // ── KPI row: Cash | Card ──
+  var kpiRow = document.createElement('div');
+  kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:4px 8px 6px;';
+  var cashWrap = document.createElement('span');
+  var cashLbl = document.createElement('span');
+  cashLbl.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
+  cashLbl.textContent = 'Cash ';
+  var cashVal = document.createElement('span');
+  cashVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  cashVal.textContent = fmt(bd.cash);
+  cashWrap.appendChild(cashLbl);
+  cashWrap.appendChild(cashVal);
+  var cardWrap = document.createElement('span');
+  var cardLbl = document.createElement('span');
+  cardLbl.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
+  cardLbl.textContent = 'Card ';
+  var cardVal = document.createElement('span');
+  cardVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  cardVal.textContent = fmt(bd.card);
+  cardWrap.appendChild(cardLbl);
+  cardWrap.appendChild(cardVal);
+  kpiRow.appendChild(cashWrap);
+  kpiRow.appendChild(cardWrap);
+  card.appendChild(kpiRow);
 
   pair.wrap.style.cursor = 'pointer';
   pair.wrap.addEventListener('pointerup', function() {
