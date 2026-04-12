@@ -94,7 +94,7 @@ SceneManager.register({
     container.appendChild(backBtn);
 
     // ── Fetch from API ──
-    var url = API + '/reporting/sales-summary?date=' + todayStr();
+    var url = API + '/reports/sales-summary?date=' + todayStr();
     if (role !== 'manager' && params.employeeId) {
       url += '&server_id=' + encodeURIComponent(params.employeeId);
     }
