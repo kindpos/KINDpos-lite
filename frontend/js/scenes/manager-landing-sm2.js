@@ -588,8 +588,8 @@ function buildSalesOverviewCard(state) {
   card.appendChild(kpiRow);
 
   // ── Tap to expand ──
-  pair.wrap.style.cursor = 'pointer';
-  pair.wrap.addEventListener('pointerup', function() {
+  card.style.cursor = 'pointer';
+  card.addEventListener('pointerup', function() {
     showDrillDown(state, 'sales-overview');
   });
 
@@ -1025,8 +1025,8 @@ function buildSalesBreakdownCard(state) {
   kpiRow.appendChild(cardWrap);
   card.appendChild(kpiRow);
 
-  pair.wrap.style.cursor = 'pointer';
-  pair.wrap.addEventListener('pointerup', function() {
+  card.style.cursor = 'pointer';
+  card.addEventListener('pointerup', function() {
     showDrillDown(state, 'sales-breakdown');
   });
 
@@ -1150,8 +1150,8 @@ function buildServerCheckoutsCard(state) {
 
   // TODO: TIP ADJUSTMENT button
 
-  pair.wrap.style.cursor = 'pointer';
-  pair.wrap.addEventListener('pointerup', function() {
+  card.style.cursor = 'pointer';
+  card.addEventListener('pointerup', function() {
     showDrillDown(state, 'server-checkouts');
   });
 
@@ -1186,8 +1186,8 @@ function buildCloseDayCard(state) {
 
   // TODO: CLOSE DAY + SETTLE BATCH buttons
 
-  pair.wrap.style.cursor = 'pointer';
-  pair.wrap.addEventListener('pointerup', function() {
+  card.style.cursor = 'pointer';
+  card.addEventListener('pointerup', function() {
     showDrillDown(state, 'close-day');
   });
 

@@ -146,7 +146,7 @@ T.categoryPalette = {
   'DRINKS': '#ffa502',
 };
 
-T.catColor = (category) => T.categoryPalette[category] || T.mint;
+T.catColor = (category) => T.categoryPalette[(category || '').toUpperCase()] || T.categoryPalette[category] || T.mint;
 
 // Text hierarchy
 T.textPrimary = '#f5f0e8';
