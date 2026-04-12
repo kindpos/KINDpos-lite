@@ -629,7 +629,6 @@ function showDrillDown(state, cardName, extra) {
     'sales-overview': 'SALES OVERVIEW',
     'sales-breakdown': 'SALES BREAKDOWN',
     'server-checkouts': 'SERVER CHECKOUTS',
-    'close-day': 'CLOSE DAY',
   };
   var headerText = cardName === 'server-detail' && extra ? extra.name : (headerLabels[cardName] || 'DETAIL');
   var header = buildCardHeader(headerText);
@@ -647,8 +646,6 @@ function showDrillDown(state, cardName, extra) {
     buildSalesBreakdownExpanded(state, content);
   } else if (cardName === 'server-detail') {
     buildServerDetailExpanded(state, content, extra, overlay);
-  } else if (cardName === 'close-day') {
-    // TODO: buildCloseDayExpanded(state, content);
   }
 
   overlay.appendChild(content);
@@ -1461,11 +1458,12 @@ function buildCloseDayCard(state) {
   ));
   card.appendChild(body);
 
-  // TODO: CLOSE DAY + SETTLE BATCH buttons
-
   card.style.cursor = 'pointer';
   card.addEventListener('pointerup', function() {
-    showDrillDown(state, 'close-day');
+    var emp = state.params.emp || state.params;
+    SceneManager.openTransactional('close-day', {
+      pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+    });
   });
 
   return pair.wrap;
