@@ -28,6 +28,34 @@ _BEVERAGE_CATS = {"Drinks", "Soda", "Beverage"}
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
+_DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+
+async def _get_operating_hours(ledger: EventLedger, target_date: datetime) -> tuple:
+    """Return (open_hour, close_hour) for the given date from store config."""
+    from app.services.store_config_service import StoreConfigService
+    service = StoreConfigService(ledger)
+    config = await service.get_config()
+    op_hours = config.get("operating_hours", {})
+
+    dow = target_date.weekday()  # 0=Monday
+    day_name = _DAY_NAMES[dow]
+    day_config = op_hours.get(day_name, {})
+
+    open_hour = 11   # fallback
+    close_hour = 22  # fallback
+
+    if day_config and day_config.get("enabled", True):
+        open_str = day_config.get("open", "")
+        close_str = day_config.get("close", "")
+        if open_str:
+            open_hour = int(open_str.split(":")[0])
+        if close_str:
+            close_hour = int(close_str.split(":")[0])
+
+    return open_hour, close_hour
+
+
 async def _get_current_day_events(ledger: EventLedger, limit: int = 50000):
     """Get events since the last day close (current business day)."""
     boundary = await ledger.get_last_day_close_sequence()
@@ -629,19 +657,22 @@ async def hourly_compare(
     """Return hourly sales for a given date and the same weekday last week.
 
     Response: { today: [{ hour, net_sales }], last_week: [{ hour, net_sales }] }
-    Used by the manager-landing Sales Overview sparkline.
+    Hour range derived from store operating hours config.
     """
     if date:
         target = datetime.strptime(date, "%Y-%m-%d")
     else:
         target = datetime.now(timezone.utc)
 
+    # Read operating hours from store config
+    open_hour, close_hour = await _get_operating_hours(ledger, target)
+
     compare_date = target - timedelta(days=7)
     target_str = target.strftime("%Y-%m-%d")
     compare_str = compare_date.strftime("%Y-%m-%d")
 
-    today_hourly = await _hourly_for_date(ledger, target_str)
-    last_week_hourly = await _hourly_for_date(ledger, compare_str)
+    today_hourly = await _hourly_for_date(ledger, target_str, open_hour, close_hour)
+    last_week_hourly = await _hourly_for_date(ledger, compare_str, open_hour, close_hour)
 
     return {
         "today": today_hourly,
@@ -649,8 +680,8 @@ async def hourly_compare(
     }
 
 
-async def _hourly_for_date(ledger: EventLedger, date_str: str):
-    """Build hourly net sales array for a date."""
+async def _hourly_for_date(ledger: EventLedger, date_str: str, open_hour: int = 11, close_hour: int = 22):
+    """Build hourly net sales array for a date within operating hours."""
     events = await _get_events_for_date(ledger, date_str)
     orders = project_orders(events)
 
@@ -666,9 +697,9 @@ async def _hourly_for_date(ledger: EventLedger, date_str: str):
         hourly[h] += Decimal(str(order.subtotal or 0))
 
     result = []
-    for h in range(6, 24):
+    for h in range(open_hour, close_hour + 1):
         ampm = 'p' if h >= 12 else 'a'
-        label = str(h - 12 if h > 12 else h) + ampm
+        label = str(h - 12 if h > 12 else (12 if h == 0 else h)) + ampm
         result.append({
             "hour": label,
             "net_sales": money_round(float(hourly[h])),
