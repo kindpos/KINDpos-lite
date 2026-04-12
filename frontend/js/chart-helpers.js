@@ -15,10 +15,12 @@ import { injectChartDefs, PAT, GLOW } from './chart-patterns.js';
 var FONT = T.fb;
 
 export var CHART = {
-  // Axis / label colors — all coral inside charts
-  axisFill:    DATA.coral,
-  axisStroke:  '#666666',
-  gridStroke:  '#444444',
+  // Structural — derived from theme tokens
+  axisFill:    T.textPrimary,   // axis labels: white
+  axisStroke:  T.textPrimary,   // axis lines: white
+  gridStroke:  T.border,        // grid lines: theme border
+  calloutBg:   T.bgEdge,       // value callout backgrounds
+  money:       T.gold,          // money values on axes
   font:        FONT,
   axisFont:    '22px ' + FONT,
   labelFont:   '24px ' + FONT,
@@ -152,7 +154,7 @@ export function drawBarChart(svg, data, options) {
     }
 
     if (showLabels) {
-      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 3, fill: DATA.coral, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+      svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 3, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
     }
   }
 
@@ -244,7 +246,7 @@ export function drawStackedArea(svg, data, options) {
       if (cy > baseline - 4) cy = toY(data[i].value) - 4;
       var tw = cText.length * coFs * 0.6 + 10;
       var th = coFs + 4;
-      svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 2, width: tw, height: th, fill: '#111111' }));
+      svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 2, width: tw, height: th, fill: CHART.calloutBg }));
       svg.appendChild(svgEl('text', { x: cx, y: cy - 1, fill: color, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = cText;
     }
 
@@ -256,7 +258,7 @@ export function drawStackedArea(svg, data, options) {
         var ccy = toY(data[i].compareValue) + coFs + 6;
         if (ccy > baseline - 4) ccy = toY(data[i].compareValue) - 4;
         var ctw = ccText.length * coFs * 0.6 + 10;
-        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 2, width: ctw, height: th, fill: '#111111' }));
+        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 2, width: ctw, height: th, fill: CHART.calloutBg }));
         svg.appendChild(svgEl('text', { x: ccx, y: ccy - 1, fill: compareColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle' })).textContent = ccText;
       }
     }
@@ -264,7 +266,7 @@ export function drawStackedArea(svg, data, options) {
 
   // X labels
   for (var i = 0; i < n; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: DATA.coral, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 
   // Axis labels
@@ -338,12 +340,12 @@ export function drawParetoChart(svg, data, options) {
       var vth = coFs + 4;
       var vcy = barY + vth + 4;
       if (vcy > padTop + chartH - 2) vcy = barY + vth;
-      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 2, width: vtw, height: vth, fill: '#111111' }));
+      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 2, width: vtw, height: vth, fill: CHART.calloutBg }));
       svg.appendChild(svgEl('text', { x: x + groupW / 2, y: vcy - 1, fill: barColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valText;
     }
 
     // X label
-    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: DATA.coral, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = sorted[i].label;
+    svg.appendChild(svgEl('text', { x: x + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = sorted[i].label;
 
     // Cumulative
     cumul += sorted[i].value;
@@ -401,7 +403,7 @@ export function drawHorizontalBars(svg, data, options) {
     svg.appendChild(svgEl('rect', { x: padLeft, y: y + (rowH - barH) / 2, width: barWidth, height: barH, fill: barColor }));
 
     if (data[i].sublabel) {
-      svg.appendChild(svgEl('text', { x: padLeft + 6, y: y + rowH / 2 + 4, fill: '#333333', 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'start', 'font-weight': 'bold' })).textContent = data[i].sublabel;
+      svg.appendChild(svgEl('text', { x: padLeft + 6, y: y + rowH / 2 + 4, fill: T.bg, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'start', 'font-weight': 'bold' })).textContent = data[i].sublabel;
     }
   }
 }
@@ -507,7 +509,7 @@ export function drawTrendLine(svg, data, options) {
 
   // X labels
   for (var i = 0; i < data.length; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: DATA.coral, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 }
 
@@ -595,7 +597,7 @@ export function drawStackedColumn(svg, data, options) {
   for (var g = 0; g <= 4; g++) {
     var gy = padTop + chartH - (g / 4) * chartH;
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(yMax * g / 4);
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(yMax * g / 4);
   }
 
   // Stacked bars
@@ -615,7 +617,7 @@ export function drawStackedColumn(svg, data, options) {
     }
 
     // X label
-    svg.appendChild(svgEl('text', { x: padLeft + i * groupW + groupW / 2, y: h - 4, fill: DATA.coral, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: padLeft + i * groupW + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 
   // Cumulative line overlay (coral, dashed 5,3)
@@ -668,7 +670,7 @@ export function drawHistogram(svg, data, options) {
   for (var g = 0; g <= 4; g++) {
     var gy = padTop + chartH - (g / 4) * chartH;
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = Math.round(maxVal * g / 4);
   }
 
   // Bars
@@ -684,13 +686,13 @@ export function drawHistogram(svg, data, options) {
     svg.appendChild(svgEl('text', { x: x + barW / 2, y: labelY, fill: labelColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = '' + data[i].count;
 
     // X label (bucket range)
-    svg.appendChild(svgEl('text', { x: padLeft + i * groupW + groupW / 2, y: h - 4, fill: DATA.coral, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    svg.appendChild(svgEl('text', { x: padLeft + i * groupW + groupW / 2, y: h - 4, fill: CHART.axisFill, 'font-size': fs(22, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
   }
 
   // Summary stat bottom-right: "AVG $X.XX"
   if (options.avgValue !== undefined) {
     var avgText = 'AVG $' + options.avgValue.toFixed(2);
-    svg.appendChild(svgEl('text', { x: w - padRight - 4, y: h - padBottom + Math.round(14 * h / 160), fill: DATA.coral, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'end', 'font-weight': 'bold' })).textContent = avgText;
+    svg.appendChild(svgEl('text', { x: w - padRight - 4, y: h - padBottom + Math.round(14 * h / 160), fill: CHART.axisFill, 'font-size': fs(24, w), 'font-family': FONT, 'text-anchor': 'end', 'font-weight': 'bold' })).textContent = avgText;
   }
 }
 
@@ -751,12 +753,12 @@ export function drawHeatmap(svg, data, options) {
 
   // Column headers
   for (var c = 0; c < nCols; c++) {
-    svg.appendChild(svgEl('text', { x: padLeft + c * cellW + cellW / 2, y: padTop - 4, fill: DATA.coral, 'font-size': fs(18, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = cols[c];
+    svg.appendChild(svgEl('text', { x: padLeft + c * cellW + cellW / 2, y: padTop - 4, fill: CHART.axisFill, 'font-size': fs(18, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = cols[c];
   }
 
   // Row labels + cells
   for (var r = 0; r < nRows; r++) {
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: padTop + r * cellH + cellH / 2 + 4, fill: DATA.coral, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = rows[r];
+    svg.appendChild(svgEl('text', { x: padLeft - 4, y: padTop + r * cellH + cellH / 2 + 4, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = rows[r];
 
     for (var c = 0; c < nCols; c++) {
       var val = (data[r] && data[r][c]) || 0;
@@ -781,7 +783,7 @@ export function drawHeatmap(svg, data, options) {
   for (var i = 0; i < legendLabels.length; i++) {
     var lx = padLeft + i * legendW;
     svg.appendChild(svgEl('rect', { x: lx, y: legendY, width: legendW - 4, height: Math.round(10 * h / 160), fill: legendColors[i] }));
-    svg.appendChild(svgEl('text', { x: lx + (legendW - 4) / 2, y: legendY + Math.round(20 * h / 160), fill: DATA.coral, 'font-size': fs(16, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = legendLabels[i];
+    svg.appendChild(svgEl('text', { x: lx + (legendW - 4) / 2, y: legendY + Math.round(20 * h / 160), fill: CHART.axisFill, 'font-size': fs(16, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = legendLabels[i];
   }
 }
 
@@ -847,7 +849,7 @@ export function drawParetoHBar(svg, data, options) {
     svg.appendChild(svgEl('polyline', { points: cumPts.join(' '), fill: 'none', stroke: DATA.coral, 'stroke-width': 2.5, 'stroke-dasharray': '5,3' }));
     for (var i = 0; i < cumPts.length; i++) {
       var parts = cumPts[i].split(',');
-      svg.appendChild(svgEl('rect', { x: parseFloat(parts[0]) - ptSz / 2, y: parseFloat(parts[1]) - ptSz / 2, width: ptSz, height: ptSz, fill: DATA.coral }));
+      svg.appendChild(svgEl('rect', { x: parseFloat(parts[0]) - ptSz / 2, y: parseFloat(parts[1]) - ptSz / 2, width: ptSz, height: ptSz, fill: CHART.axisFill }));
     }
   }
 
@@ -855,7 +857,7 @@ export function drawParetoHBar(svg, data, options) {
   for (var p = 0; p <= 4; p++) {
     var pct = p * 25;
     var px = padLeft + (pct / 100) * chartW;
-    svg.appendChild(svgEl('text', { x: px, y: h - 2, fill: DATA.coral, 'font-size': fs(18, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = pct + '%';
+    svg.appendChild(svgEl('text', { x: px, y: h - 2, fill: CHART.axisFill, 'font-size': fs(18, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = pct + '%';
   }
 }
 
