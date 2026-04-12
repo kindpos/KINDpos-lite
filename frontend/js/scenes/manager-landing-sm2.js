@@ -573,7 +573,7 @@ function showDrillDown(state, cardName) {
   if (cardName === 'sales-overview') {
     buildSalesOverviewExpanded(state, content);
   } else if (cardName === 'sales-breakdown') {
-    // TODO: buildSalesBreakdownExpanded(state, content);
+    buildSalesBreakdownExpanded(state, content);
   } else if (cardName === 'server-checkouts') {
     // TODO: buildServerCheckoutsExpanded(state, content);
   } else if (cardName === 'close-day') {
@@ -696,6 +696,218 @@ function buildSalesOverviewExpanded(state, content) {
   grid.appendChild(gridCell('Voids', fmt(d.void_total), T.vermillion));
 
   content.appendChild(grid);
+}
+
+function buildSalesBreakdownExpanded(state, content) {
+  var bd = state.breakdownData || {};
+  var cats = bd.categories || [];
+  var hc = bd.hourlyCats || { hours: [], series: [] };
+  var orders = state.allOrders || [];
+  var activeFilter = null;
+
+  // ── Stats row ──
+  var totalRevenue = 0;
+  for (var i = 0; i < cats.length; i++) totalRevenue += cats[i].value;
+  var topCat = cats.length > 0 ? cats.reduce(function(a, b) { return a.value > b.value ? a : b; }) : null;
+  var totalItems = 0;
+  for (var oi = 0; oi < orders.length; oi++) {
+    var items = orders[oi].items || [];
+    for (var ii = 0; ii < items.length; ii++) totalItems += (items[ii].quantity || 1);
+  }
+  // Peak hour from hourly data
+  var hourlyData = bd.hourly || [];
+  var peakHour = '--';
+  var peakVal = 0;
+  for (var i = 0; i < hourlyData.length; i++) {
+    if (hourlyData[i].value > peakVal) { peakVal = hourlyData[i].value; peakHour = hourlyData[i].label; }
+  }
+
+  var statsRow = document.createElement('div');
+  statsRow.style.cssText = 'display:flex;gap:6px;margin-bottom:12px;';
+
+  function statBox(label, value, color) {
+    var box = document.createElement('div');
+    box.style.cssText = 'background:' + T.bg + ';border:2px solid ' + T.border + ';flex:1;padding:7px 8px;';
+    box.style.clipPath = chamfer(4);
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.numpadChassis + ';font-weight:bold;letter-spacing:1px;';
+    lbl.textContent = label;
+    var val = document.createElement('div');
+    val.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + color + ';font-weight:bold;line-height:1.1;margin-top:2px;';
+    val.textContent = value;
+    box.appendChild(lbl);
+    box.appendChild(val);
+    return box;
+  }
+
+  statsRow.appendChild(statBox('TOTAL REVENUE', fmt(totalRevenue), T.gold));
+  var topBox = statBox('TOP CATEGORY', topCat ? topCat.name : '--', topCat ? T.catColor(topCat.name) : T.textPrimary);
+  statsRow.appendChild(topBox);
+  statsRow.appendChild(statBox('PEAK HOUR', peakHour, T.lime));
+  statsRow.appendChild(statBox('TOTAL ITEMS', String(totalItems), T.lime));
+  content.appendChild(statsRow);
+
+  // ── Full stacked area chart ──
+  var chartContainer = document.createElement('div');
+
+  function renderChart() {
+    chartContainer.innerHTML = '';
+    if (hc.series.length > 0) {
+      var svg = createSVG(T.chartFullW, T.chartFullH);
+      drawStackedAreaMulti(svg, hc.series, {
+        width: T.chartFullW,
+        height: T.chartFullH,
+        labels: hc.hours,
+        activeSeries: activeFilter,
+      });
+      chartContainer.appendChild(svg);
+    }
+  }
+
+  content.appendChild(chartContainer);
+  renderChart();
+
+  // ── Tender split bar ──
+  var tenderLabel = document.createElement('div');
+  tenderLabel.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.numpadChassis + ';font-weight:bold;letter-spacing:2px;margin:12px 0 6px;';
+  tenderLabel.textContent = 'TENDER SPLIT';
+  content.appendChild(tenderLabel);
+
+  var cashTotal = bd.cash || 0;
+  var cardTotal = bd.card || 0;
+  var tenderTotal = cashTotal + cardTotal;
+  var cashPct = tenderTotal > 0 ? cashTotal / tenderTotal : 0.5;
+
+  var tenderBar = document.createElement('div');
+  tenderBar.style.cssText = 'display:flex;height:28px;margin-bottom:4px;';
+  var cashSeg = document.createElement('div');
+  cashSeg.style.cssText = 'background:' + T.gold + ';flex:' + (cashPct * 100).toFixed(0) + ';display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:14px;color:' + T.bgDark + ';font-weight:bold;';
+  cashSeg.textContent = 'CASH ' + fmt(cashTotal) + ' ' + Math.round(cashPct * 100) + '%';
+  var cardSeg = document.createElement('div');
+  cardSeg.style.cssText = 'background:' + T.electricPink + ';flex:' + ((1 - cashPct) * 100).toFixed(0) + ';display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:14px;color:' + T.bgDark + ';font-weight:bold;';
+  cardSeg.textContent = 'CARD ' + fmt(cardTotal) + ' ' + Math.round((1 - cashPct) * 100) + '%';
+  tenderBar.appendChild(cashSeg);
+  tenderBar.appendChild(cardSeg);
+  content.appendChild(tenderBar);
+
+  // ── Category filter chips ──
+  var filterBar = document.createElement('div');
+  filterBar.style.cssText = 'display:flex;gap:5px;margin:12px 0 10px;flex-wrap:wrap;align-items:center;';
+  var filterLbl = document.createElement('span');
+  filterLbl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mutedText + ';font-weight:bold;letter-spacing:1px;';
+  filterLbl.textContent = 'FILTER:';
+  filterBar.appendChild(filterLbl);
+
+  var chipEls = [];
+  var itemSections = document.createElement('div');
+
+  function updateFilter(name) {
+    if (activeFilter === name) {
+      activeFilter = null;
+    } else {
+      activeFilter = name;
+    }
+    for (var i = 0; i < chipEls.length; i++) {
+      var isActive = !activeFilter || chipEls[i]._catName === activeFilter;
+      chipEls[i].style.opacity = isActive ? '1' : '0.2';
+    }
+    renderChart();
+    renderItemSections();
+  }
+
+  for (var i = 0; i < cats.length; i++) {
+    (function(cat) {
+      var chip = document.createElement('button');
+      chip.style.cssText = 'font-family:' + T.fh + ';font-size:14px;font-weight:bold;letter-spacing:1px;padding:3px 8px;border:1px solid ' + T.catColor(cat.name) + ';color:' + T.catColor(cat.name) + ';background:transparent;cursor:pointer;';
+      chip.style.clipPath = chamfer(3);
+      chip.textContent = cat.name;
+      chip._catName = cat.name;
+      chip.addEventListener('pointerup', function() { updateFilter(cat.name); });
+      chipEls.push(chip);
+      filterBar.appendChild(chip);
+    })(cats[i]);
+  }
+  content.appendChild(filterBar);
+
+  // ── Item sections per category ──
+  function renderItemSections() {
+    itemSections.innerHTML = '';
+    var visibleCats = activeFilter ? cats.filter(function(c) { return c.name === activeFilter; }) : cats;
+
+    // Build item map from orders
+    var itemsByCat = {};
+    for (var oi = 0; oi < orders.length; oi++) {
+      if (orders[oi].status === 'voided') continue;
+      var oItems = orders[oi].items || [];
+      for (var ii = 0; ii < oItems.length; ii++) {
+        var item = oItems[ii];
+        var catName = (item.category || '').toUpperCase();
+        if (!itemsByCat[catName]) itemsByCat[catName] = {};
+        var key = item.name || item.menu_item_id || 'Unknown';
+        if (!itemsByCat[catName][key]) {
+          itemsByCat[catName][key] = { name: key, qty: 0, price: item.price || 0 };
+        }
+        itemsByCat[catName][key].qty += (item.quantity || 1);
+      }
+    }
+
+    for (var ci = 0; ci < visibleCats.length; ci++) {
+      var cat = visibleCats[ci];
+      var catColor = T.catColor(cat.name);
+
+      // Section header
+      var secHdr = document.createElement('div');
+      secHdr.style.cssText = 'display:flex;align-items:center;gap:8px;padding-bottom:4px;margin-bottom:5px;border-bottom:1px solid ' + T.border + ';margin-top:10px;';
+      var dot = document.createElement('span');
+      dot.style.cssText = 'width:8px;height:8px;background:' + catColor + ';flex-shrink:0;';
+      var nameEl = document.createElement('span');
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + catColor + ';font-weight:bold;letter-spacing:2px;';
+      nameEl.textContent = cat.name;
+      var totalEl = document.createElement('span');
+      totalEl.style.cssText = 'margin-left:auto;font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';font-weight:bold;';
+      totalEl.textContent = fmt(cat.value);
+      secHdr.appendChild(dot);
+      secHdr.appendChild(nameEl);
+      secHdr.appendChild(totalEl);
+      itemSections.appendChild(secHdr);
+
+      // Item table
+      var catItems = itemsByCat[cat.name] || {};
+      var itemList = [];
+      for (var k in catItems) { if (catItems.hasOwnProperty(k)) itemList.push(catItems[k]); }
+      itemList.sort(function(a, b) { return (b.qty * b.price) - (a.qty * a.price); });
+
+      if (itemList.length === 0) continue;
+
+      var table = document.createElement('div');
+      table.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0;';
+
+      // Header row
+      var thLabels = ['ITEM', 'QTY', 'UNIT', 'TOTAL'];
+      for (var ti = 0; ti < thLabels.length; ti++) {
+        var th = document.createElement('div');
+        th.style.cssText = 'background:' + T.bgDark + ';font-family:' + T.fh + ';font-size:14px;color:' + T.numpadChassis + ';font-weight:bold;letter-spacing:1px;padding:4px 8px;border-bottom:1px solid ' + T.border + ';' + (ti > 0 ? 'text-align:right;' : '');
+        th.textContent = thLabels[ti];
+        table.appendChild(th);
+      }
+
+      for (var ii = 0; ii < itemList.length; ii++) {
+        var it = itemList[ii];
+        var cells = [it.name, String(it.qty), fmt(it.price), fmt(it.qty * it.price)];
+        for (var ci2 = 0; ci2 < cells.length; ci2++) {
+          var td = document.createElement('div');
+          var isMoney = ci2 === 3;
+          td.style.cssText = 'font-family:' + T.fb + ';font-size:16px;padding:5px 8px;border-bottom:1px solid ' + T.bg + ';font-weight:bold;color:' + (isMoney ? T.gold : ci2 > 0 ? T.numpadChassis : T.textPrimary) + ';' + (ci2 > 0 ? 'text-align:right;' : '');
+          td.textContent = cells[ci2];
+          table.appendChild(td);
+        }
+      }
+      itemSections.appendChild(table);
+    }
+  }
+
+  content.appendChild(itemSections);
+  renderItemSections();
 }
 
 function buildSalesBreakdownCard(state) {
