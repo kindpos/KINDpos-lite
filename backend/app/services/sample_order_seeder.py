@@ -392,14 +392,14 @@ async def seed_sample_orders_if_empty(ledger: EventLedger) -> None:
     today = datetime.now(timezone.utc).date()
     start_date = today - timedelta(days=DAYS_OF_HISTORY)
 
-    print(f"  Seeding {DAYS_OF_HISTORY} days of sample orders ({start_date} → {today})...")
+    # Seed only previous days — today starts empty so real usage isn't mixed with demo data
+    print(f"  Seeding {DAYS_OF_HISTORY} days of sample orders ({start_date} → {today - timedelta(days=1)})...")
 
     total_events = 0
-    for day_offset in range(DAYS_OF_HISTORY + 1):
+    for day_offset in range(DAYS_OF_HISTORY):
         day_date = start_date + timedelta(days=day_offset)
-        is_today = (day_date == today)
 
-        day_events = _generate_day(day_date, staff, weighted_items, is_today=is_today)
+        day_events = _generate_day(day_date, staff, weighted_items, is_today=False)
         if day_events:
             await ledger.append_batch(day_events)
             total_events += len(day_events)
