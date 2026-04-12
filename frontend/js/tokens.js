@@ -95,6 +95,20 @@ export const T = {
   colGap:   20,
   colGapSm: 12,
   pcLeftW:  280,
+
+  // Chart dimensions (shared across all chart-rendering scenes)
+  chartPanelW:   500,     // chart width in card panels / drill-downs
+  chartPanelH:   180,     // chart height — standard (bar, category)
+  chartPanelHSm: 160,     // chart height — short (trend line)
+  chartFullW:    900,     // chart width in expanded / full views
+  chartFullH:    380,     // chart height in expanded / full views
+  chartDonut:    140,     // donut chart diameter
+  chartPt:       8,       // data point marker size (square)
+  chartLblW:     120,     // axis label column width
+  chartLblWSm:   80,      // axis label column width (compact)
+  chartProgW:    860,     // progress bar width (full)
+  chartProgWSm:  380,     // progress bar width (compact)
+
   bevel:    7,
   bevelBtn: 4,
   chamfer:  8,
