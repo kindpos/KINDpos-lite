@@ -636,44 +636,68 @@ function rebuildBottomBar(params) {
     }
   }
 
-  // ── Row 2: Action buttons (always present when not in session) ──
-  var disc  = buildButton('DISC', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleDiscount(); },
-  });
-  var voidB = buildButton('VOID', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleVoid(); },
-  });
-  voidB.id = 'void-btn';
-  var print = buildButton('PRINT', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() {
-      if (!currentOrderId) return;
-      fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
-        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
-        .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
-    },
-  });
-  var pay = buildButton('PAY', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handlePay(_payParams); },
-  });
-  var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
-  var sendLabel = allSent ? 'RESEND' : 'SEND';
-  var send = buildButton(sendLabel, { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-    onTap: function() { handleSend(); },
-  });
+  // ── Row 2: Action buttons ──
+  var hasUnsent = ticket.some(function(i) { return !i.sent; });
 
-  disc.style.gridColumn  = '1'; disc.style.gridRow  = '2'; disc.style.height = '100%';
-  voidB.style.gridColumn = '2'; voidB.style.gridRow = '2'; voidB.style.height = '100%';
-  print.style.gridColumn = '3'; print.style.gridRow = '2'; print.style.height = '100%';
-  pay.style.gridColumn   = '4'; pay.style.gridRow   = '2'; pay.style.height = '100%';
-  send.style.gridColumn  = '5'; send.style.gridRow  = '2'; send.style.height = '100%';
+  if (sceneParams.returnScene === 'check-overview' && hasUnsent) {
+    // Check-overview mode: ADD (save only) + SEND (save + kitchen)
+    var addOnly = buildButton('ADD', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
+      onTap: async function() {
+        try { await handleSaveOnly(); } catch (e) { return; }
+        handleClose();
+      },
+    });
+    var sendAndClose = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: async function() {
+        try { await handleSend(); } catch (e) { return; }
+        handleClose();
+      },
+    });
 
-  [disc, voidB, print, pay, send].forEach(function(b) { _bottomBar.appendChild(b); });
+    addOnly.style.gridColumn = '1 / 3'; addOnly.style.gridRow = '2'; addOnly.style.height = '100%';
+    sendAndClose.style.gridColumn = '3 / 6'; sendAndClose.style.gridRow = '2'; sendAndClose.style.height = '100%';
+    _bottomBar.appendChild(addOnly);
+    _bottomBar.appendChild(sendAndClose);
+  } else {
+    // Normal mode: DISC, VOID, PRINT, PAY, SEND
+    var disc  = buildButton('DISC', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() { handleDiscount(); },
+    });
+    var voidB = buildButton('VOID', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() { handleVoid(); },
+    });
+    voidB.id = 'void-btn';
+    var print = buildButton('PRINT', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() {
+        if (!currentOrderId) return;
+        fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
+          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
+          .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
+      },
+    });
+    var pay = buildButton('PAY', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() { handlePay(_payParams); },
+    });
+    var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
+    var sendLabel = allSent ? 'RESEND' : 'SEND';
+    var send = buildButton(sendLabel, { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() { handleSend(); },
+    });
 
-  // Update void/delete label
-  var selected = ticket.filter(function(i) { return i.selected; });
-  var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
-  var vInner = voidB.firstElementChild;
-  if (vInner) vInner.textContent = unsentSelected ? 'DELETE' : 'VOID';
+    disc.style.gridColumn  = '1'; disc.style.gridRow  = '2'; disc.style.height = '100%';
+    voidB.style.gridColumn = '2'; voidB.style.gridRow = '2'; voidB.style.height = '100%';
+    print.style.gridColumn = '3'; print.style.gridRow = '2'; print.style.height = '100%';
+    pay.style.gridColumn   = '4'; pay.style.gridRow   = '2'; pay.style.height = '100%';
+    send.style.gridColumn  = '5'; send.style.gridRow  = '2'; send.style.height = '100%';
+
+    [disc, voidB, print, pay, send].forEach(function(b) { _bottomBar.appendChild(b); });
+
+    // Update void/delete label
+    var selected = ticket.filter(function(i) { return i.selected; });
+    var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
+    var vInner = voidB.firstElementChild;
+    if (vInner) vInner.textContent = unsentSelected ? 'DELETE' : 'VOID';
+  }
 }
 
 function clearModifierSelection() {
@@ -1466,10 +1490,23 @@ function renderTicket() {
   if (!list) return;
   list.innerHTML = '';
 
+  // In check-overview mode, only show newly added (unsent) items
+  var displayTicket = ticket;
+  if (sceneParams.returnScene === 'check-overview') {
+    displayTicket = ticket.filter(function(inst) { return !inst.sent; });
+    if (displayTicket.length === 0) {
+      var hint = document.createElement('div');
+      hint.style.cssText = 'padding:20px 8px;font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;';
+      hint.textContent = 'Tap items to add';
+      list.appendChild(hint);
+      return;
+    }
+  }
+
   // ── Group instances by name ──────────────────────
   var groups = {};
   var groupOrder = [];
-  ticket.forEach(function(inst) {
+  displayTicket.forEach(function(inst) {
     if (!groups[inst.name]) {
       groups[inst.name] = [];
       groupOrder.push(inst.name);
@@ -2098,6 +2135,68 @@ function _buildItemPayload(inst) {
   }
 
   return payload;
+}
+
+async function handleSaveOnly() {
+  if (ticket.length === 0) return;
+  if (isSending) return;
+
+  var unsentInstances = ticket.filter(function(inst) { return !inst.sent; });
+  if (unsentInstances.length === 0) return;
+
+  isSending = true;
+
+  try {
+    // Step 1 — create order if needed
+    if (!currentOrderId) {
+      var createRes = await fetch(API + '/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_type:  'quick_service',
+          guest_count: 1,
+          customer_name: customerName || null,
+          server_id:   sceneParams.employeeId || null,
+          server_name: sceneParams.employeeName || null,
+        }),
+      });
+      if (!createRes.ok) throw new Error('Order create failed: ' + createRes.status);
+      var created = await createRes.json();
+      if (!created || !created.order_id) throw new Error('Invalid order response — missing order_id');
+      currentOrderId = created.order_id;
+      currentCheckNumber = created.check_number;
+    }
+
+    // Step 2 — post unsent items
+    var itemPromises = unsentInstances.map(function(inst) {
+      return fetch(API + '/orders/' + currentOrderId + '/items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': inst.idemKey || _idemKey(),
+        },
+        body: JSON.stringify(_buildItemPayload(inst)),
+      });
+    });
+    var results = await Promise.allSettled(itemPromises);
+    var anyFailed = false;
+    results.forEach(function(r, idx) {
+      if (r.status === 'fulfilled' && r.value.ok) {
+        unsentInstances[idx].sent = true;
+      } else {
+        anyFailed = true;
+      }
+    });
+    if (anyFailed) throw new Error('Some items failed to save');
+
+    showToast('Items saved', { bg: T.goGreen, duration: 1500 });
+  } catch (err) {
+    console.warn('[KINDpos] Save failed:', err);
+    showToast('Save failed', { bg: T.red });
+    throw err;
+  } finally {
+    isSending = false;
+  }
 }
 
 async function handleSend() {
