@@ -79,6 +79,18 @@ function fs(base, w) {
   return '' + Math.round(base * s);
 }
 
+// Standard chart padding — scaled from tokens to actual chart dimensions.
+// Options can override any side. Base tokens assume T.chartW × T.chartH.
+function chartPad(w, h, opts) {
+  opts = opts || {};
+  return {
+    left:   opts.padLeft   != null ? opts.padLeft   : Math.round(T.chartLblW * w / T.chartW),
+    right:  opts.padRight  != null ? opts.padRight  : Math.round(T.chartPadR * w / T.chartW),
+    top:    opts.padTop    != null ? opts.padTop     : Math.round(T.chartPadT * h / T.chartH),
+    bottom: opts.padBottom != null ? opts.padBottom  : Math.round(T.chartPadB * h / T.chartH),
+  };
+}
+
 // ═══════════════════════════════════════════════════
 //  BAR CHART — side-by-side vertical bars with shading
 // ═══════════════════════════════════════════════════
@@ -95,10 +107,11 @@ export function drawBarChart(svg, data, options) {
     if (data[i].compareValue !== undefined && data[i].compareValue !== null) { hasCompare = true; break; }
   }
 
-  var padLeft = Math.round(70 * w / 400);
-  var padRight = 8;
-  var padTop = showValueAbove ? Math.round(28 * h / 160) : 10;
-  var padBottom = showLabels ? Math.round(32 * h / 160) : 10;
+  var _p = chartPad(w, h, options);
+  var padLeft = _p.left;
+  var padRight = _p.right;
+  var padTop = showValueAbove ? Math.round(_p.top * 2.8) : _p.top;
+  var padBottom = showLabels ? _p.bottom : _p.top;
   var chartW = w - padLeft - padRight;
   var chartH = h - padTop - padBottom;
 
