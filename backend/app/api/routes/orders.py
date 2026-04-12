@@ -1548,7 +1548,11 @@ async def adjust_tip_on_order(
     request: OrderTipAdjustRequest,
     ledger: EventLedger = Depends(get_ledger),
 ):
-    """Adjust tip on a specific payment within an order."""
+    """Adjust tip on a specific payment within an order.
+
+    Authorization is handled at the scene level — servers only see
+    their own checks, managers see all checks.
+    """
     if request.tip_amount < 0:
         raise HTTPException(status_code=400, detail="Tip amount cannot be negative")
     _validate_2dp(request.tip_amount, "tip_amount")
