@@ -1612,8 +1612,8 @@ function renderCheckGrid(state) {
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
       var emp = state.params.emp || state.params;
-      SceneManager.mountWorking('order-entry', {
-        mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+      SceneManager.mountWorking('check-overview', {
+        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
       });
     });
     state.centerGrid.appendChild(newTile);
@@ -1678,14 +1678,10 @@ function buildCheckTile(state, order) {
   if (isOpen) {
     if (state.selected[order.order_id]) applyTileSelected(tile, sColor, true);
     tile.addEventListener('pointerup', function() {
-      if (state.selected[order.order_id]) {
-        delete state.selected[order.order_id];
-        applyTileSelected(tile, sColor, false);
-      } else {
-        state.selected[order.order_id] = order;
-        applyTileSelected(tile, sColor, true);
-      }
-      renderOpsPanel(state);
+      SceneManager.mountWorking('check-overview', {
+        checkId: order.order_id,
+        tableId: order.table_id,
+      });
     });
   } else if (isClosed) {
     tile.addEventListener('pointerup', function() {
