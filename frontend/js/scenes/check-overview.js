@@ -7,8 +7,6 @@
 import { SceneManager } from '../scene-manager.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
 
-// TODO: bevelEdges() has no entry for T.sage — falls back to { light: T.bgLight, dark: T.bgEdge }.
-//       Sage bevel pair (sageL / sageD) should be added to tokens.js for correct seat slot rendering.
 // TODO: No font-size token exists for 26px card header labels — using inline '9px'.
 //       Consider adding T.fsLabel or similar to tokens.js.
 
@@ -36,7 +34,6 @@ SceneManager.register({
     container.appendChild(root);
 
     var mintEdges = bevelEdges(T.mint);
-    var sageEdges = bevelEdges(T.sage);
     var darkEdges = bevelEdges(T.darkBtn);
 
     // ═══════════════════════════════════════════════════
@@ -147,14 +144,14 @@ SceneManager.register({
       overflow: 'hidden',
     });
 
-    // Seat slot definitions: S-001,002,006 = sage (occupied), S-003,004,005 = darkBtn (empty)
+    // Seat slot definitions: S-001,002,006 = mint (occupied), S-003,004,005 = darkBtn (empty)
     var seats = [
-      { id: 'S-001', frame: T.sage,    edges: sageEdges },
-      { id: 'S-002', frame: T.sage,    edges: sageEdges },
+      { id: 'S-001', frame: T.mint,    edges: mintEdges },
+      { id: 'S-002', frame: T.mint,    edges: mintEdges },
       { id: 'S-003', frame: T.darkBtn, edges: darkEdges },
       { id: 'S-004', frame: T.darkBtn, edges: darkEdges },
       { id: 'S-005', frame: T.darkBtn, edges: darkEdges },
-      { id: 'S-006', frame: T.sage,    edges: sageEdges },
+      { id: 'S-006', frame: T.mint,    edges: mintEdges },
     ];
 
     for (var i = 0; i < seats.length; i++) {
