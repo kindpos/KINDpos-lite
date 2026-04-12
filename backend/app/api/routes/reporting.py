@@ -35,23 +35,21 @@ async def _get_operating_hours(ledger: EventLedger, target_date: datetime) -> tu
     """Return (open_hour, close_hour) for the given date from store config."""
     from app.services.store_config_service import StoreConfigService
     service = StoreConfigService(ledger)
-    config = await service.get_config()
-    op_hours = config.get("operating_hours", {})
+    config = await service.get_projected_config()
+    op_hours = config.operating_hours or {}
 
     dow = target_date.weekday()  # 0=Monday
     day_name = _DAY_NAMES[dow]
-    day_config = op_hours.get(day_name, {})
+    day_config = op_hours.get(day_name)
 
     open_hour = 11   # fallback
     close_hour = 22  # fallback
 
-    if day_config and day_config.get("enabled", True):
-        open_str = day_config.get("open", "")
-        close_str = day_config.get("close", "")
-        if open_str:
-            open_hour = int(open_str.split(":")[0])
-        if close_str:
-            close_hour = int(close_str.split(":")[0])
+    if day_config and day_config.enabled:
+        if day_config.open:
+            open_hour = int(day_config.open.split(":")[0])
+        if day_config.close:
+            close_hour = int(day_config.close.split(":")[0])
 
     return open_hour, close_hour
 
