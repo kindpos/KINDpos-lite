@@ -146,10 +146,10 @@ export function drawBarChart(svg, data, options) {
       var vTw = valStr.length * vFs * 0.6 + 10;
       var vTh = vFs + 6;
       var vX = hasCompare ? x + barW / 2 + gap : x + groupW / 2;
-      // Center inside the bar
+      // Center inside the bar; fallback above if bar too short
       var vY = barY + barH / 2 + vFs / 3;
-      if (barH < vTh + 4) vY = barY - 2; // fallback above if bar too short
-      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: T.bgDark, rx: 2 }));
+      if (barH < vTh + 4) vY = barY - 2;
+      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: T.bg, rx: 2 }));
       svg.appendChild(svgEl('text', { x: vX, y: vY - 1, fill: color, 'font-size': '' + vFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valStr;
     }
 
