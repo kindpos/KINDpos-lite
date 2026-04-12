@@ -296,6 +296,123 @@ export function drawStackedArea(svg, data, options) {
 }
 
 // ═══════════════════════════════════════════════════
+//  STACKED AREA (MULTI-SERIES) — N categories layered
+//  series: [{ name, color, data: [val, val, ...] }]
+//  options: { width, height, labels, hideLabels, hideAxis,
+//             activeSeries, dither }
+// ═══════════════════════════════════════════════════
+
+export function drawStackedAreaMulti(svg, series, options) {
+  var w = options.width || T.chartW;
+  var h = options.height || T.chartH;
+  var labels = options.labels || [];
+  var hideLabels = options.hideLabels || false;
+  var hideAxis = options.hideAxis || false;
+  var activeSeries = options.activeSeries || null;
+  var dither = options.dither !== false;
+
+  var _p = chartPad(w, h, {
+    padLeft: hideAxis ? Math.round(4 * w / T.chartW) : null,
+    padBottom: hideLabels ? Math.round(4 * h / T.chartH) : null,
+  });
+  var padLeft = _p.left;
+  var padRight = _p.right;
+  var padTop = _p.top;
+  var padBottom = _p.bottom;
+  var chartW = w - padLeft - padRight;
+  var chartH = h - padTop - padBottom;
+
+  if (!series || series.length === 0) return;
+  var n = series[0].data.length;
+  if (n < 2) return;
+
+  // Compute hourly totals for y-axis scale
+  var maxTotal = 0;
+  for (var hi = 0; hi < n; hi++) {
+    var hourSum = 0;
+    for (var si = 0; si < series.length; si++) hourSum += (series[si].data[hi] || 0);
+    if (hourSum > maxTotal) maxTotal = hourSum;
+  }
+  if (maxTotal === 0) maxTotal = 1;
+
+  var bot = padTop + chartH;
+  function xOf(i) { return padLeft + (i / (n - 1)) * chartW; }
+  function yOf(v) { return bot - (v / maxTotal) * chartH; }
+
+  // Inject defs (patterns + glows)
+  injectChartDefs(svg);
+
+  // Dither pattern (checkerboard)
+  var defs = svg.querySelector('defs');
+  if (dither && defs) {
+    var ditPat = svgEl('pattern', { id: 'pat-dither', width: '2', height: '2', patternUnits: 'userSpaceOnUse' });
+    ditPat.appendChild(svgEl('rect', { x: '0', y: '0', width: '1', height: '1', fill: 'rgba(0,0,0,0.20)' }));
+    ditPat.appendChild(svgEl('rect', { x: '1', y: '1', width: '1', height: '1', fill: 'rgba(0,0,0,0.20)' }));
+    defs.appendChild(ditPat);
+  }
+
+  // Chart well background
+  svg.appendChild(svgEl('rect', { x: padLeft, y: padTop, width: chartW, height: chartH, fill: T.bgDark }));
+
+  // Grid lines
+  for (var g = 0; g <= 4; g++) {
+    var gy = padTop + chartH - (g / 4) * chartH;
+    svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
+    if (!hideAxis) {
+      var gVal = Math.round(maxTotal * g / 4);
+      svg.appendChild(svgEl('text', { 'font-weight': 'bold', x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': DATA_FONT, 'text-anchor': 'end' })).textContent = '$' + gVal;
+    }
+  }
+
+  // Draw stacked areas — bottom series first (reverse order for layering)
+  var stackBot = [];
+  for (var i = 0; i < n; i++) stackBot.push(0);
+
+  var drawOrder = [];
+  for (var si = series.length - 1; si >= 0; si--) drawOrder.push(series[si]);
+
+  for (var di = 0; di < drawOrder.length; di++) {
+    var cat = drawOrder[di];
+    var isActive = !activeSeries || activeSeries === cat.name;
+    var opacity = isActive ? 0.75 : 0.12;
+
+    // Compute top values
+    var topVals = [];
+    for (var i = 0; i < n; i++) topVals.push(stackBot[i] + (cat.data[i] || 0));
+
+    // Build polygon points: forward along top, backward along bottom
+    var pts = '';
+    for (var i = 0; i < n; i++) pts += xOf(i).toFixed(1) + ',' + yOf(topVals[i]).toFixed(1) + ' ';
+    for (var i = n - 1; i >= 0; i--) pts += xOf(i).toFixed(1) + ',' + yOf(stackBot[i]).toFixed(1) + ' ';
+
+    // Fill polygon
+    svg.appendChild(svgEl('polygon', { points: pts.trim(), fill: cat.color, opacity: opacity }));
+
+    // Dither overlay
+    if (dither && isActive) {
+      svg.appendChild(svgEl('polygon', { points: pts.trim(), fill: 'url(#pat-dither)', 'pointer-events': 'none' }));
+    }
+
+    // Top edge stroke
+    if (isActive) {
+      var edgePts = '';
+      for (var i = 0; i < n; i++) edgePts += xOf(i).toFixed(1) + ',' + yOf(topVals[i]).toFixed(1) + ' ';
+      svg.appendChild(svgEl('polyline', { points: edgePts.trim(), fill: 'none', stroke: cat.color, 'stroke-width': '1.5', 'pointer-events': 'none' }));
+    }
+
+    // Advance stack
+    for (var i = 0; i < n; i++) stackBot[i] = topVals[i];
+  }
+
+  // X-axis labels
+  if (!hideLabels && labels.length > 0) {
+    for (var i = 0; i < labels.length; i++) {
+      svg.appendChild(svgEl('text', { 'font-weight': 'bold', x: xOf(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': LABEL_FONT, 'text-anchor': 'middle' })).textContent = labels[i];
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
 //  PARETO CHART — bars + cumulative line
 // ═══════════════════════════════════════════════════
 
