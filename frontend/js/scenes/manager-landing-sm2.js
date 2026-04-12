@@ -469,9 +469,170 @@ function buildSalesOverviewCard(state) {
   kpiRow.appendChild(avgWrap);
   card.appendChild(kpiRow);
 
-  // TODO: >>> drill-down (expanded chart + breakdown table)
+  // ── Tap to expand ──
+  pair.wrap.style.cursor = 'pointer';
+  pair.wrap.addEventListener('pointerup', function() {
+    showDrillDown(state, 'sales-overview');
+  });
 
   return pair.wrap;
+}
+
+// ═══════════════════════════════════════════════════
+//  DRILL-DOWN OVERLAY
+// ═══════════════════════════════════════════════════
+
+function showDrillDown(state, cardName) {
+  hideDrillDown(state);
+  if (!state.el) return;
+
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:' + T.bgDark
+    + ';display:flex;flex-direction:column;z-index:5;overflow:hidden;';
+  overlay.style.clipPath = chamfer(8);
+
+  // Header — tap to close
+  var headerLabels = {
+    'sales-overview': 'SALES OVERVIEW',
+    'sales-breakdown': 'SALES BREAKDOWN',
+    'server-checkouts': 'SERVER CHECKOUTS',
+    'close-day': 'CLOSE DAY',
+  };
+  var header = buildCardHeader(headerLabels[cardName] || 'DETAIL');
+  header.style.cursor = 'pointer';
+  header.addEventListener('pointerup', function() { hideDrillDown(state); });
+  overlay.appendChild(header);
+
+  // Scrollable content (invisible scrollbar)
+  var content = document.createElement('div');
+  content.style.cssText = 'flex:1;overflow-y:auto;padding:12px;-ms-overflow-style:none;scrollbar-width:none;';
+
+  if (cardName === 'sales-overview') {
+    buildSalesOverviewExpanded(state, content);
+  } else if (cardName === 'sales-breakdown') {
+    // TODO: buildSalesBreakdownExpanded(state, content);
+  } else if (cardName === 'server-checkouts') {
+    // TODO: buildServerCheckoutsExpanded(state, content);
+  } else if (cardName === 'close-day') {
+    // TODO: buildCloseDayExpanded(state, content);
+  }
+
+  overlay.appendChild(content);
+  state.el.style.position = 'relative';
+  state.el.appendChild(overlay);
+  state.drillEl = overlay;
+}
+
+function hideDrillDown(state) {
+  if (state.drillEl) {
+    state.drillEl.remove();
+    state.drillEl = null;
+  }
+}
+
+function buildSalesOverviewExpanded(state, content) {
+  var d = state.salesData || {};
+  var hc = state.hourlyCompare || {};
+  var activeTab = 'both';
+
+  var todayData = (hc.today || []).map(function(h) {
+    return { label: h.hour, value: h.net_sales || 0 };
+  });
+  var lastWeekData = (hc.last_week || []).map(function(h) {
+    return { label: h.hour, value: h.net_sales || 0 };
+  });
+
+  // ── Tabs: Today / Last Week / Both ──
+  var tabBar = document.createElement('div');
+  tabBar.style.cssText = 'display:flex;margin-bottom:10px;border-bottom:1px solid ' + T.border + ';';
+  var tabKeys = ['both', 'today', 'last_week'];
+  var tabLabels = ['BOTH', 'TODAY', 'LAST WEEK'];
+  var tabEls = [];
+  var chartContainer = document.createElement('div');
+
+  function applyTab(el, active) {
+    el.style.background = active ? T.mint : T.bgDark;
+    el.style.color = active ? T.bgDark : T.mutedText;
+  }
+
+  function renderChart() {
+    chartContainer.innerHTML = '';
+    var chartData, opts;
+
+    if (activeTab === 'today') {
+      chartData = todayData;
+      opts = { color: T.gold, width: T.chartFullW, height: T.chartFullH, shaded: false, showCallouts: true, calloutFmt: fmt };
+    } else if (activeTab === 'last_week') {
+      chartData = lastWeekData;
+      opts = { color: T.mint, width: T.chartFullW, height: T.chartFullH, shaded: false, showCallouts: true, calloutFmt: fmt };
+    } else {
+      chartData = todayData.map(function(d, i) {
+        return { label: d.label, value: d.value, compareValue: lastWeekData[i] ? lastWeekData[i].value : 0 };
+      });
+      opts = { color: T.gold, compareColor: T.mint, width: T.chartFullW, height: T.chartFullH, shaded: false, showCallouts: true, calloutFmt: fmt };
+    }
+
+    if (chartData.length > 0) {
+      var svg = createSVG(opts.width, opts.height);
+      drawTrendLine(svg, chartData, opts);
+      chartContainer.appendChild(svg);
+    }
+  }
+
+  for (var t = 0; t < tabKeys.length; t++) {
+    (function(key, label) {
+      var tab = document.createElement('div');
+      tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:16px;letter-spacing:2px;user-select:none;';
+      applyTab(tab, key === activeTab);
+      tab.textContent = label;
+      tab.addEventListener('pointerup', function() {
+        activeTab = key;
+        for (var i = 0; i < tabEls.length; i++) applyTab(tabEls[i], tabKeys[i] === activeTab);
+        renderChart();
+      });
+      tabEls.push(tab);
+      tabBar.appendChild(tab);
+    })(tabKeys[t], tabLabels[t]);
+  }
+
+  content.appendChild(tabBar);
+  content.appendChild(chartContainer);
+  renderChart();
+
+  // ── Breakdown Grid ──
+  var gridLabel = document.createElement('div');
+  gridLabel.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.textPrimary + ';letter-spacing:1px;margin:12px 0 6px;';
+  gridLabel.textContent = 'BREAKDOWN';
+  content.appendChild(gridLabel);
+
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;';
+
+  function gridCell(label, value, color) {
+    var cell = document.createElement('div');
+    cell.style.cssText = 'background:' + T.bg + ';padding:8px 10px;';
+    cell.style.clipPath = chamfer(4);
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
+    lbl.textContent = label;
+    var val = document.createElement('div');
+    val.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + color + ';font-weight:bold;margin-top:2px;';
+    val.textContent = value;
+    cell.appendChild(lbl);
+    cell.appendChild(val);
+    return cell;
+  }
+
+  grid.appendChild(gridCell('Net Sales', fmt(d.net_sales), T.gold));
+  grid.appendChild(gridCell('Gross Sales', fmt(d.gross_sales), T.gold));
+  grid.appendChild(gridCell('Tax', fmt(d.tax_total), T.textPrimary));
+  grid.appendChild(gridCell('Cash', fmt(d.cash_total), T.gold));
+  grid.appendChild(gridCell('Card', fmt(d.card_total), T.gold));
+  grid.appendChild(gridCell('Check Avg', fmt(d.avg_check), T.gold));
+  grid.appendChild(gridCell('Discounts', fmt(d.discount_total), T.vermillion));
+  grid.appendChild(gridCell('Voids', fmt(d.void_total), T.vermillion));
+
+  content.appendChild(grid);
 }
 
 function buildSalesBreakdownCard(state) {
@@ -501,7 +662,10 @@ function buildSalesBreakdownCard(state) {
   body.appendChild(statRow('Card:', fmt(bd.card), T.gold));
   card.appendChild(body);
 
-  // TODO: >>> drill-down button
+  pair.wrap.style.cursor = 'pointer';
+  pair.wrap.addEventListener('pointerup', function() {
+    showDrillDown(state, 'sales-breakdown');
+  });
 
   return pair.wrap;
 }
@@ -621,7 +785,12 @@ function buildServerCheckoutsCard(state) {
 
   card.appendChild(body);
 
-  // TODO: TIP ADJUSTMENT button + >>> drill-down
+  // TODO: TIP ADJUSTMENT button
+
+  pair.wrap.style.cursor = 'pointer';
+  pair.wrap.addEventListener('pointerup', function() {
+    showDrillDown(state, 'server-checkouts');
+  });
 
   return pair.wrap;
 }
@@ -653,6 +822,11 @@ function buildCloseDayCard(state) {
   card.appendChild(body);
 
   // TODO: CLOSE DAY + SETTLE BATCH buttons
+
+  pair.wrap.style.cursor = 'pointer';
+  pair.wrap.addEventListener('pointerup', function() {
+    showDrillDown(state, 'close-day');
+  });
 
   return pair.wrap;
 }

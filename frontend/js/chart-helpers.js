@@ -515,6 +515,20 @@ export function drawTrendLine(svg, data, options) {
     for (var i = 0; i < compareData.length; i++) {
       svg.appendChild(svgEl('rect', { x: toX(i) - ptSz / 2, y: toY(compareData[i].value) - ptSz / 2, width: ptSz, height: ptSz, fill: compareColor }));
     }
+    // Compare callouts
+    if (options.showCallouts) {
+      var coFsCmp = parseInt(fs(11, w));
+      for (var i = 0; i < compareData.length; i++) {
+        var cvText = options.calloutFmt ? options.calloutFmt(compareData[i].value) : '' + compareData[i].value;
+        var cvTw = cvText.length * coFsCmp * 0.6 + 8;
+        var cvTh = coFsCmp + 4;
+        var cvX = toX(i);
+        var cvY = toY(compareData[i].value) + ptSz + cvTh;
+        if (cvY > baseline) cvY = toY(compareData[i].value) - ptSz - 2;
+        svg.appendChild(svgEl('rect', { x: cvX - cvTw / 2, y: cvY - cvTh + 2, width: cvTw, height: cvTh, fill: T.bg, rx: 2 }));
+        svg.appendChild(svgEl('text', { x: cvX, y: cvY - 1, fill: compareColor, 'font-size': '' + coFsCmp, 'font-family': FONT, 'text-anchor': 'middle' })).textContent = cvText;
+      }
+    }
   }
 
   // Primary: shaded area + solid line
@@ -531,6 +545,20 @@ export function drawTrendLine(svg, data, options) {
   svg.appendChild(svgEl('polyline', { points: points.join(' '), fill: 'none', stroke: color, 'stroke-width': 3, filter: GLOW.orange }));
   for (var i = 0; i < data.length; i++) {
     svg.appendChild(svgEl('rect', { x: toX(i) - ptSz / 2, y: toY(data[i].value) - ptSz / 2, width: ptSz, height: ptSz, fill: color }));
+  }
+  // Primary callouts
+  if (options.showCallouts) {
+    var coFs = parseInt(fs(11, w));
+    for (var i = 0; i < data.length; i++) {
+      var vText = options.calloutFmt ? options.calloutFmt(data[i].value) : '' + data[i].value;
+      var vTw = vText.length * coFs * 0.6 + 8;
+      var vTh = coFs + 4;
+      var vX = toX(i);
+      var vY = toY(data[i].value) - ptSz - 2;
+      if (vY < padTop) vY = toY(data[i].value) + ptSz + vTh;
+      svg.appendChild(svgEl('rect', { x: vX - vTw / 2, y: vY - vTh + 2, width: vTw, height: vTh, fill: T.bg, rx: 2 }));
+      svg.appendChild(svgEl('text', { x: vX, y: vY - 1, fill: color, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle' })).textContent = vText;
+    }
   }
 
   // X labels
