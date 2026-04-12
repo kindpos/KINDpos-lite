@@ -2242,7 +2242,16 @@ function handleClose() {
     showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
   }
   OrderSummary.hide();
-  SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
+  if (sceneParams.returnScene === 'check-overview') {
+    SceneManager.mountWorking('check-overview', {
+      checkId: currentOrderId || sceneParams.recallOrderId,
+      pin: sceneParams.pin,
+      employeeId: sceneParams.employeeId,
+      employeeName: sceneParams.employeeName,
+    });
+  } else {
+    SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
+  }
 }
 
 // ── SAVE ─────────────────────────────────────────

@@ -583,22 +583,14 @@ defineScene({
     var addItemBtn = buildStyledButton({
       label: 'ADD ITEM(S)', variant: 'gold', size: 'lg',
       onClick: function() {
-        if (state.orderId) {
-          SceneManager.mountWorking('order-entry', {
-            recallOrderId: state.orderId,
-            mode: 'service',
-            pin: params.pin,
-            employeeId: params.employeeId,
-            employeeName: params.employeeName,
-          });
-        } else {
-          SceneManager.mountWorking('order-entry', {
-            mode: 'service',
-            pin: params.pin,
-            employeeId: params.employeeId,
-            employeeName: params.employeeName,
-          });
-        }
+        SceneManager.mountWorking('order-entry', {
+          recallOrderId: state.orderId || undefined,
+          mode: 'service',
+          pin: params.pin,
+          employeeId: params.employeeId,
+          employeeName: params.employeeName,
+          returnScene: 'check-overview',
+        });
       },
     });
     Object.assign(addItemBtn.wrap.style, {
@@ -670,6 +662,7 @@ defineScene({
             pin: params.pin,
             employeeId: params.employeeId,
             employeeName: params.employeeName,
+            returnScene: 'check-overview',
           });
         } else {
           showToast('Save check first', { bg: T.gold });
