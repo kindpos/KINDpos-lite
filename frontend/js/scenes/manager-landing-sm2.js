@@ -113,6 +113,9 @@ function fetchAllData(state) {
     // 5: Hourly sales comparison (today vs last week)
     fetch(API + '/reports/hourly-compare?date=' + dateStr)
       .then(function(r) { return r.json(); }).catch(function() { return { today: [], last_week: [] }; }),
+    // 6: Store config → operating hours
+    fetch(API + '/config/store')
+      .then(function(r) { return r.json(); }).catch(function() { return {}; }),
   ]).then(function(results) {
     var daySummary = results[0] || {};
     var orders = Array.isArray(results[1]) ? results[1] : [];
@@ -120,9 +123,13 @@ function fetchAllData(state) {
     var laborSummary = results[3] || {};
     var tipPool = results[4] || {};
     var hourlyCompare = results[5] || {};
+    var storeConfig = results[6] || {};
+
+    // Extract operating hours for today
+    state.operatingHours = parseOperatingHours(storeConfig);
 
     wireSalesData(state, daySummary, orders, laborSummary);
-    wireBreakdownData(state, daySummary, orders);
+    wireBreakdownData(state, daySummary, orders, state.operatingHours);
     wireOrders(state, orders);
     wireStaffData(state, staffResult, orders);
     wireHeatmap(state, staffResult, orders);
@@ -135,6 +142,26 @@ function fetchAllData(state) {
 
 function refreshData(state) {
   fetchAllData(state).then(function() { if (state.el) renderLayout(state); });
+}
+
+// ── Operating Hours ──────────────────────────────
+
+var DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function parseOperatingHours(storeConfig) {
+  var opHours = storeConfig.operating_hours || {};
+  var today = DAY_NAMES[new Date().getDay()];
+  var todayHours = opHours[today];
+
+  var openHour = 11;  // fallback
+  var closeHour = 22; // fallback
+
+  if (todayHours && todayHours.enabled !== false) {
+    if (todayHours.open) openHour = parseInt(todayHours.open.split(':')[0], 10);
+    if (todayHours.close) closeHour = parseInt(todayHours.close.split(':')[0], 10);
+  }
+
+  return { openHour: openHour, closeHour: closeHour };
 }
 
 // ── Data Wiring ─────────────────────────────────
@@ -156,7 +183,7 @@ function wireSalesData(state, daySummary, orders, laborSummary) {
   };
 }
 
-function wireBreakdownData(state, daySummary, orders) {
+function wireBreakdownData(state, daySummary, orders, opHours) {
   var cats = daySummary.categories || [];
   var catList = [];
   if (Array.isArray(cats)) {
@@ -175,7 +202,7 @@ function wireBreakdownData(state, daySummary, orders) {
   });
 
   // Compute hourly-per-category from orders for stacked area chart
-  var hourlyCats = computeHourlyCats(orders || [], catList);
+  var hourlyCats = computeHourlyCats(orders || [], catList, opHours);
 
   state.breakdownData = {
     categories: catList,
@@ -186,12 +213,14 @@ function wireBreakdownData(state, daySummary, orders) {
   };
 }
 
-function computeHourlyCats(orders, catList) {
-  // Build hour labels (6a-11p)
+function computeHourlyCats(orders, catList, opHours) {
+  // Build hour labels from operating hours
+  var openH = opHours ? opHours.openHour : 11;
+  var closeH = opHours ? opHours.closeHour : 22;
   var hours = [];
-  for (var h = 6; h < 24; h++) {
+  for (var h = openH; h <= closeH; h++) {
     var ampm = h >= 12 ? 'p' : 'a';
-    hours.push((h > 12 ? h - 12 : h) + ampm);
+    hours.push((h > 12 ? h - 12 : (h === 0 ? 12 : h)) + ampm);
   }
 
   // Get category names from catList
@@ -214,7 +243,7 @@ function computeHourlyCats(orders, catList) {
       var d = new Date(order.created_at);
       if (!isNaN(d.getTime())) orderHour = d.getHours();
     }
-    var hourIdx = orderHour - 6;
+    var hourIdx = orderHour - openH;
     if (hourIdx < 0 || hourIdx >= hours.length) continue;
 
     var items = order.items || [];
@@ -280,12 +309,13 @@ function wireStaffData(state, staffResult, orders) {
 function wireHeatmap(state, staffResult, orders) {
   var staff = staffResult.staff || [];
   var now = new Date();
-  var startHour = 11;
+  var opH = state.operatingHours || { openHour: 11, closeHour: 22 };
+  var startHour = opH.openHour;
   var curH = now.getHours();
   var hours = [];
   for (var hh = startHour; hh <= Math.max(curH, startHour + 1); hh++) {
     var ampm = hh >= 12 ? 'p' : 'a';
-    hours.push((hh > 12 ? hh - 12 : hh) + ampm);
+    hours.push((hh > 12 ? hh - 12 : (hh === 0 ? 12 : hh)) + ampm);
   }
   var curIdx = Math.min(Math.max(0, curH - startHour), hours.length - 1);
 
@@ -362,6 +392,7 @@ defineScene({
     closeDayData: null,
     allOrders: [],
     serverColorMap: {},
+    operatingHours: null,
     // UI interaction
     filteredServerId: null,
     activeTab: 'open',
