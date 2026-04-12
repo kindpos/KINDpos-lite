@@ -404,10 +404,13 @@ export function drawStackedAreaMulti(svg, series, options) {
     for (var i = 0; i < n; i++) stackBot[i] = topVals[i];
   }
 
-  // X-axis labels
+  // X-axis labels — skip labels when too many to fit
   if (!hideLabels && labels.length > 0) {
+    var labelSkip = labels.length > 14 ? 3 : labels.length > 8 ? 2 : 1;
+    var labelFs = labels.length > 10 ? fs(14, w) : fs(20, w);
     for (var i = 0; i < labels.length; i++) {
-      svg.appendChild(svgEl('text', { 'font-weight': 'bold', x: xOf(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': LABEL_FONT, 'text-anchor': 'middle' })).textContent = labels[i];
+      if (i % labelSkip !== 0 && i !== labels.length - 1) continue;
+      svg.appendChild(svgEl('text', { 'font-weight': 'bold', x: xOf(i), y: h - 4, fill: CHART.axisFill, 'font-size': labelFs, 'font-family': LABEL_FONT, 'text-anchor': 'middle' })).textContent = labels[i];
     }
   }
 }
