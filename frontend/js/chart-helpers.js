@@ -19,7 +19,7 @@ export var CHART = {
   axisFill:    T.textPrimary,   // axis labels: white
   axisStroke:  T.textPrimary,   // axis lines: white
   gridStroke:  T.border,        // grid lines: theme border
-  calloutBg:   T.bgEdge,       // value callout backgrounds
+  calloutBg:   T.bg,            // value callout backgrounds (#333333)
   money:       T.gold,          // money values on axes
   font:        FONT,
   axisFont:    '22px ' + FONT,
@@ -246,7 +246,7 @@ export function drawStackedArea(svg, data, options) {
       if (cy > baseline - 4) cy = toY(data[i].value) - 4;
       var tw = cText.length * coFs * 0.6 + 10;
       var th = coFs + 4;
-      svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 2, width: tw, height: th, fill: CHART.calloutBg }));
+      svg.appendChild(svgEl('rect', { x: cx - tw / 2, y: cy - th + 2, width: tw, height: th, fill: T.bg }));
       svg.appendChild(svgEl('text', { x: cx, y: cy - 1, fill: color, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = cText;
     }
 
@@ -258,7 +258,7 @@ export function drawStackedArea(svg, data, options) {
         var ccy = toY(data[i].compareValue) + coFs + 6;
         if (ccy > baseline - 4) ccy = toY(data[i].compareValue) - 4;
         var ctw = ccText.length * coFs * 0.6 + 10;
-        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 2, width: ctw, height: th, fill: CHART.calloutBg }));
+        svg.appendChild(svgEl('rect', { x: ccx - ctw / 2, y: ccy - th + 2, width: ctw, height: th, fill: T.bg }));
         svg.appendChild(svgEl('text', { x: ccx, y: ccy - 1, fill: compareColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle' })).textContent = ccText;
       }
     }
@@ -340,7 +340,7 @@ export function drawParetoChart(svg, data, options) {
       var vth = coFs + 4;
       var vcy = barY + vth + 4;
       if (vcy > padTop + chartH - 2) vcy = barY + vth;
-      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 2, width: vtw, height: vth, fill: CHART.calloutBg }));
+      svg.appendChild(svgEl('rect', { x: x + groupW / 2 - vtw / 2, y: vcy - vth + 2, width: vtw, height: vth, fill: T.bg }));
       svg.appendChild(svgEl('text', { x: x + groupW / 2, y: vcy - 1, fill: barColor, 'font-size': '' + coFs, 'font-family': FONT, 'text-anchor': 'middle', 'font-weight': 'bold' })).textContent = valText;
     }
 
