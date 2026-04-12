@@ -44,6 +44,7 @@ from app.core.events import (
     order_closed,
     order_reopened,
     order_voided,
+    tip_adjusted,
     cash_refund_due,
     ticket_printed,
     batch_submitted,
@@ -1529,6 +1530,66 @@ async def split_evenly(
         "num_ways": request.num_ways,
         "per_person": per_person,
         "last_person": last_person,
+    }
+
+
+# =============================================================================
+# TIP ADJUSTMENT (per-order route)
+# =============================================================================
+
+class OrderTipAdjustRequest(BaseModel):
+    payment_id: str
+    tip_amount: float
+
+
+@router.post("/{order_id}/adjust-tip")
+async def adjust_tip_on_order(
+    order_id: str,
+    request: OrderTipAdjustRequest,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Adjust tip on a specific payment within an order."""
+    if request.tip_amount < 0:
+        raise HTTPException(status_code=400, detail="Tip amount cannot be negative")
+    _validate_2dp(request.tip_amount, "tip_amount")
+
+    order = await get_order_or_404(ledger, order_id)
+
+    # Find the payment
+    target = None
+    for p in order.payments:
+        if p.payment_id == request.payment_id:
+            target = p
+            break
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Payment {request.payment_id} not found")
+    if target.status != "confirmed":
+        raise HTTPException(status_code=400, detail="Can only adjust tips on confirmed payments")
+
+    # Get previous tip from existing TIP_ADJUSTED events
+    events = await ledger.get_events_by_correlation(order_id)
+    previous_tip = 0.0
+    for e in events:
+        if (e.event_type == EventType.TIP_ADJUSTED
+                and e.payload.get("payment_id") == request.payment_id):
+            previous_tip = e.payload.get("tip_amount", 0.0)
+
+    tip_amt = money_round(request.tip_amount)
+    evt = tip_adjusted(
+        terminal_id=settings.terminal_id,
+        order_id=order_id,
+        payment_id=request.payment_id,
+        tip_amount=tip_amt,
+        previous_tip=previous_tip,
+    )
+    await ledger.append(evt)
+
+    return {
+        "success": True,
+        "order_id": order_id,
+        "payment_id": request.payment_id,
+        "tip_amount": tip_amt,
+        "previous_tip": previous_tip,
     }
 
 
