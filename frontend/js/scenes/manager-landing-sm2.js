@@ -556,12 +556,16 @@ function buildSalesOverviewCard(state) {
     return { label: h.hour, value: h.net_sales || 0 };
   });
 
-  // Merge compare values into today array for drawTrendLine
-  var chartData = todayData.map(function(d, i) {
-    return { label: d.label, value: d.value, compareValue: lastWeekData[i] ? lastWeekData[i].value : 0 };
+  // Merge compare values — use whichever has more data points as the base
+  var baseData = todayData.length >= lastWeekData.length ? todayData : lastWeekData;
+  var chartData = baseData.map(function(d, i) {
+    var todayVal = todayData[i] ? todayData[i].value : 0;
+    var lastVal = lastWeekData[i] ? lastWeekData[i].value : 0;
+    return { label: d.label, value: todayVal, compareValue: lastVal };
   });
 
-  if (chartData.length > 0) {
+  var hasAnyData = chartData.length > 0 && chartData.some(function(d) { return d.value > 0 || d.compareValue > 0; });
+  if (hasAnyData) {
     var svg = createSVG(T.chartW, T.chartHSm);
     drawTrendLine(svg, chartData, {
       color: T.gold,
@@ -695,21 +699,25 @@ function buildSalesOverviewExpanded(state, content) {
   function renderChart() {
     chartContainer.innerHTML = '';
     var chartData, opts;
+    var baseData = todayData.length >= lastWeekData.length ? todayData : lastWeekData;
 
     if (activeTab === 'today') {
-      chartData = todayData;
+      chartData = todayData.length > 0 ? todayData : baseData.map(function(d) { return { label: d.label, value: 0 }; });
       opts = { color: T.gold, width: T.chartFullW, height: T.chartFullH, shaded: false, showCallouts: true, calloutFmt: fmt };
     } else if (activeTab === 'last_week') {
-      chartData = lastWeekData;
+      chartData = lastWeekData.length > 0 ? lastWeekData : baseData.map(function(d) { return { label: d.label, value: 0 }; });
       opts = { color: T.mint, width: T.chartFullW, height: T.chartFullH, shaded: false, showCallouts: true, calloutFmt: fmt };
     } else {
-      chartData = todayData.map(function(d, i) {
-        return { label: d.label, value: d.value, compareValue: lastWeekData[i] ? lastWeekData[i].value : 0 };
+      chartData = baseData.map(function(d, i) {
+        var todayVal = todayData[i] ? todayData[i].value : 0;
+        var lastVal = lastWeekData[i] ? lastWeekData[i].value : 0;
+        return { label: d.label, value: todayVal, compareValue: lastVal };
       });
       opts = { color: T.gold, compareColor: T.mint, width: T.chartFullW, height: T.chartFullH, shaded: false, showCallouts: true, calloutFmt: fmt };
     }
 
-    if (chartData.length > 0) {
+    var hasAny = chartData.length > 0 && chartData.some(function(d) { return d.value > 0 || (d.compareValue || 0) > 0; });
+    if (hasAny) {
       var svg = createSVG(opts.width, opts.height);
       drawTrendLine(svg, chartData, opts);
       chartContainer.appendChild(svg);
