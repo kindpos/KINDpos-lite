@@ -126,6 +126,7 @@ function fetchAllData(state) {
     var storeConfig = results[6] || {};
 
     // Extract operating hours for today
+    state.storeConfig = storeConfig;
     state.operatingHours = parseOperatingHours(storeConfig);
 
     wireSalesData(state, daySummary, orders, laborSummary);
@@ -162,6 +163,28 @@ function parseOperatingHours(storeConfig) {
   }
 
   return { openHour: openHour, closeHour: closeHour };
+}
+
+function getShifts(storeConfig) {
+  var shifts = (storeConfig || {}).shifts;
+  if (shifts && shifts.length > 0) return shifts;
+  // Default: split operating hours at midpoint
+  var opH = storeConfig ? parseOperatingHours(storeConfig) : { openHour: 11, closeHour: 22 };
+  var mid = Math.floor((opH.openHour + opH.closeHour) / 2);
+  return [
+    { label: 'LUNCH', startHour: opH.openHour, endHour: mid },
+    { label: 'DINNER', startHour: mid + 1, endHour: opH.closeHour },
+  ];
+}
+
+function getShiftDividerIndices(shifts, openHour) {
+  // Returns data-point indices where shift boundaries fall
+  var indices = [];
+  for (var i = 1; i < shifts.length; i++) {
+    var idx = shifts[i].startHour - openHour;
+    if (idx > 0) indices.push(idx);
+  }
+  return indices;
 }
 
 // ── Data Wiring ─────────────────────────────────
@@ -393,6 +416,7 @@ defineScene({
     allOrders: [],
     serverColorMap: {},
     operatingHours: null,
+    storeConfig: null,
     // UI interaction
     filteredServerId: null,
     activeTab: 'open',
@@ -956,6 +980,9 @@ function buildSalesBreakdownCard(state) {
   var chartWrap = document.createElement('div');
   chartWrap.style.cssText = 'padding:4px 6px 0;';
   if (hc.series.length > 0) {
+    var opH = state.operatingHours || { openHour: 11, closeHour: 22 };
+    var shifts = getShifts(state.storeConfig || {});
+    var dividers = getShiftDividerIndices(shifts, opH.openHour);
     var svg = createSVG(T.chartW, T.chartHSm);
     drawStackedAreaMulti(svg, hc.series, {
       width: T.chartW,
@@ -963,6 +990,7 @@ function buildSalesBreakdownCard(state) {
       labels: hc.hours,
       hideLabels: true,
       hideAxis: true,
+      shiftDividers: dividers,
     });
     chartWrap.appendChild(svg);
   }

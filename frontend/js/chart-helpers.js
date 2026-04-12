@@ -413,6 +413,13 @@ export function drawStackedAreaMulti(svg, series, options) {
       svg.appendChild(svgEl('text', { 'font-weight': 'bold', x: xOf(i), y: h - 4, fill: CHART.axisFill, 'font-size': labelFs, 'font-family': LABEL_FONT, 'text-anchor': 'middle' })).textContent = labels[i];
     }
   }
+
+  // Shift divider lines — vertical dashed lines at specified data indices
+  var dividers = options.shiftDividers || [];
+  for (var di = 0; di < dividers.length; di++) {
+    var dx = xOf(dividers[di]);
+    svg.appendChild(svgEl('line', { x1: dx, y1: padTop, x2: dx, y2: bot, stroke: CHART.axisFill, 'stroke-width': '1.5', 'stroke-dasharray': '6,4', opacity: '0.5' }));
+  }
 }
 
 // ═══════════════════════════════════════════════════
