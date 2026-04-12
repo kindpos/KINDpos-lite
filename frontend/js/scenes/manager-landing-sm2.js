@@ -315,15 +315,30 @@ function wireStaffData(state, staffResult, orders) {
   var staff = staffResult.staff || [];
   state.staffData = {
     servers: staff.map(function(s) {
-      var serverOrders = orders.filter(function(o) {
-        return o.server_id === s.employee_id && o.status === 'open';
-      });
+      var myOrders = orders.filter(function(o) { return o.server_id === s.employee_id; });
+      var openOrders = myOrders.filter(function(o) { return o.status === 'open'; });
+      var closedOrders = myOrders.filter(function(o) { return o.status === 'closed' || o.status === 'paid'; });
+
+      // Count unadjusted tips — closed card payments with no tip_amount
+      var unadjTips = 0;
+      for (var ci = 0; ci < closedOrders.length; ci++) {
+        var payments = closedOrders[ci].payments || [];
+        for (var pi = 0; pi < payments.length; pi++) {
+          var p = payments[pi];
+          if (p.method === 'card' && p.status === 'confirmed' && (p.tip_amount == null || p.tip_amount === undefined)) {
+            unadjTips++;
+          }
+        }
+      }
+
       return {
         id: s.employee_id,
         name: s.employee_name || s.name || '',
-        status: serverOrders.length > 0 ? 'active' : 'pending',
-        shift_end: '--',
-        open_tables: serverOrders.length,
+        status: openOrders.length > 0 ? 'active' : 'pending',
+        open_tables: openOrders.length,
+        closed_checks: closedOrders.length,
+        unadj_tips: unadjTips,
+        checked_out: false,
       };
     }),
   };
@@ -600,7 +615,7 @@ function buildSalesOverviewCard(state) {
 //  DRILL-DOWN OVERLAY
 // ═══════════════════════════════════════════════════
 
-function showDrillDown(state, cardName) {
+function showDrillDown(state, cardName, extra) {
   hideDrillDown(state);
   if (!state.el) return;
 
@@ -616,7 +631,8 @@ function showDrillDown(state, cardName) {
     'server-checkouts': 'SERVER CHECKOUTS',
     'close-day': 'CLOSE DAY',
   };
-  var header = buildCardHeader(headerLabels[cardName] || 'DETAIL');
+  var headerText = cardName === 'server-detail' && extra ? extra.name : (headerLabels[cardName] || 'DETAIL');
+  var header = buildCardHeader(headerText);
   header.style.cursor = 'pointer';
   header.addEventListener('pointerup', function() { hideDrillDown(state); });
   overlay.appendChild(header);
@@ -629,8 +645,8 @@ function showDrillDown(state, cardName) {
     buildSalesOverviewExpanded(state, content);
   } else if (cardName === 'sales-breakdown') {
     buildSalesBreakdownExpanded(state, content);
-  } else if (cardName === 'server-checkouts') {
-    // TODO: buildServerCheckoutsExpanded(state, content);
+  } else if (cardName === 'server-detail') {
+    buildServerDetailExpanded(state, content, extra, overlay);
   } else if (cardName === 'close-day') {
     // TODO: buildCloseDayExpanded(state, content);
   }
@@ -969,6 +985,251 @@ function buildSalesBreakdownExpanded(state, content) {
   renderItemSections();
 }
 
+// ═══════════════════════════════════════════════════
+//  SERVER DETAIL — expanded per-server checkout view
+// ═══════════════════════════════════════════════════
+
+function buildServerDetailExpanded(state, content, srv, overlay) {
+  var orders = state.allOrders || [];
+  var showAll = true; // false = unadjusted only
+
+  // Get this server's closed orders
+  var closedOrders = orders.filter(function(o) {
+    return o.server_id === srv.id && (o.status === 'closed' || o.status === 'paid');
+  });
+
+  // ── Filter toggle: ALL / UNADJUSTED ──
+  var filterBar = document.createElement('div');
+  filterBar.style.cssText = 'display:flex;gap:6px;margin-bottom:10px;';
+  var filterEls = [];
+
+  function applyFilterStyle(el, active) {
+    el.style.background = active ? T.mint : T.bgDark;
+    el.style.color = active ? T.bgDark : T.mutedText;
+  }
+
+  ['ALL', 'UNADJUSTED'].forEach(function(label, idx) {
+    var btn = document.createElement('div');
+    btn.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:16px;letter-spacing:2px;user-select:none;font-weight:bold;';
+    btn.textContent = label;
+    applyFilterStyle(btn, idx === 0);
+    btn.addEventListener('pointerup', function() {
+      showAll = idx === 0;
+      for (var i = 0; i < filterEls.length; i++) applyFilterStyle(filterEls[i], i === idx);
+      renderChecks();
+    });
+    filterEls.push(btn);
+    filterBar.appendChild(btn);
+  });
+  content.appendChild(filterBar);
+
+  // ── Check list container ──
+  var checkList = document.createElement('div');
+  content.appendChild(checkList);
+
+  // ── Numpad container (slides in from right) ──
+  var numpadWrap = document.createElement('div');
+  numpadWrap.style.cssText = 'position:absolute;top:0;right:-300px;width:280px;height:100%;background:' + T.bg + ';border-left:2px solid ' + T.border + ';transition:right 200ms ease-out;z-index:10;display:flex;flex-direction:column;padding:8px;';
+  overlay.appendChild(numpadWrap);
+
+  var activePaymentId = null;
+  var activeOrderId = null;
+
+  function showNumpad(orderId, paymentId) {
+    activeOrderId = orderId;
+    activePaymentId = paymentId;
+    numpadWrap.innerHTML = '';
+    numpadWrap.style.right = '0';
+    content.style.marginRight = '280px';
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.mint + ';font-weight:bold;letter-spacing:1px;margin-bottom:8px;';
+    title.textContent = 'ADJUST TIP';
+    numpadWrap.appendChild(title);
+
+    // Simple digit entry
+    var display = document.createElement('div');
+    display.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.gold + ';font-weight:bold;text-align:right;padding:8px;background:' + T.bgDark + ';margin-bottom:8px;';
+    display.textContent = '$0.00';
+    numpadWrap.appendChild(display);
+
+    var digits = '';
+    function updateDisplay() {
+      var cents = parseInt(digits || '0', 10);
+      display.textContent = '$' + (cents / 100).toFixed(2);
+    }
+
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;flex:1;';
+    var keys = ['1','2','3','4','5','6','7','8','9','C','0','\u2713'];
+    for (var ki = 0; ki < keys.length; ki++) {
+      (function(k) {
+        var btn = document.createElement('div');
+        var isConfirm = k === '\u2713';
+        var isClear = k === 'C';
+        btn.style.cssText = 'display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:24px;font-weight:bold;cursor:pointer;user-select:none;background:' + (isConfirm ? T.numpadChassis : isClear ? T.vermillion : T.bg) + ';color:' + (isConfirm ? T.bgDark : isClear ? T.textPrimary : T.gold) + ';';
+        btn.textContent = k;
+        btn.addEventListener('pointerup', function() {
+          if (isClear) {
+            digits = '';
+          } else if (isConfirm) {
+            var tipVal = parseInt(digits || '0', 10) / 100;
+            submitTipAdjust(activeOrderId, activePaymentId, tipVal);
+          } else {
+            if (digits.length < 6) digits += k;
+          }
+          updateDisplay();
+        });
+        grid.appendChild(btn);
+      })(keys[ki]);
+    }
+    numpadWrap.appendChild(grid);
+
+    // Cancel button
+    var cancelBtn = document.createElement('div');
+    cancelBtn.style.cssText = 'text-align:center;padding:8px;cursor:pointer;font-family:' + T.fh + ';font-size:16px;color:' + T.vermillion + ';font-weight:bold;margin-top:6px;';
+    cancelBtn.textContent = 'CANCEL';
+    cancelBtn.addEventListener('pointerup', function() { hideNumpad(); });
+    numpadWrap.appendChild(cancelBtn);
+  }
+
+  function hideNumpad() {
+    numpadWrap.style.right = '-300px';
+    content.style.marginRight = '0';
+    activePaymentId = null;
+    activeOrderId = null;
+  }
+
+  function submitTipAdjust(orderId, paymentId, tipVal) {
+    fetch('/api/v1/orders/' + orderId + '/adjust-tip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_id: paymentId, tip_amount: tipVal }),
+    }).then(function(r) {
+      if (r.ok) {
+        showToast('Tip adjusted', { bg: T.goGreen });
+        hideNumpad();
+        // Refresh data and re-render the check list
+        refreshData(state);
+      } else {
+        showToast('Tip adjust failed', { bg: T.red });
+      }
+    }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
+  }
+
+  function renderChecks() {
+    checkList.innerHTML = '';
+
+    var visible = closedOrders;
+    if (!showAll) {
+      visible = closedOrders.filter(function(o) {
+        var payments = o.payments || [];
+        for (var pi = 0; pi < payments.length; pi++) {
+          if (payments[pi].method === 'card' && payments[pi].status === 'confirmed' && (payments[pi].tip_amount == null || payments[pi].tip_amount === undefined)) return true;
+        }
+        return false;
+      });
+    }
+
+    if (visible.length === 0) {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'text-align:center;padding:20px;font-family:' + T.fh + ';font-size:18px;color:' + T.mutedText + ';font-weight:bold;';
+      empty.textContent = showAll ? 'No closed checks' : 'All tips adjusted';
+      checkList.appendChild(empty);
+      return;
+    }
+
+    // Header row
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0;margin-bottom:2px;';
+    var hdrLabels = ['CHECK', 'COVERS', 'TOTAL', 'TIP'];
+    for (var hi = 0; hi < hdrLabels.length; hi++) {
+      var th = document.createElement('div');
+      th.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.numpadChassis + ';font-weight:bold;letter-spacing:1px;padding:4px 8px;border-bottom:1px solid ' + T.border + ';' + (hi > 0 ? 'text-align:right;' : '');
+      th.textContent = hdrLabels[hi];
+      hdr.appendChild(th);
+    }
+    checkList.appendChild(hdr);
+
+    for (var oi = 0; oi < visible.length; oi++) {
+      (function(order) {
+        var checkNum = order.check_number || ('C-' + String(order.order_id).slice(0, 3).toUpperCase());
+        var items = order.items || [];
+        var coverCount = 0;
+        for (var ii = 0; ii < items.length; ii++) coverCount += (items[ii].quantity || 1);
+        var total = order.total || 0;
+
+        // Find card payment + tip status
+        var cardPayment = null;
+        var payments = order.payments || [];
+        for (var pi = 0; pi < payments.length; pi++) {
+          if (payments[pi].method === 'card' && payments[pi].status === 'confirmed') {
+            cardPayment = payments[pi];
+            break;
+          }
+        }
+        var tipText, tipColor, isTappable;
+        if (!cardPayment) {
+          tipText = 'CASH';
+          tipColor = T.mutedText;
+          isTappable = false;
+        } else if (cardPayment.tip_amount != null && cardPayment.tip_amount !== undefined) {
+          tipText = fmt(cardPayment.tip_amount);
+          tipColor = T.gold;
+          isTappable = true; // can re-adjust
+        } else {
+          tipText = 'UNADJ';
+          tipColor = T.vermillion;
+          isTappable = true;
+        }
+
+        var row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid ' + T.bg + ';';
+
+        var cells = [checkNum, String(coverCount), fmt(total), tipText];
+        var colors = [T.textPrimary, T.textPrimary, T.gold, tipColor];
+        for (var ci = 0; ci < cells.length; ci++) {
+          var td = document.createElement('div');
+          td.style.cssText = 'font-family:' + T.fb + ';font-size:18px;padding:6px 8px;font-weight:bold;color:' + colors[ci] + ';' + (ci > 0 ? 'text-align:right;' : '');
+
+          if (ci === 3 && isTappable) {
+            // Tip cell is tappable
+            td.style.cursor = 'pointer';
+            td.style.borderBottom = '2px solid ' + tipColor;
+            (function(oid, pid) {
+              td.addEventListener('pointerup', function(e) {
+                e.stopPropagation();
+                showNumpad(oid, pid);
+              });
+            })(order.order_id, cardPayment.payment_id);
+          }
+
+          td.textContent = cells[ci];
+          row.appendChild(td);
+        }
+        checkList.appendChild(row);
+      })(visible[oi]);
+    }
+  }
+
+  renderChecks();
+
+  // ── CHECKOUT button ──
+  var checkoutBtn = document.createElement('div');
+  checkoutBtn.style.cssText = 'margin-top:12px;text-align:center;padding:10px;cursor:pointer;font-family:' + T.fh + ';font-size:20px;color:' + T.bgDark + ';font-weight:bold;letter-spacing:2px;background:' + T.numpadChassis + ';';
+  checkoutBtn.style.clipPath = chamfer(4);
+  checkoutBtn.textContent = 'CHECKOUT ' + srv.name.toUpperCase() + ' \u25B6';
+  checkoutBtn.addEventListener('pointerup', function(e) {
+    e.stopPropagation();
+    hideDrillDown(state);
+    var emp = state.params.emp || state.params;
+    SceneManager.openTransactional('server-checkout', {
+      pin: emp.pin, employeeId: srv.id, employeeName: srv.name,
+    });
+  });
+  content.appendChild(checkoutBtn);
+}
+
 function buildSalesBreakdownCard(state) {
   var bd = state.breakdownData || {};
   var hc = bd.hourlyCats || { hours: [], series: [] };
@@ -1107,54 +1368,70 @@ function buildRightColumn(state) {
 function buildServerCheckoutsCard(state) {
   var sd = state.staffData || {};
   var servers = sd.servers || [];
-  var ta = state.tipAdjData || {};
-  var unadjCount = ta.unadjusted_count || 0;
-  var tp = state.tipPoolData || {};
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
+  card.style.overflow = 'hidden';
 
   card.appendChild(buildCardHeader('SERVER CHECKOUTS'));
 
-  var body = document.createElement('div');
-  body.style.cssText = 'padding:6px 0;';
+  // ── Scrollable server list ──
+  var list = document.createElement('div');
+  list.style.cssText = 'flex:1;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;padding:4px 0;';
 
-  for (var i = 0; i < servers.length; i++) {
-    var srv = servers[i];
-    var statusLabel, statusColor;
-    if (srv.status === 'checked_out') {
-      statusLabel = 'CHECKED OUT'; statusColor = T.green;
-    } else if (srv.status === 'pending') {
-      statusLabel = 'PENDING'; statusColor = T.yellow;
-    } else {
-      statusLabel = 'ACTIVE TABLES'; statusColor = T.vermillion;
-    }
-    body.appendChild(statRow(srv.name, statusLabel, statusColor));
-  }
-
-  var divider = document.createElement('div');
-  divider.style.cssText = 'height:1px;margin:4px 8px;border-top:1px solid ' + T.border + ';';
-  body.appendChild(divider);
-
-  var tipColor = unadjCount === 0 ? T.green : (unadjCount >= TIP_ADJ_THRESHOLD ? T.vermillion : T.yellow);
-  body.appendChild(statRow('Unadjusted:', String(unadjCount), tipColor));
-
-  var divider2 = document.createElement('div');
-  divider2.style.cssText = 'height:1px;margin:4px 8px;border-top:1px solid ' + T.border + ';';
-  body.appendChild(divider2);
-  body.appendChild(statRow('Total Tips:', fmt(tp.total_tips), T.gold));
-
-  card.appendChild(body);
-
-  // TODO: TIP ADJUSTMENT button
-
-  card.style.cursor = 'pointer';
-  card.addEventListener('pointerup', function() {
-    showDrillDown(state, 'server-checkouts');
+  // Sort: active/pending first, checked_out at bottom
+  var sorted = servers.slice().sort(function(a, b) {
+    if (a.checked_out && !b.checked_out) return 1;
+    if (!a.checked_out && b.checked_out) return -1;
+    return 0;
   });
 
+  for (var i = 0; i < sorted.length; i++) {
+    (function(srv) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;padding:4px 8px;cursor:pointer;border-bottom:1px solid ' + T.border + ';';
+
+      var name = document.createElement('span');
+      name.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + T.textPrimary + ';font-weight:bold;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+
+      if (srv.checked_out) {
+        name.textContent = srv.name;
+        name.style.color = T.green;
+        var badge = document.createElement('span');
+        badge.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.green + ';font-weight:bold;';
+        badge.textContent = '\u2713 COMPLETE';
+        row.appendChild(name);
+        row.appendChild(badge);
+      } else {
+        name.textContent = srv.name;
+        row.appendChild(name);
+
+        var closedBadge = document.createElement('span');
+        closedBadge.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.textPrimary + ';font-weight:bold;margin-right:12px;';
+        closedBadge.textContent = srv.closed_checks + ' closed';
+        row.appendChild(closedBadge);
+
+        var unadjBadge = document.createElement('span');
+        var unadjColor = srv.unadj_tips === 0 ? T.green : T.vermillion;
+        unadjBadge.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + unadjColor + ';font-weight:bold;';
+        unadjBadge.textContent = srv.unadj_tips + ' unadj';
+        row.appendChild(unadjBadge);
+      }
+
+      row.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        if (!srv.checked_out) {
+          showDrillDown(state, 'server-detail', srv);
+        }
+      });
+
+      list.appendChild(row);
+    })(sorted[i]);
+  }
+
+  card.appendChild(list);
   return pair.wrap;
 }
 
