@@ -651,21 +651,64 @@ defineScene({
     });
     root.appendChild(editSeatsBtn.wrap);
 
-    // +1 ROUND — open order-entry to add more items
+    // +1 ROUND — duplicate selected seat items, auto-send to kitchen
     var roundBtn = buildStyledButton({
       label: '+1 ROUND', variant: 'gold', size: 'md',
       onClick: function() {
-        if (state.orderId) {
-          SceneManager.mountWorking('order-entry', {
-            recallOrderId: state.orderId,
-            mode: 'service',
-            pin: params.pin,
-            employeeId: params.employeeId,
-            employeeName: params.employeeName,
-            returnScene: 'check-overview',
+        if (!state.orderId) { showToast('Save check first', { bg: T.gold }); return; }
+
+        // Collect items from selected seats
+        var itemsToAdd = [];
+        for (var ri = 0; ri < state.seats.length; ri++) {
+          if (!state.selected[state.seats[ri].id]) continue;
+          var seatNum = ri + 1;
+          for (var rj = 0; rj < state.seats[ri].items.length; rj++) {
+            var it = state.seats[ri].items[rj];
+            itemsToAdd.push({
+              name: it.name,
+              price: it.price,
+              quantity: it.qty,
+              seat_number: seatNum,
+            });
+          }
+        }
+
+        if (itemsToAdd.length === 0) {
+          showToast('No items to reorder', { bg: T.gold });
+          return;
+        }
+
+        // POST each item, then send to kitchen, then refresh
+        var pending = itemsToAdd.length;
+        var failed = 0;
+        for (var rk = 0; rk < itemsToAdd.length; rk++) {
+          fetch('/api/v1/orders/' + state.orderId + '/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(itemsToAdd[rk]),
+          }).then(function(r) {
+            if (!r.ok) failed++;
+            if (--pending === 0) finishRound();
+          }).catch(function() {
+            failed++;
+            if (--pending === 0) finishRound();
           });
-        } else {
-          showToast('Save check first', { bg: T.gold });
+        }
+
+        function finishRound() {
+          if (failed > 0) {
+            showToast(failed + ' item(s) failed to add', { bg: T.red });
+          }
+          // Send unsent items to kitchen
+          fetch('/api/v1/orders/' + state.orderId + '/send', { method: 'POST' })
+            .then(function() {
+              showToast('+1 Round sent to kitchen', { bg: T.goGreen });
+              refreshOrder();
+            })
+            .catch(function() {
+              showToast('Send failed', { bg: T.red });
+              refreshOrder();
+            });
         }
       },
     });
