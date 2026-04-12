@@ -13,6 +13,8 @@
 import { defineScene } from '../scene-manager-2.js';
 import { SceneManager } from '../scene-manager.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
+import { showToast } from '../components.js';
+import './server-picker.js';
 
 // ── Inject invisible scrollbar styles ──
 (function() {
@@ -352,7 +354,7 @@ defineScene({
       if (op === 'MERGE') doMerge();
       else if (op === 'MOVE') enterMoveMode();
       else if (op === 'SPLIT') enterSplitMode();
-      else if (op === 'TRANSFER') console.log('[column-editor] TRANSFER — not yet implemented');
+      else if (op === 'TRANSFER') doTransfer();
       else if (op === 'CANCEL') cancelMode();
       else if (op === 'CONFIRM') confirmAction();
     }
@@ -519,6 +521,34 @@ defineScene({
       }
 
       clearMode();
+    }
+
+    // ── TRANSFER ──
+    function doTransfer() {
+      var orderId = params.orderId || null;
+      var currentServerId = params.serverId || null;
+      SceneManager.interrupt('server-picker', {
+        onConfirm: function(server) {
+          if (!orderId) {
+            showToast('Transfer: ' + server.employee_name + ' (no order to update)', { bg: T.gold });
+            return;
+          }
+          // Reassign the order to the selected server
+          fetch('/api/v1/orders/' + orderId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              server_id: server.employee_id,
+              server_name: server.employee_name,
+            }),
+          }).then(function(r) {
+            if (r.ok) showToast('Transferred to ' + server.employee_name, { bg: T.goGreen });
+            else showToast('Transfer failed', { bg: T.red });
+          }).catch(function() { showToast('Transfer failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+        params: { excludeId: currentServerId },
+      });
     }
 
     // Initial render

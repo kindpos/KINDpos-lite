@@ -620,6 +620,8 @@ defineScene({
             return { id: s.id, label: s.id, items: s.items.slice() };
           }),
           operations: ['MERGE', 'MOVE', 'SPLIT', 'TRANSFER'],
+          orderId: state.orderId,
+          serverId: state.order ? state.order.server_id : null,
           onSave: function(columns) {
             // Apply column-editor changes back to seat state
             state.seats = [];
