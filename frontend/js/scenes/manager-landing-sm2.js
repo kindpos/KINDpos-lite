@@ -532,7 +532,7 @@ function buildSalesOverviewCard(state) {
 
   // ── Sparkline: today (gold) vs last week (mint dashed) ──
   var chartWrap = document.createElement('div');
-  chartWrap.style.cssText = 'padding:4px 6px 0;';
+  chartWrap.style.cssText = 'padding:4px 6px 0;pointer-events:none;';
 
   var todayData = (hc.today || []).map(function(h) {
     return { label: h.hour, value: h.net_sales || 0 };
@@ -668,8 +668,11 @@ function buildSalesOverviewExpanded(state, content) {
   var tabEls = [];
   var chartContainer = document.createElement('div');
 
-  function applyTab(el, active) {
-    el.style.background = active ? T.mint : T.bgDark;
+  var tabColors = { both: T.textPrimary, today: T.gold, last_week: T.mint };
+
+  function applyTab(el, active, key) {
+    var accent = tabColors[key] || T.textPrimary;
+    el.style.background = active ? accent : T.bgDark;
     el.style.color = active ? T.bgDark : T.mutedText;
   }
 
@@ -701,11 +704,12 @@ function buildSalesOverviewExpanded(state, content) {
     (function(key, label) {
       var tab = document.createElement('div');
       tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:16px;letter-spacing:2px;user-select:none;';
-      applyTab(tab, key === activeTab);
+      applyTab(tab, key === activeTab, key);
       tab.textContent = label;
+      tab._tabKey = key;
       tab.addEventListener('pointerup', function() {
         activeTab = key;
-        for (var i = 0; i < tabEls.length; i++) applyTab(tabEls[i], tabKeys[i] === activeTab);
+        for (var i = 0; i < tabEls.length; i++) applyTab(tabEls[i], tabKeys[i] === activeTab, tabEls[i]._tabKey);
         renderChart();
       });
       tabEls.push(tab);
@@ -978,7 +982,7 @@ function buildSalesBreakdownCard(state) {
 
   // ── Stacked area sparkline ──
   var chartWrap = document.createElement('div');
-  chartWrap.style.cssText = 'padding:4px 6px 0;';
+  chartWrap.style.cssText = 'padding:4px 6px 0;pointer-events:none;';
   if (hc.series.length > 0) {
     var opH = state.operatingHours || { openHour: 11, closeHour: 22 };
     var shifts = getShifts(state.storeConfig || {});
