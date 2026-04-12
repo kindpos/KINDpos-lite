@@ -331,7 +331,7 @@ function startNetworkScan(card, wrap) {
   card.appendChild(discoveryArea);
 
   // SSE stream
-  _scanEventSource = new EventSource('/api/v1/hardware/scan/stream');
+  _scanEventSource = new EventSource('/api/v1/hardware/scan/stream?type=card_reader');
 
   _scanEventSource.onmessage = function(e) {
     if (gen !== _scanGen) return; // stale

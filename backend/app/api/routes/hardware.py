@@ -90,14 +90,26 @@ class TestPrintRequest(BaseModel):
 #  SCAN
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _ports_for_type(device_type: Optional[str]) -> list:
+    """Return the port list to scan based on device type filter."""
+    if device_type == 'card_reader':
+        return CARD_READER_PORTS
+    elif device_type in ('printer', 'kitchen', 'receipt'):
+        return PRINTER_PORTS + PRINTER_PORTS_EXT
+    return ALL_SCAN_PORTS
+
+
 @router.get("/scan")
-async def scan_network(ip: Optional[str] = None):
+async def scan_network(ip: Optional[str] = None, type: Optional[str] = None):
     """
     Scan for devices on known ESC/POS and card-reader ports.
-    ?ip=10.0.0.19  → probe that specific address only
-    (no param)     → sweep default subnet
+    ?ip=10.0.0.19    → probe that specific address only
+    ?type=card_reader → only scan card reader ports (much faster)
+    ?type=printer     → only scan printer ports
+    (no param)        → sweep default subnet, all ports
     """
     await _ensure_db()
+    ports = _ports_for_type(type)
 
     if ip:
         targets = [ip]
@@ -107,7 +119,7 @@ async def scan_network(ip: Optional[str] = None):
             subnet = subnet.split('/')[0].rsplit('.', 1)[0]
         targets = [f"{subnet}.{i}" for i in range(1, 255)]
 
-    found = await asyncio.gather(*[_probe_host(h) for h in targets])
+    found = await asyncio.gather(*[_probe_host(h, ports) for h in targets])
     results = [r for r in found if r is not None]
 
     # Annotate with saved info where MACs match
@@ -125,10 +137,12 @@ async def scan_network(ip: Optional[str] = None):
 
 
 @router.get("/scan/stream")
-async def scan_network_stream(ip: Optional[str] = None):
+async def scan_network_stream(ip: Optional[str] = None, type: Optional[str] = None):
     """
     Same as /scan but streams devices as they are found via Server-Sent Events.
     Each discovered device fires immediately — no waiting for full sweep.
+
+    ?type=card_reader → only scan card reader ports (much faster)
 
     SSE event types:
         start    — scan started, includes target count
@@ -137,6 +151,7 @@ async def scan_network_stream(ip: Optional[str] = None):
         error    — something went wrong
     """
     await _ensure_db()
+    ports = _ports_for_type(type)
 
     if ip:
         targets = [ip]
@@ -157,11 +172,11 @@ async def scan_network_stream(ip: Optional[str] = None):
 
         yield f"data: {json.dumps({'type': 'start', 'total': len(targets)})}\n\n"
 
-        # Probe in batches of 20 — enough concurrency without hammering the LAN
-        BATCH = 20
+        # Probe in batches of 40 — higher concurrency for faster sweeps
+        BATCH = 40
         for i in range(0, len(targets), BATCH):
             batch = targets[i:i + BATCH]
-            results = await asyncio.gather(*[_probe_host(h) for h in batch])
+            results = await asyncio.gather(*[_probe_host(h, ports) for h in batch])
             for r in results:
                 if r is not None:
                     if r['mac'] in saved:
@@ -183,38 +198,47 @@ async def scan_network_stream(ip: Optional[str] = None):
     )
 
 
-async def _probe_host(host: str):
-    """Probe a host on all known ports. Returns device dict or None."""
+async def _probe_host(host: str, ports: list = None):
+    """Probe a host on given ports in parallel. Returns device dict or None."""
+    if ports is None:
+        ports = ALL_SCAN_PORTS
     loop = asyncio.get_running_loop()
-    for port in ALL_SCAN_PORTS:
+
+    async def _try_port(port):
         try:
             hit = await asyncio.wait_for(
                 loop.run_in_executor(None, _tcp_probe, host, port),
-                timeout=1.0
+                timeout=0.8
             )
-            if hit:
-                mac   = _get_mac(host)
-                dtype = 'printer' if port in PRINTER_PORTS + PRINTER_PORTS_EXT else 'card_reader'
-                result = {
-                    'ip':   host,
-                    'port': port,
-                    'mac':  mac or f"UNKNOWN-{host.replace('.', '-')}",
-                    'type': dtype,
-                    'name': 'Thermal Printer' if dtype == 'printer' else 'Card Reader',
-                }
-                # Auto-detect SPIn details for card readers
-                if dtype == 'card_reader':
-                    spin = await _probe_spin(host, port)
-                    if spin.get('register_id'):
-                        result['register_id'] = spin['register_id']
-                    if spin.get('model'):
-                        result['name'] = spin['model']
-                    elif spin.get('status'):
-                        result['name'] = 'Dejavoo'
-                return result
+            return port if hit else None
         except (asyncio.TimeoutError, Exception):
-            continue
-    return None
+            return None
+
+    # Probe all ports in parallel — first hit wins
+    results = await asyncio.gather(*[_try_port(p) for p in ports])
+    hit_port = next((p for p in results if p is not None), None)
+    if hit_port is None:
+        return None
+
+    mac   = _get_mac(host)
+    dtype = 'printer' if hit_port in PRINTER_PORTS + PRINTER_PORTS_EXT else 'card_reader'
+    result = {
+        'ip':   host,
+        'port': hit_port,
+        'mac':  mac or f"UNKNOWN-{host.replace('.', '-')}",
+        'type': dtype,
+        'name': 'Thermal Printer' if dtype == 'printer' else 'Card Reader',
+    }
+    # Auto-detect SPIn details for card readers
+    if dtype == 'card_reader':
+        spin = await _probe_spin(host, hit_port)
+        if spin.get('register_id'):
+            result['register_id'] = spin['register_id']
+        if spin.get('model'):
+            result['name'] = spin['model']
+        elif spin.get('status'):
+            result['name'] = 'Dejavoo'
+    return result
 
 
 def _tcp_probe(host: str, port: int) -> bool:
