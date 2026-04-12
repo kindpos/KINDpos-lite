@@ -629,6 +629,7 @@ function showDrillDown(state, cardName, extra) {
     'sales-overview': 'SALES OVERVIEW',
     'sales-breakdown': 'SALES BREAKDOWN',
     'server-checkouts': 'SERVER CHECKOUTS',
+    'heatmap-full': 'SERVER WORKLOAD',
   };
   var headerText = cardName === 'server-detail' && extra ? extra.name : (headerLabels[cardName] || 'DETAIL');
   var header = buildCardHeader(headerText);
@@ -646,6 +647,8 @@ function showDrillDown(state, cardName, extra) {
     buildSalesBreakdownExpanded(state, content);
   } else if (cardName === 'server-detail') {
     buildServerDetailExpanded(state, content, extra, overlay);
+  } else if (cardName === 'heatmap-full') {
+    buildHeatmapExpanded(state, content);
   }
 
   overlay.appendChild(content);
@@ -1299,7 +1302,217 @@ function buildCenterColumn(state) {
   var col = document.createElement('div');
   col.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;gap:8px;';
 
-  // ── Check grid container ──
+  // ── Heatmap card (compact — last 2hrs + now) ──
+  col.appendChild(buildHeatmapCard(state));
+
+  // ── Check grid card (fills remaining space) ──
+  col.appendChild(buildCheckGridCard(state));
+
+  return col;
+}
+
+// ═══════════════════════════════════════════════════
+//  HEATMAP CARD — compact (last 2hrs + current)
+// ═══════════════════════════════════════════════════
+
+function heatmapTier(count) {
+  if (count === 0)  return { fill: 'transparent', color: T.mutedText, border: '1px dashed ' + T.border };
+  if (count <= 2)   return { fill: T.textPrimary, color: T.bgDark, border: 'none' };
+  if (count <= 4)   return { fill: T.mint, color: T.bgDark, border: 'none' };
+  if (count <= 6)   return { fill: '#ff8800', color: T.textPrimary, border: 'none' };
+  return { fill: T.vermillion, color: T.textPrimary, border: 'none' };
+}
+
+function buildHeatmapCard(state) {
+  var hm = state.heatmapData || {};
+  var hours = hm.hours || [];
+  var servers = hm.servers || [];
+  var curHour = hm.current_hour != null ? hm.current_hour : -1;
+
+  // Show last 2 hours + current (compact view)
+  var startIdx = Math.max(0, curHour - 2);
+  var visibleHours = hours.slice(startIdx);
+  var visibleIndices = [];
+  for (var i = startIdx; i < hours.length; i++) visibleIndices.push(i);
+
+  // Filter servers with any activity
+  var active = servers.filter(function(s) {
+    for (var i = 0; i < s.cells.length; i++) { if (s.cells[i] > 0) return true; }
+    return s.live_tables > 0;
+  });
+
+  var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  var card = pair.card;
+  card.style.display = 'flex';
+  card.style.flexDirection = 'column';
+  card.style.flexShrink = '0';
+
+  card.appendChild(buildCardHeader('SERVER WORKLOAD'));
+
+  if (active.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'padding:12px;text-align:center;font-family:' + T.fh + ';font-size:16px;color:' + T.mutedText + ';font-weight:bold;';
+    empty.textContent = 'No active servers';
+    card.appendChild(empty);
+  } else {
+    var gridCols = 'auto repeat(' + visibleHours.length + ', 1fr) auto';
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:' + gridCols + ';gap:2px;padding:6px;';
+
+    // Header row: corner + hour labels + NOW
+    grid.appendChild(document.createElement('div')); // empty corner
+    for (var h = 0; h < visibleHours.length; h++) {
+      var hLabel = document.createElement('div');
+      var isCurrent = visibleIndices[h] === curHour;
+      hLabel.style.cssText = 'font-family:' + T.fh + ';font-size:12px;font-weight:bold;color:' + (isCurrent ? T.lime : T.mutedText) + ';text-align:center;padding:2px 0;';
+      hLabel.textContent = visibleHours[h];
+      grid.appendChild(hLabel);
+    }
+    var nowLabel = document.createElement('div');
+    nowLabel.style.cssText = 'font-family:' + T.fh + ';font-size:12px;font-weight:bold;color:' + T.lime + ';text-align:right;padding:2px 4px;';
+    nowLabel.textContent = 'NOW';
+    grid.appendChild(nowLabel);
+
+    // Server rows
+    for (var s = 0; s < active.length; s++) {
+      var srv = active[s];
+      var sColor = srvColor(state.serverColorMap, srv.id);
+
+      // Name cell
+      var nameCell = document.createElement('div');
+      nameCell.style.cssText = 'font-family:' + T.fh + ';font-size:14px;font-weight:bold;color:' + sColor + ';padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;';
+      nameCell.textContent = srv.name;
+      grid.appendChild(nameCell);
+
+      // Hour cells
+      for (var c = 0; c < visibleIndices.length; c++) {
+        var cellIdx = visibleIndices[c];
+        var count = srv.cells[cellIdx] || 0;
+        var tier = heatmapTier(count);
+        var cell = document.createElement('div');
+        cell.style.cssText = 'min-height:22px;display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:14px;font-weight:bold;color:' + tier.color + ';background:' + tier.fill + ';';
+        if (tier.border !== 'none') cell.style.border = tier.border;
+        if (cellIdx === curHour) cell.style.borderLeft = '2px solid ' + T.lime;
+        if (count > 0) cell.textContent = String(count);
+        grid.appendChild(cell);
+      }
+
+      // Live count
+      var liveCell = document.createElement('div');
+      liveCell.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + sColor + ';text-align:right;padding:3px 4px;';
+      liveCell.textContent = String(srv.live_tables);
+      grid.appendChild(liveCell);
+    }
+
+    card.appendChild(grid);
+  }
+
+  // Tap to expand full-day heatmap
+  card.style.cursor = 'pointer';
+  card.addEventListener('pointerup', function() {
+    showDrillDown(state, 'heatmap-full');
+  });
+
+  return pair.wrap;
+}
+
+function buildHeatmapExpanded(state, content) {
+  var hm = state.heatmapData || {};
+  var hours = hm.hours || [];
+  var servers = hm.servers || [];
+  var curHour = hm.current_hour != null ? hm.current_hour : -1;
+
+  var active = servers.filter(function(s) {
+    for (var i = 0; i < s.cells.length; i++) { if (s.cells[i] > 0) return true; }
+    return s.live_tables > 0;
+  });
+
+  if (active.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;padding:40px;font-family:' + T.fh + ';font-size:18px;color:' + T.mutedText + ';font-weight:bold;';
+    empty.textContent = 'No server activity today';
+    content.appendChild(empty);
+    return;
+  }
+
+  var gridCols = 'auto repeat(' + hours.length + ', 1fr) auto';
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:' + gridCols + ';gap:3px;';
+
+  // Header row
+  grid.appendChild(document.createElement('div'));
+  for (var h = 0; h < hours.length; h++) {
+    var hLabel = document.createElement('div');
+    var isCurrent = h === curHour;
+    hLabel.style.cssText = 'font-family:' + T.fh + ';font-size:14px;font-weight:bold;color:' + (isCurrent ? T.lime : T.mutedText) + ';text-align:center;padding:2px 0;';
+    hLabel.textContent = hours[h];
+    grid.appendChild(hLabel);
+  }
+  var nowHdr = document.createElement('div');
+  nowHdr.style.cssText = 'font-family:' + T.fh + ';font-size:14px;font-weight:bold;color:' + T.lime + ';text-align:right;padding:2px 4px;';
+  nowHdr.textContent = 'NOW';
+  grid.appendChild(nowHdr);
+
+  // Server rows
+  for (var s = 0; s < active.length; s++) {
+    var srv = active[s];
+    var sColor = srvColor(state.serverColorMap, srv.id);
+
+    var nameCell = document.createElement('div');
+    nameCell.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + sColor + ';padding:4px 8px;white-space:nowrap;';
+    nameCell.textContent = srv.name;
+    grid.appendChild(nameCell);
+
+    for (var c = 0; c < srv.cells.length; c++) {
+      var count = srv.cells[c] || 0;
+      var tier = heatmapTier(count);
+      var cell = document.createElement('div');
+      cell.style.cssText = 'min-height:28px;display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + tier.color + ';background:' + tier.fill + ';';
+      if (tier.border !== 'none') cell.style.border = tier.border;
+      if (c === curHour) cell.style.borderLeft = '2px solid ' + T.lime;
+      if (count > 0) cell.textContent = String(count);
+      grid.appendChild(cell);
+    }
+
+    var liveCell = document.createElement('div');
+    liveCell.style.cssText = 'font-family:' + T.fb + ';font-size:18px;font-weight:bold;color:' + sColor + ';text-align:right;padding:4px 6px;';
+    liveCell.textContent = String(srv.live_tables);
+    grid.appendChild(liveCell);
+  }
+
+  content.appendChild(grid);
+
+  // Legend
+  var legend = document.createElement('div');
+  legend.style.cssText = 'display:flex;gap:12px;justify-content:center;margin-top:12px;';
+  var tiers = [
+    { label: 'NONE', fill: 'transparent', border: '1px dashed ' + T.border, color: T.mutedText },
+    { label: 'CALM', fill: T.textPrimary, color: T.bgDark },
+    { label: 'MODERATE', fill: T.mint, color: T.bgDark },
+    { label: 'HIGH', fill: '#ff8800', color: T.textPrimary },
+    { label: 'EXTREME', fill: T.vermillion, color: T.textPrimary },
+  ];
+  for (var ti = 0; ti < tiers.length; ti++) {
+    var item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:4px;';
+    var swatch = document.createElement('div');
+    swatch.style.cssText = 'width:14px;height:14px;background:' + tiers[ti].fill + ';';
+    if (tiers[ti].border) swatch.style.border = tiers[ti].border;
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'font-family:' + T.fh + ';font-size:12px;font-weight:bold;color:' + T.mutedText + ';';
+    lbl.textContent = tiers[ti].label;
+    item.appendChild(swatch);
+    item.appendChild(lbl);
+    legend.appendChild(item);
+  }
+  content.appendChild(legend);
+}
+
+// ═══════════════════════════════════════════════════
+//  CHECK GRID CARD — tabs + tiles + operations
+// ═══════════════════════════════════════════════════
+
+function buildCheckGridCard(state) {
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
   var card = pair.card;
   card.style.display = 'flex';
@@ -1309,43 +1522,321 @@ function buildCenterColumn(state) {
   pair.wrap.style.flex = '1';
   pair.wrap.style.display = 'flex';
 
-  // Header
-  state.checkHeader = buildCardHeader('ALL CHECKS');
-  card.appendChild(state.checkHeader);
-
   // ── Tab bar ──
+  var tabKeys = ['open', 'closed', 'void'];
+  var tabLabels = ['OPEN', 'CLOSED', 'VOID'];
+  var tabEls = [];
   var tabBar = document.createElement('div');
   tabBar.style.cssText = 'display:flex;flex-shrink:0;border-bottom:1px solid ' + T.border + ';';
-  var tabs = ['OPEN', 'CLOSED', 'VOID'];
-  for (var t = 0; t < tabs.length; t++) {
-    var tab = document.createElement('div');
-    tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;font-family:' + T.fh
-      + ';font-size:16px;letter-spacing:2px;user-select:none;';
-    tab.style.background = t === 0 ? T.mint : T.bgDark;
-    tab.style.color = t === 0 ? T.bgDark : T.mutedText;
-    tab.textContent = tabs[t];
-    tabBar.appendChild(tab);
+
+  function applyCheckTab(el, active) {
+    el.style.background = active ? T.mint : T.bgDark;
+    el.style.color = active ? T.bgDark : T.mutedText;
+  }
+
+  for (var t = 0; t < tabKeys.length; t++) {
+    (function(key, label) {
+      var tab = document.createElement('div');
+      tab.style.cssText = 'flex:1;text-align:center;padding:6px 0;cursor:pointer;font-family:' + T.fh + ';font-size:16px;letter-spacing:2px;user-select:none;font-weight:bold;';
+      applyCheckTab(tab, key === state.activeTab);
+      tab.textContent = label;
+      tab.addEventListener('pointerup', function() {
+        state.activeTab = key;
+        state.selected = {};
+        for (var i = 0; i < tabEls.length; i++) applyCheckTab(tabEls[i], tabKeys[i] === state.activeTab);
+        renderCheckGrid(state);
+        renderOpsPanel(state);
+      });
+      tabEls.push(tab);
+      tabBar.appendChild(tab);
+    })(tabKeys[t], tabLabels[t]);
   }
   card.appendChild(tabBar);
 
   // ── Check grid ──
   state.centerGrid = document.createElement('div');
-  state.centerGrid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;';
+  state.centerGrid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:end;';
   card.appendChild(state.centerGrid);
-
-  // TODO: renderGrid(state) — check tiles + new-check tile
-  // TODO: tab switching logic
 
   // ── Operations panel ──
   state.opsPanel = document.createElement('div');
   state.opsPanel.style.cssText = 'flex-shrink:0;border-top:1px solid ' + T.border + ';background:' + T.bg + ';';
   card.appendChild(state.opsPanel);
 
-  col.appendChild(pair.wrap);
+  renderCheckGrid(state);
+  renderOpsPanel(state);
 
-  // TODO: buildHeatmapPanel(state)
+  return pair.wrap;
+}
 
-  return col;
+// ── Check Grid Rendering ────────────────────────
+
+function ordersByTab(state) {
+  var tab = state.activeTab;
+  return (state.allOrders || []).filter(function(o) {
+    if (tab === 'open') return o.status === 'open';
+    if (tab === 'closed') return o.status === 'closed' || o.status === 'paid';
+    if (tab === 'void') return o.status === 'voided';
+    return false;
+  });
+}
+
+function renderCheckGrid(state) {
+  if (!state.centerGrid) return;
+  state.centerGrid.innerHTML = '';
+  var orders = ordersByTab(state);
+  var isOpen = state.activeTab === 'open';
+  var isClosed = state.activeTab === 'closed';
+  var isVoid = state.activeTab === 'void';
+
+  if (orders.length === 0 && !isOpen) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'grid-column:1/-1;text-align:center;padding:40px 0;font-family:' + T.fh + ';font-size:18px;color:' + T.mutedText + ';font-weight:bold;';
+    empty.textContent = isClosed ? 'No closed checks' : 'No voided checks';
+    state.centerGrid.appendChild(empty);
+    return;
+  }
+
+  for (var i = 0; i < orders.length; i++) {
+    state.centerGrid.appendChild(buildCheckTile(state, orders[i]));
+  }
+
+  // + NEW CHECK tile (OPEN tab only)
+  if (isOpen) {
+    var newTile = document.createElement('div');
+    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:90px;cursor:pointer;user-select:none;';
+    newTile.style.clipPath = chamfer(6);
+    var plus = document.createElement('div');
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + CHROME + ';';
+    plus.textContent = '+';
+    newTile.appendChild(plus);
+    newTile.addEventListener('pointerup', function() {
+      var emp = state.params.emp || state.params;
+      SceneManager.mountWorking('order-entry', {
+        mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+      });
+    });
+    state.centerGrid.appendChild(newTile);
+  }
+}
+
+function buildCheckTile(state, order) {
+  var isOpen = state.activeTab === 'open';
+  var isClosed = state.activeTab === 'closed';
+  var isVoid = state.activeTab === 'void';
+  var sColor = srvColor(state.serverColorMap, order.server_id);
+  var checkNum = order.check_number || ('C-' + String(order.order_id).slice(0, 3).toUpperCase());
+
+  var tile = document.createElement('div');
+  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + sColor + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
+  tile.style.clipPath = chamfer(6);
+  if (isClosed) tile.style.opacity = '0.7';
+  if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
+
+  // Check number
+  var numColor = isOpen ? T.mint : (isClosed ? T.electricPink : T.vermillion);
+  var num = document.createElement('div');
+  num.style.cssText = 'font-family:' + T.fh + ';font-size:22px;font-weight:bold;color:' + numColor + ';';
+  num.textContent = checkNum;
+  num.dataset.role = 'num';
+  tile.appendChild(num);
+
+  // Server name
+  var srvName = document.createElement('div');
+  srvName.style.cssText = 'font-family:' + T.fh + ';font-size:12px;font-weight:bold;color:' + sColor + ';';
+  srvName.textContent = order.server_name || '';
+  srvName.dataset.role = 'server';
+  tile.appendChild(srvName);
+
+  // Customer name
+  if (order.customer_name) {
+    var name = document.createElement('div');
+    name.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.mutedText + ';';
+    name.textContent = order.customer_name;
+    name.dataset.role = 'name';
+    tile.appendChild(name);
+  }
+
+  // Item count
+  var items = order.items || [];
+  var count = 0;
+  for (var ii = 0; ii < items.length; ii++) count += (items[ii].quantity || 1);
+  var countEl = document.createElement('div');
+  countEl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.textPrimary + ';';
+  countEl.textContent = 'x' + count;
+  countEl.dataset.role = 'count';
+  tile.appendChild(countEl);
+
+  // Total
+  var total = document.createElement('div');
+  total.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.gold + ';';
+  total.textContent = fmt(order.total || 0);
+  total.dataset.role = 'total';
+  tile.appendChild(total);
+
+  // ── Interaction ──
+  if (isOpen) {
+    if (state.selected[order.order_id]) applyTileSelected(tile, sColor, true);
+    tile.addEventListener('pointerup', function() {
+      if (state.selected[order.order_id]) {
+        delete state.selected[order.order_id];
+        applyTileSelected(tile, sColor, false);
+      } else {
+        state.selected[order.order_id] = order;
+        applyTileSelected(tile, sColor, true);
+      }
+      renderOpsPanel(state);
+    });
+  } else if (isClosed) {
+    tile.addEventListener('pointerup', function() {
+      SceneManager.interrupt('sl-reopen-confirm', {
+        onConfirm: function() {
+          fetch('/api/v1/orders/' + order.order_id + '/reopen', { method: 'POST' })
+            .then(function(r) {
+              if (r.ok) { showToast('Check reopened', { bg: T.goGreen }); refreshData(state); }
+              else { showToast('Reopen failed', { bg: T.red }); }
+            }).catch(function() { showToast('Reopen failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+        params: { checkLabel: checkNum },
+      });
+    });
+  }
+
+  return tile;
+}
+
+function applyTileSelected(tile, sColor, selected) {
+  if (selected) {
+    tile.style.background = T.mint;
+    tile.style.borderColor = sColor;
+    for (var i = 0; i < tile.children.length; i++) tile.children[i].style.color = T.bgDark;
+  } else {
+    tile.style.background = T.bgDark;
+    tile.style.borderColor = sColor;
+    var roleColors = { num: T.mint, server: sColor, name: T.mutedText, count: T.textPrimary, total: T.gold };
+    for (var i = 0; i < tile.children.length; i++) {
+      var role = tile.children[i].dataset.role;
+      if (roleColors[role]) tile.children[i].style.color = roleColors[role];
+    }
+  }
+}
+
+// ── Operations Panel ────────────────────────────
+
+function renderOpsPanel(state) {
+  if (!state.opsPanel) return;
+  state.opsPanel.innerHTML = '';
+
+  if (state.activeTab !== 'open') return;
+  var ids = Object.keys(state.selected);
+  if (ids.length === 0) return;
+
+  state.opsPanel.appendChild(buildCardHeader('CHECK OPERATION'));
+
+  var emp = state.params ? (state.params.emp || state.params) : {};
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px 8px;';
+  var isSingle = ids.length === 1;
+
+  if (isSingle) {
+    var order = state.selected[ids[0]];
+
+    grid.appendChild(buildButton('EDIT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.mountWorking('order-entry', {
+          mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+          recallOrderId: order.order_id,
+        });
+      },
+    }));
+
+    grid.appendChild(buildButton('PRINT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        fetch('/api/v1/print/receipt/' + order.order_id, { method: 'POST' })
+          .then(function() { showToast('Print sent', { bg: T.goGreen }); })
+          .catch(function() { showToast('Print failed', { bg: T.red }); });
+      },
+    }));
+
+    grid.appendChild(buildButton('TRANSFER', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        showToast('Transfer — not yet wired', { bg: T.gold });
+      },
+    }));
+
+    var voidBtn = buildButton('VOID', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.interrupt('sl-void-gate', {
+          onConfirm: function() {
+            fetch('/api/v1/orders/' + order.order_id + '/void', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: 'Voided by manager', approved_by: emp.id || 'manager' }),
+            }).then(function(r) {
+              if (r.ok) { showToast('Check voided', { bg: T.goGreen }); state.selected = {}; refreshData(state); }
+              else { showToast('Void failed', { bg: T.red }); }
+            }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          },
+          onCancel: function() {},
+          params: { message: 'Void ' + (order.check_number || order.order_id) + '? This is destructive.' },
+        });
+      },
+    });
+    voidBtn.style.border = '2px solid ' + T.vermillion;
+    grid.appendChild(voidBtn);
+
+  } else {
+    // Multi-select
+    grid.appendChild(buildButton('MERGE', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() { showToast('Merge — not yet wired', { bg: T.gold }); },
+    }));
+
+    grid.appendChild(buildButton('PRINT ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        ids.forEach(function(id) {
+          fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function() {});
+        });
+        showToast('Print sent for ' + ids.length + ' checks', { bg: T.goGreen });
+      },
+    }));
+
+    grid.appendChild(buildButton('TRANSFER ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() { showToast('Transfer — not yet wired', { bg: T.gold }); },
+    }));
+
+    var voidAllBtn = buildButton('VOID ALL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
+      onTap: function() {
+        SceneManager.interrupt('sl-void-gate', {
+          onConfirm: function() {
+            Promise.all(ids.map(function(id) {
+              return fetch('/api/v1/orders/' + id + '/void', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: emp.id || 'manager' }),
+              });
+            })).then(function() {
+              showToast(ids.length + ' checks voided', { bg: T.goGreen });
+              state.selected = {};
+              refreshData(state);
+            }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          },
+          onCancel: function() {},
+          params: { message: 'Void ' + ids.length + ' checks? This is destructive.' },
+        });
+      },
+    });
+    voidAllBtn.style.border = '2px solid ' + T.vermillion;
+    grid.appendChild(voidAllBtn);
+  }
+
+  state.opsPanel.appendChild(grid);
 }
 
 // ═══════════════════════════════════════════════════
