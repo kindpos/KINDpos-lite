@@ -594,24 +594,6 @@ function buildCheckoutsDrillContent(content) {
     info.appendChild(shiftEl);
     row.appendChild(nameEl);
     row.appendChild(info);
-
-    // Checkout button — only for servers not yet checked out
-    if (srv.status !== 'checked_out') {
-      var coBtn = buildButton('CHECKOUT', {
-        fill: T.darkBtn, color: T.mint, fontSize: '11px', fontFamily: T.fb,
-        width: 70, height: 22,
-        onTap: (function(s) { return function() {
-          SceneManager.mountWorking('server-checkout', {
-            returnTo: 'manager-landing',
-            employeeId: s.id,
-            employeeName: s.name,
-          });
-        }; })(srv),
-      });
-      coBtn.style.flexShrink = '0';
-      row.appendChild(coBtn);
-    }
-
     content.appendChild(row);
   }
 }

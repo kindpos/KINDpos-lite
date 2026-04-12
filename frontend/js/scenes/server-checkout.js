@@ -1,16 +1,15 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Terminal — Server Checkout Scene (SM2)
+//  KINDpos Terminal — Server Checkout Scene
 //  2-column: Receipt preview left | Card grid + banner + action bar right
 //  Two blockers: open checks + unadjusted tips
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
-import { buildGap, showToast } from '../components.js';
+import { buildButton, buildGap, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
-import { defineScene } from '../scene-manager-2.js';
-import { hexToRgba } from '../theme-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { buildNumpad } from '../numpad.js';
 
 // ── Layout ────────────────────────────────────────
 var RECEIPT_W   = 280;
@@ -22,9 +21,9 @@ var ACTION_H    = 48;
 var BANNER_H    = 36;
 var BEVEL       = 4;
 var CHAM        = 8;
+var RED         = '#ff3355';
 
 // ── Scene state ──────────────────────────────────
-var _returnTo      = null;
 var _state         = null;
 var _expandedIdx   = null;
 var _gridContainer = null;
@@ -132,8 +131,8 @@ function buildReceiptContent(state) {
   var BASE   = T.fsBtn;
   var HEADER = T.fsBtn;
   var SMALL  = T.fsSmall;
-  var COL    = T.bg;
-  var DIM    = T.subtleText;
+  var COL    = '#333';
+  var DIM    = '#999';
 
   var wrap = document.createElement('div');
   wrap.style.cssText = 'padding:12px 14px;font-family:' + T.fb + ';color:' + COL + ';display:flex;flex-direction:column;gap:0;';
@@ -231,7 +230,7 @@ function buildReceiptPanel(state) {
   header.style.cssText = [
     'flex-shrink:0;padding:6px 12px;',
     'background:' + T.bgEdge + ';',
-    'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.mint + ';',
+    'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
     'letter-spacing:0.1em;text-align:center;',
   ].join('');
   header.textContent = 'PRINT PREVIEW';
@@ -253,10 +252,10 @@ function detailRow(label, value, valueColor) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';padding:2px 0;';
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:' + T.fsMed + ';color:' + T.mint + ';';
+  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
   lbl.textContent = label;
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:' + T.fsMed + ';color:' + (valueColor || T.gold) + ';font-weight:bold;';
+  val.style.cssText = 'font-size:40px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
   val.textContent = value;
   row.appendChild(lbl); row.appendChild(val);
   return row;
@@ -264,7 +263,7 @@ function detailRow(label, value, valueColor) {
 
 function detailDivider() {
   var el = document.createElement('div');
-  el.style.cssText = 'border-top:1px solid ' + T.bg + ';margin:4px 0;';
+  el.style.cssText = 'border-top:1px solid #333;margin:4px 0;';
   return el;
 }
 
@@ -291,7 +290,7 @@ function buildShortcutRow(state) {
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
   zPair.inner.style.fontFamily = T.fb;
   zPair.inner.style.fontSize = T.fsSmall;
-  zPair.inner.style.color = T.vermillion;
+  zPair.inner.style.color = RED;
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
     doZeroAll(state);
@@ -347,7 +346,7 @@ function getCardDefs(state) {
         el.appendChild(detailRow('Total Checks', String(state.totalChecks), T.mint));
         el.appendChild(detailRow('Avg Check',    fmt(state.avgCheck)));
         if (state.openChecks > 0) {
-          el.appendChild(detailRow('Open Checks', String(state.openChecks), T.vermillion));
+          el.appendChild(detailRow('Open Checks', String(state.openChecks), RED));
         }
       },
     },
@@ -374,7 +373,7 @@ function getCardDefs(state) {
     {
       title: 'Tip-Out Calc',
       hero: '−' + fmt(state.tipOutTotal),
-      heroColor: T.vermillion,
+      heroColor: RED,
       subtitle: (state.tipOutRoles.length ? state.tipOutRoles[0].percent + '% rate' : '0%') + ' • editable',
       border: T.border,
       statusColor: null,
@@ -411,7 +410,7 @@ function getCardDefs(state) {
       statusColor: null,
       buildExpanded: function(el) {
         el.appendChild(detailRow('Card Tips',    fmt(state.cardTips)));
-        el.appendChild(detailRow('Tip-Out',      '− ' + fmt(state.tipOutTotal), T.vermillion));
+        el.appendChild(detailRow('Tip-Out',      '− ' + fmt(state.tipOutTotal), RED));
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Take-Home',    fmt(state.takeHome), T.gold));
         el.appendChild(detailDivider());
@@ -444,7 +443,7 @@ function buildCardTile(def, idx) {
   }
 
   var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.mint + ';font-weight:bold;text-align:center;';
+  title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;text-align:center;';
   title.textContent = def.title;
   inner.appendChild(title);
 
@@ -453,17 +452,17 @@ function buildCardTile(def, idx) {
   inner.appendChild(hr);
 
   var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsDenom + ';color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
+  hero.style.cssText = 'font-family:' + T.fb + ';font-size:45px;color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
   hero.textContent = def.hero;
   inner.appendChild(hero);
 
   var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.mint + ';text-align:center;';
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;';
   sub.textContent = def.subtitle;
   inner.appendChild(sub);
 
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.mint + ';text-align:center;margin-top:2px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;margin-top:2px;';
   hint.textContent = '▸';
   inner.appendChild(hint);
 
@@ -503,12 +502,12 @@ function buildCardStrip(def, idx) {
   ].join('');
 
   var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:' + T.fsMed + ';color:' + T.mint + ';';
+  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
   lbl.textContent = def.title;
   strip.appendChild(lbl);
 
   var val = document.createElement('span');
-  val.style.cssText = 'font-size:' + T.fsMed + ';color:' + T.cyan + ';';
+  val.style.cssText = 'font-size:40px;color:' + T.cyan + ';';
   val.textContent = def.hero;
   strip.appendChild(val);
 
@@ -561,10 +560,10 @@ function buildExpandedView(state, idx) {
   var hdr = document.createElement('div');
   hdr.style.cssText = 'flex-shrink:0;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:' + T.bg3 + ';cursor:pointer;user-select:none;-webkit-user-select:none;';
   var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.mint + ';font-weight:bold;';
+  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;';
   hTitle.textContent = defs[idx].title;
   var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.mint + ';';
+  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
   hHint.textContent = '▾';
   hdr.appendChild(hTitle); hdr.appendChild(hHint);
   hdr.addEventListener('pointerup', function() { collapseToGrid(); });
@@ -613,21 +612,21 @@ function buildBlockerBanner(state) {
   el.style.cssText = [
     'flex-shrink:0;height:' + BANNER_H + 'px;',
     'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:' + T.fsMed + ';',
+    'font-family:' + T.fb + ';font-size:40px;',
     'clip-path:' + chamfer(4) + ';',
   ].join('');
 
   var blocked = isBlocked(state);
   if (blocked) {
-    el.style.background = hexToRgba(T.vermillion, 0.1);
-    el.style.border = '1px solid ' + T.vermillion;
-    el.style.color = T.vermillion;
+    el.style.background = 'rgba(255,51,85,0.1)';
+    el.style.border = '1px solid ' + RED;
+    el.style.color = RED;
     var msgs = [];
     if (state.openChecks > 0) msgs.push(state.openChecks + ' open check' + (state.openChecks > 1 ? 's' : ''));
     if (state.unadjustedTips > 0) msgs.push(state.unadjustedTips + ' unadjusted tip' + (state.unadjustedTips > 1 ? 's' : ''));
     el.textContent = '⚠ RESOLVE: ' + msgs.join(' + ');
   } else {
-    el.style.background = hexToRgba(T.cyan, 0.08);
+    el.style.background = 'rgba(51,255,255,0.08)';
     el.style.border = '1px solid ' + T.cyan;
     el.style.color = T.cyan;
     el.textContent = '✓ ALL CLEAR — ready to finalize';
@@ -647,7 +646,7 @@ function buildActionBar(state) {
 
   function arrow() {
     var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.mint + ';flex-shrink:0;';
+    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';flex-shrink:0;';
     el.textContent = '→';
     return el;
   }
@@ -656,7 +655,7 @@ function buildActionBar(state) {
   var printPair = buildStyledButton(T.darkBtn);
   printPair.wrap.style.cssText = 'flex:1;height:100%;';
   printPair.inner.style.fontFamily = T.fb;
-  printPair.inner.style.fontSize = T.fsSmall;
+  printPair.inner.style.fontSize = '27px';
   printPair.inner.style.color = T.cyan;
   printPair.inner.textContent = '//PRINT//';
   printPair.wrap.addEventListener('pointerup', function() {
@@ -677,14 +676,14 @@ function buildActionBar(state) {
   if (blocked) {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = T.dimText;
+    finPair.inner.style.color = '#555';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.style.pointerEvents = 'none';
     finPair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = T.mutedText;
+    finPair.inner.style.color = '#888';
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       openPinGate(function() {
@@ -698,7 +697,7 @@ function buildActionBar(state) {
   } else {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = T.bgDark;
+    finPair.inner.style.color = '#1a1a1a';
     finPair.inner.textContent = '//FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       if (isBlocked(state)) return;
@@ -751,11 +750,11 @@ function buildAdjustRow(role) {
   row.style.cssText = 'display:flex;align-items:center;gap:10px;font-family:' + T.fb + ';';
 
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-size:' + T.fsMed + ';color:' + T.mint + ';min-width:80px;';
+  nameEl.style.cssText = 'font-size:40px;color:' + T.mint + ';min-width:80px;';
   nameEl.textContent = role.label;
 
   var basisBtn = document.createElement('div');
-  basisBtn.style.cssText = 'font-size:' + T.fsMed + ';color:' + T.mint + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
+  basisBtn.style.cssText = 'font-size:40px;color:' + T.mint + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
   basisBtn.textContent = role.basis;
   basisBtn.addEventListener('pointerup', function() {
     role.basis = role.basis === 'Net Sales' ? 'Liquor Sales' : 'Net Sales';
@@ -771,7 +770,7 @@ function buildAdjustRow(role) {
   });
 
   var pctEl = document.createElement('div');
-  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
+  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
   pctEl.textContent = role.percent + '%';
 
   var incBtn = buildStyledButton(T.bgDark);
@@ -807,19 +806,6 @@ function refreshAfterAdjust(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  CLOSE — handles both Working and Transactional mount
-// ─────────────────────────────────────────────────
-
-function closeScene() {
-  var stack = SceneManager.getTransactionalStack();
-  if (stack.indexOf('server-checkout') !== -1) {
-    closeScene();
-  } else {
-    SceneManager.mountWorking(_returnTo || 'server-landing');
-  }
-}
-
-// ─────────────────────────────────────────────────
 //  FINALIZE ACTION
 // ─────────────────────────────────────────────────
 
@@ -831,7 +817,7 @@ function completeFinalizeAfterTips(state) {
     })
     .then(function(data) {
       console.log('[KINDpos] Server checkout finalized:', data);
-      closeScene();
+      SceneManager.closeTransactional('server-checkout');
     })
     .catch(function(err) {
       console.error('[KINDpos] Finalize failed:', err);
@@ -929,20 +915,14 @@ function buildScene(el, params) {
 //  REGISTRATION
 // ─────────────────────────────────────────────────
 
-defineScene({
+SceneManager.register({
   name: 'server-checkout',
-
-  state: {},
-
-  render: function(container, params) {
-    _returnTo = params.returnTo || 'server-landing';
+  mount: function(container, params) {
     setSceneName('Checkout: ' + (params.employeeName || ''));
-    setHeaderBack({ back: true, x: true, onBack: function() { closeScene(); } });
+    setHeaderBack({ back: true, x: true, onBack: function() { SceneManager.closeTransactional('server-checkout'); } });
     buildScene(container, params);
   },
-
   unmount: function() {
-    _returnTo      = null;
     _state         = null;
     _expandedIdx   = null;
     _gridContainer = null;
@@ -951,4 +931,6 @@ defineScene({
     _rightCol      = null;
     _pinUnlocked   = false;
   },
+  cache: false,
+  timeoutMs: 0,
 });
