@@ -615,3 +615,63 @@ async def get_labor_summary(
         "ot_alerts": ot_alerts,
         "cob_trend": cob_trend,
     }
+
+
+# =============================================================================
+# HOURLY SALES COMPARISON (today vs last week)
+# =============================================================================
+
+@router.get("/hourly-compare")
+async def hourly_compare(
+    date: Optional[str] = None,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Return hourly sales for a given date and the same weekday last week.
+
+    Response: { today: [{ hour, net_sales }], last_week: [{ hour, net_sales }] }
+    Used by the manager-landing Sales Overview sparkline.
+    """
+    if date:
+        target = datetime.strptime(date, "%Y-%m-%d")
+    else:
+        target = datetime.now(timezone.utc)
+
+    compare_date = target - timedelta(days=7)
+    target_str = target.strftime("%Y-%m-%d")
+    compare_str = compare_date.strftime("%Y-%m-%d")
+
+    today_hourly = await _hourly_for_date(ledger, target_str)
+    last_week_hourly = await _hourly_for_date(ledger, compare_str)
+
+    return {
+        "today": today_hourly,
+        "last_week": last_week_hourly,
+    }
+
+
+async def _hourly_for_date(ledger: EventLedger, date_str: str):
+    """Build hourly net sales array for a date."""
+    events = await _get_events_for_date(ledger, date_str)
+    orders = project_orders(events)
+
+    hourly = defaultdict(lambda: Decimal("0"))
+    for order in orders:
+        if order.status == "voided":
+            continue
+        ts = order.created_at
+        if ts:
+            h = ts.hour if hasattr(ts, 'hour') else 0
+        else:
+            h = 0
+        hourly[h] += Decimal(str(order.subtotal or 0))
+
+    result = []
+    for h in range(6, 24):
+        ampm = 'p' if h >= 12 else 'a'
+        label = str(h - 12 if h > 12 else h) + ampm
+        result.append({
+            "hour": label,
+            "net_sales": money_round(float(hourly[h])),
+        })
+
+    return result

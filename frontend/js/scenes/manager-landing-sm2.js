@@ -10,6 +10,7 @@ import { SceneManager } from '../scene-manager.js';
 import { defineScene } from '../scene-manager-2.js';
 import { buildCard, applyCardBevel, hexToRgba } from '../theme-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { createSVG, drawTrendLine } from '../chart-helpers.js';
 
 // ── Constants (immutable) ────────────────────────
 
@@ -109,12 +110,16 @@ function fetchAllData(state) {
     fetch(API + '/tips/pool')
       .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .catch(function() { return { total_tips: 0, distribution_method: '--', servers: [] }; }),
+    // 5: Hourly sales comparison (today vs last week)
+    fetch(API + '/reports/hourly-compare?date=' + dateStr)
+      .then(function(r) { return r.json(); }).catch(function() { return { today: [], last_week: [] }; }),
   ]).then(function(results) {
     var daySummary = results[0] || {};
     var orders = Array.isArray(results[1]) ? results[1] : [];
     var staffResult = results[2] || {};
     var laborSummary = results[3] || {};
     var tipPool = results[4] || {};
+    var hourlyCompare = results[5] || {};
 
     wireSalesData(state, daySummary, orders, laborSummary);
     wireBreakdownData(state, daySummary);
@@ -122,6 +127,7 @@ function fetchAllData(state) {
     wireStaffData(state, staffResult, orders);
     wireHeatmap(state, staffResult, orders);
     state.tipPoolData = tipPool;
+    state.hourlyCompare = hourlyCompare;
     wireTipAdjData(state, daySummary);
     wireCloseDayData(state);
   });
@@ -285,6 +291,7 @@ defineScene({
     // API data
     salesData: null,
     breakdownData: null,
+    hourlyCompare: null,
     heatmapData: null,
     staffData: null,
     tipPoolData: null,
@@ -396,7 +403,7 @@ function buildLeftColumn(state) {
 
 function buildSalesOverviewCard(state) {
   var d = state.salesData || {};
-  var cob = d.labor_cob || 0;
+  var hc = state.hourlyCompare || {};
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
   var card = pair.card;
@@ -405,16 +412,46 @@ function buildSalesOverviewCard(state) {
 
   card.appendChild(buildCardHeader('SALES OVERVIEW'));
 
+  // ── Sparkline: today (gold) vs last week (mint dashed) ──
+  var chartWrap = document.createElement('div');
+  chartWrap.style.cssText = 'padding:4px 6px 0;';
+
+  var todayData = (hc.today || []).map(function(h) {
+    return { label: h.hour, value: h.net_sales || 0 };
+  });
+  var lastWeekData = (hc.last_week || []).map(function(h) {
+    return { label: h.hour, value: h.net_sales || 0 };
+  });
+
+  // Merge compare values into today array for drawTrendLine
+  var chartData = todayData.map(function(d, i) {
+    return { label: d.label, value: d.value, compareValue: lastWeekData[i] ? lastWeekData[i].value : 0 };
+  });
+
+  if (chartData.length > 0) {
+    var svg = createSVG(T.chartW, T.chartHSm);
+    drawTrendLine(svg, chartData, {
+      color: T.gold,
+      compareColor: T.mint,
+      compareDashed: true,
+      width: T.chartW,
+      height: T.chartHSm,
+      shaded: false,
+      hideLabels: true,
+      hideAxis: true,
+    });
+    chartWrap.appendChild(svg);
+  }
+  card.appendChild(chartWrap);
+
+  // ── KPIs ──
   var body = document.createElement('div');
-  body.style.cssText = 'padding:6px 0;';
+  body.style.cssText = 'padding:4px 0 6px;';
   body.appendChild(statRow('Net Sales:', fmt(d.net_sales), T.gold));
   body.appendChild(statRow('Check Avg:', fmt(d.avg_check), T.gold));
-  body.appendChild(statRow('Active Checks:', String(d.active_checks || 0), T.lime));
-  body.appendChild(statRow('Total Covers:', String(d.total_covers || 0), T.lime));
-  body.appendChild(statRow('Labor COB%:', cob.toFixed(1) + '%', cobColor(cob)));
   card.appendChild(body);
 
-  // TODO: >>> drill-down button
+  // TODO: >>> drill-down (expanded chart + breakdown table)
 
   return pair.wrap;
 }

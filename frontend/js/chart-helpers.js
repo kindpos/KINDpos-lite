@@ -429,15 +429,26 @@ export function drawTrendLine(svg, data, options) {
   var color = options.color || DATA.orange;
   var w = options.width || 300;
   var h = options.height || 150;
-  var compareData = options.compareData || null;
   var compareColor = options.compareColor || DATA.blue;
   var thresholds = options.thresholds || [];
   var shaded = options.shaded !== false;
+  var hideLabels = options.hideLabels || false;
+  var hideAxis = options.hideAxis || false;
 
-  var padLeft = Math.round(55 * w / 400);
-  var padRight = 12;
-  var padTop = Math.round(14 * h / 160);
-  var padBottom = Math.round(32 * h / 160);
+  // Support compareData as separate array or inline compareValue on data items
+  var compareData = options.compareData || null;
+  if (!compareData && data.length > 0 && data[0].compareValue != null) {
+    compareData = data.map(function(d) { return { label: d.label, value: d.compareValue || 0 }; });
+  }
+
+  var _p = chartPad(w, h, {
+    padLeft: hideAxis ? Math.round(8 * w / T.chartW) : null,
+    padBottom: hideLabels ? Math.round(8 * h / T.chartH) : null,
+  });
+  var padLeft = _p.left;
+  var padRight = _p.right;
+  var padTop = _p.top;
+  var padBottom = _p.bottom;
   var chartW = w - padLeft - padRight;
   var chartH = h - padTop - padBottom;
   var ptSz = Math.round(8 * w / 400);
@@ -477,7 +488,9 @@ export function drawTrendLine(svg, data, options) {
     var gv = yMin + (g / 4) * yRange;
     var gy = toY(gv);
     svg.appendChild(svgEl('line', { x1: padLeft, y1: gy, x2: w - padRight, y2: gy, stroke: CHART.gridStroke, 'stroke-width': 1 }));
-    svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = gv.toFixed(1);
+    if (!hideAxis) {
+      svg.appendChild(svgEl('text', { x: padLeft - 4, y: gy + 3, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'end' })).textContent = gv.toFixed(1);
+    }
   }
 
   // Threshold lines
@@ -521,8 +534,10 @@ export function drawTrendLine(svg, data, options) {
   }
 
   // X labels
-  for (var i = 0; i < data.length; i++) {
-    svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+  if (!hideLabels) {
+    for (var i = 0; i < data.length; i++) {
+      svg.appendChild(svgEl('text', { x: toX(i), y: h - 4, fill: CHART.axisFill, 'font-size': fs(20, w), 'font-family': FONT, 'text-anchor': 'middle' })).textContent = data[i].label;
+    }
   }
 }
 
