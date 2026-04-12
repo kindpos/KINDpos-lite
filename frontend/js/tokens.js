@@ -96,18 +96,21 @@ export const T = {
   colGapSm: 12,
   pcLeftW:  280,
 
-  // Chart dimensions (shared across all chart-rendering scenes)
-  chartPanelW:   500,     // chart width in card panels / drill-downs
-  chartPanelH:   180,     // chart height — standard (bar, category)
-  chartPanelHSm: 160,     // chart height — short (trend line)
-  chartFullW:    900,     // chart width in expanded / full views
-  chartFullH:    380,     // chart height in expanded / full views
-  chartDonut:    140,     // donut chart diameter
-  chartPt:       8,       // data point marker size (square)
-  chartLblW:     120,     // axis label column width
-  chartLblWSm:   80,      // axis label column width (compact)
-  chartProgW:    860,     // progress bar width (full)
-  chartProgWSm:  380,     // progress bar width (compact)
+  // Chart viewBox dimensions (internal coordinate space — SVG renders at width:100%)
+  chartVB:       '500 180',   // standard panel chart (category bars, breakdowns)
+  chartVBSm:     '500 160',   // short panel chart (trend lines)
+  chartVBFull:   '900 380',   // expanded / drill-down chart
+  chartW:        500,          // viewBox width (standard)
+  chartH:        180,          // viewBox height (standard)
+  chartHSm:      160,          // viewBox height (short)
+  chartFullW:    900,          // viewBox width (expanded)
+  chartFullH:    380,          // viewBox height (expanded)
+  chartDonut:    140,          // donut diameter (square viewBox)
+  chartPt:       8,            // data point marker size
+  chartLblW:     70,           // axis label area (left pad)
+  chartPadR:     8,            // right padding
+  chartPadT:     10,           // top padding
+  chartPadB:     32,           // bottom padding (axis labels)
 
   bevel:    7,
   bevelBtn: 4,
