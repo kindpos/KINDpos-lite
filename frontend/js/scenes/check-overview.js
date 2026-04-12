@@ -440,7 +440,7 @@ defineScene({
       if (!state.orderId) { showToast('No check to discount', { bg: T.red }); return; }
       SceneManager.interrupt('disc-pin', {
         onConfirm: function(pin) {
-          SceneManager.interrupt('disc-options', {
+          SceneManager.interrupt('disc-select', {
             onConfirm: function(opt) {
               var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
               var totals = collectSummary(state.seats, state.selected);
@@ -522,12 +522,24 @@ defineScene({
         .then(function(r) { return r.json(); })
         .then(function(order) {
           state.order = order;
+          state.checkNumber = order.check_number || '';
           state.seats = orderToSeats(order);
+          setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
           selectAll();
+          // If fully paid, return to landing
+          if (order.status === 'paid' || order.status === 'closed') {
+            showToast('Check closed', { bg: T.goGreen });
+            SceneManager.mountWorking('manager-landing', params);
+            return;
+          }
         })
         .catch(function() { showToast('Refresh failed', { bg: T.red }); });
     }
+
+    // Listen for payment completion — refresh to check if check is fully paid or partial
+    SceneManager.on('payment:complete', refreshOrder);
+    state.listeners.push({ el: null, event: 'payment:complete', handler: refreshOrder, bus: true });
 
     var optHandlers = {
       PRINT: handlePrint,
@@ -620,6 +632,22 @@ defineScene({
             }
             rebuildSeatGrid();
             selectAll();
+            // Persist seat_number changes via API
+            if (state.orderId) {
+              for (var pi = 0; pi < columns.length; pi++) {
+                var seatNum = pi + 1;
+                var colItems = columns[pi].items;
+                for (var qi = 0; qi < colItems.length; qi++) {
+                  if (colItems[qi].item_id) {
+                    fetch('/api/v1/orders/' + state.orderId + '/items/' + colItems[qi].item_id, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ seat_number: seatNum }),
+                    }).catch(function() {});
+                  }
+                }
+              }
+            }
           },
         });
       },
@@ -656,7 +684,11 @@ defineScene({
     OrderSummary.hide();
     for (var i = 0; i < state.listeners.length; i++) {
       var l = state.listeners[i];
-      l.el.removeEventListener(l.event, l.handler);
+      if (l.bus) {
+        SceneManager.off(l.event, l.handler);
+      } else {
+        l.el.removeEventListener(l.event, l.handler);
+      }
     }
     state.listeners = [];
   },

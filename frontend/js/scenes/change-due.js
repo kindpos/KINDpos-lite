@@ -161,12 +161,18 @@ function doReturn(target) {
     clearInterval(sceneEl._countdownTimer);
     sceneEl._countdownTimer = null;
   }
+  var activeScene = SceneManager.getActiveWorking();
   SceneManager.closeAllTransactional();
-  OrderSummary.hide();
   if (target === 'login') {
-    SceneManager.unmountWorking(SceneManager.getActiveWorking());
+    OrderSummary.hide();
+    SceneManager.unmountWorking(activeScene);
     SceneManager.openGate('login');
+  } else if (activeScene === 'check-overview') {
+    // check-overview is still mounted — just let it show through
+    // It will refresh its own data via the event bus
+    SceneManager.emit('payment:complete');
   } else {
+    OrderSummary.hide();
     SceneManager.mountWorking('order-entry', {});
   }
 }
