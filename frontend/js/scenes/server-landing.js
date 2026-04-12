@@ -274,7 +274,7 @@ function drawParetoChart(container, data, opts) {
     var cash = d.cash || 0;
     var card = d.card || 0;
     var tot = cash + card;
-    var catColor = d.color || T.mint;
+    var catColor = T.catColor((d.category || '').toUpperCase());
 
     var y = padT + gap + i * (barH + gap);
     var trackW = chartW;
