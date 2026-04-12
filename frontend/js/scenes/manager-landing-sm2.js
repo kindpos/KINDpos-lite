@@ -444,12 +444,30 @@ function buildSalesOverviewCard(state) {
   }
   card.appendChild(chartWrap);
 
-  // ── KPIs ──
-  var body = document.createElement('div');
-  body.style.cssText = 'padding:4px 0 6px;';
-  body.appendChild(statRow('Net Sales:', fmt(d.net_sales), T.gold));
-  body.appendChild(statRow('Check Avg:', fmt(d.avg_check), T.gold));
-  card.appendChild(body);
+  // ── KPIs (single row) ──
+  var kpiRow = document.createElement('div');
+  kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:4px 8px 6px;';
+  var netLabel = document.createElement('span');
+  netLabel.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';';
+  netLabel.textContent = 'Net ';
+  var netVal = document.createElement('span');
+  netVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  netVal.textContent = fmt(d.net_sales);
+  var avgLabel = document.createElement('span');
+  avgLabel.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';';
+  avgLabel.textContent = 'Avg ';
+  var avgVal = document.createElement('span');
+  avgVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  avgVal.textContent = fmt(d.avg_check);
+  var netWrap = document.createElement('span');
+  netWrap.appendChild(netLabel);
+  netWrap.appendChild(netVal);
+  var avgWrap = document.createElement('span');
+  avgWrap.appendChild(avgLabel);
+  avgWrap.appendChild(avgVal);
+  kpiRow.appendChild(netWrap);
+  kpiRow.appendChild(avgWrap);
+  card.appendChild(kpiRow);
 
   // TODO: >>> drill-down (expanded chart + breakdown table)
 
