@@ -57,7 +57,7 @@ function statRow(label, value, color) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;min-width:0;';
   var l = document.createElement('span');
-  l.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
+  l.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
   l.textContent = label;
   var v = document.createElement('span');
   v.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
@@ -74,7 +74,7 @@ function gateRow(met, label) {
   icon.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + (met ? T.green : T.vermillion) + ';';
   icon.textContent = met ? '\u2713' : '\u2717';
   var text = document.createElement('span');
-  text.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + (met ? T.green : T.vermillion) + ';';
+  text.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + (met ? T.green : T.vermillion) + ';font-weight:bold;';
   text.textContent = label;
   row.appendChild(icon);
   row.appendChild(text);
@@ -448,13 +448,13 @@ function buildSalesOverviewCard(state) {
   var kpiRow = document.createElement('div');
   kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:4px 8px 6px;';
   var netLabel = document.createElement('span');
-  netLabel.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';';
+  netLabel.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
   netLabel.textContent = 'Net ';
   var netVal = document.createElement('span');
   netVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
   netVal.textContent = fmt(d.net_sales);
   var avgLabel = document.createElement('span');
-  avgLabel.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';';
+  avgLabel.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
   avgLabel.textContent = 'Avg ';
   var avgVal = document.createElement('span');
   avgVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
@@ -613,7 +613,7 @@ function buildSalesOverviewExpanded(state, content) {
     cell.style.cssText = 'background:' + T.bg + ';padding:8px 10px;';
     cell.style.clipPath = chamfer(4);
     var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';';
+    lbl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.mutedText + ';font-weight:bold;';
     lbl.textContent = label;
     var val = document.createElement('div');
     val.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + color + ';font-weight:bold;margin-top:2px;';
