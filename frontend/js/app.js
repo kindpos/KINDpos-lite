@@ -24,7 +24,6 @@ import './scenes/sales-summary.js?v=2';
 import './scenes/landing.js?v=2';
 import './scenes/server-landing.js?v=2';
 import './scenes/clock-in.js?v=3';  // SM2 format
-import './scenes/check-overview.js?v=1';
 
 // ── Header state ──────────────────────────────────
 let _sceneName = null;

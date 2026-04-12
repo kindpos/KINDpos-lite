@@ -600,10 +600,8 @@ function renderGrid(emp) {
     plus.textContent = '+';
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
-      SceneManager.mountWorking('check-overview', {
-        pin: emp.pin,
-        employeeId: emp.id,
-        employeeName: emp.name,
+      SceneManager.mountWorking('order-entry', {
+        mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
       });
     });
     _centerGrid.appendChild(newTile);
@@ -658,10 +656,15 @@ function buildCheckTile(order, emp) {
   if (isOpen) {
     if (_selected[order.order_id]) applyTileSelected(tile, true);
     tile.addEventListener('pointerup', function() {
-      SceneManager.mountWorking('check-overview', {
-        checkId: order.order_id,
-        tableId: order.table_id,
-      });
+      var id = order.order_id;
+      if (_selected[id]) {
+        delete _selected[id];
+        applyTileSelected(tile, false);
+      } else {
+        _selected[id] = order;
+        applyTileSelected(tile, true);
+      }
+      renderOpsPanel(emp);
     });
   } else if (isClosed) {
     tile.addEventListener('pointerup', function() {
