@@ -208,7 +208,7 @@ function renderLayout(state) {
 
   el.innerHTML = '';
   el.style.cssText = 'width:100%;height:100%;background:' + T.bg
-    + ';display:grid;grid-template-columns:25fr 42fr 33fr;gap:' + T.colGap
+    + ';display:grid;grid-template-columns:29fr 42fr 29fr;gap:' + T.colGap
     + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   state.leftCol = buildLeftColumn(state);
