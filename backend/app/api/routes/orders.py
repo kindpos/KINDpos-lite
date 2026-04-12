@@ -1584,12 +1584,34 @@ async def adjust_tip_on_order(
     )
     await ledger.append(evt)
 
+    # Sync tip to payment device for batch settlement
+    device_adjusted = False
+    device_error = None
+    try:
+        from app.api.routes.payment_routes import get_payment_manager, _ensure_devices
+        manager = get_payment_manager(ledger)
+        await _ensure_devices(manager)
+        device = manager.get_device_for_terminal(settings.terminal_id)
+        if device and hasattr(device, 'adjust_tip') and device.config and device.config.protocol != "mock":
+            result = await device.adjust_tip(target.payment_id, Decimal(str(tip_amt)))
+            device_adjusted = result.status.value == "APPROVED"
+            if not device_adjusted:
+                device_error = f"Device tip adjust returned {result.status.value}"
+    except Exception as e:
+        device_error = f"Device tip adjust failed: {e}"
+    if device_error:
+        _logger.warning(
+            f"Tip adjust for {request.payment_id} saved to ledger but device sync failed: {device_error}"
+        )
+
     return {
         "success": True,
         "order_id": order_id,
         "payment_id": request.payment_id,
         "tip_amount": tip_amt,
         "previous_tip": previous_tip,
+        "device_adjusted": device_adjusted,
+        "device_warning": device_error,
     }
 
 
