@@ -80,39 +80,196 @@ function gateRow(met, label) {
   return row;
 }
 
-// ── Stub Data ────────────────────────────────────
+// ── Module ref for event handler access to state ─
 
-function loadStubData(state) {
-  state.salesData = {
-    net_sales: 0, avg_check: 0, active_checks: 0,
-    total_covers: 0, labor_cob: 0,
-    gross_sales: 0, cash_total: 0, card_total: 0,
-    discount_total: 0, void_total: 0, tax_total: 0,
-  };
-  state.breakdownData = { categories: [], cash: 0, card: 0, hourly: [] };
-  state.heatmapData = { hours: [], current_hour: -1, servers: [] };
-  state.allOrders = [];
-  state.staffData = { servers: [] };
-  state.tipPoolData = { total_tips: 0, distribution_method: '--', servers: [] };
-  state.tipAdjData = { unadjusted_count: 0 };
-  state.closeDayData = {
-    all_checked_out: false, pending_count: 0,
-    all_tips_adjusted: true, unadjusted_count: 0,
-    batch_ready: false, day_closed: false,
-  };
-  state.serverColorMap = {};
-}
+var _state = null;
 
-// ── Data Fetching (TODO: port from v3) ──────────
+// ── Data Fetching ────────────────────────────────
+
+var API = '/api/v1';
 
 function fetchAllData(state) {
-  loadStubData(state);
-  // TODO: port Promise.all fetch orchestration from v3
-  return Promise.resolve();
+  var today = new Date();
+  var dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+  return Promise.all([
+    // 0: Day summary → sales overview + breakdown + hourly + tips
+    fetch(API + '/orders/day-summary')
+      .then(function(r) { return r.json(); }).catch(function() { return {}; }),
+    // 1: All orders → check grid + heatmap
+    fetch(API + '/orders')
+      .then(function(r) { return r.json(); }).catch(function() { return []; }),
+    // 2: Clocked-in staff → server checkouts + heatmap
+    fetch(API + '/servers/clocked-in')
+      .then(function(r) { return r.json(); }).catch(function() { return { staff: [] }; }),
+    // 3: Labor summary → COB%
+    fetch(API + '/reports/labor-summary?date=' + dateStr)
+      .then(function(r) { return r.json(); }).catch(function() { return {}; }),
+    // 4: Tip pool (stub — endpoint not yet available)
+    fetch(API + '/tips/pool')
+      .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .catch(function() { return { total_tips: 0, distribution_method: '--', servers: [] }; }),
+  ]).then(function(results) {
+    var daySummary = results[0] || {};
+    var orders = Array.isArray(results[1]) ? results[1] : [];
+    var staffResult = results[2] || {};
+    var laborSummary = results[3] || {};
+    var tipPool = results[4] || {};
+
+    wireSalesData(state, daySummary, orders, laborSummary);
+    wireBreakdownData(state, daySummary);
+    wireOrders(state, orders);
+    wireStaffData(state, staffResult, orders);
+    wireHeatmap(state, staffResult, orders);
+    state.tipPoolData = tipPool;
+    wireTipAdjData(state, daySummary);
+    wireCloseDayData(state);
+  });
 }
 
 function refreshData(state) {
   fetchAllData(state).then(function() { if (state.el) renderLayout(state); });
+}
+
+// ── Data Wiring ─────────────────────────────────
+
+function wireSalesData(state, daySummary, orders, laborSummary) {
+  var openOrders = orders.filter(function(o) { return o.status === 'open'; });
+  state.salesData = {
+    net_sales: daySummary.net_sales || 0,
+    avg_check: daySummary.check_avg || daySummary.avg_check || 0,
+    active_checks: openOrders.length,
+    total_covers: daySummary.guest_count || daySummary.total_checks || 0,
+    labor_cob: laborSummary.cob_percent || 0,
+    gross_sales: daySummary.gross_sales || 0,
+    cash_total: daySummary.cash_total || 0,
+    card_total: daySummary.card_total || 0,
+    discount_total: daySummary.discount_total || 0,
+    void_total: daySummary.void_total || 0,
+    tax_total: daySummary.tax_total || 0,
+  };
+}
+
+function wireBreakdownData(state, daySummary) {
+  var cats = daySummary.categories || [];
+  var catList = [];
+  if (Array.isArray(cats)) {
+    catList = cats.map(function(c) {
+      return { name: c.name || c.category, value: c.total || c.value || 0 };
+    });
+  } else {
+    for (var catName in cats) {
+      if (cats.hasOwnProperty(catName)) {
+        catList.push({ name: catName, value: cats[catName] });
+      }
+    }
+  }
+  var hourlyData = (daySummary.hourly_breakdown || daySummary.hourly_sales || []).map(function(h) {
+    return { label: h.hour || h.label || '', value: h.total || h.value || h.net_sales || 0 };
+  });
+  state.breakdownData = {
+    categories: catList,
+    cash: daySummary.cash_total || 0,
+    card: daySummary.card_total || 0,
+    hourly: hourlyData,
+  };
+}
+
+function wireOrders(state, orders) {
+  state.allOrders = orders.map(function(o) {
+    return {
+      order_id: o.order_id,
+      check_number: o.check_number || ('C-' + String(o.order_id).slice(0, 3).toUpperCase()),
+      server_id: o.server_id || '',
+      server_name: o.server_name || '',
+      customer_name: o.customer_name || o.table || '',
+      status: o.status,
+      items: o.items || [],
+      total: o.total || o.subtotal || 0,
+    };
+  });
+}
+
+function wireStaffData(state, staffResult, orders) {
+  var staff = staffResult.staff || [];
+  state.staffData = {
+    servers: staff.map(function(s) {
+      var serverOrders = orders.filter(function(o) {
+        return o.server_id === s.employee_id && o.status === 'open';
+      });
+      return {
+        id: s.employee_id,
+        name: s.employee_name || s.name || '',
+        status: serverOrders.length > 0 ? 'active' : 'pending',
+        shift_end: '--',
+        open_tables: serverOrders.length,
+      };
+    }),
+  };
+}
+
+function wireHeatmap(state, staffResult, orders) {
+  var staff = staffResult.staff || [];
+  var now = new Date();
+  var startHour = 11;
+  var curH = now.getHours();
+  var hours = [];
+  for (var hh = startHour; hh <= Math.max(curH, startHour + 1); hh++) {
+    var ampm = hh >= 12 ? 'p' : 'a';
+    hours.push((hh > 12 ? hh - 12 : hh) + ampm);
+  }
+  var curIdx = Math.min(Math.max(0, curH - startHour), hours.length - 1);
+
+  var servers = staff.map(function(s) {
+    var sOrders = orders.filter(function(o) { return o.server_id === s.employee_id; });
+    var openCount = sOrders.filter(function(o) { return o.status === 'open'; }).length;
+    var cells = [];
+    for (var h = 0; h < hours.length; h++) cells.push(0);
+    if (curIdx >= 0 && curIdx < cells.length) cells[curIdx] = sOrders.length;
+    return { id: s.employee_id, name: s.employee_name || s.name || '', live_tables: openCount, cells: cells };
+  });
+
+  state.heatmapData = { hours: hours, current_hour: curIdx, servers: servers };
+
+  // Assign palette colors
+  state.serverColorMap = {};
+  for (var i = 0; i < servers.length; i++) {
+    state.serverColorMap[servers[i].id] = SERVER_PALETTE[i % SERVER_PALETTE.length];
+  }
+  for (var j = 0; j < staff.length; j++) {
+    if (!state.serverColorMap[staff[j].employee_id]) {
+      state.serverColorMap[staff[j].employee_id] = SERVER_PALETTE[Object.keys(state.serverColorMap).length % SERVER_PALETTE.length];
+    }
+  }
+}
+
+function wireTipAdjData(state, daySummary) {
+  var unadjCount = 0;
+  var checklist = daySummary.tip_adjustment_checklist || [];
+  for (var i = 0; i < checklist.length; i++) {
+    if (!checklist[i].adjusted) unadjCount++;
+  }
+  if (unadjCount === 0 && daySummary.unadjusted_tips != null) {
+    unadjCount = daySummary.unadjusted_tips;
+  }
+  state.tipAdjData = { unadjusted_count: unadjCount };
+}
+
+function wireCloseDayData(state) {
+  var pendingCount = 0;
+  var srvList = state.staffData.servers;
+  for (var i = 0; i < srvList.length; i++) {
+    if (srvList[i].status !== 'checked_out') pendingCount++;
+  }
+  var unadj = state.tipAdjData.unadjusted_count;
+  state.closeDayData = {
+    all_checked_out: pendingCount === 0,
+    pending_count: pendingCount,
+    all_tips_adjusted: unadj === 0,
+    unadjusted_count: unadj,
+    batch_ready: false,
+    day_closed: false,
+  };
 }
 
 // ═══════════════════════════════════════════════════
@@ -154,6 +311,7 @@ defineScene({
   },
 
   render: function(el, params, state) {
+    _state = state;
     state.el = el;
     state.params = params;
 
@@ -180,7 +338,9 @@ defineScene({
 
   events: {
     'transactional:closed': function(e) {
-      // TODO: refresh data when tip-adjustment closes
+      if (e && e.sceneName === 'tip-adjustment' && _state) {
+        refreshData(_state);
+      }
     },
   },
 
