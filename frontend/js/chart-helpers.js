@@ -59,8 +59,9 @@ export function createSVG(width, height) {
   var svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
   svg.setAttribute('width', '100%');
-  svg.setAttribute('height', '100%');
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.style.display = 'block';
+  svg.style.overflow = 'visible';
   return svg;
 }
 
