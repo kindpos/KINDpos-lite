@@ -1,29 +1,27 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Terminal — check-overview scene
+//  KINDpos Terminal — check-overview scene (SM2)
 //  Working layer: Check overview with payment summary, seats, and options
 //  SceneManager.mountWorking('check-overview', { checkId, tableId })
 // ═══════════════════════════════════════════════════
 
-import { SceneManager } from '../scene-manager.js';
+import { defineScene } from '../scene-manager-2.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
 
 // TODO: No font-size token exists for 26px card header labels — using inline '9px'.
 //       Consider adding T.fsLabel or similar to tokens.js.
 
-// ── Listener tracking for cleanup ──
-var _listeners = [];
-
-function _track(el, event, handler) {
-  el.addEventListener(event, handler);
-  _listeners.push({ el: el, event: event, handler: handler });
-}
-
-SceneManager.register({
+defineScene({
   name: 'check-overview',
 
-  mount: function(container, params) {
-    if (params === undefined) params = {};
-    _listeners = [];
+  state: {
+    listeners: [],
+  },
+
+  render: function(container, params, state) {
+    function track(el, event, handler) {
+      el.addEventListener(event, handler);
+      state.listeners.push({ el: el, event: event, handler: handler });
+    }
 
     var root = document.createElement('div');
     Object.assign(root.style, {
@@ -187,7 +185,7 @@ SceneManager.register({
 
       // Seat tap handler
       (function(slotId) {
-        _track(slot, 'pointerup', function() {
+        track(slot, 'pointerup', function() {
           console.log('seat tapped: ' + slotId);
         });
       })(s.id);
@@ -303,11 +301,11 @@ SceneManager.register({
     }
   },
 
-  unmount: function() {
-    for (var i = 0; i < _listeners.length; i++) {
-      var l = _listeners[i];
+  unmount: function(state) {
+    for (var i = 0; i < state.listeners.length; i++) {
+      var l = state.listeners[i];
       l.el.removeEventListener(l.event, l.handler);
     }
-    _listeners = [];
+    state.listeners = [];
   },
 });
