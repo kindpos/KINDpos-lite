@@ -1,0 +1,535 @@
+// ═══════════════════════════════════════════════════
+//  KINDpos Terminal — column-editor (SM2)
+//  Transactional overlay: multi-column item editor
+//  Works for seats within a check or checks within a selection
+//
+//  SceneManager.openTransactional('column-editor', {
+//    columns: [{ id, label, items: [{ name, qty, price }] }],
+//    operations: ['MERGE', 'MOVE', 'SPLIT', 'TRANSFER'],
+//    onSave: function(columns) {},
+//  })
+// ═══════════════════════════════════════════════════
+
+import { defineScene } from '../scene-manager-2.js';
+import { SceneManager } from '../scene-manager.js';
+import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
+
+// ── Inject invisible scrollbar styles ──
+(function() {
+  if (document.getElementById('ce-scroll-style')) return;
+  var s = document.createElement('style');
+  s.id = 'ce-scroll-style';
+  s.textContent = '.ce-scroll::-webkit-scrollbar{display:none}.ce-hscroll::-webkit-scrollbar{display:none}';
+  document.head.appendChild(s);
+})();
+
+function fmt(n) { return '$' + (n || 0).toFixed(2); }
+
+function colTotal(col) {
+  var t = 0;
+  for (var i = 0; i < col.items.length; i++) t += col.items[i].qty * col.items[i].price;
+  return t;
+}
+
+defineScene({
+  name: 'column-editor',
+
+  state: {
+    listeners: [],
+    columns: [],
+    mode: null,          // null | 'move' | 'split'
+    selectedItems: [],   // [{ colIdx, itemIdx }]
+    splitTargets: [],    // [colIdx] for split destinations
+    colEls: [],          // DOM refs per column
+    opsPanel: null,
+    columnsArea: null,
+    statusEl: null,
+    onSave: null,
+  },
+
+  render: function(container, params, state) {
+    function track(el, event, handler) {
+      el.addEventListener(event, handler);
+      state.listeners.push({ el: el, event: event, handler: handler });
+    }
+
+    // Deep copy columns so mutations don't affect caller
+    state.columns = [];
+    var srcCols = params.columns || [];
+    for (var ci = 0; ci < srcCols.length; ci++) {
+      var sc = srcCols[ci];
+      var items = [];
+      for (var ii = 0; ii < sc.items.length; ii++) {
+        var it = sc.items[ii];
+        items.push({ name: it.name, qty: it.qty, price: it.price });
+      }
+      state.columns.push({ id: sc.id, label: sc.label, items: items });
+    }
+    state.onSave = params.onSave || null;
+
+    var mintEdges = bevelEdges(T.mint);
+
+    var root = document.createElement('div');
+    Object.assign(root.style, {
+      position: 'absolute',
+      inset: '0',
+      background: T.bg,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    });
+    container.appendChild(root);
+
+    // ═══════════════════════════════════════════════════
+    //  Operations card (top bar)
+    // ═══════════════════════════════════════════════════
+
+    var opsCard = document.createElement('div');
+    Object.assign(opsCard.style, {
+      margin: '12px 12px 0',
+      borderRadius: '5px',
+      background: T.bg,
+      borderTop: T.bevel + 'px solid ' + mintEdges.light,
+      borderLeft: T.bevel + 'px solid ' + mintEdges.light,
+      borderBottom: T.bevel + 'px solid ' + mintEdges.dark,
+      borderRight: T.bevel + 'px solid ' + mintEdges.dark,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      flexShrink: '0',
+    });
+
+    var opsH = document.createElement('div');
+    Object.assign(opsH.style, {
+      background: T.mint,
+      height: '26px',
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 8px',
+      fontFamily: T.fh,
+      fontSize: '9px',
+      letterSpacing: '2px',
+      color: T.bgDark,
+      textTransform: 'uppercase',
+    });
+    opsH.textContent = 'OPERATIONS';
+    opsCard.appendChild(opsH);
+
+    var opsBody = document.createElement('div');
+    Object.assign(opsBody.style, {
+      padding: '6px',
+      display: 'flex',
+      gap: '8px',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    });
+    state.opsPanel = opsBody;
+
+    // Status text (shows current mode instructions)
+    var statusEl = document.createElement('div');
+    Object.assign(statusEl.style, {
+      fontFamily: T.fb,
+      fontSize: T.fsConSm,
+      color: T.mutedText,
+      marginLeft: '8px',
+      flex: '1',
+    });
+    state.statusEl = statusEl;
+
+    // Operation buttons
+    var ops = params.operations || ['MERGE', 'MOVE', 'SPLIT', 'TRANSFER'];
+
+    var opVariants = {
+      MERGE: 'mint', MOVE: 'gold', SPLIT: 'gold',
+      TRANSFER: 'dark', CANCEL: 'vermillion', CONFIRM: 'mint',
+    };
+
+    function buildOpBtn(label) {
+      return buildStyledButton({
+        label: label,
+        variant: opVariants[label] || 'dark',
+        size: 'sm',
+        onClick: function() { handleOp(label); },
+      });
+    }
+
+    for (var oi = 0; oi < ops.length; oi++) {
+      opsBody.appendChild(buildOpBtn(ops[oi]).wrap);
+    }
+
+    // Done button (close overlay)
+    var doneBtn = buildStyledButton({
+      label: 'DONE', variant: 'mint', size: 'sm',
+      onClick: function() {
+        if (state.onSave) state.onSave(state.columns);
+        SceneManager.closeTransactional('column-editor');
+      },
+    });
+    opsBody.appendChild(doneBtn.wrap);
+
+    opsBody.appendChild(statusEl);
+    opsCard.appendChild(opsBody);
+    root.appendChild(opsCard);
+
+    // ═══════════════════════════════════════════════════
+    //  Columns area (horizontal scroll, each column vertical scroll)
+    // ═══════════════════════════════════════════════════
+
+    var colsArea = document.createElement('div');
+    colsArea.className = 'ce-hscroll';
+    Object.assign(colsArea.style, {
+      flex: '1',
+      margin: '8px 12px 12px',
+      display: 'flex',
+      gap: '8px',
+      overflowX: 'auto',
+      overflowY: 'hidden',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
+    });
+    state.columnsArea = colsArea;
+    root.appendChild(colsArea);
+
+    // ═══════════════════════════════════════════════════
+    //  Render columns
+    // ═══════════════════════════════════════════════════
+
+    function renderColumns() {
+      colsArea.innerHTML = '';
+      state.colEls = [];
+
+      for (var ci = 0; ci < state.columns.length; ci++) {
+        colsArea.appendChild(buildColumn(ci));
+      }
+
+      // Fixed "+" column on the right
+      var addCol = document.createElement('div');
+      Object.assign(addCol.style, {
+        minWidth: '180px',
+        borderRadius: '5px',
+        border: '2px dashed ' + T.mint,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        userSelect: 'none',
+        flexShrink: '0',
+        boxSizing: 'border-box',
+      });
+      var addPlus = document.createElement('div');
+      Object.assign(addPlus.style, {
+        fontFamily: T.fb,
+        fontSize: '48px',
+        color: T.mint,
+      });
+      addPlus.textContent = '+';
+      addCol.appendChild(addPlus);
+
+      track(addCol, 'pointerup', function() { handleAddColumn(); });
+      colsArea.appendChild(addCol);
+    }
+
+    function buildColumn(colIdx) {
+      var col = state.columns[colIdx];
+      var darkEdges = bevelEdges(T.darkBtn);
+
+      var colEl = document.createElement('div');
+      Object.assign(colEl.style, {
+        minWidth: '220px',
+        maxWidth: '280px',
+        borderRadius: '5px',
+        background: T.bgDark,
+        borderTop: T.bevelBtn + 'px solid ' + mintEdges.light,
+        borderLeft: T.bevelBtn + 'px solid ' + mintEdges.light,
+        borderBottom: T.bevelBtn + 'px solid ' + mintEdges.dark,
+        borderRight: T.bevelBtn + 'px solid ' + mintEdges.dark,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        flexShrink: '0',
+      });
+
+      // Column header (tappable for split target)
+      var hdr = document.createElement('div');
+      Object.assign(hdr.style, {
+        background: T.mint,
+        height: '26px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 8px',
+        fontFamily: T.fh,
+        fontSize: '9px',
+        letterSpacing: '2px',
+        color: T.bgDark,
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+      });
+
+      var hdrLabel = document.createElement('span');
+      hdrLabel.textContent = col.label;
+      hdr.appendChild(hdrLabel);
+
+      var hdrTotal = document.createElement('span');
+      hdrTotal.style.color = T.bgDark;
+      hdrTotal.textContent = fmt(colTotal(col));
+      hdr.appendChild(hdrTotal);
+
+      track(hdr, 'pointerup', (function(idx) {
+        return function() { handleColumnTap(idx); };
+      })(colIdx));
+
+      colEl.appendChild(hdr);
+
+      // Item list (vertical scroll)
+      var itemList = document.createElement('div');
+      itemList.className = 'ce-scroll';
+      Object.assign(itemList.style, {
+        flex: '1',
+        overflowY: 'auto',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        padding: '4px',
+      });
+
+      for (var ii = 0; ii < col.items.length; ii++) {
+        var item = col.items[ii];
+        var row = document.createElement('div');
+        Object.assign(row.style, {
+          display: 'flex',
+          justifyContent: 'space-between',
+          padding: '4px 6px',
+          fontFamily: T.fb,
+          fontSize: T.fsConSm,
+          color: T.textPrimary,
+          cursor: 'pointer',
+          borderBottom: '1px solid ' + T.border,
+        });
+
+        var nameEl = document.createElement('span');
+        nameEl.textContent = (item.qty > 1 ? item.qty + 'x ' : '') + item.name;
+        row.appendChild(nameEl);
+
+        var priceEl = document.createElement('span');
+        priceEl.style.color = T.gold;
+        priceEl.textContent = fmt(item.qty * item.price);
+        row.appendChild(priceEl);
+
+        // Item tap for move/split selection
+        (function(cIdx, iIdx, rowEl) {
+          track(rowEl, 'pointerup', function() {
+            handleItemTap(cIdx, iIdx, rowEl);
+          });
+        })(colIdx, ii, row);
+
+        itemList.appendChild(row);
+      }
+
+      if (col.items.length === 0) {
+        var emptyEl = document.createElement('div');
+        Object.assign(emptyEl.style, {
+          fontFamily: T.fb,
+          fontSize: T.fsConSm,
+          color: T.mutedText,
+          textAlign: 'center',
+          padding: '12px 0',
+        });
+        emptyEl.textContent = 'Empty';
+        itemList.appendChild(emptyEl);
+      }
+
+      colEl.appendChild(itemList);
+
+      state.colEls.push({ el: colEl, hdr: hdr, hdrLabel: hdrLabel, hdrTotal: hdrTotal, itemList: itemList });
+      return colEl;
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  Operation handlers
+    // ═══════════════════════════════════════════════════
+
+    function handleOp(op) {
+      if (op === 'MERGE') doMerge();
+      else if (op === 'MOVE') enterMoveMode();
+      else if (op === 'SPLIT') enterSplitMode();
+      else if (op === 'TRANSFER') console.log('[column-editor] TRANSFER — not yet implemented');
+      else if (op === 'CANCEL') cancelMode();
+      else if (op === 'CONFIRM') confirmAction();
+    }
+
+    function setStatus(text) {
+      state.statusEl.textContent = text;
+    }
+
+    function clearMode() {
+      state.mode = null;
+      state.selectedItems = [];
+      state.splitTargets = [];
+      setStatus('');
+      renderColumns();
+    }
+
+    function cancelMode() {
+      clearMode();
+    }
+
+    // ── MERGE ──
+    function doMerge() {
+      if (state.columns.length < 2) return;
+      var target = state.columns[0];
+      for (var ci = 1; ci < state.columns.length; ci++) {
+        for (var ii = 0; ii < state.columns[ci].items.length; ii++) {
+          target.items.push(state.columns[ci].items[ii]);
+        }
+      }
+      state.columns = [target];
+      clearMode();
+    }
+
+    // ── MOVE ──
+    function enterMoveMode() {
+      state.mode = 'move';
+      state.selectedItems = [];
+      setStatus('Select items to move, then tap a column header or +');
+      renderColumns();
+    }
+
+    // ── SPLIT ──
+    function enterSplitMode() {
+      state.mode = 'split';
+      state.selectedItems = [];
+      state.splitTargets = [];
+      setStatus('Select items, then tap destination columns or +');
+      renderColumns();
+    }
+
+    function handleItemTap(colIdx, itemIdx, rowEl) {
+      if (state.mode !== 'move' && state.mode !== 'split') return;
+
+      var key = colIdx + ':' + itemIdx;
+      var found = -1;
+      for (var i = 0; i < state.selectedItems.length; i++) {
+        if (state.selectedItems[i].colIdx === colIdx && state.selectedItems[i].itemIdx === itemIdx) {
+          found = i;
+          break;
+        }
+      }
+
+      if (found >= 0) {
+        state.selectedItems.splice(found, 1);
+        rowEl.style.background = '';
+        rowEl.style.color = T.textPrimary;
+      } else {
+        state.selectedItems.push({ colIdx: colIdx, itemIdx: itemIdx });
+        rowEl.style.background = T.gold;
+        rowEl.style.color = T.bgDark;
+      }
+    }
+
+    function handleColumnTap(colIdx) {
+      if (state.mode === 'move' && state.selectedItems.length > 0) {
+        doMove(colIdx);
+      } else if (state.mode === 'split') {
+        toggleSplitTarget(colIdx);
+      }
+    }
+
+    function handleAddColumn() {
+      var nextNum = state.columns.length + 1;
+      var newCol = { id: 'NEW-' + nextNum, label: 'S-' + String(nextNum).padStart(3, '0'), items: [] };
+
+      if (state.mode === 'move' && state.selectedItems.length > 0) {
+        // Move selected items into the new column
+        var moved = extractSelectedItems();
+        newCol.items = moved;
+        state.columns.push(newCol);
+        clearMode();
+      } else if (state.mode === 'split' && state.selectedItems.length > 0) {
+        // Add new column as split target and execute
+        state.columns.push(newCol);
+        state.splitTargets.push(state.columns.length - 1);
+        if (state.splitTargets.length >= 2 || state.selectedItems.length > 0) {
+          doSplit();
+        } else {
+          renderColumns();
+        }
+      } else {
+        state.columns.push(newCol);
+        renderColumns();
+      }
+    }
+
+    function extractSelectedItems() {
+      // Sort descending by itemIdx so splicing doesn't shift indices
+      var sorted = state.selectedItems.slice().sort(function(a, b) {
+        if (a.colIdx !== b.colIdx) return b.colIdx - a.colIdx;
+        return b.itemIdx - a.itemIdx;
+      });
+      var items = [];
+      for (var i = 0; i < sorted.length; i++) {
+        var s = sorted[i];
+        var removed = state.columns[s.colIdx].items.splice(s.itemIdx, 1)[0];
+        items.push(removed);
+      }
+      items.reverse();
+      return items;
+    }
+
+    function doMove(targetColIdx) {
+      var moved = extractSelectedItems();
+      for (var i = 0; i < moved.length; i++) {
+        state.columns[targetColIdx].items.push(moved[i]);
+      }
+      clearMode();
+    }
+
+    function toggleSplitTarget(colIdx) {
+      var found = state.splitTargets.indexOf(colIdx);
+      if (found >= 0) {
+        state.splitTargets.splice(found, 1);
+        if (state.colEls[colIdx]) state.colEls[colIdx].hdr.style.background = T.mint;
+      } else {
+        state.splitTargets.push(colIdx);
+        if (state.colEls[colIdx]) state.colEls[colIdx].hdr.style.background = T.gold;
+      }
+      setStatus('Select items, then tap destination columns or +  (' + state.splitTargets.length + ' targets)');
+    }
+
+    function doSplit() {
+      if (state.selectedItems.length === 0 || state.splitTargets.length === 0) return;
+
+      var items = extractSelectedItems();
+      var targetCount = state.splitTargets.length;
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var splitPrice = Math.round(item.price / targetCount * 100) / 100;
+        var remainder = Math.round((item.price - splitPrice * targetCount) * 100) / 100;
+
+        for (var t = 0; t < targetCount; t++) {
+          var tIdx = state.splitTargets[t];
+          var price = splitPrice;
+          if (t === 0) price = splitPrice + remainder; // first target absorbs rounding
+          state.columns[tIdx].items.push({
+            name: item.name,
+            qty: item.qty,
+            price: price,
+          });
+        }
+      }
+
+      clearMode();
+    }
+
+    // Initial render
+    renderColumns();
+  },
+
+  unmount: function(state) {
+    for (var i = 0; i < state.listeners.length; i++) {
+      var l = state.listeners[i];
+      l.el.removeEventListener(l.event, l.handler);
+    }
+    state.listeners = [];
+  },
+});

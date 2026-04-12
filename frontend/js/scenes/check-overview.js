@@ -1,16 +1,19 @@
-// ════════��══════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 //  KINDpos Terminal — check-overview scene (SM2)
-//  Working layer: Check overview with payment summary, seats, and options
+//  Working layer: Check overview with seats, options, and OrderSummary
 //  SceneManager.mountWorking('check-overview', { checkId, tableId })
-// ══════��════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 
 import { defineScene } from '../scene-manager-2.js';
+import { SceneManager } from '../scene-manager.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
+import { OrderSummary } from '../order-summary.js';
+import './column-editor.js';
 
 // TODO: No font-size token exists for 26px card header labels — using inline '9px'.
 //       Consider adding T.fsLabel or similar to tokens.js.
 
-// ── Inject invisible scrollbar style ─���
+// ── Inject invisible scrollbar style ──
 (function() {
   if (document.getElementById('co-scroll-style')) return;
   var s = document.createElement('style');
@@ -33,13 +36,29 @@ function getMockSeats() {
 
 function seatTotal(seat) {
   var t = 0;
-  for (var i = 0; i < seat.items.length; i++) {
-    t += seat.items[i].qty * seat.items[i].price;
-  }
+  for (var i = 0; i < seat.items.length; i++) t += seat.items[i].qty * seat.items[i].price;
   return t;
 }
 
 function fmt(n) { return '$' + (n || 0).toFixed(2); }
+
+// Flatten selected seats into OrderSummary item format
+function collectSummary(seats, selected) {
+  var items = [];
+  var subtotal = 0;
+  for (var i = 0; i < seats.length; i++) {
+    if (!selected[seats[i].id]) continue;
+    for (var j = 0; j < seats[i].items.length; j++) {
+      var it = seats[i].items[j];
+      items.push({ name: it.name, qty: it.qty, unitPrice: it.price });
+      subtotal += it.qty * it.price;
+    }
+  }
+  var tax = Math.round(subtotal * 0.08 * 100) / 100;
+  var cardTotal = Math.round((subtotal + tax) * 100) / 100;
+  var cashPrice = Math.round(cardTotal * 0.97 * 100) / 100;
+  return { items: items, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
+}
 
 defineScene({
   name: 'check-overview',
@@ -49,7 +68,6 @@ defineScene({
     seats: [],
     selected: {},
     seatEls: {},
-    summaryBody: null,
   },
 
   render: function(container, params, state) {
@@ -63,6 +81,9 @@ defineScene({
     var mintEdges = bevelEdges(T.mint);
     var darkEdges = bevelEdges(T.darkBtn);
 
+    // Show persistent OrderSummary panel (matches order-entry placement + style)
+    OrderSummary.show({ checkId: params.checkId || '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 });
+
     var root = document.createElement('div');
     Object.assign(root.style, {
       position: 'absolute',
@@ -71,18 +92,18 @@ defineScene({
     });
     container.appendChild(root);
 
-    // ���═══════════════════════════��══════════════════════
-    //  Card 1 — PAYMENT SUMMARY (left panel)
-    //  x:24 y:24 w:312 h:552
-    // ════════════════════════════��══════════════════════
+    // ═══════════════════════════════════════════════════
+    //  SEATS card (top, full width of working area)
+    //  Working layer is ~732px wide when OrderSummary visible
+    // ═══════════════════════════════════════════════════
 
-    var card1 = document.createElement('div');
-    Object.assign(card1.style, {
+    var seatsCard = document.createElement('div');
+    Object.assign(seatsCard.style, {
       position: 'absolute',
-      left: '24px',
-      top: '24px',
-      width: '312px',
-      height: '552px',
+      left: '12px',
+      top: '12px',
+      right: '12px',
+      height: '336px',
       borderRadius: '5px',
       background: T.bg,
       borderTop: T.bevel + 'px solid ' + mintEdges.light,
@@ -94,9 +115,9 @@ defineScene({
       overflow: 'hidden',
     });
 
-    // Header with ALL button
-    var card1H = document.createElement('div');
-    Object.assign(card1H.style, {
+    // Header: SEATS left, ALL right
+    var seatsH = document.createElement('div');
+    Object.assign(seatsH.style, {
       background: T.mint,
       height: '26px',
       display: 'flex',
@@ -110,9 +131,9 @@ defineScene({
       textTransform: 'uppercase',
     });
 
-    var card1Label = document.createElement('span');
-    card1Label.textContent = 'PAYMENT SUMMARY';
-    card1H.appendChild(card1Label);
+    var seatsLabel = document.createElement('span');
+    seatsLabel.textContent = 'SEATS';
+    seatsH.appendChild(seatsLabel);
 
     var allBtn = document.createElement('span');
     Object.assign(allBtn.style, {
@@ -125,66 +146,13 @@ defineScene({
       userSelect: 'none',
     });
     allBtn.textContent = 'ALL';
-    card1H.appendChild(allBtn);
-    card1.appendChild(card1H);
+    seatsH.appendChild(allBtn);
+    seatsCard.appendChild(seatsH);
 
-    // Summary body — scrollable, invisible scrollbar
-    var summaryBody = document.createElement('div');
-    summaryBody.className = 'co-scroll';
-    Object.assign(summaryBody.style, {
-      flex: '1',
-      overflowY: 'auto',
-      scrollbarWidth: 'none',
-      msOverflowStyle: 'none',
-      padding: '6px',
-    });
-    state.summaryBody = summaryBody;
-    card1.appendChild(summaryBody);
-
-    root.appendChild(card1);
-
-    // ═════════��═════════════════════════════════════════
-    //  Card 2 — SEATS (top right grid)
-    //  x:360 y:24 w:648 h:336
-    // ═════════════════════════���═════════════════════════
-
-    var card2 = document.createElement('div');
-    Object.assign(card2.style, {
-      position: 'absolute',
-      left: '360px',
-      top: '24px',
-      width: '648px',
-      height: '336px',
-      borderRadius: '5px',
-      background: T.bg,
-      borderTop: T.bevel + 'px solid ' + mintEdges.light,
-      borderLeft: T.bevel + 'px solid ' + mintEdges.light,
-      borderBottom: T.bevel + 'px solid ' + mintEdges.dark,
-      borderRight: T.bevel + 'px solid ' + mintEdges.dark,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    });
-
-    var card2H = document.createElement('div');
-    Object.assign(card2H.style, {
-      background: T.mint,
-      height: '26px',
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0 8px',
-      fontFamily: T.fh,
-      fontSize: '9px',
-      letterSpacing: '2px',
-      color: T.bgDark,
-      textTransform: 'uppercase',
-    });
-    card2H.textContent = 'SEATS';
-    card2.appendChild(card2H);
-
-    var card2Body = document.createElement('div');
-    card2Body.className = 'co-scroll';
-    Object.assign(card2Body.style, {
+    // Grid body — 3 columns, auto rows, invisible scroll
+    var seatsGrid = document.createElement('div');
+    seatsGrid.className = 'co-scroll';
+    Object.assign(seatsGrid.style, {
       flex: '1',
       padding: '6px',
       display: 'grid',
@@ -258,7 +226,7 @@ defineScene({
     }
 
     for (var i = 0; i < state.seats.length; i++) {
-      card2Body.appendChild(buildSeatTile(state.seats[i]));
+      seatsGrid.appendChild(buildSeatTile(state.seats[i]));
     }
 
     // "+" tile to add a new seat
@@ -286,17 +254,16 @@ defineScene({
       var nextNum = state.seats.length + 1;
       var newSeat = { id: 'S-' + String(nextNum).padStart(3, '0'), items: [] };
       state.seats.push(newSeat);
-      card2Body.insertBefore(buildSeatTile(newSeat), addTile);
-      console.log('[check-overview] added seat: ' + newSeat.id);
+      seatsGrid.insertBefore(buildSeatTile(newSeat), addTile);
     });
 
-    card2Body.appendChild(addTile);
-    card2.appendChild(card2Body);
-    root.appendChild(card2);
+    seatsGrid.appendChild(addTile);
+    seatsCard.appendChild(seatsGrid);
+    root.appendChild(seatsCard);
 
-    // ═══════��═══════════════════════════════════════════
+    // ═══════════════════════════════════════════════════
     //  Selection logic
-    // ════════��══════════════════════════════════���═══════
+    // ═══════════════════════════════════════════════════
 
     function toggleSeat(seatId) {
       if (state.selected[seatId]) {
@@ -305,34 +272,32 @@ defineScene({
         state.selected[seatId] = true;
       }
       updateSeatVisuals();
-      renderSummary();
+      updateSummary();
     }
 
     function selectAll() {
       state.selected = {};
-      for (var i = 0; i < state.seats.length; i++) {
-        state.selected[state.seats[i].id] = true;
+      for (var si = 0; si < state.seats.length; si++) {
+        state.selected[state.seats[si].id] = true;
       }
       updateSeatVisuals();
-      renderSummary();
+      updateSummary();
     }
 
     function updateSeatVisuals() {
-      for (var i = 0; i < state.seats.length; i++) {
-        var seat = state.seats[i];
+      for (var si = 0; si < state.seats.length; si++) {
+        var seat = state.seats[si];
         var el = state.seatEls[seat.id];
         if (!el) continue;
         var sel = !!state.selected[seat.id];
         var hasItems = seat.items.length > 0;
 
         if (sel) {
-          // Inverted: body gets frame color, header gets bgDark
           el.header.style.background = T.bgDark;
           el.header.style.color = el.frameColor;
           el.body.style.background = el.frameColor;
           el.body.style.color = T.bgDark;
         } else {
-          // Normal
           el.header.style.background = el.frameColor;
           el.header.style.color = T.bgDark;
           el.body.style.background = '';
@@ -341,134 +306,33 @@ defineScene({
       }
     }
 
-    function renderSummary() {
-      summaryBody.innerHTML = '';
-
-      var selectedSeats = [];
-      for (var i = 0; i < state.seats.length; i++) {
-        if (state.selected[state.seats[i].id]) selectedSeats.push(state.seats[i]);
-      }
-
-      if (selectedSeats.length === 0) {
-        var empty = document.createElement('div');
-        Object.assign(empty.style, {
-          fontFamily: T.fb,
-          fontSize: T.fsConSm,
-          color: T.mutedText,
-          textAlign: 'center',
-          padding: '20px 0',
-        });
-        empty.textContent = 'No seats selected';
-        summaryBody.appendChild(empty);
-        return;
-      }
-
-      var grandTotal = 0;
-
-      for (var j = 0; j < selectedSeats.length; j++) {
-        var seat = selectedSeats[j];
-        var total = seatTotal(seat);
-        grandTotal += total;
-
-        // Seat sub-header
-        var sh = document.createElement('div');
-        Object.assign(sh.style, {
-          fontFamily: T.fh,
-          fontSize: '9px',
-          letterSpacing: '2px',
-          color: T.mint,
-          textTransform: 'uppercase',
-          padding: '6px 0 2px',
-          borderBottom: '1px solid ' + T.border,
-          marginBottom: '4px',
-          display: 'flex',
-          justifyContent: 'space-between',
-        });
-        var shLabel = document.createElement('span');
-        shLabel.textContent = seat.id;
-        sh.appendChild(shLabel);
-        var shTotal = document.createElement('span');
-        shTotal.style.color = T.gold;
-        shTotal.textContent = fmt(total);
-        sh.appendChild(shTotal);
-        summaryBody.appendChild(sh);
-
-        // Items
-        if (seat.items.length === 0) {
-          var noItems = document.createElement('div');
-          Object.assign(noItems.style, {
-            fontFamily: T.fb,
-            fontSize: T.fsConSm,
-            color: T.mutedText,
-            padding: '2px 0 6px',
-          });
-          noItems.textContent = 'Empty';
-          summaryBody.appendChild(noItems);
-        } else {
-          for (var k = 0; k < seat.items.length; k++) {
-            var item = seat.items[k];
-            var row = document.createElement('div');
-            Object.assign(row.style, {
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontFamily: T.fb,
-              fontSize: T.fsConSm,
-              color: T.textPrimary,
-              padding: '1px 0',
-            });
-            var nameEl = document.createElement('span');
-            nameEl.textContent = (item.qty > 1 ? item.qty + 'x ' : '') + item.name;
-            row.appendChild(nameEl);
-            var priceEl = document.createElement('span');
-            priceEl.style.color = T.gold;
-            priceEl.textContent = fmt(item.qty * item.price);
-            row.appendChild(priceEl);
-            summaryBody.appendChild(row);
-          }
-        }
-      }
-
-      // Grand total bar
-      var totalBar = document.createElement('div');
-      Object.assign(totalBar.style, {
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontFamily: T.fh,
-        fontSize: '11px',
-        letterSpacing: '2px',
-        color: T.mint,
-        textTransform: 'uppercase',
-        padding: '8px 0 0',
-        marginTop: '6px',
-        borderTop: '2px solid ' + T.mint,
+    function updateSummary() {
+      var totals = collectSummary(state.seats, state.selected);
+      OrderSummary.update({
+        checkId: params.checkId || '',
+        items: totals.items,
+        subtotal: totals.subtotal,
+        tax: totals.tax,
+        cardTotal: totals.cardTotal,
+        cashPrice: totals.cashPrice,
       });
-      var totalLabel = document.createElement('span');
-      totalLabel.textContent = 'TOTAL';
-      totalBar.appendChild(totalLabel);
-      var totalVal = document.createElement('span');
-      totalVal.style.color = T.gold;
-      totalVal.textContent = fmt(grandTotal);
-      totalBar.appendChild(totalVal);
-      summaryBody.appendChild(totalBar);
     }
 
-    // ALL button handler
     track(allBtn, 'pointerup', function() { selectAll(); });
 
     // Default: ALL selected on mount
     selectAll();
 
-    // ═══���═════════════════════════════════════════���═════
-    //  Card 3 — CHECK OPTIONS (bottom right)
-    //  x:360 y:408 w:408 h:168
-    // ══════════════════════════���═════════════════════��══
+    // ═══════════════════════════════════════════════════
+    //  CHECK OPTIONS card (bottom left)
+    // ═══════════════════════════════════════════════════
 
-    var card3 = document.createElement('div');
-    Object.assign(card3.style, {
+    var optCard = document.createElement('div');
+    Object.assign(optCard.style, {
       position: 'absolute',
-      left: '360px',
-      top: '408px',
-      width: '408px',
+      left: '12px',
+      top: '360px',
+      width: '440px',
       height: '168px',
       borderRadius: '5px',
       background: T.bg,
@@ -481,8 +345,8 @@ defineScene({
       overflow: 'hidden',
     });
 
-    var card3H = document.createElement('div');
-    Object.assign(card3H.style, {
+    var optH = document.createElement('div');
+    Object.assign(optH.style, {
       background: T.mint,
       height: '26px',
       display: 'flex',
@@ -494,11 +358,11 @@ defineScene({
       color: T.bgDark,
       textTransform: 'uppercase',
     });
-    card3H.textContent = 'CHECK OPTIONS';
-    card3.appendChild(card3H);
+    optH.textContent = 'CHECK OPTIONS';
+    optCard.appendChild(optH);
 
-    var card3Body = document.createElement('div');
-    Object.assign(card3Body.style, {
+    var optBody = document.createElement('div');
+    Object.assign(optBody.style, {
       flex: '1',
       padding: '6px',
       display: 'flex',
@@ -526,32 +390,47 @@ defineScene({
           return function() { console.log('[check-overview] ' + lbl + ' tapped'); };
         })(opt.label),
       });
-      card3Body.appendChild(btn.wrap);
+      optBody.appendChild(btn.wrap);
     }
 
-    card3.appendChild(card3Body);
-    root.appendChild(card3);
+    optCard.appendChild(optBody);
+    root.appendChild(optCard);
 
-    // ═��═══════════════════���═════════════════════════════
+    // ═══════════════════════════════════════════════════
     //  Floating buttons (position: absolute, above all cards)
-    //  Sit outside card boundaries — do not clip or contain
-    // ══════��═══════════���════════════════════════════════
+    // ═══════════════════════════════════════════════════
 
     var floats = [
-      { label: 'ADD ITEM(S)', variant: 'gold', size: 'lg', x: 816, y: 504 },
-      { label: 'EDIT SEATS',  variant: 'dark', size: 'lg', x: 816, y: 336 },
-      { label: '+1 ROUND',    variant: 'gold', size: 'md', x: 408, y: 336 },
+      { label: 'ADD ITEM(S)', variant: 'gold', size: 'lg', x: 520, y: 468 },
+      {
+        label: 'EDIT SEATS', variant: 'dark', size: 'lg', x: 520, y: 360,
+        onClick: function() {
+          var selectedSeats = [];
+          for (var si = 0; si < state.seats.length; si++) {
+            if (state.selected[state.seats[si].id]) selectedSeats.push(state.seats[si]);
+          }
+          if (selectedSeats.length === 0) selectedSeats = state.seats.slice();
+          SceneManager.openTransactional('column-editor', {
+            columns: selectedSeats.map(function(s) {
+              return { id: s.id, label: s.id, items: s.items.slice() };
+            }),
+            operations: ['MERGE', 'MOVE', 'SPLIT', 'TRANSFER'],
+          });
+        },
+      },
+      { label: '+1 ROUND',   variant: 'gold', size: 'md', x: 300, y: 336 },
     ];
 
     for (var fi = 0; fi < floats.length; fi++) {
       var f = floats[fi];
+      var onClickFn = f.onClick || (function(lbl) {
+        return function() { console.log('[check-overview] ' + lbl + ' tapped'); };
+      })(f.label);
       var fb = buildStyledButton({
         label: f.label,
         variant: f.variant,
         size: f.size,
-        onClick: (function(lbl) {
-          return function() { console.log('[check-overview] ' + lbl + ' tapped'); };
-        })(f.label),
+        onClick: onClickFn,
       });
       Object.assign(fb.wrap.style, {
         position: 'absolute',
@@ -564,6 +443,7 @@ defineScene({
   },
 
   unmount: function(state) {
+    OrderSummary.hide();
     for (var i = 0; i < state.listeners.length; i++) {
       var l = state.listeners[i];
       l.el.removeEventListener(l.event, l.handler);
