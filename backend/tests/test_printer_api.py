@@ -102,15 +102,14 @@ class TestHardwareScan:
         assert start['mode'] == 'direct'
 
     async def test_scan_stream_sweep_mode(self, client):
-        """Without ?ip, runs in sweep mode with two passes."""
-        # This will scan the full subnet — we just check it starts correctly
-        # Use a type filter to limit ports and speed up
+        """Without ?ip, runs in sweep mode via ARP discovery."""
         resp = await client.get("/api/v1/hardware/scan/stream", params={"type": "card_reader"})
         assert resp.status_code == 200
         events = _parse_sse(resp.text)
         start = next(e for e in events if e['type'] == 'start')
         assert start['mode'] == 'sweep'
-        assert start['total'] == 254
+        # total = number of ARP-discovered hosts (0 in test env, varies on real LAN)
+        assert isinstance(start['total'], int)
 
 
 # ── POST /api/v1/hardware/test ────────────────────────

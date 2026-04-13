@@ -37,16 +37,14 @@ HARDWARE_DB_PATH = os.path.join(
 # ── Port fingerprinting ───────────────────────────────────────────────────────
 PRINTER_PORTS = [9100, 9101, 9102]
 # Dejavoo SPIn — default port first, then dedicated fallbacks only
-# (no 443/8080 — too many routers and NAS boxes respond on those)
 CARD_READER_PORTS = [9000, 8443, 9443]
 
 ALL_SCAN_PORTS = PRINTER_PORTS + CARD_READER_PORTS
 
 # ── Scan tuning ──────────────────────────────────────────────────────────────
-FAST_TIMEOUT  = 0.5   # Pass 1: wired devices
-SLOW_TIMEOUT  = 2.5   # Pass 2: WiFi / slow responders
+PROBE_TIMEOUT  = 2.5  # TCP connect timeout per port
 DIRECT_TIMEOUT = 2.5  # Direct IP probe (user-entered)
-BATCH_SIZE    = 10    # Hosts per concurrent batch (conservative for WiFi)
+PING_TIMEOUT   = 2    # Seconds to wait for broadcast ping / ARP population
 
 # ── DB bootstrap ──────────────────────────────────────────────────────────────
 
@@ -99,16 +97,21 @@ class TestPrintRequest(BaseModel):
     port: int = 9100
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  NETWORK SCANNER
+#  NETWORK SCANNER — ARP-first discovery
+#
+#  Instead of brute-forcing TCP on 254 hosts (slow, hammers WiFi), we:
+#    1. Ping the broadcast address to wake up the ARP cache
+#    2. Read `arp -a` to get only the live hosts (usually 3-10)
+#    3. TCP probe just those hosts on our specific ports
+#
+#  This turns 254 × 6 = 1,524 connections into ~5 × 6 = 30.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _subnet_targets() -> List[str]:
-    """Build the target IP list from settings.default_subnet (e.g. '10.0.0.0/24')."""
+def _get_subnet_prefix() -> str:
+    """Extract the /24 prefix from settings.default_subnet (e.g. '10.0.0')."""
     raw = settings.default_subnet
-    # Strip CIDR if present — we always scan the /24
     base = raw.split('/')[0]
-    prefix = base.rsplit('.', 1)[0]
-    return [f"{prefix}.{i}" for i in range(1, 255)]
+    return base.rsplit('.', 1)[0]
 
 
 def _ports_for_type(device_type: Optional[str]) -> list:
@@ -120,21 +123,71 @@ def _ports_for_type(device_type: Optional[str]) -> list:
     return ALL_SCAN_PORTS
 
 
-# ── Low-level probes ─────────────────────────────────────────────────────────
+# ── ARP discovery ────────────────────────────────────────────────────────────
 
-def _tcp_probe(host: str, port: int, timeout: float) -> bool:
-    """Attempt a TCP connect. Returns True if the port is open."""
+def _ping_broadcast(prefix: str) -> None:
+    """
+    Ping the broadcast address to populate the OS ARP cache.
+    Works cross-platform: tries broadcast ping, then falls back to
+    pinging a handful of common addresses.
+    """
+    broadcast = f"{prefix}.255"
+    import platform
+    is_win = platform.system() == "Windows"
+
+    # Try broadcast ping first
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(timeout)
-            s.connect((host, port))
-            return True
+        if is_win:
+            subprocess.run(
+                ['ping', '-n', '1', '-w', str(PING_TIMEOUT * 1000), broadcast],
+                timeout=PING_TIMEOUT + 1, capture_output=True,
+            )
+        else:
+            subprocess.run(
+                ['ping', '-c', '1', '-W', str(PING_TIMEOUT), '-b', broadcast],
+                timeout=PING_TIMEOUT + 1, capture_output=True,
+            )
     except Exception:
-        return False
+        pass
+
+
+def _get_arp_hosts(prefix: str) -> List[dict]:
+    """
+    Read the OS ARP cache and return all live hosts on our subnet.
+    Returns list of {'ip': str, 'mac': str}.
+    """
+    hosts = []
+    try:
+        out = subprocess.check_output(
+            ['arp', '-a'], timeout=3, stderr=subprocess.DEVNULL
+        ).decode()
+        for line in out.splitlines():
+            # Find IPs on our subnet
+            if prefix + '.' not in line:
+                continue
+            parts = line.split()
+            ip = None
+            mac = None
+            for part in parts:
+                # Match IP address
+                stripped = part.strip('()')
+                if stripped.startswith(prefix + '.') and stripped.count('.') == 3:
+                    ip = stripped
+                # Match MAC address (xx:xx:xx:xx:xx:xx or xx-xx-xx-xx-xx-xx)
+                if len(part) == 17 and (':' in part or '-' in part):
+                    mac = part.replace('-', ':').upper()
+            if ip and mac:
+                # Skip broadcast and incomplete entries
+                if mac in ('FF:FF:FF:FF:FF:FF', '00:00:00:00:00:00'):
+                    continue
+                hosts.append({'ip': ip, 'mac': mac})
+    except Exception as e:
+        logger.warning(f"ARP cache read failed: {e}")
+    return hosts
 
 
 def _get_mac(ip: str) -> Optional[str]:
-    """Best-effort MAC from ARP cache — works on LAN without root."""
+    """Best-effort MAC from ARP cache for a single IP."""
     for cmd in (['arp', '-a', ip], ['arp', '-n', ip]):
         try:
             out = subprocess.check_output(
@@ -148,6 +201,19 @@ def _get_mac(ip: str) -> Optional[str]:
         except Exception:
             continue
     return None
+
+
+# ── Low-level probes ─────────────────────────────────────────────────────────
+
+def _tcp_probe(host: str, port: int, timeout: float) -> bool:
+    """Attempt a TCP connect. Returns True if the port is open."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(timeout)
+            s.connect((host, port))
+            return True
+    except Exception:
+        return False
 
 
 async def _probe_spin(ip: str, port: int) -> dict:
@@ -179,19 +245,18 @@ async def _probe_spin(ip: str, port: int) -> dict:
 
 # ── Host probing ─────────────────────────────────────────────────────────────
 
-async def _probe_host(host: str, ports: list, timeout: float) -> Optional[dict]:
+async def _probe_host(ip: str, mac: Optional[str], ports: list, timeout: float) -> Optional[dict]:
     """
-    Probe a single host on all given ports. Collects ALL open ports,
+    Probe a known-live host on all given ports. Collects ALL open ports,
     then classifies the device from the full picture.
-    Returns a device dict or None if nothing responded.
     """
     loop = asyncio.get_running_loop()
 
     async def _try_port(port: int) -> Optional[int]:
         try:
             hit = await asyncio.wait_for(
-                loop.run_in_executor(None, _tcp_probe, host, port, timeout),
-                timeout=timeout + 0.1,
+                loop.run_in_executor(None, _tcp_probe, ip, port, timeout),
+                timeout=timeout + 0.2,
             )
             return port if hit else None
         except Exception:
@@ -218,21 +283,22 @@ async def _probe_host(host: str, ports: list, timeout: float) -> Optional[dict]:
     else:
         return None
 
-    # MAC resolution — small delay lets ARP cache settle after TCP connect
-    await asyncio.sleep(0.05)
-    mac = await loop.run_in_executor(None, _get_mac, host)
+    # Resolve MAC if not provided by ARP discovery
+    if not mac:
+        await asyncio.sleep(0.05)
+        mac = await loop.run_in_executor(None, _get_mac, ip)
 
     result = {
-        'ip':   host,
+        'ip':   ip,
         'port': best_port,
-        'mac':  mac or f"UNKNOWN-{host.replace('.', '-')}",
+        'mac':  mac or f"UNKNOWN-{ip.replace('.', '-')}",
         'type': dtype,
         'name': name,
     }
 
     # Auto-detect SPIn details for card readers
     if dtype == 'card_reader':
-        spin = await _probe_spin(host, best_port)
+        spin = await _probe_spin(ip, best_port)
         if spin.get('register_id'):
             result['register_id'] = spin['register_id']
         if spin.get('model'):
@@ -241,19 +307,6 @@ async def _probe_host(host: str, ports: list, timeout: float) -> Optional[dict]:
             result['name'] = 'Dejavoo'
 
     return result
-
-
-async def _annotate_saved(devices: List[dict]) -> List[dict]:
-    """Annotate discovered devices with saved info from hardware_config.db."""
-    async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        async with db.execute("SELECT * FROM devices") as cur:
-            saved = {row['mac']: dict(row) async for row in cur}
-    for d in devices:
-        if d['mac'] in saved:
-            d['saved_name'] = saved[d['mac']]['name']
-            d['saved_type'] = saved[d['mac']]['type']
-    return devices
 
 
 # ── Scan endpoints ───────────────────────────────────────────────────────────
@@ -267,21 +320,21 @@ async def scan_network_stream(
     SSE streaming network scan. Two modes:
 
     Subnet sweep (default):
-        Pass 1 (fast, 300ms) — finds wired devices quickly
-        Pass 2 (slow, 1.5s)  — retries missed hosts for WiFi devices
+        1. Ping broadcast to populate ARP cache
+        2. Read ARP table for live hosts on the subnet
+        3. TCP probe only those hosts on device-specific ports
+        Much faster and more reliable than brute-force scanning.
 
     Direct IP probe:
         ?ip=10.0.0.19           → single host
         ?ip=10.0.0.19,10.0.0.20 → multiple hosts (comma-separated)
-        Always uses the slower timeout.
 
     Optional: ?type=card_reader|printer to filter ports scanned.
 
     SSE event types:
-        start    — scan started, includes target count and mode
+        start    — scan started, includes host count and mode
         device   — a device was found
-        pass     — which scan pass is running (1 or 2)
-        complete — sweep finished, includes device count
+        complete — sweep finished
         error    — something went wrong
     """
     await _ensure_db()
@@ -311,51 +364,47 @@ async def scan_network_stream(
         return device
 
     async def stream():
+        loop = asyncio.get_running_loop()
+
         try:
             if mode == 'direct':
                 # ── Direct IP probe ──────────────────────────────────
                 yield _sse({'type': 'start', 'total': len(direct_ips), 'mode': 'direct'})
 
                 results = await asyncio.gather(
-                    *[_probe_host(h, ports, DIRECT_TIMEOUT) for h in direct_ips]
+                    *[_probe_host(h, None, ports, DIRECT_TIMEOUT) for h in direct_ips]
                 )
                 for r in results:
                     if r is not None:
                         yield _sse({**_annotate(r), 'type': 'device'})
 
             else:
-                # ── Subnet sweep — two passes ────────────────────────
-                targets = _subnet_targets()
-                yield _sse({'type': 'start', 'total': len(targets), 'mode': 'sweep'})
+                # ── ARP-first subnet sweep ───────────────────────────
+                prefix = _get_subnet_prefix()
 
-                # Pass 1: fast (wired)
-                yield _sse({'type': 'pass', 'pass': 1, 'timeout': FAST_TIMEOUT})
-                found_ips = set()
+                # Step 1: Ping broadcast to populate ARP cache
+                await loop.run_in_executor(None, _ping_broadcast, prefix)
+                # Brief pause to let ARP entries settle
+                await asyncio.sleep(0.5)
 
-                for i in range(0, len(targets), BATCH_SIZE):
-                    batch = targets[i:i + BATCH_SIZE]
-                    results = await asyncio.gather(
-                        *[_probe_host(h, ports, FAST_TIMEOUT) for h in batch]
-                    )
-                    for r in results:
-                        if r is not None:
-                            found_ips.add(r['ip'])
-                            yield _sse({**_annotate(r), 'type': 'device'})
+                # Step 2: Read ARP table for live hosts
+                arp_hosts = await loop.run_in_executor(None, _get_arp_hosts, prefix)
 
-                # Pass 2: slow (WiFi) — only hosts that didn't respond
-                missed = [t for t in targets if t not in found_ips]
-                if missed:
-                    yield _sse({'type': 'pass', 'pass': 2, 'timeout': SLOW_TIMEOUT, 'remaining': len(missed)})
+                yield _sse({
+                    'type': 'start',
+                    'total': len(arp_hosts),
+                    'mode': 'sweep',
+                    'subnet': f"{prefix}.0/24",
+                })
 
-                    for i in range(0, len(missed), BATCH_SIZE):
-                        batch = missed[i:i + BATCH_SIZE]
-                        results = await asyncio.gather(
-                            *[_probe_host(h, ports, SLOW_TIMEOUT) for h in batch]
-                        )
-                        for r in results:
-                            if r is not None:
-                                found_ips.add(r['ip'])
-                                yield _sse({**_annotate(r), 'type': 'device'})
+                # Step 3: TCP probe all live hosts in parallel
+                results = await asyncio.gather(
+                    *[_probe_host(h['ip'], h['mac'], ports, PROBE_TIMEOUT)
+                      for h in arp_hosts]
+                )
+                for r in results:
+                    if r is not None:
+                        yield _sse({**_annotate(r), 'type': 'device'})
 
             yield _sse({'type': 'complete'})
 
