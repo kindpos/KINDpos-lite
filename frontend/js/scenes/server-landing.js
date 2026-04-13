@@ -7,6 +7,7 @@
 import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
+import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
@@ -1614,12 +1615,12 @@ SceneManager.register({
   unmount: function() {},
 });
 
-// ── Void PIN Gate ────────────────────────────────
+// ── Void PIN Gate (SM2) ──────────────────────────
 // Manager PIN required after void confirmation
 
-SceneManager.register({
+defineScene({
   name: 'void-pin',
-  mount: function(container, params) {
+  render: function(container, params) {
     container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
     var numpad = buildNumpad({
       maxDigits: 4,
@@ -1644,7 +1645,6 @@ SceneManager.register({
     });
     container.appendChild(numpad);
   },
-  unmount: function() {},
 });
 
 // ── Checkout Gate ─────────────────────────────────

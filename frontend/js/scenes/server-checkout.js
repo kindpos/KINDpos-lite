@@ -8,6 +8,7 @@
 import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, buildGap, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
+import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 
@@ -936,13 +937,13 @@ SceneManager.register({
 });
 
 // ─────────────────────────────────────────────────
-//  INTERRUPT: zero-confirm
+//  INTERRUPT: zero-confirm  (SM2)
 //  Confirms the "$0 ALL" action for unadjusted tips
 // ─────────────────────────────────────────────────
 
-SceneManager.register({
+defineScene({
   name: 'zero-confirm',
-  mount: function(container, params) {
+  render: function(container, params) {
     var panel = document.createElement('div');
     panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:20px;min-width:280px;';
 
@@ -971,17 +972,16 @@ SceneManager.register({
     panel.appendChild(cancelBtn);
     container.appendChild(panel);
   },
-  unmount: function() {},
 });
 
 // ─────────────────────────────────────────────────
-//  INTERRUPT: manager-pin
+//  INTERRUPT: manager-pin  (SM2)
 //  Manager PIN gate for FINALIZE action
 // ─────────────────────────────────────────────────
 
-SceneManager.register({
+defineScene({
   name: 'manager-pin',
-  mount: function(container, params) {
+  render: function(container, params) {
     container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
     var numpad = buildNumpad({
       maxDigits: 4,
@@ -1006,17 +1006,16 @@ SceneManager.register({
     });
     container.appendChild(numpad);
   },
-  unmount: function() {},
 });
 
 // ─────────────────────────────────────────────────
-//  TRANSACTIONAL: adjust-pct
+//  TRANSACTIONAL: adjust-pct  (SM2)
 //  Tip-out percentage adjustment overlay
 // ─────────────────────────────────────────────────
 
-SceneManager.register({
+defineScene({
   name: 'adjust-pct',
-  mount: function(container, params) {
+  render: function(container, params) {
     setHeaderBack({ back: true, onBack: function() {
       if (params.onDismiss) params.onDismiss();
       SceneManager.closeTransactional('adjust-pct');
@@ -1064,11 +1063,11 @@ SceneManager.register({
       fill: T.darkBtn, color: T.gold, fontSize: T.fsBtn, width: 120, height: 40,
       onTap: function() {
         // Write updated roles back to state
-        var state = params.state;
-        if (state) {
-          state.tipOutRoles = roles;
-          if (params.workingOneTime) state.oneTimeRole = params.workingOneTime;
-          recalcTipOut(state);
+        var st = params.state;
+        if (st) {
+          st.tipOutRoles = roles;
+          if (params.workingOneTime) st.oneTimeRole = params.workingOneTime;
+          recalcTipOut(st);
         }
         // Persist to backend
         var payload = roles.map(function(r) { return { label: r.label, percent: r.percent, basis: r.basis }; });
@@ -1084,19 +1083,16 @@ SceneManager.register({
     }));
     container.appendChild(actionBar);
   },
-  unmount: function() {},
-  cache: false,
-  timeoutMs: 0,
 });
 
 // ─────────────────────────────────────────────────
-//  INTERRUPT: cash-tip-declare
+//  INTERRUPT: cash-tip-declare  (SM2)
 //  Cash tip declaration before finalizing checkout
 // ─────────────────────────────────────────────────
 
-SceneManager.register({
+defineScene({
   name: 'cash-tip-declare',
-  mount: function(container, params) {
+  render: function(container, params) {
     var panel = document.createElement('div');
     panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:300px;';
 
@@ -1160,5 +1156,4 @@ SceneManager.register({
     panel.appendChild(btns);
     container.appendChild(panel);
   },
-  unmount: function() {},
 });
