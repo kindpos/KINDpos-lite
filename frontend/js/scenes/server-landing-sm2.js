@@ -161,10 +161,10 @@ function injectDitherDefs(svg) {
 function drawParetoChart(container, data, opts) {
   var W = opts.width || T.chartW;
   var H = opts.height || T.chartH;
-  var padL = Math.round(T.chartPadT * W / T.chartW);
-  var padR = Math.round(55 * W / 280);
-  var padT = T.chartPadT;
-  var padB = T.chartPadT;
+  var padL = T.chartPadR;           // minimal left margin (8)
+  var padR = T.chartLblW;           // right label area for revenue values (70)
+  var padT = T.chartPadT;           // top margin (10)
+  var padB = T.chartPadT;           // bottom margin (10)
   var chartW = W - padL - padR;
   var chartH = H - padT - padB;
   var n = data.length;
@@ -283,10 +283,10 @@ function drawTableHistogram(container, ts) {
   var data = ts.byPartySize;
   var W = T.chartW;
   var H = T.chartHSm;
-  var padL = Math.round(36 * W / 280);
-  var padR = Math.round(50 * W / 280);
-  var padT = T.chartPadT;
-  var padB = Math.round(20 * H / 130);
+  var padL = 40;                    // y-axis labels (party size)
+  var padR = T.chartLblW;           // right label area for avg check values (70)
+  var padT = T.chartPadT;           // top margin (10)
+  var padB = T.chartPadB;           // bottom axis labels (32)
   var chartW = W - padL - padR;
   var chartH = H - padT - padB;
   var n = data.length;
