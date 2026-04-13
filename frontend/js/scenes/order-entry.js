@@ -1393,6 +1393,81 @@ function _updateTicketTotals() {
   });
 }
 
+// ── Swipe-to-delete wrapper ──────────────────────
+function _wrapSwipeDelete(innerEl, onDelete) {
+  var THRESHOLD = 60;
+  var BTN_W = 70;
+
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;overflow:hidden;flex-shrink:0;';
+
+  // Delete button behind
+  var delBtn = document.createElement('div');
+  delBtn.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:' + BTN_W + 'px;display:flex;align-items:center;justify-content:center;background:' + T.red + ';color:' + T.textPrimary + ';font-family:' + T.fh + ';font-size:' + T.fsConSm + ';letter-spacing:1px;cursor:pointer;user-select:none;';
+  delBtn.textContent = 'DELETE';
+  wrap.appendChild(delBtn);
+
+  // Inner content on top
+  innerEl.style.position = 'relative';
+  innerEl.style.zIndex = '1';
+  innerEl.style.transition = 'transform 150ms ease-out';
+  wrap.appendChild(innerEl);
+
+  var startX = 0;
+  var currentX = 0;
+  var swiping = false;
+  var revealed = false;
+
+  innerEl.addEventListener('pointerdown', function(e) {
+    startX = e.clientX;
+    currentX = 0;
+    swiping = true;
+    innerEl.style.transition = 'none';
+  });
+
+  innerEl.addEventListener('pointermove', function(e) {
+    if (!swiping) return;
+    var dx = e.clientX - startX;
+    if (dx > 0) dx = 0; // no right swipe
+    if (dx < -BTN_W) dx = -BTN_W;
+    currentX = dx;
+    innerEl.style.transform = 'translateX(' + dx + 'px)';
+  });
+
+  innerEl.addEventListener('pointerup', function() {
+    if (!swiping) return;
+    swiping = false;
+    innerEl.style.transition = 'transform 150ms ease-out';
+    if (currentX < -THRESHOLD) {
+      // Reveal delete
+      innerEl.style.transform = 'translateX(-' + BTN_W + 'px)';
+      revealed = true;
+    } else {
+      innerEl.style.transform = 'translateX(0)';
+      revealed = false;
+    }
+  });
+
+  innerEl.addEventListener('pointerleave', function() {
+    if (!swiping) return;
+    swiping = false;
+    innerEl.style.transition = 'transform 150ms ease-out';
+    if (currentX < -THRESHOLD) {
+      innerEl.style.transform = 'translateX(-' + BTN_W + 'px)';
+      revealed = true;
+    } else {
+      innerEl.style.transform = 'translateX(0)';
+      revealed = false;
+    }
+  });
+
+  delBtn.addEventListener('pointerup', function() {
+    onDelete();
+  });
+
+  return wrap;
+}
+
 function _renderTicketGroup(list, displayTicket) {
   var groups = {};
   var groupOrder = [];
@@ -1499,7 +1574,15 @@ function _renderTicketGroup(list, displayTicket) {
         clearTimeout(_qtyHoldTimer);
       });
 
-      list.appendChild(gc);
+      list.appendChild(_wrapSwipeDelete(gc, function() {
+        // Remove all instances of this item group
+        instances.forEach(function(inst) {
+          var idx = ticket.indexOf(inst);
+          if (idx !== -1) ticket.splice(idx, 1);
+        });
+        renderTicket();
+        rebuildBottomBar();
+      }));
 
     } else {
       // ── Individual instance cards ─────────────────
@@ -1581,7 +1664,14 @@ function _renderTicketGroup(list, displayTicket) {
           rebuildBottomBar();
         });
 
-        list.appendChild(ic);
+        list.appendChild(_wrapSwipeDelete(ic, (function(instance) {
+          return function() {
+            var idx = ticket.indexOf(instance);
+            if (idx !== -1) ticket.splice(idx, 1);
+            renderTicket();
+            rebuildBottomBar();
+          };
+        })(inst)));
       });
     }
   });
