@@ -339,9 +339,27 @@ defineScene({
 
       state.seatEls[seat.id] = { wrap: wrap, inner: inner, idEl: idEl, totalEl: totalEl, isPaid: isPaid };
 
-      track(wrap, 'pointerup', (function(seatId) {
-        return function() { toggleSeat(seatId); };
-      })(seat.id));
+      // Long-press on paid seat to reopen; normal tap for unpaid toggle
+      (function(seatId, isPaidSeat) {
+        var _holdTimer = null;
+        var _didHold = false;
+        track(wrap, 'pointerdown', function() {
+          _didHold = false;
+          if (!isPaidSeat) return;
+          _holdTimer = setTimeout(function() {
+            _didHold = true;
+            reopenSeat(seatId);
+          }, 600);
+        });
+        track(wrap, 'pointerup', function() {
+          clearTimeout(_holdTimer);
+          if (_didHold) return;
+          toggleSeat(seatId);
+        });
+        track(wrap, 'pointerleave', function() {
+          clearTimeout(_holdTimer);
+        });
+      })(seat.id, isPaid);
 
       return wrap;
     }
@@ -362,7 +380,7 @@ defineScene({
     // ═══════════════════════════════════════════════════
 
     function toggleSeat(seatId) {
-      // Paid seats cannot be re-selected
+      // Paid seats cannot be toggled via normal tap
       if (state.paidSeats[seatId]) return;
       if (state.selected[seatId]) {
         delete state.selected[seatId];
@@ -371,6 +389,20 @@ defineScene({
       }
       updateSeatVisuals();
       updateSummary();
+    }
+
+    function reopenSeat(seatId) {
+      SceneManager.interrupt('disc-pin', {
+        onConfirm: function() {
+          delete state.paidSeats[seatId];
+          state.selected[seatId] = true;
+          showToast(seatId + ' reopened', { bg: T.gold, duration: 2000 });
+          rebuildSeatGrid();
+          updateSeatVisuals();
+          updateSummary();
+        },
+        onCancel: function() {},
+      });
     }
 
     function forceSelectAll() {
@@ -599,6 +631,14 @@ defineScene({
     //  Fetch real order data (or start empty)
     // ═══════════════════════════════════════════════════
 
+    function syncPaidSeats(order) {
+      var ps = order.paid_seats || [];
+      for (var i = 0; i < ps.length; i++) {
+        var key = 'S-' + String(ps[i]).padStart(3, '0');
+        state.paidSeats[key] = true;
+      }
+    }
+
     if (state.orderId) {
       fetch('/api/v1/orders/' + state.orderId)
         .then(function(r) { return r.json(); })
@@ -606,6 +646,7 @@ defineScene({
           state.order = order;
           state.checkNumber = order.check_number || '';
           state.seats = orderToSeats(order);
+          syncPaidSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
           forceSelectAll();
@@ -740,8 +781,12 @@ defineScene({
       var totals = collectSummary(state.seats, state.selected);
       // Stash which seats are part of this payment
       state._payingSeats = [];
+      var seatNums = [];
       for (var pi = 0; pi < state.seats.length; pi++) {
-        if (state.selected[state.seats[pi].id]) state._payingSeats.push(state.seats[pi].id);
+        if (state.selected[state.seats[pi].id]) {
+          state._payingSeats.push(state.seats[pi].id);
+          seatNums.push(pi + 1);
+        }
       }
       SceneManager.openTransactional('payment-console', {
         orderId: state.orderId,
@@ -753,6 +798,7 @@ defineScene({
         cashPrice: totals.cashPrice,
         discount: 0,
         returnScene: 'check-overview',
+        seatNumbers: seatNums,
       });
     }
 
@@ -779,6 +825,7 @@ defineScene({
           state.order = order;
           state.checkNumber = order.check_number || '';
           state.seats = orderToSeats(order);
+          syncPaidSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
           forceSelectAll();
