@@ -1542,7 +1542,61 @@ function renderTicket() {
     }
   }
 
-  // ── Group instances by name ──────────────────────
+  // ── Group by seat (check-overview mode) then by name ──
+  var hasSeatGroups = sceneParams.returnScene === 'check-overview' &&
+    sceneParams.seatNumbers && sceneParams.seatNumbers.length > 1;
+
+  if (hasSeatGroups) {
+    // Collect unique seat numbers in order
+    var seatOrder = [];
+    var seatItems = {};
+    displayTicket.forEach(function(inst) {
+      var sn = inst.seat_number || 1;
+      if (!seatItems[sn]) { seatItems[sn] = []; seatOrder.push(sn); }
+      seatItems[sn].push(inst);
+    });
+    seatOrder.sort(function(a, b) { return a - b; });
+
+    for (var si = 0; si < seatOrder.length; si++) {
+      var sn = seatOrder[si];
+      // Seat header
+      var seatHdr = document.createElement('div');
+      seatHdr.style.cssText = 'padding:4px 8px 2px;font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.numpadChassis + ';letter-spacing:2px;border-bottom:1px solid ' + T.border + ';margin-bottom:2px;';
+      seatHdr.textContent = 'S-' + String(sn).padStart(3, '0');
+      list.appendChild(seatHdr);
+
+      // Render items for this seat using the same group logic below
+      var seatTicket = seatItems[sn];
+      _renderTicketGroup(list, seatTicket);
+    }
+    _updateTicketTotals();
+    return;
+  }
+
+  _renderTicketGroup(list, displayTicket);
+  _updateTicketTotals();
+}
+
+function _updateTicketTotals() {
+  var totals = computeTotals();
+  if (_modPanelItem) {
+    var previewPrice = _modPanelItem.basePrice + (_modPanelItem.mods || []).reduce(function(s, m) { return s + m.price; }, 0);
+    totals.subtotal += previewPrice;
+    totals.tax = Math.round(totals.subtotal * TAX_RATE * 100) / 100;
+    totals.cardTotal = Math.round((totals.subtotal + totals.tax) * 100) / 100;
+    totals.cashPrice = Math.round(totals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
+  }
+  OrderSummary.update({
+    checkId: currentCheckNumber || '',
+    skipItems: true,
+    subtotal: totals.subtotal,
+    tax: totals.tax,
+    cardTotal: totals.cardTotal,
+    cashPrice: totals.cashPrice,
+  });
+}
+
+function _renderTicketGroup(list, displayTicket) {
   var groups = {};
   var groupOrder = [];
   displayTicket.forEach(function(inst) {
@@ -1794,25 +1848,6 @@ function renderTicket() {
     list.appendChild(previewCard);
   }
 
-  // ── Live totals ───────────────────────────────────
-  var totals = computeTotals();
-  // Include modifier panel preview item in totals
-  if (_modPanelItem) {
-    var previewPrice = _modPanelItem.basePrice + (_modPanelItem.mods || []).reduce(function(s, m) { return s + m.price; }, 0);
-    totals.subtotal += previewPrice;
-    totals.tax = Math.round(totals.subtotal * TAX_RATE * 100) / 100;
-    totals.cardTotal = Math.round((totals.subtotal + totals.tax) * 100) / 100;
-    totals.cashPrice = Math.round(totals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
-  }
-  // Update persistent order summary panel with current totals (skip items — we render interactive ones above)
-  OrderSummary.update({
-    checkId: currentCheckNumber || '',
-    skipItems: true,
-    subtotal: totals.subtotal,
-    tax: totals.tax,
-    cardTotal: totals.cardTotal,
-    cashPrice: totals.cashPrice,
-  });
 }
 
 // ── SEPARATOR + MOD ROW helpers ───────────────────
