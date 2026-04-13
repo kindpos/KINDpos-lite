@@ -12,6 +12,7 @@ import { buildCard, cardFilter } from '../theme-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 import { createSVG, svgEl, CHART } from '../chart-helpers.js';
+import './check-overview.js';
 import { injectChartDefs, PAT } from '../chart-patterns.js';
 import { DATA } from '../chart-colors.js';
 
@@ -857,8 +858,8 @@ function renderCheckGrid(state) {
     plus.textContent = '+';
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
-      SceneManager.mountWorking('order-entry', {
-        mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+      SceneManager.mountWorking('check-overview', {
+        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
       });
     });
     state.centerGrid.appendChild(newTile);
@@ -908,15 +909,14 @@ function buildCheckTile(state, order) {
   if (isOpen) {
     if (state.selected[order.order_id]) applyTileSelected(tile, true);
     tile.addEventListener('pointerup', function() {
-      var id = order.order_id;
-      if (state.selected[id]) {
-        delete state.selected[id];
-        applyTileSelected(tile, false);
-      } else {
-        state.selected[id] = order;
-        applyTileSelected(tile, true);
-      }
-      renderOpsPanel(state);
+      var emp = state.params.emp || state.params;
+      SceneManager.mountWorking('check-overview', {
+        checkId: order.order_id,
+        tableId: order.table_id,
+        pin: emp.pin,
+        employeeId: emp.id,
+        employeeName: emp.name,
+      });
     });
   } else if (isClosed) {
     tile.addEventListener('pointerup', function() {
@@ -969,7 +969,7 @@ function renderOpsPanel(state) {
   if (isSingle) {
     var order = state.selected[ids[0]];
     grid.appendChild(buildButton('EDIT', { fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34, onTap: function() {
-      SceneManager.mountWorking('order-entry', { mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name, recallOrderId: order.order_id });
+      SceneManager.mountWorking('check-overview', { checkId: order.order_id, pin: emp.pin, employeeId: emp.id, employeeName: emp.name });
     }}));
     grid.appendChild(buildButton('PRINT', { fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34, onTap: function() {
       fetch('/api/v1/print/receipt/' + order.order_id, { method: 'POST' }).then(function() { showToast('Print sent', { bg: T.goGreen }); }).catch(function() { showToast('Print failed', { bg: T.red }); });
