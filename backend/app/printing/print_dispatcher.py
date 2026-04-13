@@ -56,6 +56,20 @@ class PrintDispatcher:
         self._task: Optional[asyncio.Task] = None
         self._failure_subscribers: list[asyncio.Queue] = []
 
+        # Receipt printer: 48 chars per line
+        # Kitchen printer: 33 chars per line
+        self._formatter_receipt = ESCPOSFormatter(paper_width=80, chars_per_line=48)
+        self._formatter_kitchen = ESCPOSFormatter(paper_width=80, chars_per_line=33)
+        self._templates_receipt = {
+            "guest_receipt":  GuestReceiptTemplate(paper_width=80, chars_per_line=48),
+            "clock_hours":    ClockHoursTemplate(paper_width=80, chars_per_line=48),
+            "sales_recap":    SalesRecapTemplate(paper_width=80, chars_per_line=48),
+            "server_checkout": None,  # loaded lazily if needed
+        }
+        self._templates_kitchen = {
+            "kitchen_ticket": KitchenTicketTemplate(paper_width=80, chars_per_line=33),
+        }
+
     def subscribe_failures(self) -> asyncio.Queue:
         """Return a queue that receives print failure dicts."""
         q: asyncio.Queue = asyncio.Queue(maxsize=64)
@@ -82,20 +96,6 @@ class PrintDispatcher:
                 q.put_nowait(msg)
             except asyncio.QueueFull:
                 pass  # drop if subscriber is too slow
-
-        # Receipt printer: 48 chars per line
-        # Kitchen printer: 33 chars per line
-        self._formatter_receipt = ESCPOSFormatter(paper_width=80, chars_per_line=48)
-        self._formatter_kitchen = ESCPOSFormatter(paper_width=80, chars_per_line=33)
-        self._templates_receipt = {
-            "guest_receipt":  GuestReceiptTemplate(paper_width=80, chars_per_line=48),
-            "clock_hours":    ClockHoursTemplate(paper_width=80, chars_per_line=48),
-            "sales_recap":    SalesRecapTemplate(paper_width=80, chars_per_line=48),
-            "server_checkout": None,  # loaded lazily if needed
-        }
-        self._templates_kitchen = {
-            "kitchen_ticket": KitchenTicketTemplate(paper_width=80, chars_per_line=33),
-        }
 
     async def start(self) -> None:
         self._running = True
