@@ -776,6 +776,7 @@ defineScene({
           employeeId: params.employeeId,
           employeeName: params.employeeName,
           returnScene: 'check-overview',
+          returnLanding: _landing,
           seatNumbers: selectedSeatNums,
         });
       },

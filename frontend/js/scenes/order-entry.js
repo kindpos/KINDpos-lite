@@ -2126,6 +2126,7 @@ function handleClose() {
     pin: sceneParams.pin,
     employeeId: sceneParams.employeeId,
     employeeName: sceneParams.employeeName,
+    returnLanding: sceneParams.returnLanding,
   });
 }
 
