@@ -111,6 +111,14 @@ defineScene({
 
     // Show persistent OrderSummary panel
     OrderSummary.show({ checkId: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 });
+    // Hide split button — split is available via EDIT SEATS column-editor
+    var summaryEl = OrderSummary.getElement();
+    if (summaryEl) {
+      var splitBtns = summaryEl.querySelectorAll('div');
+      for (var sb = 0; sb < splitBtns.length; sb++) {
+        if (splitBtns[sb].textContent === 'Split') { splitBtns[sb].style.display = 'none'; break; }
+      }
+    }
 
     var root = document.createElement('div');
     Object.assign(root.style, {
@@ -313,12 +321,14 @@ defineScene({
     }
 
     function updateSeatVisuals() {
+      var anySelected = false;
       for (var si = 0; si < state.seats.length; si++) {
         var seat = state.seats[si];
         var el = state.seatEls[seat.id];
         if (!el) continue;
         var sel = !!state.selected[seat.id];
         var hasItems = seat.items.length > 0;
+        if (sel) anySelected = true;
 
         if (sel) {
           el.header.style.background = T.bgDark;
@@ -332,6 +342,8 @@ defineScene({
           el.body.style.color = hasItems ? T.gold : T.mutedText;
         }
       }
+      // EDIT SEATS only visible when seats are selected
+      if (editSeatsBtn) editSeatsBtn.wrap.style.display = anySelected ? '' : 'none';
     }
 
     function updateSummary() {
@@ -418,10 +430,10 @@ defineScene({
     Object.assign(optBody.style, {
       flex: '1',
       padding: '6px',
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '8px',
-      alignContent: 'flex-start',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr auto auto',
+      gridTemplateRows: '1fr 1fr',
+      gap: '6px',
     });
 
     // ── Button handlers ──
@@ -550,27 +562,30 @@ defineScene({
       RSND: handleResend,
     };
 
-    var options = [
-      { label: 'PRINT',    variant: 'gold',       size: 'lg' },
-      { label: 'DISCOUNT', variant: 'vermillion', size: 'sm' },
-      { label: 'VOID',     variant: 'vermillion', size: 'sm' },
-      { label: 'PAY',      variant: 'mint',       size: 'lg' },
-      { label: 'DRAWER',   variant: 'dark',       size: 'sm' },
-      { label: 'RSND',     variant: 'dark',       size: 'sm' },
-    ];
+    // Grid layout: PRINT/PAY stacked left (col 1-2), small buttons right (col 3-4)
+    var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'lg', onClick: handlePrint });
+    Object.assign(printBtn.wrap.style, { gridColumn: '1 / 3', gridRow: '1' });
+    optBody.appendChild(printBtn.wrap);
 
-    for (var oi = 0; oi < options.length; oi++) {
-      var opt = options[oi];
-      var btn = buildStyledButton({
-        label: opt.label,
-        variant: opt.variant,
-        size: opt.size,
-        onClick: (function(lbl) {
-          return function() { (optHandlers[lbl] || function() {})(); };
-        })(opt.label),
-      });
-      optBody.appendChild(btn.wrap);
-    }
+    var payBtn = buildStyledButton({ label: 'PAY', variant: 'mint', size: 'lg', onClick: handlePay });
+    Object.assign(payBtn.wrap.style, { gridColumn: '1 / 3', gridRow: '2' });
+    optBody.appendChild(payBtn.wrap);
+
+    var discBtn = buildStyledButton({ label: 'DISCOUNT', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
+    Object.assign(discBtn.wrap.style, { gridColumn: '3', gridRow: '1' });
+    optBody.appendChild(discBtn.wrap);
+
+    var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
+    Object.assign(voidBtn.wrap.style, { gridColumn: '3', gridRow: '2' });
+    optBody.appendChild(voidBtn.wrap);
+
+    var drawerBtn = buildStyledButton({ label: 'DRAWER', variant: 'dark', size: 'sm', onClick: handleDrawer });
+    Object.assign(drawerBtn.wrap.style, { gridColumn: '4', gridRow: '1' });
+    optBody.appendChild(drawerBtn.wrap);
+
+    var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
+    Object.assign(rsndBtn.wrap.style, { gridColumn: '4', gridRow: '2' });
+    optBody.appendChild(rsndBtn.wrap);
 
     optCard.appendChild(optBody);
     root.appendChild(optCard);
@@ -648,6 +663,7 @@ defineScene({
     });
     Object.assign(editSeatsBtn.wrap.style, {
       position: 'absolute', left: '492px', top: '340px', zIndex: '50',
+      display: 'none',
     });
     root.appendChild(editSeatsBtn.wrap);
 
