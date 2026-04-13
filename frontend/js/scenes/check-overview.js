@@ -7,7 +7,9 @@
 import { defineScene } from '../scene-manager-2.js';
 import { SceneManager } from '../scene-manager.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
+import { buildButton } from '../components.js';
 import { OrderSummary } from '../order-summary.js';
+import { buildNumpad } from '../numpad.js';
 import { showToast } from '../components.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import './column-editor.js';
@@ -855,4 +857,83 @@ defineScene({
     }
     state.listeners = [];
   },
+});
+
+// ═══════════════════════════════════════════════════
+//  Shared interrupt scenes (disc-pin, disc-select)
+// ═══════════════════════════════════════════════════
+
+var DISCOUNT_OPTIONS = ['10%', '15%', '20%', '25%', '50%', 'Comp (100%)'];
+
+SceneManager.register({
+  name: 'disc-pin',
+  mount: function(container, params) {
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';border-radius:5px;padding:20px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// MANAGER PIN //';
+    panel.appendChild(lbl);
+
+    var numpad = buildNumpad({
+      onSubmit: function(pin) {
+        fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
+          var servers = data.servers || [];
+          var mgr = servers.find(function(s) { return s.pin === pin && (s.roles || []).indexOf('manager') !== -1; });
+          if (mgr) {
+            SceneManager.resolveInterrupt('disc-pin');
+            params.onConfirm(mgr.id || pin);
+          } else {
+            numpad.setError('NOT AUTHORIZED');
+          }
+        }).catch(function() { numpad.setError('NETWORK ERROR'); });
+      },
+    });
+    panel.appendChild(numpad);
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { SceneManager.resolveInterrupt('disc-pin'); params.onCancel(); },
+    });
+    cancelBtn.style.width = '332px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+
+    container.addEventListener('pointerup', function(e) {
+      if (e.target === container) { SceneManager.resolveInterrupt('disc-pin'); params.onCancel(); }
+    });
+  },
+  unmount: function() {},
+});
+
+SceneManager.register({
+  name: 'disc-select',
+  mount: function(container, params) {
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';border-radius:5px;padding:20px;min-width:280px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// DISCOUNT //';
+    panel.appendChild(lbl);
+
+    DISCOUNT_OPTIONS.forEach(function(opt) {
+      var btn = buildButton(opt, {
+        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
+        onTap: function() { SceneManager.resolveInterrupt('disc-select'); params.onConfirm(opt); },
+      });
+      btn.style.width = '240px';
+      panel.appendChild(btn);
+    });
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
+      onTap: function() { SceneManager.resolveInterrupt('disc-select'); params.onCancel(); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
 });
