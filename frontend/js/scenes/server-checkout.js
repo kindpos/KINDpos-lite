@@ -934,3 +934,231 @@ SceneManager.register({
   cache: false,
   timeoutMs: 0,
 });
+
+// ─────────────────────────────────────────────────
+//  INTERRUPT: zero-confirm
+//  Confirms the "$0 ALL" action for unadjusted tips
+// ─────────────────────────────────────────────────
+
+SceneManager.register({
+  name: 'zero-confirm',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:20px;min-width:280px;';
+
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + RED + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// ZERO ALL TIPS //';
+    panel.appendChild(lbl);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+    msg.textContent = 'Set ' + (params.count || 0) + ' unadjusted tip(s) to $0.00?';
+    panel.appendChild(msg);
+
+    var confirmBtn = buildButton('CONFIRM', {
+      fill: T.darkBtn, color: RED, fontSize: '26px', height: 44,
+      onTap: function() { params.onConfirm(); },
+    });
+    confirmBtn.style.width = '240px';
+    panel.appendChild(confirmBtn);
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.width = '240px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+// ─────────────────────────────────────────────────
+//  INTERRUPT: manager-pin
+//  Manager PIN gate for FINALIZE action
+// ─────────────────────────────────────────────────
+
+SceneManager.register({
+  name: 'manager-pin',
+  mount: function(container, params) {
+    container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+    var numpad = buildNumpad({
+      maxDigits: 4,
+      masked: true,
+      onSubmit: function(pin) {
+        fetch('/api/v1/auth/verify-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: pin }),
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.valid) {
+              params.onConfirm(data);
+            } else {
+              numpad.setError('Invalid PIN');
+            }
+          })
+          .catch(function() { numpad.setError('PIN check failed'); });
+      },
+      onCancel: function() { params.onCancel(); },
+    });
+    container.appendChild(numpad);
+  },
+  unmount: function() {},
+});
+
+// ─────────────────────────────────────────────────
+//  TRANSACTIONAL: adjust-pct
+//  Tip-out percentage adjustment overlay
+// ─────────────────────────────────────────────────
+
+SceneManager.register({
+  name: 'adjust-pct',
+  mount: function(container, params) {
+    setHeaderBack({ back: true, onBack: function() {
+      if (params.onDismiss) params.onDismiss();
+      SceneManager.closeTransactional('adjust-pct');
+    }});
+
+    container.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;padding:' + T.scenePad + 'px;box-sizing:border-box;';
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.mint + ';letter-spacing:1px;margin-bottom:12px;';
+    title.textContent = 'ADJUST TIP-OUT %';
+    container.appendChild(title);
+
+    var scrollArea = document.createElement('div');
+    scrollArea.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;';
+
+    var roles = params.workingRoles || [];
+    for (var i = 0; i < roles.length; i++) {
+      scrollArea.appendChild(buildAdjustRow(roles[i]));
+    }
+
+    // One-time role
+    if (params.workingOneTime) {
+      var divider = document.createElement('div');
+      divider.style.cssText = 'height:1px;background:' + T.border + ';margin:8px 0;';
+      scrollArea.appendChild(divider);
+
+      var otLabel = document.createElement('div');
+      otLabel.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';margin-bottom:4px;';
+      otLabel.textContent = 'ONE-TIME';
+      scrollArea.appendChild(otLabel);
+      scrollArea.appendChild(buildAdjustRow(params.workingOneTime));
+    }
+
+    container.appendChild(scrollArea);
+
+    // Action bar
+    var actionBar = document.createElement('div');
+    actionBar.style.cssText = 'flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;padding-top:10px;';
+
+    actionBar.appendChild(buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 120, height: 40,
+      onTap: function() { SceneManager.closeTransactional('adjust-pct'); },
+    }));
+    actionBar.appendChild(buildButton('SAVE', {
+      fill: T.darkBtn, color: T.gold, fontSize: T.fsBtn, width: 120, height: 40,
+      onTap: function() {
+        // Write updated roles back to state
+        var state = params.state;
+        if (state) {
+          state.tipOutRoles = roles;
+          if (params.workingOneTime) state.oneTimeRole = params.workingOneTime;
+          recalcTipOut(state);
+        }
+        // Persist to backend
+        var payload = roles.map(function(r) { return { label: r.label, percent: r.percent, basis: r.basis }; });
+        fetch('/api/v1/config/tipout', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(function(err) { console.error('[KINDpos] Tipout save failed:', err); });
+
+        if (params.onDismiss) params.onDismiss();
+        SceneManager.closeTransactional('adjust-pct');
+      },
+    }));
+    container.appendChild(actionBar);
+  },
+  unmount: function() {},
+  cache: false,
+  timeoutMs: 0,
+});
+
+// ─────────────────────────────────────────────────
+//  INTERRUPT: cash-tip-declare
+//  Cash tip declaration before finalizing checkout
+// ─────────────────────────────────────────────────
+
+SceneManager.register({
+  name: 'cash-tip-declare',
+  mount: function(container, params) {
+    var panel = document.createElement('div');
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:300px;';
+
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.textContent = '// CASH TIPS //';
+    panel.appendChild(lbl);
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;margin-bottom:8px;';
+    msg.textContent = 'Declare cash tips received this shift:';
+    panel.appendChild(msg);
+
+    // Display
+    var display = document.createElement('div');
+    display.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';background:' + T.bgDark + ';padding:10px;margin-bottom:12px;min-height:52px;min-width:200px;text-align:center;border:2px solid ' + T.border + ';';
+    display.textContent = '$0.00';
+    panel.appendChild(display);
+
+    var buffer = '';
+    function updateDisplay() {
+      var cents = parseInt(buffer || '0', 10);
+      display.textContent = '$' + (cents / 100).toFixed(2);
+    }
+
+    // Numpad grid
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;';
+    var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'CLR', '0', 'DEL'];
+    for (var k = 0; k < keys.length; k++) {
+      (function(key) {
+        grid.appendChild(buildButton(key, {
+          fill: T.darkBtn,
+          color: key === 'CLR' ? T.vermillion : (key === 'DEL' ? T.gold : T.mint),
+          fontSize: '22px', fontFamily: T.fb, height: 44,
+          onTap: function() {
+            if (key === 'CLR') { buffer = ''; }
+            else if (key === 'DEL') { buffer = buffer.slice(0, -1); }
+            else { if (buffer.length < 8) buffer += key; }
+            updateDisplay();
+          },
+        }));
+      })(keys[k]);
+    }
+    panel.appendChild(grid);
+
+    // Action buttons
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+    btns.appendChild(buildButton('DECLARE', {
+      fill: T.darkBtn, color: T.gold, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() {
+        var cents = parseInt(buffer || '0', 10);
+        params.onConfirm(cents / 100);
+      },
+    }));
+    btns.appendChild(buildButton('SKIP', {
+      fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtn, width: 130, height: 44,
+      onTap: function() { params.onCancel(); },
+    }));
+    panel.appendChild(btns);
+    container.appendChild(panel);
+  },
+  unmount: function() {},
+});
