@@ -15,7 +15,7 @@ import { OrderSummary } from '../order-summary.js';
 import { buildCard } from '../theme-manager.js';
 import {
   fmt, detailRow, detailDivider, buildMixBar,
-  buildCardGrid, buildExpandedCard, buildBlockerBanner,
+  buildCardGrid, buildExpandedCard,
   CARD_GAP, ACTION_H, BANNER_H, COL_GAP, SCENE_PAD, RED,
 } from './checkout-core.js';
 
@@ -398,19 +398,81 @@ function doCloseDay(state) {
 //  OrderSummary HELPERS
 // ─────────────────────────────────────────────────
 
-function buildCheckList(state) {
-  return (state.checks || []).filter(function(c) {
-    return c.status === 'closed';
-  }).map(function(c) {
-    return { name: c.checkLabel || c.checkId || 'CHK', total: c.amount || 0 };
+function buildSections(state) {
+  var sections = [
+    {
+      title: 'REVENUE',
+      rows: [
+        { label: 'Gross Sales', value: fmt(state.grossSales) },
+        { label: 'Voids (' + state.voidsCount + ')', value: '\u2212 ' + fmt(state.voidsTotal) },
+        { label: 'Discounts (' + state.discCount + ')', value: '\u2212 ' + fmt(state.discTotal) },
+        { label: 'NET SALES', value: fmt(state.netSales) },
+        { label: 'Tax', value: fmt(state.taxCollected) },
+      ],
+    },
+    {
+      title: 'PAYMENTS',
+      rows: [
+        { label: 'Cash (' + state.cashCount + ')', value: fmt(state.cashSales) },
+        { label: 'Card (' + state.cardCount + ')', value: fmt(state.cardSales) },
+        { label: 'Total', value: fmt(state.totalPayments) },
+      ],
+    },
+    {
+      title: 'CHECKS',
+      rows: [
+        { label: 'Total Checks', value: String(state.totalChecks) },
+        { label: 'Average', value: fmt(state.avgCheck) },
+        { label: 'Covers', value: String(state.covers) },
+      ],
+    },
+  ];
+
+  if (state.categories && state.categories.length > 0) {
+    sections.push({
+      title: 'CATEGORIES',
+      rows: state.categories.map(function(c) {
+        return { label: c.name, value: fmt(c.total) };
+      }),
+    });
+  }
+
+  if (state.dayparts && state.dayparts.length > 0) {
+    sections.push({
+      title: 'DAYPARTS',
+      rows: state.dayparts.map(function(d) {
+        return { label: d.name + ' (' + d.checks + ')', value: fmt(d.sales) };
+      }),
+    });
+  }
+
+  sections.push({
+    title: 'TIPS',
+    rows: [
+      { label: 'Total Tips', value: fmt(state.totalTips) },
+      { label: 'Card Tips', value: fmt(state.cardTips) },
+      { label: 'Cash Tips', value: fmt(state.cashTips) },
+      { label: 'Tip-Out', value: '\u2212 ' + fmt(state.totalTipOut) },
+    ],
   });
+
+  if (state.openChecks > 0) {
+    sections.push({
+      title: 'OPEN',
+      rows: [
+        { label: 'Open Checks', value: String(state.openChecks) },
+      ],
+    });
+  }
+
+  return sections;
 }
 
 function showSummaryPanel(state) {
   OrderSummary.showCheckout({
     title: 'CLOSE DAY',
     label: state.date,
-    checks: buildCheckList(state),
+    sections: buildSections(state),
     cardSales: state.cardSales,
     tips: state.totalTips,
     cashExpected: state.cashSales + state.cashTips,
@@ -420,7 +482,7 @@ function showSummaryPanel(state) {
 function updateSummaryPanel(state) {
   OrderSummary.updateCheckout({
     label: state.date,
-    checks: buildCheckList(state),
+    sections: buildSections(state),
     cardSales: state.cardSales,
     tips: state.totalTips,
     cashExpected: state.cashSales + state.cashTips,
@@ -483,10 +545,6 @@ defineScene({
       var defs = getCardDefs(state.data, cardOpts);
       state.gridContainer.appendChild(buildCardGrid(defs, cardOpts));
       state.rightCol.appendChild(state.gridContainer);
-
-      var msgs = [];
-      if (state.data.openChecks > 0) msgs.push(state.data.openChecks + ' open check' + (state.data.openChecks > 1 ? 's' : '') + ' must close before finalizing');
-      state.rightCol.appendChild(buildBlockerBanner(msgs));
       state.rightCol.appendChild(buildActionBar(state.data, state, refreshScene));
     }
 

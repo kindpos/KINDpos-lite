@@ -78,12 +78,14 @@ export function buildMixBar(cashPct, cardPct) {
 
 export function buildCardTile(def, idx, opts) {
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.height = '100%';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
   card.style.overflow = 'hidden';
   card.style.cursor = 'pointer';
   card.style.position = 'relative';
+  card.style.height = '100%';
 
   // Chrome header bar
   var hdr = document.createElement('div');

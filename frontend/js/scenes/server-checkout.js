@@ -16,7 +16,7 @@ import { OrderSummary } from '../order-summary.js';
 import { buildCard } from '../theme-manager.js';
 import {
   fmt, detailRow, detailDivider, buildMixBar,
-  buildCardGrid, buildExpandedCard, buildBlockerBanner,
+  buildCardGrid, buildExpandedCard,
   CARD_GAP, ACTION_H, BANNER_H, COL_GAP, SCENE_PAD, RED,
 } from './checkout-core.js';
 
@@ -398,19 +398,62 @@ function openAdjustOverlay(state) {
 //  OrderSummary HELPERS
 // ─────────────────────────────────────────────────
 
-function buildCheckList(state) {
-  return (state.checks || []).filter(function(c) {
-    return c.status === 'closed';
-  }).map(function(c) {
-    return { name: c.checkLabel || c.checkId || 'CHK', total: c.amount || 0 };
-  });
+function buildSections(state) {
+  var sections = [
+    {
+      title: 'SALES',
+      rows: [
+        { label: 'Checks Closed', value: String(state.totalChecks) },
+        { label: 'Net Sales', value: fmt(state.netSales) },
+        { label: 'Cash Sales', value: fmt(state.cashSales) },
+        { label: 'Card Sales', value: fmt(state.cardSales) },
+      ],
+    },
+    {
+      title: 'TIPS',
+      rows: [
+        { label: 'Card Tips', value: fmt(state.cardTips) },
+        { label: 'Cash Tips', value: fmt(state.cashTips) },
+        { label: 'Total Tips', value: fmt(state.cardTips + state.cashTips) },
+      ],
+    },
+    {
+      title: 'TIP-OUT',
+      rows: state.tipOutRoles.map(function(r) {
+        return { label: r.label + ' ' + r.percent + '%', value: fmt(r.amount) };
+      }).concat([
+        { label: 'Tip-Out Total', value: '\u2212 ' + fmt(state.tipOutTotal) },
+      ]),
+    },
+    {
+      title: 'TAKE-HOME',
+      rows: [
+        { label: 'Take-Home', value: fmt(state.takeHome) },
+      ],
+    },
+  ];
+
+  if (state.openChecks > 0) {
+    sections.push({
+      title: 'OPEN',
+      rows: [{ label: 'Open Checks', value: String(state.openChecks) }],
+    });
+  }
+  if (state.unadjustedTips > 0) {
+    sections.push({
+      title: 'UNADJUSTED',
+      rows: [{ label: 'Unadjusted Tips', value: String(state.unadjustedTips) }],
+    });
+  }
+
+  return sections;
 }
 
 function showSummaryPanel(state) {
   OrderSummary.showCheckout({
     title: 'CHECKOUT RECAP',
     label: state.employeeName || state.date,
-    checks: buildCheckList(state),
+    sections: buildSections(state),
     cardSales: state.cardSales,
     tips: state.cardTips + state.cashTips,
     cashExpected: state.cashExpected,
@@ -420,7 +463,7 @@ function showSummaryPanel(state) {
 function updateSummaryPanel(state) {
   OrderSummary.updateCheckout({
     label: state.employeeName || state.date,
-    checks: buildCheckList(state),
+    sections: buildSections(state),
     cardSales: state.cardSales,
     tips: state.cardTips + state.cashTips,
     cashExpected: state.cashExpected,
@@ -484,11 +527,6 @@ defineScene({
       var defs = getCardDefs(state.data, cardOpts);
       state.gridContainer.appendChild(buildCardGrid(defs, cardOpts));
       state.rightCol.appendChild(state.gridContainer);
-
-      var msgs = [];
-      if (state.data.openChecks > 0) msgs.push(state.data.openChecks + ' open check' + (state.data.openChecks > 1 ? 's' : ''));
-      if (state.data.unadjustedTips > 0) msgs.push(state.data.unadjustedTips + ' unadjusted tip' + (state.data.unadjustedTips > 1 ? 's' : ''));
-      state.rightCol.appendChild(buildBlockerBanner(msgs));
       state.rightCol.appendChild(buildActionBar(state.data, state, refreshScene));
     }
 
