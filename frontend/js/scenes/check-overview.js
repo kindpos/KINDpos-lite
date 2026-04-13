@@ -1006,6 +1006,70 @@ defineScene({
     }
     state.listeners = [];
   },
+
+  interrupts: {
+    'server-picker': {
+      render: function(container, params) {
+        params = params || {};
+        var excludeId = (params.params || {}).excludeId || null;
+
+        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+        var panel = document.createElement('div');
+        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';border-radius:5px;padding:16px;min-width:320px;max-width:440px;max-height:460px;display:flex;flex-direction:column;gap:8px;';
+
+        var title = document.createElement('div');
+        title.style.cssText = 'font-family:' + T.fh + ';font-size:11px;letter-spacing:3px;color:' + T.mint + ';text-transform:uppercase;text-align:center;padding:4px 0 8px;';
+        title.textContent = 'TRANSFER TO SERVER';
+        panel.appendChild(title);
+
+        var list = document.createElement('div');
+        list.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;';
+
+        var loading = document.createElement('div');
+        loading.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;padding:20px 0;';
+        loading.textContent = 'Loading...';
+        list.appendChild(loading);
+        panel.appendChild(list);
+
+        var cancelBtn = buildStyledButton({ label: 'CANCEL', variant: 'vermillion', size: 'sm', onClick: function() { params.onCancel(); } });
+        cancelBtn.wrap.style.alignSelf = 'center';
+        panel.appendChild(cancelBtn.wrap);
+
+        container.appendChild(panel);
+
+        fetch('/api/v1/servers/clocked-in')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            list.innerHTML = '';
+            var staff = (data.staff || []).filter(function(s) { return s.employee_id !== excludeId; });
+
+            if (staff.length === 0) {
+              var empty = document.createElement('div');
+              empty.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;padding:20px 0;';
+              empty.textContent = 'No other servers clocked in';
+              list.appendChild(empty);
+              return;
+            }
+
+            for (var i = 0; i < staff.length; i++) {
+              (function(srv) {
+                var btn = buildStyledButton({ label: srv.employee_name, variant: 'dark', size: 'md', onClick: function() { params.onConfirm({ employee_id: srv.employee_id, employee_name: srv.employee_name }); } });
+                btn.wrap.style.width = '100%';
+                list.appendChild(btn.wrap);
+              })(staff[i]);
+            }
+          })
+          .catch(function() {
+            list.innerHTML = '';
+            var err = document.createElement('div');
+            err.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.red + ';text-align:center;padding:20px 0;';
+            err.textContent = 'Failed to load servers';
+            list.appendChild(err);
+          });
+      },
+    },
+  },
 });
 
 // ═══════════════════════════════════════════════════
