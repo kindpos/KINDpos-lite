@@ -637,29 +637,7 @@ function rebuildBottomBar(params) {
   }
 
   // ── Row 2: Action buttons ──
-  var hasUnsent = ticket.some(function(i) { return !i.sent; });
-
-  if (sceneParams.returnScene === 'check-overview' && hasUnsent) {
-    // Check-overview mode: ADD (save only) + SEND (save + kitchen)
-    var addOnly = buildButton('ADD', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
-      onTap: async function() {
-        try { await handleSaveOnly(); } catch (e) { return; }
-        handleClose();
-      },
-    });
-    var sendAndClose = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: async function() {
-        try { await handleSend(); } catch (e) { return; }
-        handleClose();
-      },
-    });
-
-    addOnly.style.gridColumn = '1 / 3'; addOnly.style.gridRow = '2'; addOnly.style.height = '100%';
-    sendAndClose.style.gridColumn = '3 / 6'; sendAndClose.style.gridRow = '2'; sendAndClose.style.height = '100%';
-    _bottomBar.appendChild(addOnly);
-    _bottomBar.appendChild(sendAndClose);
-  } else {
-    // Normal mode: DISC, VOID, PRINT, PAY, SEND
+  {
     var disc  = buildButton('DISC', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
       onTap: function() { handleDiscount(); },
     });
@@ -697,6 +675,29 @@ function rebuildBottomBar(params) {
     var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
     var vInner = voidB.firstElementChild;
     if (vInner) vInner.textContent = unsentSelected ? 'DELETE' : 'VOID';
+  }
+
+  // ── Row 3: ADD + SEND (check-overview mode only) ──
+  if (sceneParams.returnScene === 'check-overview') {
+    var hasUnsent = ticket.some(function(i) { return !i.sent; });
+
+    var addOnly = buildButton('ADD', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
+      onTap: async function() {
+        if (hasUnsent) { try { await handleSaveOnly(); } catch (e) { return; } }
+        handleClose();
+      },
+    });
+    var sendAndClose = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: async function() {
+        if (hasUnsent) { try { await handleSend(); } catch (e) { return; } }
+        handleClose();
+      },
+    });
+
+    addOnly.style.gridColumn = '4 / 5'; addOnly.style.gridRow = '3'; addOnly.style.height = '100%';
+    sendAndClose.style.gridColumn = '5 / 6'; sendAndClose.style.gridRow = '3'; sendAndClose.style.height = '100%';
+    _bottomBar.appendChild(addOnly);
+    _bottomBar.appendChild(sendAndClose);
   }
 }
 
