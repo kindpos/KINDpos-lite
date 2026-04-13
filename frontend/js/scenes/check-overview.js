@@ -371,10 +371,19 @@ defineScene({
     }
 
     function selectAll() {
+      // Toggle: if all selectable seats are selected, deselect all
+      var allSelected = true;
+      for (var ci = 0; ci < state.seats.length; ci++) {
+        if (!state.paidSeats[state.seats[ci].id] && !state.selected[state.seats[ci].id]) {
+          allSelected = false; break;
+        }
+      }
       state.selected = {};
-      for (var si = 0; si < state.seats.length; si++) {
-        if (!state.paidSeats[state.seats[si].id]) {
-          state.selected[state.seats[si].id] = true;
+      if (!allSelected) {
+        for (var si = 0; si < state.seats.length; si++) {
+          if (!state.paidSeats[state.seats[si].id]) {
+            state.selected[state.seats[si].id] = true;
+          }
         }
       }
       updateSeatVisuals();
