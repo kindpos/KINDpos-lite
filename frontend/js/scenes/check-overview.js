@@ -153,7 +153,7 @@ defineScene({
 
     var seatsH = document.createElement('div');
     Object.assign(seatsH.style, {
-      background: T.mint,
+      background: T.numpadChassis,
       height: '26px',
       display: 'flex',
       alignItems: 'center',
@@ -510,31 +510,31 @@ defineScene({
     SceneManager.on('payment:complete', refreshOrder);
     state.listeners.push({ el: null, event: 'payment:complete', handler: refreshOrder, bus: true });
 
-    // Row 1 (y:340): PRINT, DISCOUNT, DRAWER
-    // Row 2 (y:410): PAY,   VOID,     RSND
-    var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'lg', onClick: handlePrint });
-    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '12px', top: '340px' });
-    root.appendChild(printBtn.wrap);
-
-    var payBtn = buildStyledButton({ label: 'PAY', variant: 'mint', size: 'lg', onClick: handlePay });
-    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '12px', top: '410px' });
-    root.appendChild(payBtn.wrap);
-
-    var discBtn = buildStyledButton({ label: 'DISCOUNT', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
-    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '244px', top: '340px' });
+    // Row 1 (y:340): DISC    RSND             PRINT
+    // Row 2 (y:388): VOID    DRAWER    PAY
+    var discBtn = buildStyledButton({ label: 'DISC', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
+    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '12px', top: '340px' });
     root.appendChild(discBtn.wrap);
 
+    var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
+    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '130px', top: '340px' });
+    root.appendChild(rsndBtn.wrap);
+
+    var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'md', onClick: handlePrint });
+    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '248px', top: '340px' });
+    root.appendChild(printBtn.wrap);
+
     var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
-    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '244px', top: '410px' });
+    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '12px', top: '388px' });
     root.appendChild(voidBtn.wrap);
 
     var drawerBtn = buildStyledButton({ label: 'DRAWER', variant: 'dark', size: 'sm', onClick: handleDrawer });
-    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '362px', top: '340px' });
+    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '130px', top: '388px' });
     root.appendChild(drawerBtn.wrap);
 
-    var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
-    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '362px', top: '410px' });
-    root.appendChild(rsndBtn.wrap);
+    var payBtn = buildStyledButton({ label: 'PAY', variant: 'mint', size: 'md', onClick: handlePay });
+    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '248px', top: '388px' });
+    root.appendChild(payBtn.wrap);
 
     // ═══════════════════════════════════════════════════
     //  Floating buttons
@@ -555,7 +555,7 @@ defineScene({
       },
     });
     Object.assign(addItemBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '473px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '448px', zIndex: '50',
     });
     root.appendChild(addItemBtn.wrap);
 
@@ -608,7 +608,7 @@ defineScene({
       },
     });
     Object.assign(editSeatsBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '340px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '336px', zIndex: '50',
       display: 'none',
     });
     root.appendChild(editSeatsBtn.wrap);
@@ -675,7 +675,7 @@ defineScene({
       },
     });
     Object.assign(roundBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '410px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '392px', zIndex: '50',
     });
     root.appendChild(roundBtn.wrap);
   },
