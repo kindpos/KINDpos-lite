@@ -94,6 +94,7 @@ defineScene({
     }
 
     var mintEdges = bevelEdges(T.mint);
+    var chassisEdges = bevelEdges(T.numpadChassis);
     var darkEdges = bevelEdges(T.darkBtn);
 
     state.orderId = params.checkId || null;
@@ -141,10 +142,10 @@ defineScene({
       height: '316px',
       borderRadius: '5px',
       background: T.bg,
-      borderTop: T.bevel + 'px solid ' + mintEdges.light,
-      borderLeft: T.bevel + 'px solid ' + mintEdges.light,
-      borderBottom: T.bevel + 'px solid ' + mintEdges.dark,
-      borderRight: T.bevel + 'px solid ' + mintEdges.dark,
+      borderTop: T.bevel + 'px solid ' + chassisEdges.light,
+      borderLeft: T.bevel + 'px solid ' + chassisEdges.light,
+      borderBottom: T.bevel + 'px solid ' + chassisEdges.dark,
+      borderRight: T.bevel + 'px solid ' + chassisEdges.dark,
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
@@ -389,52 +390,8 @@ defineScene({
     }
 
     // ═══════════════════════════════════════════════════
-    //  CHECK OPTIONS card
+    //  Check option buttons (free-floating, no card)
     // ═══════════════════════════════════════════════════
-
-    var optCard = document.createElement('div');
-    Object.assign(optCard.style, {
-      position: 'absolute',
-      left: '12px',
-      top: '340px',
-      width: '468px',
-      height: '196px',
-      borderRadius: '5px',
-      background: T.bg,
-      borderTop: T.bevel + 'px solid ' + mintEdges.light,
-      borderLeft: T.bevel + 'px solid ' + mintEdges.light,
-      borderBottom: T.bevel + 'px solid ' + mintEdges.dark,
-      borderRight: T.bevel + 'px solid ' + mintEdges.dark,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    });
-
-    var optH = document.createElement('div');
-    Object.assign(optH.style, {
-      background: T.mint,
-      height: '26px',
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0 8px',
-      fontFamily: T.fh,
-      fontSize: '9px',
-      letterSpacing: '2px',
-      color: T.bgDark,
-      textTransform: 'uppercase',
-    });
-    optH.textContent = 'CHECK OPTIONS';
-    optCard.appendChild(optH);
-
-    var optBody = document.createElement('div');
-    Object.assign(optBody.style, {
-      flex: '1',
-      padding: '6px',
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr auto auto',
-      gridTemplateRows: '1fr 1fr',
-      gap: '6px',
-    });
 
     // ── Button handlers ──
 
@@ -553,42 +510,31 @@ defineScene({
     SceneManager.on('payment:complete', refreshOrder);
     state.listeners.push({ el: null, event: 'payment:complete', handler: refreshOrder, bus: true });
 
-    var optHandlers = {
-      PRINT: handlePrint,
-      DISCOUNT: handleDiscount,
-      VOID: handleVoid,
-      PAY: handlePay,
-      DRAWER: handleDrawer,
-      RSND: handleResend,
-    };
-
-    // Grid layout: PRINT/PAY stacked left (col 1-2), small buttons right (col 3-4)
+    // Row 1 (y:340): PRINT, DISCOUNT, DRAWER
+    // Row 2 (y:410): PAY,   VOID,     RSND
     var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'lg', onClick: handlePrint });
-    Object.assign(printBtn.wrap.style, { gridColumn: '1 / 3', gridRow: '1' });
-    optBody.appendChild(printBtn.wrap);
+    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '12px', top: '340px' });
+    root.appendChild(printBtn.wrap);
 
     var payBtn = buildStyledButton({ label: 'PAY', variant: 'mint', size: 'lg', onClick: handlePay });
-    Object.assign(payBtn.wrap.style, { gridColumn: '1 / 3', gridRow: '2' });
-    optBody.appendChild(payBtn.wrap);
+    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '12px', top: '410px' });
+    root.appendChild(payBtn.wrap);
 
     var discBtn = buildStyledButton({ label: 'DISCOUNT', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
-    Object.assign(discBtn.wrap.style, { gridColumn: '3', gridRow: '1' });
-    optBody.appendChild(discBtn.wrap);
+    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '244px', top: '340px' });
+    root.appendChild(discBtn.wrap);
 
     var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
-    Object.assign(voidBtn.wrap.style, { gridColumn: '3', gridRow: '2' });
-    optBody.appendChild(voidBtn.wrap);
+    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '244px', top: '410px' });
+    root.appendChild(voidBtn.wrap);
 
     var drawerBtn = buildStyledButton({ label: 'DRAWER', variant: 'dark', size: 'sm', onClick: handleDrawer });
-    Object.assign(drawerBtn.wrap.style, { gridColumn: '4', gridRow: '1' });
-    optBody.appendChild(drawerBtn.wrap);
+    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '362px', top: '340px' });
+    root.appendChild(drawerBtn.wrap);
 
     var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
-    Object.assign(rsndBtn.wrap.style, { gridColumn: '4', gridRow: '2' });
-    optBody.appendChild(rsndBtn.wrap);
-
-    optCard.appendChild(optBody);
-    root.appendChild(optCard);
+    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '362px', top: '410px' });
+    root.appendChild(rsndBtn.wrap);
 
     // ═══════════════════════════════════════════════════
     //  Floating buttons
