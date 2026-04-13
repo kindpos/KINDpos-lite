@@ -46,7 +46,7 @@ ALL_SCAN_PORTS = PRINTER_PORTS + CARD_READER_PORTS
 FAST_TIMEOUT  = 0.5   # Pass 1: wired devices
 SLOW_TIMEOUT  = 2.5   # Pass 2: WiFi / slow responders
 DIRECT_TIMEOUT = 2.5  # Direct IP probe (user-entered)
-BATCH_SIZE    = 20    # Hosts per concurrent batch (conservative for WiFi)
+BATCH_SIZE    = 10    # Hosts per concurrent batch (conservative for WiFi)
 
 # ── DB bootstrap ──────────────────────────────────────────────────────────────
 
