@@ -1622,7 +1622,7 @@ function renderCheckGrid(state) {
     newTile.addEventListener('pointerup', function() {
       var emp = state.params.emp || state.params;
       SceneManager.mountWorking('check-overview', {
-        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+        pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'manager-landing',
       });
     });
     state.centerGrid.appendChild(newTile);
@@ -1690,6 +1690,7 @@ function buildCheckTile(state, order) {
       SceneManager.mountWorking('check-overview', {
         checkId: order.order_id,
         tableId: order.table_id,
+        returnLanding: 'manager-landing',
       });
     });
   } else if (isClosed) {

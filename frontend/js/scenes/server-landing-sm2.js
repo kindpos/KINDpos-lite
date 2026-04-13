@@ -859,7 +859,7 @@ function renderCheckGrid(state) {
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
       SceneManager.mountWorking('check-overview', {
-        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
+        pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'server-landing',
       });
     });
     state.centerGrid.appendChild(newTile);
@@ -916,6 +916,7 @@ function buildCheckTile(state, order) {
         pin: emp.pin,
         employeeId: emp.id,
         employeeName: emp.name,
+        returnLanding: 'server-landing',
       });
     });
   } else if (isClosed) {
@@ -969,7 +970,7 @@ function renderOpsPanel(state) {
   if (isSingle) {
     var order = state.selected[ids[0]];
     grid.appendChild(buildButton('EDIT', { fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34, onTap: function() {
-      SceneManager.mountWorking('check-overview', { checkId: order.order_id, pin: emp.pin, employeeId: emp.id, employeeName: emp.name });
+      SceneManager.mountWorking('check-overview', { checkId: order.order_id, pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'server-landing' });
     }}));
     grid.appendChild(buildButton('PRINT', { fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34, onTap: function() {
       fetch('/api/v1/print/receipt/' + order.order_id, { method: 'POST' }).then(function() { showToast('Print sent', { bg: T.goGreen }); }).catch(function() { showToast('Print failed', { bg: T.red }); });

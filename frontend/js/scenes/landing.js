@@ -340,6 +340,7 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
         pin: emp.pin,
         employeeId: emp.id,
         employeeName: emp.name,
+        returnLanding: 'landing',
       });
     }
     // MERGE, SPLIT, PRINT, VOID — placeholder for future implementation
@@ -380,6 +381,7 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
             pin: emp.pin,
             employeeId: emp.id,
             employeeName: emp.name,
+            returnLanding: 'landing',
           });
         });
         tabGrid.appendChild(newCheckEmpty);
@@ -432,6 +434,7 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
           pin: emp.pin,
           employeeId: emp.id,
           employeeName: emp.name,
+          returnLanding: 'landing',
         });
       });
       tabGrid.appendChild(newCheckBtn);
