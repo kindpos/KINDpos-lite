@@ -424,7 +424,7 @@ function queueReceipt(copyType) {
 function activateResult(change) {
   var lastPayment = payments[payments.length - 1] || {};
   var isCash = lastPayment.method === 'cash';
-  SceneManager.openTransactional('change-due', {
+  SceneManager.openTransactional('pc-change-due', {
     paymentMode: isCash ? 'cash' : 'card',
     change:      change,
     total:       totalPaid,
@@ -671,5 +671,141 @@ SceneManager.register({
     if (_procAnimTimer) clearInterval(_procAnimTimer);
     _procAnimTimer = null;
     _procStatusEl = null;
+  },
+});
+
+
+// ═══════════════════════════════════════════════════
+//  CHANGE DUE / PAYMENT COMPLETE OVERLAY
+// ═══════════════════════════════════════════════════
+
+var _changeDueTimer = null;
+
+SceneManager.register({
+  name: 'pc-change-due',
+
+  mount: function(container, params) {
+    params = params || {};
+    var returned = false;
+    _changeDueTimer = null;
+
+    setSceneName(null);
+    setHeaderBack({});
+
+    container.style.cssText = [
+      'width:100%;height:100%;',
+      'display:flex;flex-direction:column;',
+      'align-items:center;justify-content:center;',
+      'gap:0;',
+      'background:rgba(0,0,0,0.85);',
+    ].join('');
+
+    var isCash    = params.paymentMode === 'cash';
+    var hasChange = isCash && params.change > 0;
+
+    // ── Card ──
+    var card = document.createElement('div');
+    card.style.cssText = [
+      'display:flex;flex-direction:column;align-items:center;',
+      'padding:32px 64px 28px;',
+      'background:' + T.bgDark + ';',
+      'min-width:480px;',
+    ].join('');
+    applySunkenStyle(card);
+
+    var topLabel = document.createElement('div');
+    topLabel.style.cssText = 'font-family:' + T.fh + ';font-size:32px;letter-spacing:0.18em;color:' + T.mint + ';margin-bottom:20px;';
+    topLabel.textContent = isCash ? 'CASH PAYMENT' : 'CARD PAYMENT';
+    card.appendChild(topLabel);
+
+    if (hasChange) {
+      var changeLabel = document.createElement('div');
+      changeLabel.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsBtn + ';letter-spacing:0.14em;color:' + T.mint + ';margin-bottom:4px;';
+      changeLabel.textContent = 'CHANGE DUE';
+      card.appendChild(changeLabel);
+
+      var changeAmount = document.createElement('div');
+      changeAmount.style.cssText = 'font-family:' + T.fb + ';font-size:96px;font-weight:bold;color:' + T.gold + ';line-height:1;letter-spacing:0.02em;';
+      changeAmount.textContent = '$' + params.change.toFixed(2);
+      card.appendChild(changeAmount);
+    } else {
+      var paidLabel = document.createElement('div');
+      paidLabel.style.cssText = 'font-family:' + T.fh + ';font-size:40px;font-weight:bold;letter-spacing:0.1em;color:' + T.mint + ';margin-bottom:8px;';
+      paidLabel.textContent = isCash ? 'EXACT CHANGE' : 'PAYMENT APPROVED';
+      card.appendChild(paidLabel);
+    }
+
+    var chargedLine = document.createElement('div');
+    chargedLine.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';margin-top:12px;letter-spacing:0.06em;';
+    chargedLine.textContent = (isCash ? 'Cash price: ' : 'Charged: ') + '$' + params.total.toFixed(2);
+    card.appendChild(chargedLine);
+
+    var printLine = document.createElement('div');
+    printLine.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';letter-spacing:0.12em;margin-top:16px;';
+    printLine.textContent = 'RECEIPT PRINTING...';
+    card.appendChild(printLine);
+
+    container.appendChild(card);
+
+    // ── Buttons ──
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:20px;margin-top:24px;';
+
+    btnRow.appendChild(buildButton('NEW ORDER', {
+      fill: T.darkBtn, color: T.mint, fontSize: '32px',
+      width: 220, height: 64,
+      onTap: function() { doReturn('order-entry'); },
+    }));
+
+    btnRow.appendChild(buildButton('LOGOUT', {
+      fill: T.darkBtn, color: T.mint, fontSize: '32px',
+      width: 220, height: 64,
+      onTap: function() { doReturn('login'); },
+    }));
+
+    container.appendChild(btnRow);
+
+    // Auto-logout countdown
+    var postAction = (window.KINDpos && window.KINDpos.postPaymentAction) || 'quick-service';
+    if (postAction === 'logout') {
+      var autoHint = document.createElement('div');
+      autoHint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';letter-spacing:0.1em;margin-top:12px;';
+      autoHint.textContent = 'auto-logout in 8s...';
+      container.appendChild(autoHint);
+
+      var countdown = 8;
+      _changeDueTimer = setInterval(function() {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(_changeDueTimer);
+          _changeDueTimer = null;
+          doReturn('login');
+        } else {
+          autoHint.textContent = 'auto-logout in ' + countdown + 's...';
+        }
+      }, 1000);
+    }
+
+    function doReturn(target) {
+      if (returned) return;
+      returned = true;
+      if (_changeDueTimer) { clearInterval(_changeDueTimer); _changeDueTimer = null; }
+      var activeScene = SceneManager.getActiveWorking();
+      SceneManager.closeAllTransactional();
+      if (target === 'login') {
+        OrderSummary.hide();
+        SceneManager.unmountWorking(activeScene);
+        SceneManager.openGate('login');
+      } else if (activeScene === 'check-overview') {
+        SceneManager.emit('payment:complete');
+      } else {
+        OrderSummary.hide();
+        SceneManager.mountWorking('order-entry', {});
+      }
+    }
+  },
+
+  unmount: function() {
+    if (_changeDueTimer) { clearInterval(_changeDueTimer); _changeDueTimer = null; }
   },
 });
