@@ -349,14 +349,97 @@ defineScene({
 
     function updateSummary() {
       var totals = collectSummary(state.seats, state.selected);
+      // Update totals (skip items — we render seat cards ourselves)
       OrderSummary.update({
         checkId: state.checkNumber || '',
-        items: totals.items,
+        skipItems: true,
         subtotal: totals.subtotal,
         tax: totals.tax,
         cardTotal: totals.cardTotal,
         cashPrice: totals.cashPrice,
       });
+      // Render seat-grouped collapsible cards into the ticket list
+      var ticketList = document.getElementById('ticket-list');
+      if (!ticketList) return;
+      ticketList.innerHTML = '';
+
+      var selectedSeats = [];
+      for (var ui = 0; ui < state.seats.length; ui++) {
+        if (state.selected[state.seats[ui].id]) selectedSeats.push(state.seats[ui]);
+      }
+
+      if (selectedSeats.length === 0) {
+        var empty = document.createElement('div');
+        empty.style.cssText = 'padding:16px 8px;font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;';
+        empty.textContent = 'No seats selected';
+        ticketList.appendChild(empty);
+        return;
+      }
+
+      for (var si = 0; si < selectedSeats.length; si++) {
+        var seat = selectedSeats[si];
+        var total = seatTotal(seat);
+
+        // Seat card container
+        var card = document.createElement('div');
+        card.style.cssText = 'margin-bottom:4px;';
+
+        // Seat header (tappable to collapse/expand)
+        var hdr = document.createElement('div');
+        hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:' + T.bg3 + ';cursor:pointer;user-select:none;border-bottom:1px solid ' + T.border + ';';
+        var hdrLabel = document.createElement('span');
+        hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.numpadChassis + ';letter-spacing:2px;';
+        hdrLabel.textContent = seat.id;
+        hdr.appendChild(hdrLabel);
+        var hdrTotal = document.createElement('span');
+        hdrTotal.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.gold + ';';
+        hdrTotal.textContent = fmt(total);
+        hdr.appendChild(hdrTotal);
+        card.appendChild(hdr);
+
+        // Items body (collapsible)
+        var body = document.createElement('div');
+        body.style.cssText = 'overflow:hidden;';
+
+        if (seat.items.length === 0) {
+          var emptyRow = document.createElement('div');
+          emptyRow.style.cssText = 'padding:3px 8px;font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.mutedText + ';';
+          emptyRow.textContent = 'Empty';
+          body.appendChild(emptyRow);
+        } else {
+          for (var ii = 0; ii < seat.items.length; ii++) {
+            var it = seat.items[ii];
+            var row = document.createElement('div');
+            row.style.cssText = 'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;padding:3px 8px;font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';border-bottom:1px solid ' + T.bg3 + ';';
+            var nameEl = document.createElement('div');
+            nameEl.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            nameEl.textContent = it.name;
+            var qtyEl = document.createElement('div');
+            qtyEl.style.cssText = 'text-align:right;color:' + T.gold + ';';
+            qtyEl.textContent = it.qty + '\u00D7';
+            var priceEl = document.createElement('div');
+            priceEl.style.cssText = 'text-align:right;color:' + T.gold + ';';
+            priceEl.textContent = fmt(it.qty * it.price);
+            row.appendChild(nameEl);
+            row.appendChild(qtyEl);
+            row.appendChild(priceEl);
+            body.appendChild(row);
+          }
+        }
+
+        card.appendChild(body);
+
+        // Toggle collapse on header tap
+        (function(bodyEl) {
+          var collapsed = false;
+          hdr.addEventListener('pointerup', function() {
+            collapsed = !collapsed;
+            bodyEl.style.display = collapsed ? 'none' : '';
+          });
+        })(body);
+
+        ticketList.appendChild(card);
+      }
     }
 
     track(allBtn, 'pointerup', function() { selectAll(); });
