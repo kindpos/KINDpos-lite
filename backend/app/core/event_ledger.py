@@ -606,19 +606,51 @@ async def get_order_events(ledger: EventLedger, order_id: str) -> list[Event]:
 
 
 async def get_open_orders(ledger: EventLedger) -> list[str]:
-    """Get IDs of orders that are still open (created but not closed/voided)."""
-    # Get all ORDER_CREATED events
-    created_events = await ledger.get_events_by_type(EventType.ORDER_CREATED)
-    created_order_ids = {e.payload["order_id"] for e in created_events}
+    """Get IDs of orders that are still open (created but not closed/voided).
 
-    # Get all ORDER_CLOSED and ORDER_VOIDED events
+    Accounts for ORDER_REOPENED: an order that was closed then reopened
+    is open again, unless a subsequent close/void exists.
+
+    The correct algorithm tracks the *last* lifecycle event per order
+    rather than using simple set subtraction, because reopened orders
+    have both CREATED and CLOSED events and would otherwise be missed.
+    """
+    # Gather all lifecycle events in sequence order
+    created_events = await ledger.get_events_by_type(EventType.ORDER_CREATED)
     closed_events = await ledger.get_events_by_type(EventType.ORDER_CLOSED)
     voided_events = await ledger.get_events_by_type(EventType.ORDER_VOIDED)
+    reopened_events = await ledger.get_events_by_type(EventType.ORDER_REOPENED)
 
-    closed_order_ids = {e.payload["order_id"] for e in closed_events}
-    voided_order_ids = {e.payload["order_id"] for e in voided_events}
+    # Build a map of order_id → latest lifecycle sequence number + state
+    # so that the *last* event wins (handles reopen → close → reopen chains)
+    last_state: dict[str, tuple[int, str]] = {}
 
-    # Open orders = created - closed - voided
-    open_order_ids = created_order_ids - closed_order_ids - voided_order_ids
+    for e in created_events:
+        oid = e.payload["order_id"]
+        seq = e.sequence_number or 0
+        prev = last_state.get(oid)
+        if prev is None or seq > prev[0]:
+            last_state[oid] = (seq, "open")
 
-    return list(open_order_ids)
+    for e in closed_events:
+        oid = e.payload["order_id"]
+        seq = e.sequence_number or 0
+        prev = last_state.get(oid)
+        if prev is None or seq > prev[0]:
+            last_state[oid] = (seq, "closed")
+
+    for e in voided_events:
+        oid = e.payload["order_id"]
+        seq = e.sequence_number or 0
+        prev = last_state.get(oid)
+        if prev is None or seq > prev[0]:
+            last_state[oid] = (seq, "voided")
+
+    for e in reopened_events:
+        oid = e.payload["order_id"]
+        seq = e.sequence_number or 0
+        prev = last_state.get(oid)
+        if prev is None or seq > prev[0]:
+            last_state[oid] = (seq, "open")
+
+    return [oid for oid, (_, state) in last_state.items() if state == "open"]
