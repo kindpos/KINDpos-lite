@@ -12,6 +12,7 @@ import { SceneManager } from '../scene-manager.js';
 import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { OrderSummary } from '../order-summary.js';
+import { buildCard } from '../theme-manager.js';
 import {
   fmt, detailRow, detailDivider, buildMixBar,
   buildCardGrid, buildExpandedCard, buildBlockerBanner,
@@ -467,6 +468,8 @@ defineScene({
 
     function rebuildRight() {
       state.rightCol.innerHTML = '';
+      state.rightCol.style.padding = '8px';
+      state.rightCol.style.gap = '8px';
       state.gridContainer = document.createElement('div');
       state.gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
 
@@ -525,10 +528,17 @@ defineScene({
 
       showSummaryPanel(state.data);
 
-      state.rightCol = document.createElement('div');
-      state.rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;';
+      var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+      pair.card.style.display = 'flex';
+      pair.card.style.flexDirection = 'column';
+      pair.card.style.flex = '1';
+      pair.card.style.overflow = 'hidden';
+      pair.wrap.style.flex = '1';
+      pair.wrap.style.display = 'flex';
+
+      state.rightCol = pair.card;
       rebuildRight();
-      container.appendChild(state.rightCol);
+      container.appendChild(pair.wrap);
     });
   },
   unmount: function(state) {
