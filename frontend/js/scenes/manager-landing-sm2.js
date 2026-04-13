@@ -42,6 +42,30 @@ function srvColor(map, id) {
   return map[id] || SERVER_PALETTE[0];
 }
 
+var ML_TAX_RATE = 0.08;
+var ML_CASH_DISCOUNT = 0.03;
+
+function orderTotals(order) {
+  var items = order.items || [];
+  var subtotal = 0;
+  var itemList = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var qty = it.quantity || 1;
+    var price = it.price || 0;
+    subtotal += qty * price;
+    itemList.push({ name: it.name, qty: qty, unitPrice: price });
+  }
+  var tax = Math.round(subtotal * ML_TAX_RATE * 100) / 100;
+  var cardTotal = Math.round((subtotal + tax) * 100) / 100;
+  var cashPrice = Math.round(cardTotal * (1 - ML_CASH_DISCOUNT) * 100) / 100;
+  return { items: itemList, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
+}
+
+function checkNum(order) {
+  return order.check_number || ('C-' + String(order.order_id).slice(0, 3).toUpperCase());
+}
+
 // ── Shared UI Builders ──────────────────────────
 
 function buildCardHeader(label) {
@@ -480,6 +504,12 @@ defineScene({
   events: {
     'transactional:closed': function(e) {
       if (e && (e.sceneName === 'sc-tip-adjust' || e.sceneName === 'cd-tip-adjust') && _state) {
+        refreshData(_state);
+      }
+    },
+    'payment:complete': function() {
+      if (_state) {
+        _state.selected = {};
         refreshData(_state);
       }
     },
@@ -1687,13 +1717,14 @@ function buildCheckTile(state, order) {
   if (isOpen) {
     if (state.selected[order.order_id]) applyTileSelected(tile, sColor, true);
     tile.addEventListener('pointerup', function() {
-      var emp = state.params.emp || state.params;
-      SceneManager.mountWorking('check-overview', {
-        checkId: order.order_id,
-        tableId: order.table_id,
-        pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
-        returnLanding: 'manager-landing',
-      });
+      if (state.selected[order.order_id]) {
+        delete state.selected[order.order_id];
+        applyTileSelected(tile, sColor, false);
+      } else {
+        state.selected[order.order_id] = order;
+        applyTileSelected(tile, sColor, true);
+      }
+      renderOpsPanel(state);
     });
   } else if (isClosed) {
     tile.addEventListener('pointerup', function() {
@@ -1744,105 +1775,123 @@ function renderOpsPanel(state) {
 
   var emp = state.params ? (state.params.emp || state.params) : {};
   var grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px 8px;';
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:6px 10px 8px;';
   var isSingle = ids.length === 1;
+  var btnStyle = { fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34 };
 
+  // Row 1: EDIT (single) or MERGE (multi) | PRINT | RSND
   if (isSingle) {
     var order = state.selected[ids[0]];
-
-    grid.appendChild(buildButton('EDIT', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() {
-        SceneManager.mountWorking('order-entry', {
-          mode: 'service', pin: emp.pin, employeeId: emp.id, employeeName: emp.name,
-          recallOrderId: order.order_id,
-        });
-      },
-    }));
-
-    grid.appendChild(buildButton('PRINT', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() {
-        fetch('/api/v1/print/receipt/' + order.order_id, { method: 'POST' })
-          .then(function() { showToast('Print sent', { bg: T.goGreen }); })
-          .catch(function() { showToast('Print failed', { bg: T.red }); });
-      },
-    }));
-
-    grid.appendChild(buildButton('TRANSFER', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() {
-        showToast('Transfer — not yet wired', { bg: T.gold });
-      },
-    }));
-
-    var voidBtn = buildButton('VOID', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() {
-        SceneManager.interrupt('sl-void-gate', {
-          onConfirm: function() {
-            fetch('/api/v1/orders/' + order.order_id + '/void', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ reason: 'Voided by manager', approved_by: emp.id || 'manager' }),
-            }).then(function(r) {
-              if (r.ok) { showToast('Check voided', { bg: T.goGreen }); state.selected = {}; refreshData(state); }
-              else { showToast('Void failed', { bg: T.red }); }
-            }).catch(function() { showToast('Void failed', { bg: T.red }); });
-          },
-          onCancel: function() {},
-          params: { message: 'Void ' + (order.check_number || order.order_id) + '? This is destructive.' },
-        });
-      },
-    });
-    voidBtn.style.border = '2px solid ' + T.vermillion;
-    grid.appendChild(voidBtn);
-
+    grid.appendChild(buildButton('EDIT', Object.assign({}, btnStyle, { onTap: function() {
+      SceneManager.mountWorking('check-overview', { checkId: order.order_id, tableId: order.table_id, pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'manager-landing' });
+    }})));
   } else {
-    // Multi-select
-    grid.appendChild(buildButton('MERGE', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() { showToast('Merge — not yet wired', { bg: T.gold }); },
-    }));
+    grid.appendChild(buildButton('MERGE', Object.assign({}, btnStyle, { onTap: function() {
+      showToast('Merge — not yet wired', { bg: T.gold });
+    }})));
+  }
 
-    grid.appendChild(buildButton('PRINT ALL', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() {
-        ids.forEach(function(id) {
-          fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function() {});
-        });
-        showToast('Print sent for ' + ids.length + ' checks', { bg: T.goGreen });
-      },
-    }));
+  grid.appendChild(buildButton('PRINT', Object.assign({}, btnStyle, { onTap: function() {
+    ids.forEach(function(id) { fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function() {}); });
+    showToast('Print sent' + (ids.length > 1 ? ' for ' + ids.length + ' checks' : ''), { bg: T.goGreen });
+  }})));
 
-    grid.appendChild(buildButton('TRANSFER ALL', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() { showToast('Transfer — not yet wired', { bg: T.gold }); },
-    }));
+  grid.appendChild(buildButton('RSND', Object.assign({}, btnStyle, { onTap: function() {
+    ids.forEach(function(id) { fetch('/api/v1/orders/' + id + '/send', { method: 'POST' }).catch(function() {}); });
+    showToast('Sent to kitchen' + (ids.length > 1 ? ' (' + ids.length + ' checks)' : ''), { bg: T.goGreen });
+  }})));
 
-    var voidAllBtn = buildButton('VOID ALL', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px', fontFamily: T.fh, height: 34,
-      onTap: function() {
-        SceneManager.interrupt('sl-void-gate', {
-          onConfirm: function() {
-            Promise.all(ids.map(function(id) {
-              return fetch('/api/v1/orders/' + id + '/void', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: emp.id || 'manager' }),
-              });
-            })).then(function() {
-              showToast(ids.length + ' checks voided', { bg: T.goGreen });
-              state.selected = {};
+  // Row 2: PAY | DISC | VOID
+  grid.appendChild(buildButton('PAY', Object.assign({}, btnStyle, { onTap: function() {
+    if (ids.length > 1) { showToast('Select one check to pay', { bg: T.gold }); return; }
+    var payOrder = state.selected[ids[0]];
+    var totals = orderTotals(payOrder);
+    SceneManager.openTransactional('payment-console', {
+      orderId: payOrder.order_id,
+      checkId: payOrder.check_number || checkNum(payOrder),
+      items: totals.items,
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      cardTotal: totals.cardTotal,
+      cashPrice: totals.cashPrice,
+      discount: 0,
+      returnScene: 'manager-landing',
+    });
+  }})));
+
+  grid.appendChild(buildButton('DISC', Object.assign({}, btnStyle, { onTap: function() {
+    SceneManager.interrupt('disc-pin', {
+      onConfirm: function(pin) {
+        SceneManager.interrupt('disc-select', {
+          onConfirm: function(opt) {
+            var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
+            var pending = ids.length;
+            var failed = 0;
+            ids.forEach(function(id) {
+              var discOrder = state.selected[id];
+              var subtotal = 0;
+              (discOrder.items || []).forEach(function(it) { subtotal += (it.quantity || 1) * (it.price || 0); });
+              var amount = Math.round(subtotal * pct * 100) / 100;
+              fetch('/api/v1/orders/' + id + '/discount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ discount_type: opt, amount: amount, approved_by: pin }),
+              }).then(function(r) { if (!r.ok) failed++; if (--pending === 0) finishDisc(); })
+                .catch(function() { failed++; if (--pending === 0) finishDisc(); });
+            });
+            function finishDisc() {
+              if (failed > 0) showToast(failed + ' discount(s) failed', { bg: T.red });
+              else showToast('Discount applied: ' + opt, { bg: T.goGreen });
               refreshData(state);
-            }).catch(function() { showToast('Void failed', { bg: T.red }); });
+            }
           },
           onCancel: function() {},
-          params: { message: 'Void ' + ids.length + ' checks? This is destructive.' },
         });
       },
+      onCancel: function() {},
     });
-    voidAllBtn.style.border = '2px solid ' + T.vermillion;
-    grid.appendChild(voidAllBtn);
-  }
+  }})));
+
+  var voidBtn = buildButton('VOID', Object.assign({}, btnStyle, { onTap: function() {
+    var voidMsg = isSingle
+      ? 'Void ' + checkNum(state.selected[ids[0]]) + '? This is destructive.'
+      : 'Void ' + ids.length + ' checks? This is destructive.';
+    SceneManager.interrupt('sl-void-gate', {
+      onConfirm: function() {
+        if (isSingle) {
+          // Manager can void directly without PIN gate
+          var ordId = ids[0];
+          fetch('/api/v1/orders/' + ordId + '/void', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'Voided by manager', approved_by: emp.id || 'manager' }),
+          }).then(function(r) {
+            if (r.ok) { showToast('Check voided', { bg: T.goGreen }); state.selected = {}; refreshData(state); }
+            else { showToast('Void failed', { bg: T.red }); }
+          }).catch(function() { showToast('Void failed', { bg: T.red }); });
+        } else {
+          Promise.all(ids.map(function(id) {
+            return fetch('/api/v1/orders/' + id + '/void', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: emp.id || 'manager' }),
+            });
+          })).then(function() {
+            showToast(ids.length + ' checks voided', { bg: T.goGreen });
+            state.selected = {};
+            refreshData(state);
+          }).catch(function() { showToast('Void failed', { bg: T.red }); });
+        }
+      },
+      onCancel: function() {},
+      params: { message: voidMsg },
+    });
+  }}));
+  voidBtn.style.border = '2px solid ' + T.vermillion;
+  grid.appendChild(voidBtn);
+
+  // Row 3: TRANSFER
+  grid.appendChild(buildButton('TRANSFER', Object.assign({}, btnStyle, { onTap: function() {
+    showToast('Transfer — not yet wired', { bg: T.gold });
+  }})));
 
   state.opsPanel.appendChild(grid);
 }
