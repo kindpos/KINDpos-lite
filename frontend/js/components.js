@@ -51,6 +51,10 @@ export function showToast(message, opts) {
     'opacity:0;transition:opacity 0.3s;',
   ].join('');
   el.textContent = message;
+  if (o.append) {
+    el.style.pointerEvents = 'auto';
+    el.appendChild(o.append);
+  }
   document.body.appendChild(el);
   requestAnimationFrame(function() { el.style.opacity = '1'; });
   setTimeout(function() {

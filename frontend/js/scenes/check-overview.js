@@ -108,6 +108,18 @@ defineScene({
     setHeaderBack({
       back: true,
       onBack: function() {
+        // Warn if new check was never saved
+        if (!state.orderId && state.seats.some(function(s) { return s.items.length > 0; })) {
+          showToast('Unsaved check \u2014 items will be lost', { bg: T.gold, duration: 2000 });
+          // Double-tap to confirm: set a flag, second tap exits
+          if (state._backConfirmed) {
+            SceneManager.mountWorking('manager-landing', params);
+            return;
+          }
+          state._backConfirmed = true;
+          setTimeout(function() { state._backConfirmed = false; }, 3000);
+          return;
+        }
         SceneManager.mountWorking('manager-landing', params);
       },
       x: true,
@@ -581,9 +593,22 @@ defineScene({
         showToast('Select items to void, or tap seat header for all', { bg: T.gold });
         return;
       }
+      // Snapshot selected items for undo
+      var voidedSnapshot = [];
+      var keys = Object.keys(state.selectedItems);
+      for (var vsi = 0; vsi < keys.length; vsi++) {
+        var parts = keys[vsi].split(':');
+        var sIdx = parseInt(parts[0]);
+        var iIdx = parseInt(parts[1]);
+        var seat = state.seats[sIdx];
+        if (seat && seat.items[iIdx]) {
+          var it = seat.items[iIdx];
+          voidedSnapshot.push({ name: it.name, price: it.price, quantity: it.qty, seat_number: sIdx + 1 });
+        }
+      }
+
       SceneManager.interrupt('disc-pin', {
         onConfirm: function(pin) {
-          // Item-level void: delete each selected item
           var pending = itemIds.length;
           var failed = 0;
           for (var vi = 0; vi < itemIds.length; vi++) {
@@ -592,9 +617,32 @@ defineScene({
               .catch(function() { failed++; if (--pending === 0) finishVoid(); });
           }
           function finishVoid() {
-            if (failed > 0) showToast(failed + ' item(s) failed to void', { bg: T.red });
-            else showToast('Items voided', { bg: T.goGreen });
             state.selectedItems = {};
+            if (failed > 0) {
+              showToast(failed + ' item(s) failed to void', { bg: T.red });
+              refreshOrder();
+              return;
+            }
+            // Show undo toast
+            var undone = false;
+            var undoEl = document.createElement('span');
+            undoEl.style.cssText = 'text-decoration:underline;cursor:pointer;margin-left:8px;';
+            undoEl.textContent = 'UNDO';
+            undoEl.addEventListener('pointerup', function() {
+              if (undone) return;
+              undone = true;
+              // Re-add voided items
+              var rePending = voidedSnapshot.length;
+              for (var ri = 0; ri < voidedSnapshot.length; ri++) {
+                fetch('/api/v1/orders/' + state.orderId + '/items', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(voidedSnapshot[ri]),
+                }).then(function() { if (--rePending === 0) { showToast('Items restored', { bg: T.goGreen }); refreshOrder(); } })
+                  .catch(function() { if (--rePending === 0) refreshOrder(); });
+              }
+            });
+            showToast('Items voided', { bg: T.goGreen, duration: 5000, append: undoEl });
             refreshOrder();
           }
         },
@@ -792,8 +840,6 @@ defineScene({
     var roundBtn = buildStyledButton({
       label: '+1 ROUND', variant: 'gold', size: 'md',
       onClick: function() {
-        if (!state.orderId) { showToast('Save check first', { bg: T.gold }); return; }
-
         // Collect items from selected seats
         var itemsToAdd = [];
         for (var ri = 0; ri < state.seats.length; ri++) {
@@ -815,7 +861,8 @@ defineScene({
           return;
         }
 
-        // POST each item, then send to kitchen, then refresh
+        // Create order first if needed, then POST items
+        var doRound = function() {
         var pending = itemsToAdd.length;
         var failed = 0;
         for (var rk = 0; rk < itemsToAdd.length; rk++) {
@@ -846,6 +893,30 @@ defineScene({
               showToast('Send failed', { bg: T.red });
               refreshOrder();
             });
+        }
+        };
+
+        if (!state.orderId) {
+          // Create order first
+          fetch('/api/v1/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              order_type: 'quick_service',
+              guest_count: 1,
+              server_id: params.employeeId || null,
+              server_name: params.employeeName || null,
+            }),
+          }).then(function(r) { return r.json(); })
+            .then(function(created) {
+              state.orderId = created.order_id;
+              state.checkNumber = created.check_number || '';
+              setSceneName(state.checkNumber);
+              doRound();
+            })
+            .catch(function() { showToast('Failed to create check', { bg: T.red }); });
+        } else {
+          doRound();
         }
       },
     });
