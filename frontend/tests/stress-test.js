@@ -385,7 +385,7 @@ async function runRapidFire() {
         await wait(500);
         // Should navigate once (debounce blocks subsequent pushes)
         var stack = SM.getStack();
-        // PAY flow goes: order-entry -> receipt-review (via handlePay -> push('receipt-review'))
+        // PAY flow goes: check-overview -> payment-console
         // Scene manager debounce should prevent duplicate pushes
         assert(stack.length <= 3, 'Stack not excessively deep: ' + stack.length);
         await resetToLogin();
