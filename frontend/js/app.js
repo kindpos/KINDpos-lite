@@ -15,8 +15,9 @@ import './scenes/settings.js?v=9';
 import './scenes/order-entry.js?v=7';
 import './scenes/payment-console.js?v=2';
 import './scenes/manager-landing-sm2.js?v=1';  // SM2 format
-import './scenes/server-checkout.js?v=2';
-import './scenes/close-day.js?v=2';
+import './scenes/checkout-core.js?v=1';  // SM2 shared sub-scenes
+import './scenes/server-checkout.js?v=3';  // SM2 format
+import './scenes/close-day.js?v=3';  // SM2 format
 import './scenes/server-landing-sm2.js?v=1';  // SM2 format
 import './scenes/clock-in.js?v=3';  // SM2 format
 

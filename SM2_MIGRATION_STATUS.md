@@ -1,6 +1,6 @@
 # SM2 Migration Status
 
-Last updated: 2026-04-13
+Last updated: 2026-04-13 (session 2)
 
 ## What is SM2?
 
@@ -24,7 +24,9 @@ SM2 style uses `defineScene({ name, state, render, unmount, events, interrupts, 
 | `order-entry.js` | `order-entry` | Pure SM2 |
 | `check-overview.js` | `check-overview` + `server-picker` interrupt | SM2 main scene + interrupt. `disc-pin` and `disc-select` remain as old-style `SceneManager.register` at bottom (functional alongside SM2). |
 | `payment-console.js` | `payment-console` + `split-select` interrupt + `pc-card-processing`, `pc-change-due` transactionals | Fully SM2. Absorbs old `payment.js`, `receipt-review.js`, `change-due.js`. |
-| `server-checkout.js` | 6 SM2 scenes: `zero-confirm`, `manager-pin`, `adjust-pct`, `cash-tip-declare`, `sc-tip-adjust`, plus 1 old-style `server-checkout` | Partially converted. Main scene still old-style. `sc-tip-adjust` replaces old `tip-adjustment.js`. |
+| `server-checkout.js` | `server-checkout` + `adjust-pct`, `cash-tip-declare` | Fully SM2. Uses `checkout-core.js` shared builders + `OrderSummary.showCheckout()`. Old sub-scenes (`zero-confirm`, `manager-pin`, `sc-tip-adjust`) replaced by shared `co-*` scenes. |
+| `close-day.js` | `close-day` + `batch-settlement` | Fully SM2. Uses `checkout-core.js` shared builders + `OrderSummary.showCheckout()`. Old sub-scenes replaced by shared `co-*` scenes. |
+| `checkout-core.js` | `co-zero-confirm`, `co-manager-pin`, `co-tip-adjust` | Shared module: card grid/accordion builders, blocker banner, and 3 shared SM2 sub-scenes for both checkout + close-day. |
 
 ## Dead Files Removed (this session)
 
@@ -43,17 +45,6 @@ SM2 style uses `defineScene({ name, state, render, unmount, events, interrupts, 
 
 ## Remaining — Not Yet Converted to SM2
 
-### `close-day.js` — 6 scenes (all old-style `SceneManager.register`)
-- `close-day` (main scene)
-- `closeday-zero-confirm` (interrupt)
-- `closeday-manager-pin` (interrupt)
-- `batch-settlement` (transactional)
-- `cd-tip-adjust` (transactional, newly added)
-
-### `server-checkout.js` — 1 old-style scene remaining
-- `server-checkout` (main scene) — still uses `SceneManager.register`
-- The 6 sub-scenes are already SM2 `defineScene`
-
 ### `settings.js` — 2 scenes (all old-style)
 - `settings` (main scene)
 - `confirm-delete-device` (interrupt)
@@ -61,7 +52,9 @@ SM2 style uses `defineScene({ name, state, render, unmount, events, interrupts, 
 ## Other Notes
 
 - `check-overview.js` has `disc-pin` and `disc-select` as old-style registrations alongside the SM2 main scene. These work fine but could be moved into the `defineScene` interrupts section for consistency.
-- SM2 landings listen for `transactional:closed` events from `sc-tip-adjust` and `cd-tip-adjust` to refresh data.
+- SM2 landings listen for `transactional:closed` events to refresh data.
+- `checkout-core.js` provides shared `co-zero-confirm`, `co-manager-pin`, `co-tip-adjust` sub-scenes used by both `server-checkout.js` and `close-day.js`.
+- `OrderSummary` extended with `showCheckout()`/`updateCheckout()` for checkout/close-day left panel (check list + CC Sales/Tips/Cash Expected hero).
 - `payment-console.js` respects `params.paymentMode` for initial mode selection (card/cash/gc).
 - The `void-pin` interrupt in `server-landing-sm2.js` uses `buildNumpad` with `onCancel` for the X dismiss button (no separate cancel button).
 - `disc-pin` in `check-overview.js` was updated to use `buildNumpad`'s built-in X button instead of a separate CANCEL button below.

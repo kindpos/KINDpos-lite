@@ -1,54 +1,33 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Terminal — Close Day Scene
-//  2-column: Receipt preview left | Card grid + banner + action bar right
+//  KINDpos Terminal — Close Day Scene (SM2)
+//  Uses OrderSummary left panel + shared card grid from checkout-core
 //  One blocker: open checks
-//  Buttons: PRINT / SUBMIT BATCH / CLOSE DAY
+//  Buttons: PRINT → SUBMIT BATCH → CLOSE DAY
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, buildGap, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
+import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-import { buildNumpad } from '../numpad.js';
-
-// ── Layout ────────────────────────────────────────
-var RECEIPT_W  = 280;
-var COL_GAP    = 20;
-var SCENE_PAD  = 13;
-var CARD_GAP   = 8;
-var STRIP_H    = 28;
-var ACTION_H   = 48;
-var BANNER_H   = 36;
-var BEVEL      = 4;
-var CHAM       = 8;
-var RED        = '#ff3355';
-
-// ── Scene state ───────────────────────────────────
-var _state         = null;
-var _expandedIdx   = null;
-var _gridContainer = null;
-var _bannerEl      = null;
-var _accordionCooldown = false;
-var _receiptScroll = null;
-var _rightCol      = null;
-var _batchSettled  = false;
-var _pinUnlocked   = false;
+import { OrderSummary } from '../order-summary.js';
+import {
+  fmt, detailRow, detailDivider, buildMixBar,
+  buildCardGrid, buildExpandedCard, buildBlockerBanner,
+  CARD_GAP, ACTION_H, BANNER_H, COL_GAP, SCENE_PAD, RED,
+} from './checkout-core.js';
 
 // ─────────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────────
-
-function fmt(n) {
-  return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
 
 function isBlocked(state) {
   return state.openChecks > 0;
 }
 
 // ─────────────────────────────────────────────────
-//  FETCH STATE from day-summary API
+//  FETCH STATE
 // ─────────────────────────────────────────────────
 
 function fetchDayState(params) {
@@ -62,7 +41,6 @@ function fetchDayState(params) {
     var store = results[2];
     var today = new Date();
 
-    // Calculate total tipout from rules
     var totalTipOut = 0;
     var cardTips = d.card_tips || 0;
     var netSales = d.net_sales || 0;
@@ -77,15 +55,14 @@ function fetchDayState(params) {
     return {
       date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
       restaurantName: (store.info && store.info.restaurant_name) || 'KINDpos',
-      terminalId: '',
-      printedBy:  params.managerName || 'Manager',
+      printedBy: params.managerName || 'Manager',
 
       // Revenue
-      grossSales:    d.gross_sales   || 0,
-      voidsTotal:    d.void_total    || 0,  voidsCount: d.void_count || 0,
+      grossSales:    d.gross_sales    || 0,
+      voidsTotal:    d.void_total     || 0, voidsCount: d.void_count || 0,
       discTotal:     d.discount_total || 0, discCount:  d.discount_count || 0,
       netSales:      netSales,
-      taxCollected:  d.tax_total     || 0,
+      taxCollected:  d.tax_total      || 0,
 
       // Payments
       cashSales:     d.cash_total  || 0, cashCount: d.cash_count || 0,
@@ -96,180 +73,37 @@ function fetchDayState(params) {
       cashTips:      d.cash_tips   || 0,
 
       // Categories
-      categories:    d.categories || [],
+      categories: d.categories || [],
 
       // Check stats
-      totalChecks:   d.total_checks || 0,
-      avgCheck:      d.avg_check    || 0,
-      covers:        d.guest_count || 0,
-      openChecks:    d.open_orders || 0,
+      totalChecks: d.total_checks || 0,
+      avgCheck:    d.avg_check    || 0,
+      covers:      d.guest_count  || 0,
+      openChecks:  d.open_orders  || 0,
 
       // Dayparts
-      dayparts:      d.dayparts || [],
+      dayparts: d.dayparts || [],
 
       // Tips
-      totalTipOut:   totalTipOut,
+      totalTipOut:    totalTipOut,
       unadjustedTips: d.unadjusted_tips || 0,
 
       // Batch
       batchTransactions: (d.cash_count || 0) + (d.card_count || 0),
-      batchTotal:    (d.cash_total || 0) + (d.card_total || 0),
+      batchTotal:        (d.cash_total || 0) + (d.card_total || 0),
 
-      // Order IDs for printing
-      closedOrders:  d.closed_order_ids || [],
+      // Checks
+      checks:       d.checks || [],
+      closedOrders: d.closed_order_ids || [],
     };
   });
-}
-
-// ─────────────────────────────────────────────────
-//  RECEIPT CONTENT (mirrors SalesRecapTemplate)
-// ─────────────────────────────────────────────────
-
-function buildReceiptContent(state) {
-  var BASE   = '28px';
-  var HEADER = T.fsBtn;
-  var SMALL  = T.fsSmall;
-  var COL    = '#333';
-  var DIM    = '#999';
-
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'padding:12px 14px;font-family:' + T.fb + ';color:' + COL + ';display:flex;flex-direction:column;gap:0;';
-
-  function sectionHeader(text) {
-    var el = document.createElement('div');
-    el.style.cssText = 'font-size:' + HEADER + ';font-weight:bold;margin-top:10px;margin-bottom:2px;';
-    el.textContent = text;
-    return el;
-  }
-
-  function row(label, value, valueColor) {
-    var el = document.createElement('div');
-    el.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-size:' + BASE + ';padding:1px 0;';
-    var l = document.createElement('span');
-    l.textContent = label;
-    var v = document.createElement('span');
-    v.style.fontWeight = 'bold';
-    if (valueColor) v.style.color = valueColor;
-    v.textContent = value;
-    el.appendChild(l);
-    el.appendChild(v);
-    return el;
-  }
-
-  function divider() {
-    var el = document.createElement('div');
-    el.style.cssText = 'border-top:1px dashed ' + DIM + ';margin:6px 0;';
-    return el;
-  }
-
-  // Identity
-  var id = document.createElement('div');
-  id.style.cssText = 'text-align:center;margin-bottom:10px;';
-  var r1 = document.createElement('div');
-  r1.style.cssText = 'font-size:' + HEADER + ';font-weight:bold;';
-  r1.textContent = state.restaurantName;
-  var r2 = document.createElement('div');
-  r2.style.cssText = 'font-size:' + BASE + ';font-weight:bold;';
-  r2.textContent = 'SALES RECAP';
-  id.appendChild(r1);
-  id.appendChild(r2);
-  wrap.appendChild(id);
-
-  wrap.appendChild(row('Date:', state.date));
-  wrap.appendChild(row('Printed by:', state.printedBy));
-  wrap.appendChild(divider());
-
-  // Revenue
-  wrap.appendChild(sectionHeader('REVENUE'));
-  wrap.appendChild(row('Gross Sales',  fmt(state.grossSales)));
-  wrap.appendChild(row('Voids (' + state.voidsCount + ')',  '− ' + fmt(state.voidsTotal)));
-
-  wrap.appendChild(row('Discounts (' + state.discCount + ')', '− ' + fmt(state.discTotal)));
-  wrap.appendChild(divider());
-  wrap.appendChild(row('NET SALES',    fmt(state.netSales)));
-  wrap.appendChild(row('Tax Collected', fmt(state.taxCollected)));
-  wrap.appendChild(divider());
-
-  // Payments
-  wrap.appendChild(sectionHeader('PAYMENTS'));
-  wrap.appendChild(row('Cash (' + state.cashCount + ')',  fmt(state.cashSales)));
-  wrap.appendChild(row('Card (' + state.cardCount + ')',  fmt(state.cardSales)));
-  wrap.appendChild(divider());
-  wrap.appendChild(row('Total Payments', fmt(state.totalPayments)));
-  wrap.appendChild(row('Cash Expected',  fmt(state.cashSales + state.cashTips)));
-  wrap.appendChild(divider());
-
-  // Categories
-  wrap.appendChild(sectionHeader('BY CATEGORY'));
-  state.categories.forEach(function(c) {
-    wrap.appendChild(row(c.name + ' (' + c.count + ')', fmt(c.total)));
-  });
-  wrap.appendChild(divider());
-
-  // Check stats
-  wrap.appendChild(sectionHeader('CHECK STATS'));
-  wrap.appendChild(row('Total Checks', String(state.totalChecks)));
-  wrap.appendChild(row('Average Check', fmt(state.avgCheck)));
-  wrap.appendChild(row('Covers', String(state.covers)));
-  wrap.appendChild(divider());
-
-  // Dayparts
-  wrap.appendChild(sectionHeader('DAYPART'));
-  state.dayparts.forEach(function(d) {
-    wrap.appendChild(row(d.name + ' (' + d.checks + ' chk)', fmt(d.sales)));
-  });
-  wrap.appendChild(divider());
-
-  // Tips
-  wrap.appendChild(sectionHeader('TIPS'));
-  wrap.appendChild(row('Tip Total',       fmt(state.totalTips)));
-  wrap.appendChild(row('Card Tips',       fmt(state.cardTips)));
-  wrap.appendChild(row('Cash Tips',       fmt(state.cashTips)));
-  wrap.appendChild(row('Total Tip-Out',   '− ' + fmt(state.totalTipOut)));
-  wrap.appendChild(divider());
-
-  var footer = document.createElement('div');
-  footer.style.cssText = 'text-align:center;margin-top:8px;font-size:' + SMALL + ';color:' + COL + ';';
-  footer.textContent = '** MANAGER REPORT — CONFIDENTIAL **';
-  wrap.appendChild(footer);
-
-  return wrap;
-}
-
-function buildReceiptPanel(state) {
-  var panel = document.createElement('div');
-  panel.style.cssText = [
-    'width:' + RECEIPT_W + 'px;flex-shrink:0;',
-    'display:flex;flex-direction:column;',
-    'background:' + T.bgDark + ';',
-    'overflow:hidden;',
-  ].join('');
-  applySunkenStyle(panel);
-
-  var header = document.createElement('div');
-  header.style.cssText = [
-    'flex-shrink:0;padding:6px 12px;',
-    'background:' + T.bgEdge + ';',
-    'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
-    'letter-spacing:0.1em;text-align:center;',
-  ].join('');
-  header.textContent = 'PRINT PREVIEW';
-  panel.appendChild(header);
-
-  _receiptScroll = document.createElement('div');
-  _receiptScroll.id = 'receipt-scroll';
-  _receiptScroll.style.cssText = 'flex:1;overflow-y:auto;background:' + T.mint + ';scrollbar-width:none;-ms-overflow-style:none;';
-  _receiptScroll.appendChild(buildReceiptContent(state));
-  panel.appendChild(_receiptScroll);
-
-  return panel;
 }
 
 // ─────────────────────────────────────────────────
 //  CARD DEFINITIONS — 6 cards in 3×2 grid
 // ─────────────────────────────────────────────────
 
-function getCardDefs(state) {
+function getCardDefs(state, opts) {
   var blocked = state.openChecks > 0;
   return [
     {
@@ -281,8 +115,8 @@ function getCardDefs(state) {
       statusColor: null,
       buildExpanded: function(el) {
         el.appendChild(detailRow('Gross Sales',  fmt(state.grossSales)));
-        el.appendChild(detailRow('Voids (' + state.voidsCount + ')', '− ' + fmt(state.voidsTotal), RED));
-        el.appendChild(detailRow('Discounts (' + state.discCount + ')', '− ' + fmt(state.discTotal), RED));
+        el.appendChild(detailRow('Voids (' + state.voidsCount + ')', '\u2212 ' + fmt(state.voidsTotal), RED));
+        el.appendChild(detailRow('Discounts (' + state.discCount + ')', '\u2212 ' + fmt(state.discTotal), RED));
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Net Sales',    fmt(state.netSales), T.gold));
         el.appendChild(detailRow('Tax Collected', fmt(state.taxCollected), T.mint));
@@ -301,7 +135,6 @@ function getCardDefs(state) {
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Total Payments', fmt(state.totalPayments), T.gold));
         el.appendChild(detailRow('Total Tips (CC)', fmt(state.totalTips)));
-        // Cash/card mix bar
         var total = state.cashSales + state.cardSales;
         if (total > 0) {
           var pct = Math.round((state.cardSales / total) * 100);
@@ -321,15 +154,15 @@ function getCardDefs(state) {
           el.appendChild(detailRow(c.name + ' (' + c.count + ')', fmt(c.total)));
         });
         if (!state.categories.length) {
-          el.appendChild(detailRow('No categories', '—', T.mint));
+          el.appendChild(detailRow('No categories', '\u2014', T.mint));
         }
       },
     },
     {
       title: 'Check Stats',
-      hero: blocked ? '⚠ ' + state.openChecks : String(state.totalChecks),
+      hero: blocked ? '\u26A0 ' + state.openChecks : String(state.totalChecks),
       heroColor: blocked ? RED : T.cyan,
-      subtitle: blocked ? 'open — must close' : state.totalChecks + ' checks · ' + fmt(state.avgCheck) + ' avg',
+      subtitle: blocked ? 'open \u2014 must close' : state.totalChecks + ' checks \u00B7 ' + fmt(state.avgCheck) + ' avg',
       border: blocked ? RED : T.border,
       statusColor: blocked ? RED : null,
       buildExpanded: function(el) {
@@ -349,11 +182,11 @@ function getCardDefs(state) {
       border: T.border,
       statusColor: null,
       buildExpanded: function(el) {
-        state.dayparts.forEach(function(d) {
-          el.appendChild(detailRow(d.name + ' (' + d.checks + ' chk)', fmt(d.sales)));
+        state.dayparts.forEach(function(dp) {
+          el.appendChild(detailRow(dp.name + ' (' + dp.checks + ' chk)', fmt(dp.sales)));
         });
         if (!state.dayparts.length) {
-          el.appendChild(detailRow('No daypart data', '—', T.mint));
+          el.appendChild(detailRow('No daypart data', '\u2014', T.mint));
         }
       },
     },
@@ -361,78 +194,37 @@ function getCardDefs(state) {
       title: 'Tips & Gratuity',
       hero: fmt(state.totalTips),
       heroColor: T.gold,
-      subtitle: 'collected • tip-out paid',
+      subtitle: 'collected \u2022 tip-out paid',
       border: T.border,
       statusColor: null,
-      hasShortcuts: true,
+      buildShortcuts: opts && opts.buildShortcuts ? function() { return opts.buildShortcuts(state); } : null,
       buildExpanded: function(el) {
         el.appendChild(detailRow('Total Tips (CC)', fmt(state.totalTips)));
-        el.appendChild(detailRow('Total Tip-Out',   '− ' + fmt(state.totalTipOut), RED));
+        el.appendChild(detailRow('Total Tip-Out', '\u2212 ' + fmt(state.totalTipOut), RED));
         el.appendChild(detailDivider());
         var net = parseFloat((state.totalTips - state.totalTipOut).toFixed(2));
         el.appendChild(detailRow('Server Net Tips', fmt(net), T.gold));
         if (state.unadjustedTips > 0) {
           el.appendChild(detailRow('Unadjusted', String(state.unadjustedTips), T.yellow));
         }
-        // Shortcut buttons
-        el.appendChild(buildGap(8));
-        el.appendChild(buildShortcutRow(state));
+        if (opts && opts.buildShortcuts) {
+          el.appendChild(buildGap(8));
+          el.appendChild(opts.buildShortcuts(state));
+        }
       },
     },
   ];
 }
 
 // ─────────────────────────────────────────────────
-//  DETAIL ROW HELPERS (used in expanded cards)
+//  SHORTCUT ROW (UNADJUSTED + $0 ALL)
 // ─────────────────────────────────────────────────
 
-function detailRow(label, value, valueColor) {
-  var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';padding:2px 0;';
-  var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
-  lbl.textContent = label;
-  var val = document.createElement('span');
-  val.style.cssText = 'font-size:40px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
-  val.textContent = value;
-  row.appendChild(lbl);
-  row.appendChild(val);
-  return row;
-}
-
-function detailDivider() {
-  var el = document.createElement('div');
-  el.style.cssText = 'border-top:1px solid #333;margin:4px 0;';
-  return el;
-}
-
-function buildMixBar(cashPct, cardPct) {
-  var bar = document.createElement('div');
-  bar.style.cssText = 'display:flex;height:16px;margin-top:8px;clip-path:' + chamfer(4) + ';overflow:hidden;';
-  var cashSeg = document.createElement('div');
-  cashSeg.style.cssText = 'width:' + cashPct + '%;background:' + T.mint + ';';
-  var cardSeg = document.createElement('div');
-  cardSeg.style.cssText = 'width:' + cardPct + '%;background:' + T.cyan + ';';
-  bar.appendChild(cashSeg);
-  bar.appendChild(cardSeg);
-  var labels = document.createElement('div');
-  labels.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';margin-top:2px;';
-  labels.innerHTML = '<span>Cash ' + cashPct + '%</span><span>Card ' + cardPct + '%</span>';
-  var wrap = document.createElement('div');
-  wrap.appendChild(bar);
-  wrap.appendChild(labels);
-  return wrap;
-}
-
-// ─────────────────────────────────────────────────
-//  SHORTCUT BUTTONS (UNADJUSTED + $0 ALL)
-// ─────────────────────────────────────────────────
-
-function buildShortcutRow(state) {
+function buildShortcutRow(state, refreshFn) {
   var row = document.createElement('div');
   row.style.cssText = 'display:flex;gap:8px;';
+  row.setAttribute('data-shortcut', '1');
 
-  // UNADJUSTED button
   var uPair = buildStyledButton(T.darkBtn);
   uPair.wrap.style.cssText = 'flex:1;height:34px;';
   uPair.inner.style.fontFamily = T.fb;
@@ -440,11 +232,10 @@ function buildShortcutRow(state) {
   uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
-    SceneManager.openTransactional('cd-tip-adjust', { onDone: refreshScene });
+    SceneManager.openTransactional('co-tip-adjust', { onDone: refreshFn });
   });
   row.appendChild(uPair.wrap);
 
-  // $0 ALL button
   var zPair = buildStyledButton(T.darkBtn);
   zPair.wrap.style.cssText = 'flex:1;height:34px;';
   zPair.inner.style.fontFamily = T.fb;
@@ -452,29 +243,25 @@ function buildShortcutRow(state) {
   zPair.inner.style.color = RED;
   zPair.inner.textContent = '$0 ALL';
   zPair.wrap.addEventListener('pointerup', function() {
-    doZeroAll(state);
+    doZeroAll(state, refreshFn);
   });
   row.appendChild(zPair.wrap);
 
   return row;
 }
 
-// ─────────────────────────────────────────────────
-//  $0 ALL ACTION
-// ─────────────────────────────────────────────────
-
-function doZeroAll(state) {
+function doZeroAll(state, refreshFn) {
   var count = state.unadjustedTips || 0;
   if (count === 0) return;
 
-  SceneManager.interrupt('closeday-zero-confirm', {
+  SceneManager.interrupt('co-zero-confirm', {
     onConfirm: function() {
       fetch('/api/v1/payments/zero-unadjusted', { method: 'POST' })
         .then(function(r) { return r.json(); })
-        .then(function() { refreshScene(); })
+        .then(function() { if (refreshFn) refreshFn(); })
         .catch(function(err) {
           console.error('[KINDpos] Zero all failed:', err);
-          showToast('Zero-all failed — check connection');
+          showToast('Zero-all failed \u2014 check connection');
         });
     },
     onCancel: function() {},
@@ -483,260 +270,17 @@ function doZeroAll(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  CARD TILE (collapsed view in grid)
-// ─────────────────────────────────────────────────
-
-function buildCardTile(def, idx) {
-  var pair = buildStyledButton(T.darkBtn);
-  var wrap = pair.wrap;
-  var inner = pair.inner;
-
-  // Override to Style D bevel: 4px
-  inner.style.borderWidth = BEVEL + 'px';
-  inner.style.clipPath = chamfer(CHAM);
-  inner.style.flexDirection = 'column';
-  inner.style.alignItems = 'stretch';
-  inner.style.justifyContent = 'flex-start';
-  inner.style.padding = '6px 8px';
-  inner.style.position = 'relative';
-  inner.style.gap = '1px';
-
-  // Border override for special cards
-  if (def.border && def.border !== T.border) {
-    inner.style.borderColor = def.border;
-  }
-
-  // Title
-  var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';font-weight:bold;text-align:center;';
-  title.textContent = def.title;
-  inner.appendChild(title);
-
-  // Divider
-  var hr = document.createElement('div');
-  hr.style.cssText = 'height:1px;background:' + T.border + ';margin:4px 0;';
-  inner.appendChild(hr);
-
-  // Hero number
-  var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
-  hero.textContent = def.hero;
-  inner.appendChild(hero);
-
-  // Subtitle
-  var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
-  sub.textContent = def.subtitle;
-  inner.appendChild(sub);
-
-  // Hint
-  var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;margin-top:1px;';
-  hint.textContent = '▸';
-  inner.appendChild(hint);
-
-  // Status dot (bottom-right)
-  var dot = document.createElement('div');
-  dot.style.cssText = 'position:absolute;bottom:8px;right:8px;width:8px;height:8px;clip-path:circle(50%);background:' + (def.statusColor || T.cyan) + ';opacity:' + (def.statusColor ? '1' : '0.4') + ';';
-  inner.appendChild(dot);
-
-  // Shortcut buttons below card for Tips & Gratuity
-  if (def.hasShortcuts && _state) {
-    var shortcuts = buildShortcutRow(_state);
-    shortcuts.style.marginTop = '4px';
-    inner.appendChild(shortcuts);
-  }
-
-  // Tap handler
-  wrap.addEventListener('pointerup', function(e) {
-    // Don't expand if tapping a shortcut button
-    if (e.target.closest && e.target.closest('[data-shortcut]')) return;
-    expandCard(idx);
-  });
-
-  return wrap;
-}
-
-// ─────────────────────────────────────────────────
-//  CARD STRIP (thin label for collapsed siblings)
-// ─────────────────────────────────────────────────
-
-function buildCardStrip(def, idx) {
-  var strip = document.createElement('div');
-  strip.style.cssText = [
-    'height:' + STRIP_H + 'px;',
-    'display:flex;align-items:center;justify-content:space-between;',
-    'padding:0 12px;cursor:pointer;',
-    'background:' + T.bgDark + ';',
-    'border:1px solid ' + T.border + ';',
-    'clip-path:' + chamfer(4) + ';',
-    'font-family:' + T.fb + ';',
-    'user-select:none;-webkit-user-select:none;',
-  ].join('');
-
-  var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
-  lbl.textContent = def.title;
-  strip.appendChild(lbl);
-
-  var val = document.createElement('span');
-  val.style.cssText = 'font-size:40px;color:' + T.cyan + ';';
-  val.textContent = def.hero;
-  strip.appendChild(val);
-
-  strip.addEventListener('pointerup', function() {
-    expandCard(idx);
-  });
-
-  return strip;
-}
-
-// ─────────────────────────────────────────────────
-//  GRID VIEW (3×2 card grid)
-// ─────────────────────────────────────────────────
-
-function buildGridView(state) {
-  var defs = getCardDefs(state);
-  var grid = document.createElement('div');
-  grid.style.cssText = [
-    'flex:1;',
-    'display:grid;',
-    'grid-template-columns:repeat(3,1fr);',
-    'grid-template-rows:repeat(2,1fr);',
-    'gap:' + CARD_GAP + 'px;',
-  ].join('');
-
-  defs.forEach(function(def, i) {
-    grid.appendChild(buildCardTile(def, i));
-  });
-
-  return grid;
-}
-
-// ─────────────────────────────────────────────────
-//  EXPANDED VIEW (one card fills area, siblings as strips)
-// ─────────────────────────────────────────────────
-
-function buildExpandedView(state, idx) {
-  var defs = getCardDefs(state);
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:4px;overflow:hidden;';
-
-  // Strips above
-  for (var i = 0; i < idx; i++) {
-    wrap.appendChild(buildCardStrip(defs[i], i));
-  }
-
-  // Expanded card
-  var expanded = document.createElement('div');
-  expanded.style.cssText = [
-    'flex:1;',
-    'background:' + T.bgDark + ';',
-    'border:2px solid ' + (defs[idx].border || T.border) + ';',
-    'clip-path:' + chamfer(CHAM) + ';',
-    'display:flex;flex-direction:column;',
-    'overflow:hidden;',
-  ].join('');
-
-  // Header bar
-  var hdr = document.createElement('div');
-  hdr.style.cssText = [
-    'flex-shrink:0;padding:8px 14px;',
-    'display:flex;justify-content:space-between;align-items:center;',
-    'background:' + T.bg3 + ';cursor:pointer;',
-    'user-select:none;-webkit-user-select:none;',
-  ].join('');
-  var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;';
-  hTitle.textContent = defs[idx].title;
-  var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
-  hHint.textContent = '▾';
-  hdr.appendChild(hTitle);
-  hdr.appendChild(hHint);
-  hdr.addEventListener('pointerup', function() { collapseToGrid(); });
-  expanded.appendChild(hdr);
-
-  // Detail content (scrollable)
-  var content = document.createElement('div');
-  content.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:4px;';
-  defs[idx].buildExpanded(content);
-  expanded.appendChild(content);
-
-  wrap.appendChild(expanded);
-
-  // Strips below
-  for (var j = idx + 1; j < defs.length; j++) {
-    wrap.appendChild(buildCardStrip(defs[j], j));
-  }
-
-  return wrap;
-}
-
-// ─────────────────────────────────────────────────
-//  EXPAND / COLLAPSE STATE MANAGEMENT
-// ─────────────────────────────────────────────────
-
-function expandCard(idx) {
-  if (!_state || !_gridContainer || _accordionCooldown) return;
-  _accordionCooldown = true;
-  setTimeout(function() { _accordionCooldown = false; }, 150);
-  _expandedIdx = idx;
-  _gridContainer.innerHTML = '';
-  _gridContainer.appendChild(buildExpandedView(_state, idx));
-}
-
-function collapseToGrid() {
-  if (!_state || !_gridContainer || _accordionCooldown) return;
-  _accordionCooldown = true;
-  setTimeout(function() { _accordionCooldown = false; }, 150);
-  _expandedIdx = null;
-  _gridContainer.innerHTML = '';
-  _gridContainer.appendChild(buildGridView(_state));
-}
-
-// ─────────────────────────────────────────────────
-//  BLOCKER BANNER
-// ─────────────────────────────────────────────────
-
-function buildBlockerBanner(state) {
-  var el = document.createElement('div');
-  el.style.cssText = [
-    'flex-shrink:0;height:' + BANNER_H + 'px;',
-    'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:40px;',
-    'clip-path:' + chamfer(4) + ';',
-  ].join('');
-
-  if (isBlocked(state)) {
-    el.style.background = 'rgba(255,51,85,0.1)';
-    el.style.border = '1px solid ' + RED;
-    el.style.color = RED;
-    el.textContent = '⚠ RESOLVE: ' + state.openChecks + ' open check' + (state.openChecks > 1 ? 's' : '') + ' must close before finalizing';
-  } else {
-    el.style.display = 'none';
-  }
-
-  _bannerEl = el;
-  return el;
-}
-
-// ─────────────────────────────────────────────────
 //  ACTION BAR (PRINT → SUBMIT BATCH → CLOSE DAY)
 // ─────────────────────────────────────────────────
 
-function buildActionBar(state) {
+function buildActionBar(state, sceneState, refreshFn) {
   var bar = document.createElement('div');
-  bar.style.cssText = [
-    'flex-shrink:0;height:' + ACTION_H + 'px;',
-    'display:flex;align-items:stretch;gap:8px;',
-  ].join('');
+  bar.style.cssText = 'flex-shrink:0;height:' + ACTION_H + 'px;display:flex;align-items:stretch;gap:8px;';
 
-  // Arrow separator helper
   function arrow() {
     var el = document.createElement('div');
     el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';flex-shrink:0;';
-    el.textContent = '→';
+    el.textContent = '\u2192';
     return el;
   }
 
@@ -763,17 +307,21 @@ function buildActionBar(state) {
   batchPair.inner.style.fontFamily = T.fb;
   batchPair.inner.style.fontSize = T.fsSmall;
   batchPair.inner.style.color = T.gold;
-  batchPair.inner.textContent = _batchSettled ? '✓ SETTLED' : '//SUBMIT BATCH//';
-  if (_batchSettled) {
+  batchPair.inner.textContent = sceneState.batchSettled ? '\u2713 SETTLED' : '//SUBMIT BATCH//';
+  if (sceneState.batchSettled) {
     batchPair.wrap.style.pointerEvents = 'none';
     batchPair.inner.style.color = T.mint;
   } else {
     batchPair.wrap.addEventListener('pointerup', function() {
-      openBatchOverlay(state, function() {
-        _batchSettled = true;
-        batchPair.inner.textContent = '✓ SETTLED';
-        batchPair.inner.style.color = T.mint;
-        batchPair.wrap.style.pointerEvents = 'none';
+      SceneManager.openTransactional('batch-settlement', {
+        batchTransactions: state.batchTransactions,
+        batchTotal: state.batchTotal,
+        onSettled: function() {
+          sceneState.batchSettled = true;
+          batchPair.inner.textContent = '\u2713 SETTLED';
+          batchPair.inner.style.color = T.mint;
+          batchPair.wrap.style.pointerEvents = 'none';
+        },
       });
     });
   }
@@ -789,22 +337,24 @@ function buildActionBar(state) {
     closePair.inner.style.fontFamily = T.fb;
     closePair.inner.style.fontSize = T.fsSmall;
     closePair.inner.style.color = '#555';
-    closePair.inner.textContent = '🔒 //CLOSE DAY//';
+    closePair.inner.textContent = '\uD83D\uDD12 //CLOSE DAY//';
     closePair.wrap.style.pointerEvents = 'none';
     closePair.wrap.style.opacity = '0.5';
-  } else if (!_pinUnlocked) {
+  } else if (!sceneState.pinUnlocked) {
     closePair.inner.style.fontFamily = T.fb;
     closePair.inner.style.fontSize = T.fsSmall;
     closePair.inner.style.color = '#888';
-    closePair.inner.textContent = '🔒 //CLOSE DAY//';
+    closePair.inner.textContent = '\uD83D\uDD12 //CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
-      openPinGate(function() {
-        _pinUnlocked = true;
-        // Rebuild action bar to show unlocked state
-        if (bar.parentNode) {
-          var newBar = buildActionBar(state);
-          bar.parentNode.replaceChild(newBar, bar);
-        }
+      SceneManager.interrupt('co-manager-pin', {
+        onConfirm: function() {
+          sceneState.pinUnlocked = true;
+          if (bar.parentNode) {
+            bar.parentNode.replaceChild(buildActionBar(state, sceneState, refreshFn), bar);
+          }
+        },
+        onCancel: function() {},
+        params: {},
       });
     });
   } else {
@@ -823,233 +373,191 @@ function buildActionBar(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  MANAGER PIN GATE (numpad interrupt)
-// ─────────────────────────────────────────────────
-
-function openPinGate(onSuccess) {
-  SceneManager.interrupt('closeday-manager-pin', {
-    onConfirm: function() {
-      if (onSuccess) onSuccess();
-    },
-    onCancel: function() {},
-    params: {},
-  });
-}
-
-// ─────────────────────────────────────────────────
 //  CLOSE DAY ACTION
 // ─────────────────────────────────────────────────
 
-var _closeDayRunning = false;
-
 function doCloseDay(state) {
-  if (_closeDayRunning) return;
-  _closeDayRunning = true;
   fetch('/api/v1/orders/close-day', { method: 'POST' })
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     })
     .then(function(data) {
-      _closeDayRunning = false;
       console.log('[KINDpos] Day closed:', data);
+      OrderSummary.hide();
       SceneManager.closeTransactional('close-day');
     })
     .catch(function(err) {
-      _closeDayRunning = false;
       console.error('[KINDpos] Close day failed:', err);
-      showToast('Close day failed — check connection');
+      showToast('Close day failed \u2014 check connection');
     });
 }
 
 // ─────────────────────────────────────────────────
-//  BATCH SETTLEMENT OVERLAY (Win98 style)
+//  OrderSummary HELPERS
 // ─────────────────────────────────────────────────
 
-function openBatchOverlay(state, onSettled) {
-  SceneManager.openTransactional('batch-settlement', {
-    batchTransactions: state.batchTransactions,
-    batchTotal: state.batchTotal,
-    onSettled: onSettled,
+function buildCheckList(state) {
+  return (state.checks || []).filter(function(c) {
+    return c.status === 'closed';
+  }).map(function(c) {
+    return { name: c.checkLabel || c.checkId || 'CHK', total: c.amount || 0 };
   });
 }
 
-// ─────────────────────────────────────────────────
-//  REFRESH SCENE (after $0 ALL or data change)
-// ─────────────────────────────────────────────────
-
-function refreshScene() {
-  if (!_rightCol || !_state) return;
-  fetchDayState({ managerName: _state.printedBy }).then(function(newState) {
-    newState.terminalId = _state.terminalId || '';
-    _state = newState;
-    _expandedIdx = null;
-
-    // Rebuild receipt
-    if (_receiptScroll) {
-      _receiptScroll.innerHTML = '';
-      _receiptScroll.appendChild(buildReceiptContent(_state));
-    }
-    // Rebuild right column
-    _rightCol.innerHTML = '';
-    _gridContainer = document.createElement('div');
-    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
-    _gridContainer.appendChild(buildGridView(_state));
-    _rightCol.appendChild(_gridContainer);
-    _rightCol.appendChild(buildBlockerBanner(_state));
-    _rightCol.appendChild(buildActionBar(_state));
+function showSummaryPanel(state) {
+  OrderSummary.showCheckout({
+    title: 'CLOSE DAY',
+    label: state.date,
+    checks: buildCheckList(state),
+    cardSales: state.cardSales,
+    tips: state.totalTips,
+    cashExpected: state.cashSales + state.cashTips,
   });
 }
 
-// ─────────────────────────────────────────────────
-//  BUILD SCENE
-// ─────────────────────────────────────────────────
-
-function buildScene(el, params) {
-  _batchSettled = false;
-  _pinUnlocked = false;
-  _expandedIdx = null;
-
-  el.style.cssText = [
-    'width:100%;height:100%;',
-    'display:flex;gap:' + COL_GAP + 'px;',
-    'padding:' + SCENE_PAD + 'px;',
-    'box-sizing:border-box;overflow:hidden;',
-  ].join('');
-
-  fetchDayState(params).then(function(state) {
-    _state = state;
-
-    // Left column: receipt
-    el.appendChild(buildReceiptPanel(_state));
-
-    // Right column: grid + banner + action bar
-    _rightCol = document.createElement('div');
-    _rightCol.id = 'closeday-right';
-    _rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;';
-
-    _gridContainer = document.createElement('div');
-    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:visible;';
-    _gridContainer.appendChild(buildGridView(_state));
-    _rightCol.appendChild(_gridContainer);
-
-    _rightCol.appendChild(buildBlockerBanner(_state));
-    _rightCol.appendChild(buildActionBar(_state));
-
-    el.appendChild(_rightCol);
+function updateSummaryPanel(state) {
+  OrderSummary.updateCheckout({
+    label: state.date,
+    checks: buildCheckList(state),
+    cardSales: state.cardSales,
+    tips: state.totalTips,
+    cashExpected: state.cashSales + state.cashTips,
   });
 }
 
-// ─────────────────────────────────────────────────
-//  REGISTRATION
-// ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+//  MAIN SCENE (SM2)
+// ═══════════════════════════════════════════════════
 
-SceneManager.register({
+defineScene({
   name: 'close-day',
-  mount: function(container, params) {
+  state: {
+    data: null,
+    expandedIdx: null,
+    gridContainer: null,
+    rightCol: null,
+    pinUnlocked: false,
+    batchSettled: false,
+    accordionCooldown: false,
+  },
+  render: function(container, params, state) {
     setSceneName('Close Day');
-    setHeaderBack({ back: true, x: true, onBack: function() { SceneManager.closeTransactional('close-day'); } });
-    buildScene(container, params);
+    setHeaderBack({ back: true, x: true, onBack: function() {
+      OrderSummary.hide();
+      SceneManager.closeTransactional('close-day');
+    }});
+
+    container.style.cssText = [
+      'width:100%;height:100%;',
+      'display:flex;flex-direction:column;gap:8px;',
+      'padding:' + SCENE_PAD + 'px;',
+      'box-sizing:border-box;overflow:hidden;',
+    ].join('');
+
+    function refreshScene() {
+      if (!state.rightCol || !state.data) return;
+      fetchDayState({ managerName: state.data.printedBy }).then(function(newState) {
+        state.data = newState;
+        state.expandedIdx = null;
+        updateSummaryPanel(state.data);
+        rebuildRight();
+      });
+    }
+
+    function rebuildRight() {
+      state.rightCol.innerHTML = '';
+      state.gridContainer = document.createElement('div');
+      state.gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+
+      var cardOpts = {
+        columns: 3,
+        buildShortcuts: function(s) { return buildShortcutRow(s, refreshScene); },
+        onExpand: function(idx) { expandCard(idx); },
+        onCollapse: function() { collapseToGrid(); },
+      };
+
+      var defs = getCardDefs(state.data, cardOpts);
+      state.gridContainer.appendChild(buildCardGrid(defs, cardOpts));
+      state.rightCol.appendChild(state.gridContainer);
+
+      var msgs = [];
+      if (state.data.openChecks > 0) msgs.push(state.data.openChecks + ' open check' + (state.data.openChecks > 1 ? 's' : '') + ' must close before finalizing');
+      state.rightCol.appendChild(buildBlockerBanner(msgs));
+      state.rightCol.appendChild(buildActionBar(state.data, state, refreshScene));
+    }
+
+    function expandCard(idx) {
+      if (!state.data || !state.gridContainer || state.accordionCooldown) return;
+      state.accordionCooldown = true;
+      setTimeout(function() { state.accordionCooldown = false; }, 150);
+      state.expandedIdx = idx;
+      state.gridContainer.innerHTML = '';
+
+      var cardOpts = {
+        buildShortcuts: function(s) { return buildShortcutRow(s, refreshScene); },
+        onExpand: function(i) { expandCard(i); },
+        onCollapse: function() { collapseToGrid(); },
+      };
+      var defs = getCardDefs(state.data, cardOpts);
+      state.gridContainer.appendChild(buildExpandedCard(defs, idx, cardOpts));
+    }
+
+    function collapseToGrid() {
+      if (!state.data || !state.gridContainer || state.accordionCooldown) return;
+      state.accordionCooldown = true;
+      setTimeout(function() { state.accordionCooldown = false; }, 150);
+      state.expandedIdx = null;
+      state.gridContainer.innerHTML = '';
+
+      var cardOpts = {
+        columns: 3,
+        buildShortcuts: function(s) { return buildShortcutRow(s, refreshScene); },
+        onExpand: function(i) { expandCard(i); },
+        onCollapse: function() { collapseToGrid(); },
+      };
+      var defs = getCardDefs(state.data, cardOpts);
+      state.gridContainer.appendChild(buildCardGrid(defs, cardOpts));
+    }
+
+    fetchDayState(params).then(function(data) {
+      state.data = data;
+
+      showSummaryPanel(state.data);
+
+      state.rightCol = document.createElement('div');
+      state.rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;';
+      rebuildRight();
+      container.appendChild(state.rightCol);
+    });
   },
-  unmount: function() {
-    _state         = null;
-    _expandedIdx   = null;
-    _gridContainer = null;
-    _bannerEl      = null;
-    _receiptScroll = null;
-    _rightCol      = null;
-    _batchSettled  = false;
-    _pinUnlocked   = false;
+  unmount: function(state) {
+    OrderSummary.hide();
   },
-  cache: false,
-  timeoutMs: 0,
 });
 
-// ═══════════════════════════════════════════════════
-//  INLINE INTERRUPT / OVERLAY SCENE REGISTRATIONS
-// ═══════════════════════════════════════════════════
+// ─────────────────────────────────────────────────
+//  TRANSACTIONAL: batch-settlement (SM2)
+// ─────────────────────────────────────────────────
 
-SceneManager.register({
-  name: 'closeday-zero-confirm',
-  mount: function(container, params) {
-    var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:20px;min-width:280px;';
-    var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + RED + ';letter-spacing:2px;margin-bottom:4px;';
-    lbl.textContent = '// ZERO ALL TIPS //';
-    panel.appendChild(lbl);
-
-    var msg = document.createElement('div');
-    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
-    msg.textContent = 'Set ' + (params.count || 0) + ' unadjusted tip(s) to $0.00?';
-    panel.appendChild(msg);
-
-    var confirmBtn = buildButton('CONFIRM', {
-      fill: T.darkBtn, color: RED, fontSize: '26px', height: 44,
-      onTap: function() { params.onConfirm(); },
-    });
-    confirmBtn.style.width = '240px';
-    panel.appendChild(confirmBtn);
-
-    var cancelBtn = buildButton('CANCEL', {
-      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
-      onTap: function() { params.onCancel(); },
-    });
-    cancelBtn.style.width = '240px';
-    panel.appendChild(cancelBtn);
-    container.appendChild(panel);
-  },
-  unmount: function() {},
-});
-
-SceneManager.register({
-  name: 'closeday-manager-pin',
-  mount: function(container, params) {
-    container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
-    var numpad = buildNumpad({
-      maxDigits: 4,
-      masked: true,
-      onSubmit: function(pin) {
-        fetch('/api/v1/auth/verify-pin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: pin }),
-        })
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.valid) {
-              params.onConfirm(data);
-            } else {
-              numpad.setError('Invalid PIN');
-            }
-          })
-          .catch(function() { numpad.setError('PIN check failed'); });
-      },
-      onCancel: function() { params.onCancel(); },
-    });
-    container.appendChild(numpad);
-  },
-  unmount: function() {},
-});
-
-SceneManager.register({
+defineScene({
   name: 'batch-settlement',
-  mount: function(container, params) {
+  render: function(container, params) {
     var batchPanel = document.createElement('div');
-    batchPanel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:300px;';
+    batchPanel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:' + T.scenePad + 'px;min-width:300px;';
 
     var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
     lbl.textContent = '// SUBMIT BATCH //';
     batchPanel.appendChild(lbl);
 
     var info = document.createElement('div');
     info.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
-    info.textContent = (params.batchTransactions || 0) + ' transactions — ' + fmt(params.batchTotal || 0);
+    info.textContent = (params.batchTransactions || 0) + ' transactions \u2014 ' + fmt(params.batchTotal || 0);
     batchPanel.appendChild(info);
 
     var submitBtn = buildButton('SETTLE', {
-      fill: T.darkBtn, color: T.gold, fontSize: '26px', height: 44,
+      fill: T.darkBtn, color: T.gold, fontSize: T.fsBtnSm, height: 44,
       onTap: function() {
         fetch('/api/v1/payments/batch-settle', { method: 'POST' })
           .then(function(r) { return r.json(); })
@@ -1074,149 +582,4 @@ SceneManager.register({
     batchPanel.appendChild(cancelBtn);
     container.appendChild(batchPanel);
   },
-  unmount: function() {},
-});
-
-
-// ─────────────────────────────────────────────────
-//  TRANSACTIONAL: cd-tip-adjust
-//  Inline unadjusted-tip adjustment (list + numpad)
-// ─────────────────────────────────────────────────
-
-SceneManager.register({
-  name: 'cd-tip-adjust',
-  mount: function(container, params) {
-    params = params || {};
-    var _selected = null;
-    var _checks = [];
-    var _listEl = null;
-
-    setSceneName('Adjust Tips');
-    setHeaderBack({ back: true, onBack: function() {
-      SceneManager.closeTransactional('cd-tip-adjust');
-      if (params.onDone) params.onDone();
-    }});
-
-    container.style.cssText = 'width:100%;height:100%;display:flex;gap:' + COL_GAP + 'px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
-
-    // ── Left: check list ──
-    var leftCol = document.createElement('div');
-    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
-
-    var header = document.createElement('div');
-    header.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';letter-spacing:0.1em;margin-bottom:8px;';
-    header.textContent = 'UNADJUSTED TIPS';
-    leftCol.appendChild(header);
-
-    _listEl = document.createElement('div');
-    _listEl.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;';
-    leftCol.appendChild(_listEl);
-    container.appendChild(leftCol);
-
-    // ── Right: numpad ──
-    var rightCol = document.createElement('div');
-    rightCol.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-
-    var hintEl = document.createElement('div');
-    hintEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';margin-bottom:8px;text-align:center;';
-    hintEl.textContent = 'Tap a check to adjust';
-    rightCol.appendChild(hintEl);
-
-    var numpad = buildNumpad({
-      masked: false,
-      maxDigits: 6,
-      submitLabel: 'ent',
-      displayFormat: function(digits) {
-        var n = parseInt(digits || '0', 10);
-        return '$' + (n / 100).toFixed(2);
-      },
-      canSubmit: function() { return _selected !== null; },
-      onSubmit: function(digits) {
-        if (!_selected) return;
-        var tipAmount = parseInt(digits || '0', 10) / 100;
-        fetch('/api/v1/payments/tip-adjust', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order_id: _selected.check_id, payment_id: _selected.payment_id, tip_amount: tipAmount }),
-        }).then(function(r) {
-          if (r.ok) {
-            showToast('Tip adjusted', { bg: T.goGreen });
-            _selected.tip_amount = tipAmount;
-            _selected = null;
-            hintEl.textContent = 'Tap a check to adjust';
-            numpad.clear();
-            renderList();
-          } else {
-            showToast('Tip adjust failed', { bg: T.red });
-          }
-        }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
-      },
-      onCancel: function() {
-        SceneManager.closeTransactional('cd-tip-adjust');
-        if (params.onDone) params.onDone();
-      },
-    });
-    rightCol.appendChild(numpad);
-    container.appendChild(rightCol);
-
-    function renderList() {
-      _listEl.innerHTML = '';
-      var unadj = _checks.filter(function(c) { return c.tip_amount == null; });
-      if (unadj.length === 0) {
-        var done = document.createElement('div');
-        done.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';text-align:center;padding:20px;';
-        done.textContent = '\u2713 All tips adjusted';
-        _listEl.appendChild(done);
-        return;
-      }
-      for (var i = 0; i < unadj.length; i++) {
-        (function(check) {
-          var row = document.createElement('div');
-          var isActive = _selected === check;
-          row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;background:' + (isActive ? T.bg3 : T.bgDark) + ';border:2px solid ' + (isActive ? T.gold : T.border) + ';';
-          applySunkenStyle(row);
-
-          var label = document.createElement('span');
-          label.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
-          label.textContent = check.check_num || 'CHK';
-
-          var amt = document.createElement('span');
-          amt.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;';
-          amt.textContent = '$' + Math.abs(check.amount || 0).toFixed(2);
-
-          row.appendChild(label);
-          row.appendChild(amt);
-          row.addEventListener('pointerup', function() {
-            _selected = check;
-            hintEl.textContent = (check.check_num || 'CHK') + ' — $' + Math.abs(check.amount || 0).toFixed(2);
-            numpad.clear();
-            renderList();
-          });
-          _listEl.appendChild(row);
-        })(unadj[i]);
-      }
-    }
-
-    // Fetch unadjusted checks
-    fetch('/api/v1/orders/day-summary').then(function(r) { return r.json(); }).then(function(data) {
-      var raw = data.checks || [];
-      _checks = raw.filter(function(c) { return c.status === 'closed' && c.method === 'card'; }).map(function(c) {
-        return {
-          check_id: c.checkId,
-          check_num: c.checkLabel || c.checkId,
-          payment_id: c.paymentId,
-          amount: c.amount,
-          tip_amount: c.adjusted ? c.tip : null,
-        };
-      });
-      renderList();
-    }).catch(function() {
-      _listEl.innerHTML = '';
-      var err = document.createElement('div');
-      err.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.red + ';padding:20px;text-align:center;';
-      err.textContent = 'Failed to load checks';
-      _listEl.appendChild(err);
-    });
-  },
-  unmount: function() {},
 });

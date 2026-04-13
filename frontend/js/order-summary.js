@@ -17,6 +17,10 @@ var _paidRow = null;     // dynamic paid row
 var _remainRow = null;   // dynamic remaining row
 var _checkIdEl = null;   // check ID display
 var _splitBtn = null;    // split button ref
+var _headerTitle = null; // header title element ref
+var _colHead = null;     // column header container ref
+var _summaryRowEl = null; // summary row (contains summary box + split btn)
+var _mode = 'order';     // 'order' or 'checkout'
 
 function _container() {
   if (!_el) _el = document.getElementById('order-summary');
@@ -48,24 +52,24 @@ function _build() {
     'border-bottom:2px solid ' + T.bgEdge + ';',
     'display:flex;justify-content:space-between;align-items:center;',
   ].join('');
-  var hTitle = document.createElement('div');
-  hTitle.style.cssText = [
+  _headerTitle = document.createElement('div');
+  _headerTitle.style.cssText = [
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';',
     'color:' + T.textPrimary + ';letter-spacing:0.08em;',
   ].join('');
-  hTitle.textContent = 'ORDER RECAP';
+  _headerTitle.textContent = 'ORDER RECAP';
   _checkIdEl = document.createElement('div');
   _checkIdEl.style.cssText = [
     'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';',
     'color:' + T.mint + ';white-space:nowrap;',
   ].join('');
-  header.appendChild(hTitle);
+  header.appendChild(_headerTitle);
   header.appendChild(_checkIdEl);
   el.appendChild(header);
 
   // ── Column headers ──
-  var colHead = document.createElement('div');
-  colHead.style.cssText = [
+  _colHead = document.createElement('div');
+  _colHead.style.cssText = [
     'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
     'padding:4px 10px;',
     'font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';letter-spacing:0.06em;',
@@ -75,9 +79,9 @@ function _build() {
     var c = document.createElement('div');
     c.textContent = t;
     if (i > 0) c.style.textAlign = 'right';
-    colHead.appendChild(c);
+    _colHead.appendChild(c);
   });
-  el.appendChild(colHead);
+  el.appendChild(_colHead);
 
   // ── Scrollable items ──
   _itemScroll = document.createElement('div');
@@ -86,8 +90,8 @@ function _build() {
   el.appendChild(_itemScroll);
 
   // ── Bottom: [Summary | Split] row ──
-  var summaryRow = document.createElement('div');
-  summaryRow.style.cssText = [
+  _summaryRowEl = document.createElement('div');
+  _summaryRowEl.style.cssText = [
     'flex-shrink:0;display:flex;gap:6px;',
     'padding:4px 6px;',
   ].join('');
@@ -99,7 +103,7 @@ function _build() {
   ].join('');
   applyCardBevel(_summaryBox, T.numpadChassis, 5);
   _summaryBox.style.clipPath = chamfer();
-  summaryRow.appendChild(_summaryBox);
+  _summaryRowEl.appendChild(_summaryBox);
 
   // Split button
   _splitBtn = buildButton('Split', {
@@ -109,8 +113,8 @@ function _build() {
   _splitBtn.style.cssText += 'flex-shrink:0;width:90px;';
   _splitBtn.style.outline = '3px solid ' + T.vermillion;
   _splitBtn.style.outlineOffset = '-1px';
-  summaryRow.appendChild(_splitBtn);
-  el.appendChild(summaryRow);
+  _summaryRowEl.appendChild(_splitBtn);
+  el.appendChild(_summaryRowEl);
 
   // ── Prices box ──
   _pricesBox = document.createElement('div');
@@ -208,6 +212,102 @@ function _renderPrices(params) {
 
 
 // ═══════════════════════════════════════════════════
+//  CHECKOUT MODE — configure panel for checkout/close-day
+// ═══════════════════════════════════════════════════
+
+function _configureForMode(mode) {
+  _mode = mode;
+  if (mode === 'checkout') {
+    if (_headerTitle) _headerTitle.textContent = 'CHECKOUT RECAP';
+    if (_colHead) {
+      _colHead.style.gridTemplateColumns = '1fr 80px';
+      _colHead.innerHTML = '';
+      ['CHECK', 'TOTAL'].forEach(function(t, i) {
+        var c = document.createElement('div');
+        c.textContent = t;
+        if (i > 0) c.style.textAlign = 'right';
+        _colHead.appendChild(c);
+      });
+    }
+    if (_splitBtn) _splitBtn.style.display = 'none';
+    if (_summaryRowEl) _summaryRowEl.style.padding = '4px 6px 0';
+  } else {
+    if (_headerTitle) _headerTitle.textContent = 'ORDER RECAP';
+    if (_colHead) {
+      _colHead.style.gridTemplateColumns = '1fr 40px 68px';
+      _colHead.innerHTML = '';
+      ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
+        var c = document.createElement('div');
+        c.textContent = t;
+        if (i > 0) c.style.textAlign = 'right';
+        _colHead.appendChild(c);
+      });
+    }
+    if (_splitBtn) _splitBtn.style.display = '';
+    if (_summaryRowEl) _summaryRowEl.style.padding = '4px 6px';
+  }
+}
+
+function _renderChecks(checks) {
+  if (!_itemScroll) return;
+  _itemScroll.innerHTML = '';
+  (checks || []).forEach(function(chk) {
+    var row = document.createElement('div');
+    row.style.cssText = [
+      'display:grid;grid-template-columns:1fr 80px;gap:0 6px;',
+      'padding:3px 0;',
+      'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';',
+      'border-bottom:1px solid ' + T.bg3 + ';',
+    ].join('');
+    var name = document.createElement('div');
+    name.textContent = chk.name;
+    name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    var total = document.createElement('div');
+    total.style.cssText = 'text-align:right;color:' + T.gold + ';';
+    total.textContent = '$' + (chk.total || 0).toFixed(2);
+    row.appendChild(name);
+    row.appendChild(total);
+    _itemScroll.appendChild(row);
+  });
+}
+
+function _renderCheckoutSummary(params) {
+  if (!_summaryBox) return;
+  _summaryBox.innerHTML = '';
+  _summaryBox.appendChild(_summaryRow('CC Sales:', '$' + (params.cardSales || 0).toFixed(2), T.mint));
+  _summaryBox.appendChild(_summaryRow('Tips:', '$' + (params.tips || 0).toFixed(2), T.mint));
+  applyCardBevel(_summaryBox, T.numpadChassis, 5);
+  _summaryBox.style.clipPath = chamfer();
+}
+
+function _renderCashExpected(params) {
+  if (!_pricesBox) return;
+  _pricesBox.innerHTML = '';
+
+  var label = document.createElement('div');
+  label.style.cssText = [
+    'font-family:' + T.fh + ';font-size:' + T.fsCon + ';',
+    'color:' + T.textPrimary + ';letter-spacing:0.06em;',
+    'text-align:center;margin-bottom:2px;',
+  ].join('');
+  label.textContent = 'CASH EXPECTED';
+  _pricesBox.appendChild(label);
+
+  var hero = document.createElement('div');
+  hero.style.cssText = [
+    'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';',
+    'color:' + T.gold + ';font-weight:bold;',
+    'text-align:center;padding:4px 0;',
+  ].join('');
+  hero.textContent = '$' + (params.cashExpected || 0).toFixed(2);
+  hero.setAttribute('data-cash-expected', '1');
+  _pricesBox.appendChild(hero);
+
+  applyCardBevel(_pricesBox, T.numpadChassis, 5);
+  _pricesBox.style.clipPath = chamfer();
+}
+
+// ═══════════════════════════════════════════════════
 //  PUBLIC API
 // ═══════════════════════════════════════════════════
 
@@ -220,6 +320,7 @@ export var OrderSummary = {
 
     // Build DOM on first show
     if (!_itemScroll) _build();
+    _configureForMode('order');
 
     if (_checkIdEl) _checkIdEl.textContent = params.checkId || '';
 
@@ -254,6 +355,32 @@ export var OrderSummary = {
       var rv = _remainRow.querySelector('[data-val]');
       if (rv) rv.textContent = '$' + (opts.remaining || 0).toFixed(2);
     }
+  },
+
+  showCheckout: function(params) {
+    params = params || {};
+    var el = _container();
+    if (!el) return;
+    if (!_itemScroll) _build();
+    _configureForMode('checkout');
+
+    if (_headerTitle && params.title) _headerTitle.textContent = params.title;
+    if (_checkIdEl) _checkIdEl.textContent = params.label || '';
+
+    _renderChecks(params.checks);
+    _renderCheckoutSummary(params);
+    _renderCashExpected(params);
+
+    SceneManager.showSummary();
+  },
+
+  updateCheckout: function(params) {
+    params = params || {};
+    if (_headerTitle && params.title) _headerTitle.textContent = params.title;
+    if (_checkIdEl && params.label !== undefined) _checkIdEl.textContent = params.label;
+    if (params.checks) _renderChecks(params.checks);
+    _renderCheckoutSummary(params);
+    _renderCashExpected(params);
   },
 
   getElement: function() {

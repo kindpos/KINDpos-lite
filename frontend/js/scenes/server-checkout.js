@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Terminal — Server Checkout Scene
-//  2-column: Receipt preview left | Card grid + banner + action bar right
+//  KINDpos Terminal — Server Checkout Scene (SM2)
+//  Uses OrderSummary left panel + shared card grid from checkout-core
 //  Two blockers: open checks + unadjusted tips
+//  Buttons: PRINT → FINALIZE
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
@@ -11,36 +12,16 @@ import { SceneManager } from '../scene-manager.js';
 import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
-
-// ── Layout ────────────────────────────────────────
-var RECEIPT_W   = 280;
-var COL_GAP     = 20;
-var SCENE_PAD   = 13;
-var CARD_GAP    = 8;
-var STRIP_H     = 28;
-var ACTION_H    = 48;
-var BANNER_H    = 36;
-var BEVEL       = 4;
-var CHAM        = 8;
-var RED         = T.vermillion;
-
-// ── Scene state ──────────────────────────────────
-var _state         = null;
-var _expandedIdx   = null;
-var _gridContainer = null;
-var _bannerEl      = null;
-var _accordionCooldown = false;
-var _receiptScroll = null;
-var _rightCol      = null;
-var _pinUnlocked   = false;
+import { OrderSummary } from '../order-summary.js';
+import {
+  fmt, detailRow, detailDivider, buildMixBar,
+  buildCardGrid, buildExpandedCard, buildBlockerBanner,
+  CARD_GAP, ACTION_H, BANNER_H, COL_GAP, SCENE_PAD, RED,
+} from './checkout-core.js';
 
 // ─────────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────────
-
-function fmt(n) {
-  return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
 
 function isBlocked(state) {
   return state.openChecks > 0 || state.unadjustedTips > 0;
@@ -65,17 +46,16 @@ function recalcTipOut(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  FETCH STATE from day-summary API (filtered by server)
+//  FETCH STATE
 // ─────────────────────────────────────────────────
 
 function fetchServerState(params) {
   var summaryUrl = '/api/v1/orders/day-summary';
   if (params.employeeId) summaryUrl += '?server_id=' + encodeURIComponent(params.employeeId);
-  var tipoutUrl = '/api/v1/config/tipout';
 
   return Promise.all([
     fetch(summaryUrl).then(function(r) { return r.json(); }),
-    fetch(tipoutUrl).then(function(r) { return r.json(); }).catch(function() { return []; }),
+    fetch('/api/v1/config/tipout').then(function(r) { return r.json(); }).catch(function() { return []; }),
     fetch('/api/v1/config/store').then(function(r) { return r.json(); }).catch(function() { return {}; }),
   ]).then(function(results) {
     var d = results[0];
@@ -83,7 +63,6 @@ function fetchServerState(params) {
     var store = results[2];
     var today = new Date();
 
-    // Map TipoutRule {role_from, role_to, percentage, calculation_base} to UI format
     var tipOutRoles = [];
     if (Array.isArray(rules)) {
       tipOutRoles = rules.map(function(r) {
@@ -113,9 +92,9 @@ function fetchServerState(params) {
       oneTimeRole:   null,
       tipOutTotal:   0,
       takeHome:      d.card_tips    || 0,
-      cashReceived:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
       cashExpected:  parseFloat(((d.cash_total || 0) + (d.cash_tips || 0)).toFixed(2)),
       closedOrders:  d.closed_order_ids || [],
+      checks:        d.checks || [],
       restaurantName: (store.info && store.info.restaurant_name) || 'KINDpos',
       terminalId: '',
     };
@@ -125,218 +104,16 @@ function fetchServerState(params) {
 }
 
 // ─────────────────────────────────────────────────
-//  RECEIPT PANEL (left)
-// ─────────────────────────────────────────────────
-
-function buildReceiptContent(state) {
-  var BASE   = T.fsBtn;
-  var HEADER = T.fsBtn;
-  var SMALL  = T.fsSmall;
-  var COL    = T.bg;
-  var DIM    = T.subtleText;
-
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'padding:12px 14px;font-family:' + T.fb + ';color:' + COL + ';display:flex;flex-direction:column;gap:0;';
-
-  function sectionHeader(text) {
-    var el = document.createElement('div');
-    el.style.cssText = 'font-size:' + HEADER + ';font-weight:bold;margin-top:8px;margin-bottom:2px;';
-    el.textContent = text;
-    return el;
-  }
-
-  function row(label, value) {
-    var el = document.createElement('div');
-    el.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-size:' + BASE + ';padding:1px 0;';
-    var l = document.createElement('span'); l.textContent = label;
-    var v = document.createElement('span'); v.style.fontWeight = 'bold'; v.textContent = value;
-    el.appendChild(l); el.appendChild(v);
-    return el;
-  }
-
-  function divider() {
-    var el = document.createElement('div');
-    el.style.cssText = 'border-top:1px dashed ' + DIM + ';margin:6px 0;';
-    return el;
-  }
-
-  // Header
-  var id = document.createElement('div');
-  id.style.cssText = 'text-align:center;margin-bottom:8px;';
-  var r1 = document.createElement('div');
-  r1.style.cssText = 'font-size:' + HEADER + ';font-weight:bold;';
-  r1.textContent = state.restaurantName;
-  var r2 = document.createElement('div');
-  r2.style.cssText = 'font-size:' + BASE + ';font-weight:bold;';
-  r2.textContent = 'SERVER CHECKOUT';
-  id.appendChild(r1); id.appendChild(r2);
-  wrap.appendChild(id);
-
-  wrap.appendChild(row('Server:', state.employeeName));
-  wrap.appendChild(row('Date:', state.date));
-  wrap.appendChild(divider());
-
-  wrap.appendChild(sectionHeader('SALES'));
-  wrap.appendChild(row('Checks Closed', String(state.totalChecks)));
-  wrap.appendChild(row('Net Sales', fmt(state.netSales)));
-  wrap.appendChild(divider());
-
-  wrap.appendChild(sectionHeader('TIPS'));
-  wrap.appendChild(row('Card Tips', fmt(state.cardTips)));
-  wrap.appendChild(row('Cash Tips', fmt(state.cashTips)));
-  wrap.appendChild(divider());
-
-  wrap.appendChild(sectionHeader('TIP-OUT'));
-  state.tipOutRoles.forEach(function(r) {
-    wrap.appendChild(row(r.label + ' ' + r.percent + '%', fmt(r.amount)));
-  });
-  if (state.oneTimeRole && state.oneTimeRole.percent > 0) {
-    var ot = state.oneTimeRole;
-    wrap.appendChild(row((ot.label || 'One-Time') + ' ' + ot.percent + '%', fmt(ot.amount)));
-  }
-  wrap.appendChild(row('Tip-Out Total', fmt(state.tipOutTotal)));
-  wrap.appendChild(divider());
-
-  // Take-home
-  var thRow = row('TAKE-HOME', fmt(state.takeHome));
-  thRow.querySelector('span:last-child').style.fontSize = T.fsBtn;
-  wrap.appendChild(thRow);
-  wrap.appendChild(divider());
-
-  // Cash expected
-  var ceRow = row('CASH EXPECTED', fmt(state.cashExpected));
-  ceRow.querySelector('span:last-child').style.fontSize = T.fsBtn;
-  wrap.appendChild(ceRow);
-  wrap.appendChild(divider());
-
-  var footer = document.createElement('div');
-  footer.style.cssText = 'text-align:center;margin-top:6px;font-size:' + SMALL + ';color:' + COL + ';';
-  footer.textContent = '** CONFIDENTIAL **';
-  wrap.appendChild(footer);
-
-  return wrap;
-}
-
-function buildReceiptPanel(state) {
-  var panel = document.createElement('div');
-  panel.style.cssText = [
-    'width:' + RECEIPT_W + 'px;flex-shrink:0;',
-    'display:flex;flex-direction:column;',
-    'background:' + T.bgDark + ';',
-    'overflow:hidden;',
-  ].join('');
-  applySunkenStyle(panel);
-
-  var header = document.createElement('div');
-  header.style.cssText = [
-    'flex-shrink:0;padding:6px 12px;',
-    'background:' + T.bgEdge + ';',
-    'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';',
-    'letter-spacing:0.1em;text-align:center;',
-  ].join('');
-  header.textContent = 'PRINT PREVIEW';
-  panel.appendChild(header);
-
-  _receiptScroll = document.createElement('div');
-  _receiptScroll.style.cssText = 'flex:1;overflow-y:auto;background:' + T.mint + ';';
-  _receiptScroll.appendChild(buildReceiptContent(state));
-  panel.appendChild(_receiptScroll);
-
-  return panel;
-}
-
-// ─────────────────────────────────────────────────
-//  DETAIL ROW HELPERS
-// ─────────────────────────────────────────────────
-
-function detailRow(label, value, valueColor) {
-  var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;font-family:' + T.fb + ';padding:2px 0;';
-  var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
-  lbl.textContent = label;
-  var val = document.createElement('span');
-  val.style.cssText = 'font-size:40px;color:' + (valueColor || T.gold) + ';font-weight:bold;';
-  val.textContent = value;
-  row.appendChild(lbl); row.appendChild(val);
-  return row;
-}
-
-function detailDivider() {
-  var el = document.createElement('div');
-  el.style.cssText = 'border-top:1px solid ' + T.bg + ';margin:4px 0;';
-  return el;
-}
-
-// ─────────────────────────────────────────────────
-//  SHORTCUT BUTTONS (UNADJUSTED + $0 ALL)
-// ─────────────────────────────────────────────────
-
-function buildShortcutRow(state) {
-  var row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:8px;';
-
-  var uPair = buildStyledButton(T.darkBtn);
-  uPair.wrap.style.cssText = 'flex:1;height:34px;';
-  uPair.inner.style.fontFamily = T.fb;
-  uPair.inner.style.fontSize = T.fsSmall;
-  uPair.inner.style.color = T.lavender;
-  uPair.inner.textContent = 'UNADJUSTED';
-  uPair.wrap.addEventListener('pointerup', function() {
-    SceneManager.openTransactional('sc-tip-adjust', { employeeId: state.employeeId, employeeName: state.employeeName, onDone: refreshScene });
-  });
-  row.appendChild(uPair.wrap);
-
-  var zPair = buildStyledButton(T.darkBtn);
-  zPair.wrap.style.cssText = 'flex:1;height:34px;';
-  zPair.inner.style.fontFamily = T.fb;
-  zPair.inner.style.fontSize = T.fsSmall;
-  zPair.inner.style.color = RED;
-  zPair.inner.textContent = '$0 ALL';
-  zPair.wrap.addEventListener('pointerup', function() {
-    doZeroAll(state);
-  });
-  row.appendChild(zPair.wrap);
-
-  return row;
-}
-
-// ─────────────────────────────────────────────────
-//  $0 ALL ACTION
-// ─────────────────────────────────────────────────
-
-function doZeroAll(state) {
-  var count = state.unadjustedTips || 0;
-  if (count === 0) return;
-
-  SceneManager.interrupt('zero-confirm', {
-    onConfirm: function() {
-      var url = '/api/v1/payments/zero-unadjusted';
-      if (state.employeeId) url += '?server_id=' + encodeURIComponent(state.employeeId);
-      fetch(url, { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function() { refreshScene(); })
-        .catch(function(err) {
-          console.error('[KINDpos] Zero all failed:', err);
-          showToast('Zero-all failed — check connection');
-        });
-    },
-    onCancel: function() {},
-    params: { count: count },
-  });
-}
-
-// ─────────────────────────────────────────────────
 //  CARD DEFINITIONS — 4 cards in 2×2 grid
 // ─────────────────────────────────────────────────
 
-function getCardDefs(state) {
+function getCardDefs(state, opts) {
   return [
     {
       title: 'Sales Summary',
       hero: fmt(state.netSales),
       heroColor: T.gold,
-      subtitle: state.totalChecks + ' checks • ' + fmt(state.avgCheck) + ' avg',
+      subtitle: state.totalChecks + ' checks \u2022 ' + fmt(state.avgCheck) + ' avg',
       border: T.border,
       statusColor: null,
       buildExpanded: function(el) {
@@ -355,10 +132,10 @@ function getCardDefs(state) {
       title: 'Tip Summary',
       hero: fmt(state.cardTips + state.cashTips),
       heroColor: T.gold,
-      subtitle: 'card tips • cash tips',
+      subtitle: 'card tips \u2022 cash tips',
       border: T.border,
       statusColor: state.unadjustedTips > 0 ? T.yellow : null,
-      hasShortcuts: true,
+      buildShortcuts: opts && opts.buildShortcuts ? function() { return opts.buildShortcuts(state); } : null,
       buildExpanded: function(el) {
         el.appendChild(detailRow('Card Tips',    fmt(state.cardTips)));
         el.appendChild(detailRow('Cash Tips',    fmt(state.cashTips)));
@@ -367,15 +144,17 @@ function getCardDefs(state) {
         if (state.unadjustedTips > 0) {
           el.appendChild(detailRow('Unadjusted', String(state.unadjustedTips), T.yellow));
         }
-        el.appendChild(buildGap(8));
-        el.appendChild(buildShortcutRow(state));
+        if (opts && opts.buildShortcuts) {
+          el.appendChild(buildGap(8));
+          el.appendChild(opts.buildShortcuts(state));
+        }
       },
     },
     {
       title: 'Tip-Out Calc',
-      hero: '−' + fmt(state.tipOutTotal),
+      hero: '\u2212' + fmt(state.tipOutTotal),
       heroColor: RED,
-      subtitle: (state.tipOutRoles.length ? state.tipOutRoles[0].percent + '% rate' : '0%') + ' • editable',
+      subtitle: (state.tipOutRoles.length ? state.tipOutRoles[0].percent + '% rate' : '0%') + ' \u2022 editable',
       border: T.border,
       statusColor: null,
       buildExpanded: function(el) {
@@ -389,7 +168,6 @@ function getCardDefs(state) {
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Total Tip-Out', fmt(state.tipOutTotal)));
 
-        // Adjust % button
         var adjPair = buildStyledButton(T.darkBtn);
         adjPair.wrap.style.cssText = 'width:100%;height:36px;margin-top:8px;';
         adjPair.inner.style.fontFamily = T.fb;
@@ -406,12 +184,12 @@ function getCardDefs(state) {
       title: 'Take-Home',
       hero: fmt(state.takeHome),
       heroColor: T.gold,
-      subtitle: 'tips − tipout + cash',
+      subtitle: 'tips \u2212 tipout + cash',
       border: T.gold,
       statusColor: null,
       buildExpanded: function(el) {
         el.appendChild(detailRow('Card Tips',    fmt(state.cardTips)));
-        el.appendChild(detailRow('Tip-Out',      '− ' + fmt(state.tipOutTotal), RED));
+        el.appendChild(detailRow('Tip-Out',      '\u2212 ' + fmt(state.tipOutTotal), RED));
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Take-Home',    fmt(state.takeHome), T.gold));
         el.appendChild(detailDivider());
@@ -422,233 +200,72 @@ function getCardDefs(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  CARD TILE (collapsed view in grid)
+//  SHORTCUT ROW (UNADJUSTED + $0 ALL)
 // ─────────────────────────────────────────────────
 
-function buildCardTile(def, idx) {
-  var pair = buildStyledButton(T.darkBtn);
-  var wrap = pair.wrap;
-  var inner = pair.inner;
+function buildShortcutRow(state, refreshFn) {
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;';
+  row.setAttribute('data-shortcut', '1');
 
-  inner.style.borderWidth = BEVEL + 'px';
-  inner.style.clipPath = chamfer(CHAM);
-  inner.style.flexDirection = 'column';
-  inner.style.alignItems = 'stretch';
-  inner.style.justifyContent = 'flex-start';
-  inner.style.padding = '10px 12px';
-  inner.style.position = 'relative';
-  inner.style.gap = '2px';
-
-  if (def.border && def.border !== T.border) {
-    inner.style.borderColor = def.border;
-  }
-
-  var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;text-align:center;';
-  title.textContent = def.title;
-  inner.appendChild(title);
-
-  var hr = document.createElement('div');
-  hr.style.cssText = 'height:1px;background:' + T.border + ';margin:4px 0;';
-  inner.appendChild(hr);
-
-  var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:45px;color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
-  hero.textContent = def.hero;
-  inner.appendChild(hero);
-
-  var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;';
-  sub.textContent = def.subtitle;
-  inner.appendChild(sub);
-
-  var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';text-align:center;margin-top:2px;';
-  hint.textContent = '▸';
-  inner.appendChild(hint);
-
-  var dot = document.createElement('div');
-  dot.style.cssText = 'position:absolute;bottom:8px;right:8px;width:8px;height:8px;clip-path:circle(50%);background:' + (def.statusColor || T.cyan) + ';opacity:' + (def.statusColor ? '1' : '0.4') + ';';
-  inner.appendChild(dot);
-
-  if (def.hasShortcuts && _state) {
-    var shortcuts = buildShortcutRow(_state);
-    shortcuts.style.marginTop = '4px';
-    inner.appendChild(shortcuts);
-  }
-
-  wrap.addEventListener('pointerup', function(e) {
-    if (e.target.closest && e.target.closest('[data-shortcut]')) return;
-    expandCard(idx);
+  var uPair = buildStyledButton(T.darkBtn);
+  uPair.wrap.style.cssText = 'flex:1;height:34px;';
+  uPair.inner.style.fontFamily = T.fb;
+  uPair.inner.style.fontSize = T.fsSmall;
+  uPair.inner.style.color = T.lavender;
+  uPair.inner.textContent = 'UNADJUSTED';
+  uPair.wrap.addEventListener('pointerup', function() {
+    SceneManager.openTransactional('co-tip-adjust', { serverId: state.employeeId, onDone: refreshFn });
   });
+  row.appendChild(uPair.wrap);
 
-  return wrap;
+  var zPair = buildStyledButton(T.darkBtn);
+  zPair.wrap.style.cssText = 'flex:1;height:34px;';
+  zPair.inner.style.fontFamily = T.fb;
+  zPair.inner.style.fontSize = T.fsSmall;
+  zPair.inner.style.color = RED;
+  zPair.inner.textContent = '$0 ALL';
+  zPair.wrap.addEventListener('pointerup', function() {
+    doZeroAll(state, refreshFn);
+  });
+  row.appendChild(zPair.wrap);
+
+  return row;
 }
 
-// ─────────────────────────────────────────────────
-//  CARD STRIP (thin label for collapsed siblings)
-// ─────────────────────────────────────────────────
+function doZeroAll(state, refreshFn) {
+  var count = state.unadjustedTips || 0;
+  if (count === 0) return;
 
-function buildCardStrip(def, idx) {
-  var strip = document.createElement('div');
-  strip.style.cssText = [
-    'height:' + STRIP_H + 'px;',
-    'display:flex;align-items:center;justify-content:space-between;',
-    'padding:0 12px;cursor:pointer;',
-    'background:' + T.bgDark + ';',
-    'border:1px solid ' + T.border + ';',
-    'clip-path:' + chamfer(4) + ';',
-    'font-family:' + T.fb + ';',
-    'user-select:none;-webkit-user-select:none;',
-  ].join('');
-
-  var lbl = document.createElement('span');
-  lbl.style.cssText = 'font-size:40px;color:' + T.mint + ';';
-  lbl.textContent = def.title;
-  strip.appendChild(lbl);
-
-  var val = document.createElement('span');
-  val.style.cssText = 'font-size:40px;color:' + T.cyan + ';';
-  val.textContent = def.hero;
-  strip.appendChild(val);
-
-  strip.addEventListener('pointerup', function() { expandCard(idx); });
-
-  return strip;
-}
-
-// ─────────────────────────────────────────────────
-//  GRID VIEW (2×2 card grid)
-// ─────────────────────────────────────────────────
-
-function buildGridView(state) {
-  var defs = getCardDefs(state);
-  var grid = document.createElement('div');
-  grid.style.cssText = [
-    'flex:1;',
-    'display:grid;',
-    'grid-template-columns:repeat(2,1fr);',
-    'grid-template-rows:repeat(2,1fr);',
-    'gap:' + CARD_GAP + 'px;',
-  ].join('');
-
-  defs.forEach(function(def, i) { grid.appendChild(buildCardTile(def, i)); });
-
-  return grid;
-}
-
-// ─────────────────────────────────────────────────
-//  EXPANDED VIEW
-// ─────────────────────────────────────────────────
-
-function buildExpandedView(state, idx) {
-  var defs = getCardDefs(state);
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:4px;overflow:hidden;';
-
-  for (var i = 0; i < idx; i++) { wrap.appendChild(buildCardStrip(defs[i], i)); }
-
-  var expanded = document.createElement('div');
-  expanded.style.cssText = [
-    'flex:1;',
-    'background:' + T.bgDark + ';',
-    'border:2px solid ' + (defs[idx].border || T.border) + ';',
-    'clip-path:' + chamfer(CHAM) + ';',
-    'display:flex;flex-direction:column;',
-    'overflow:hidden;',
-  ].join('');
-
-  var hdr = document.createElement('div');
-  hdr.style.cssText = 'flex-shrink:0;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;background:' + T.bg3 + ';cursor:pointer;user-select:none;-webkit-user-select:none;';
-  var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;';
-  hTitle.textContent = defs[idx].title;
-  var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
-  hHint.textContent = '▾';
-  hdr.appendChild(hTitle); hdr.appendChild(hHint);
-  hdr.addEventListener('pointerup', function() { collapseToGrid(); });
-  expanded.appendChild(hdr);
-
-  var content = document.createElement('div');
-  content.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:4px;';
-  defs[idx].buildExpanded(content);
-  expanded.appendChild(content);
-
-  wrap.appendChild(expanded);
-
-  for (var j = idx + 1; j < defs.length; j++) { wrap.appendChild(buildCardStrip(defs[j], j)); }
-
-  return wrap;
-}
-
-// ─────────────────────────────────────────────────
-//  EXPAND / COLLAPSE STATE
-// ─────────────────────────────────────────────────
-
-function expandCard(idx) {
-  if (!_state || !_gridContainer || _accordionCooldown) return;
-  _accordionCooldown = true;
-  setTimeout(function() { _accordionCooldown = false; }, 150);
-  _expandedIdx = idx;
-  _gridContainer.innerHTML = '';
-  _gridContainer.appendChild(buildExpandedView(_state, idx));
-}
-
-function collapseToGrid() {
-  if (!_state || !_gridContainer || _accordionCooldown) return;
-  _accordionCooldown = true;
-  setTimeout(function() { _accordionCooldown = false; }, 150);
-  _expandedIdx = null;
-  _gridContainer.innerHTML = '';
-  _gridContainer.appendChild(buildGridView(_state));
-}
-
-// ─────────────────────────────────────────────────
-//  BLOCKER / CLEAR BANNER
-// ─────────────────────────────────────────────────
-
-function buildBlockerBanner(state) {
-  var el = document.createElement('div');
-  el.style.cssText = [
-    'flex-shrink:0;height:' + BANNER_H + 'px;',
-    'display:flex;align-items:center;justify-content:center;',
-    'font-family:' + T.fb + ';font-size:40px;',
-    'clip-path:' + chamfer(4) + ';',
-  ].join('');
-
-  var blocked = isBlocked(state);
-  if (blocked) {
-    el.style.background = 'rgba(255,51,85,0.1)';
-    el.style.border = '1px solid ' + RED;
-    el.style.color = RED;
-    var msgs = [];
-    if (state.openChecks > 0) msgs.push(state.openChecks + ' open check' + (state.openChecks > 1 ? 's' : ''));
-    if (state.unadjustedTips > 0) msgs.push(state.unadjustedTips + ' unadjusted tip' + (state.unadjustedTips > 1 ? 's' : ''));
-    el.textContent = '⚠ RESOLVE: ' + msgs.join(' + ');
-  } else {
-    el.style.background = 'rgba(51,255,255,0.08)';
-    el.style.border = '1px solid ' + T.cyan;
-    el.style.color = T.cyan;
-    el.textContent = '✓ ALL CLEAR — ready to finalize';
-  }
-
-  _bannerEl = el;
-  return el;
+  SceneManager.interrupt('co-zero-confirm', {
+    onConfirm: function() {
+      var url = '/api/v1/payments/zero-unadjusted';
+      if (state.employeeId) url += '?server_id=' + encodeURIComponent(state.employeeId);
+      fetch(url, { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function() { if (refreshFn) refreshFn(); })
+        .catch(function(err) {
+          console.error('[KINDpos] Zero all failed:', err);
+          showToast('Zero-all failed \u2014 check connection');
+        });
+    },
+    onCancel: function() {},
+    params: { count: count },
+  });
 }
 
 // ─────────────────────────────────────────────────
 //  ACTION BAR (PRINT → FINALIZE)
 // ─────────────────────────────────────────────────
 
-function buildActionBar(state) {
+function buildActionBar(state, sceneState, refreshFn) {
   var bar = document.createElement('div');
   bar.style.cssText = 'flex-shrink:0;height:' + ACTION_H + 'px;display:flex;align-items:stretch;gap:8px;';
 
   function arrow() {
     var el = document.createElement('div');
     el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';flex-shrink:0;';
-    el.textContent = '→';
+    el.textContent = '\u2192';
     return el;
   }
 
@@ -678,21 +295,25 @@ function buildActionBar(state) {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
     finPair.inner.style.color = T.dimText;
-    finPair.inner.textContent = '🔒 //FINALIZE//';
+    finPair.inner.textContent = '\uD83D\uDD12 //FINALIZE//';
     finPair.wrap.style.pointerEvents = 'none';
     finPair.wrap.style.opacity = '0.5';
-  } else if (!_pinUnlocked) {
+  } else if (!sceneState.pinUnlocked) {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
     finPair.inner.style.color = T.mutedText;
-    finPair.inner.textContent = '🔒 //FINALIZE//';
+    finPair.inner.textContent = '\uD83D\uDD12 //FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
-      openPinGate(function() {
-        _pinUnlocked = true;
-        if (bar.parentNode) {
-          var newBar = buildActionBar(state);
-          bar.parentNode.replaceChild(newBar, bar);
-        }
+      SceneManager.interrupt('co-manager-pin', {
+        onConfirm: function() {
+          sceneState.pinUnlocked = true;
+          if (bar.parentNode) {
+            var newBar = buildActionBar(state, sceneState, refreshFn);
+            bar.parentNode.replaceChild(newBar, bar);
+          }
+        },
+        onCancel: function() {},
+        params: {},
       });
     });
   } else {
@@ -711,15 +332,43 @@ function buildActionBar(state) {
 }
 
 // ─────────────────────────────────────────────────
-//  MANAGER PIN GATE
+//  FINALIZE FLOW
 // ─────────────────────────────────────────────────
 
-function openPinGate(onSuccess) {
-  SceneManager.interrupt('manager-pin', {
-    onConfirm: function() {
-      if (onSuccess) onSuccess();
+function completeFinalizeAfterTips(state) {
+  fetch('/api/v1/orders/close-batch', { method: 'POST' })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      console.log('[KINDpos] Server checkout finalized:', data);
+      OrderSummary.hide();
+      SceneManager.closeTransactional('server-checkout');
+    })
+    .catch(function(err) {
+      console.error('[KINDpos] Finalize failed:', err);
+      showToast('Checkout failed \u2014 check connection');
+    });
+}
+
+function doFinalize(state) {
+  SceneManager.interrupt('cash-tip-declare', {
+    onConfirm: function(amount) {
+      if (amount != null && amount > 0) {
+        fetch('/api/v1/servers/declare-cash-tips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ server_id: state.employeeId, amount: amount }),
+        }).then(function() { completeFinalizeAfterTips(state); })
+          .catch(function() { completeFinalizeAfterTips(state); });
+      } else {
+        completeFinalizeAfterTips(state);
+      }
     },
-    onCancel: function() {},
+    onCancel: function() {
+      completeFinalizeAfterTips(state);
+    },
     params: {},
   });
 }
@@ -740,11 +389,161 @@ function openAdjustOverlay(state) {
     workingRoles: workingRoles,
     workingOneTime: workingOneTime,
     state: state,
-    onDismiss: function() {
-      refreshAfterAdjust(state);
-    },
+    recalcTipOut: recalcTipOut,
   });
 }
+
+// ─────────────────────────────────────────────────
+//  OrderSummary HELPERS
+// ─────────────────────────────────────────────────
+
+function buildCheckList(state) {
+  return (state.checks || []).filter(function(c) {
+    return c.status === 'closed';
+  }).map(function(c) {
+    return { name: c.checkLabel || c.checkId || 'CHK', total: c.amount || 0 };
+  });
+}
+
+function showSummaryPanel(state) {
+  OrderSummary.showCheckout({
+    title: 'CHECKOUT RECAP',
+    label: state.employeeName || state.date,
+    checks: buildCheckList(state),
+    cardSales: state.cardSales,
+    tips: state.cardTips + state.cashTips,
+    cashExpected: state.cashExpected,
+  });
+}
+
+function updateSummaryPanel(state) {
+  OrderSummary.updateCheckout({
+    label: state.employeeName || state.date,
+    checks: buildCheckList(state),
+    cardSales: state.cardSales,
+    tips: state.cardTips + state.cashTips,
+    cashExpected: state.cashExpected,
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  MAIN SCENE (SM2)
+// ═══════════════════════════════════════════════════
+
+defineScene({
+  name: 'server-checkout',
+  state: {
+    data: null,
+    expandedIdx: null,
+    gridContainer: null,
+    rightCol: null,
+    pinUnlocked: false,
+    accordionCooldown: false,
+  },
+  render: function(container, params, state) {
+    setSceneName('Checkout: ' + (params.employeeName || ''));
+    setHeaderBack({ back: true, x: true, onBack: function() {
+      OrderSummary.hide();
+      SceneManager.closeTransactional('server-checkout');
+    }});
+
+    container.style.cssText = [
+      'width:100%;height:100%;',
+      'display:flex;flex-direction:column;gap:8px;',
+      'padding:' + SCENE_PAD + 'px;',
+      'box-sizing:border-box;overflow:hidden;',
+    ].join('');
+
+    function refreshScene() {
+      if (!state.rightCol || !state.data) return;
+      fetchServerState({ employeeId: state.data.employeeId, employeeName: state.data.employeeName }).then(function(newState) {
+        newState.restaurantName = state.data.restaurantName;
+        newState.terminalId = state.data.terminalId;
+        state.data = newState;
+        state.expandedIdx = null;
+        updateSummaryPanel(state.data);
+        rebuildRight();
+      });
+    }
+
+    function rebuildRight() {
+      state.rightCol.innerHTML = '';
+      state.gridContainer = document.createElement('div');
+      state.gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+
+      var cardOpts = {
+        columns: 2,
+        buildShortcuts: function(s) { return buildShortcutRow(s, refreshScene); },
+        onExpand: function(idx) { expandCard(idx); },
+        onCollapse: function() { collapseToGrid(); },
+      };
+
+      var defs = getCardDefs(state.data, cardOpts);
+      state.gridContainer.appendChild(buildCardGrid(defs, cardOpts));
+      state.rightCol.appendChild(state.gridContainer);
+
+      var msgs = [];
+      if (state.data.openChecks > 0) msgs.push(state.data.openChecks + ' open check' + (state.data.openChecks > 1 ? 's' : ''));
+      if (state.data.unadjustedTips > 0) msgs.push(state.data.unadjustedTips + ' unadjusted tip' + (state.data.unadjustedTips > 1 ? 's' : ''));
+      state.rightCol.appendChild(buildBlockerBanner(msgs));
+      state.rightCol.appendChild(buildActionBar(state.data, state, refreshScene));
+    }
+
+    function expandCard(idx) {
+      if (!state.data || !state.gridContainer || state.accordionCooldown) return;
+      state.accordionCooldown = true;
+      setTimeout(function() { state.accordionCooldown = false; }, 150);
+      state.expandedIdx = idx;
+      state.gridContainer.innerHTML = '';
+
+      var cardOpts = {
+        buildShortcuts: function(s) { return buildShortcutRow(s, refreshScene); },
+        onExpand: function(i) { expandCard(i); },
+        onCollapse: function() { collapseToGrid(); },
+      };
+      var defs = getCardDefs(state.data, cardOpts);
+      state.gridContainer.appendChild(buildExpandedCard(defs, idx, cardOpts));
+    }
+
+    function collapseToGrid() {
+      if (!state.data || !state.gridContainer || state.accordionCooldown) return;
+      state.accordionCooldown = true;
+      setTimeout(function() { state.accordionCooldown = false; }, 150);
+      state.expandedIdx = null;
+      state.gridContainer.innerHTML = '';
+
+      var cardOpts = {
+        columns: 2,
+        buildShortcuts: function(s) { return buildShortcutRow(s, refreshScene); },
+        onExpand: function(i) { expandCard(i); },
+        onCollapse: function() { collapseToGrid(); },
+      };
+      var defs = getCardDefs(state.data, cardOpts);
+      state.gridContainer.appendChild(buildCardGrid(defs, cardOpts));
+    }
+
+    // Fetch and build
+    fetchServerState(params).then(function(data) {
+      state.data = data;
+
+      // Left: OrderSummary panel
+      showSummaryPanel(state.data);
+
+      // Right: card grid + banner + action bar
+      state.rightCol = document.createElement('div');
+      state.rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+      rebuildRight();
+      container.appendChild(state.rightCol);
+    });
+  },
+  unmount: function(state) {
+    OrderSummary.hide();
+  },
+});
+
+// ─────────────────────────────────────────────────
+//  TRANSACTIONAL: adjust-pct (SM2)
+// ─────────────────────────────────────────────────
 
 function buildAdjustRow(role) {
   var row = document.createElement('div');
@@ -765,7 +564,7 @@ function buildAdjustRow(role) {
   var decBtn = buildStyledButton(T.bgDark);
   decBtn.wrap.style.width = '36px'; decBtn.wrap.style.height = '36px';
   decBtn.inner.style.fontFamily = T.fb; decBtn.inner.style.fontSize = T.fsBtn; decBtn.inner.style.color = T.mint;
-  decBtn.inner.textContent = '−';
+  decBtn.inner.textContent = '\u2212';
   decBtn.wrap.addEventListener('pointerup', function() {
     if (role.percent > 0) { role.percent = parseFloat((role.percent - 0.5).toFixed(1)); pctEl.textContent = role.percent + '%'; }
   });
@@ -790,234 +589,10 @@ function buildAdjustRow(role) {
   return row;
 }
 
-function refreshAfterAdjust(state) {
-  if (_receiptScroll) {
-    _receiptScroll.innerHTML = '';
-    _receiptScroll.appendChild(buildReceiptContent(state));
-  }
-  if (_rightCol) {
-    _rightCol.innerHTML = '';
-    _gridContainer = document.createElement('div');
-    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
-    _gridContainer.appendChild(buildGridView(state));
-    _rightCol.appendChild(_gridContainer);
-    _rightCol.appendChild(buildBlockerBanner(state));
-    _rightCol.appendChild(buildActionBar(state));
-  }
-}
-
-// ─────────────────────────────────────────────────
-//  FINALIZE ACTION
-// ─────────────────────────────────────────────────
-
-function completeFinalizeAfterTips(state) {
-  fetch('/api/v1/orders/close-batch', { method: 'POST' })
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(data) {
-      console.log('[KINDpos] Server checkout finalized:', data);
-      SceneManager.closeTransactional('server-checkout');
-    })
-    .catch(function(err) {
-      console.error('[KINDpos] Finalize failed:', err);
-      showToast('Checkout failed — check connection');
-    });
-}
-
-function showCashTipDeclaration(state) {
-  SceneManager.interrupt('cash-tip-declare', {
-    onConfirm: function(amount) {
-      if (amount != null && amount > 0) {
-        fetch('/api/v1/servers/declare-cash-tips', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ server_id: state.employeeId, amount: amount }),
-        }).then(function() { completeFinalizeAfterTips(state); })
-          .catch(function() { completeFinalizeAfterTips(state); });
-      } else {
-        completeFinalizeAfterTips(state);
-      }
-    },
-    onCancel: function() {
-      completeFinalizeAfterTips(state);
-    },
-    params: {},
-  });
-}
-
-function doFinalize(state) {
-  showCashTipDeclaration(state);
-}
-
-// ─────────────────────────────────────────────────
-//  REFRESH SCENE
-// ─────────────────────────────────────────────────
-
-function refreshScene() {
-  if (!_rightCol || !_state) return;
-  fetchServerState({ employeeId: _state.employeeId, employeeName: _state.employeeName }).then(function(newState) {
-    newState.restaurantName = _state.restaurantName;
-    newState.terminalId = _state.terminalId;
-    _state = newState;
-    _expandedIdx = null;
-
-    if (_receiptScroll) {
-      _receiptScroll.innerHTML = '';
-      _receiptScroll.appendChild(buildReceiptContent(_state));
-    }
-    _rightCol.innerHTML = '';
-    _gridContainer = document.createElement('div');
-    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
-    _gridContainer.appendChild(buildGridView(_state));
-    _rightCol.appendChild(_gridContainer);
-    _rightCol.appendChild(buildBlockerBanner(_state));
-    _rightCol.appendChild(buildActionBar(_state));
-  });
-}
-
-// ─────────────────────────────────────────────────
-//  BUILD SCENE
-// ─────────────────────────────────────────────────
-
-function buildScene(el, params) {
-  _pinUnlocked = false;
-  _expandedIdx = null;
-
-  el.style.cssText = [
-    'width:100%;height:100%;',
-    'display:flex;gap:' + COL_GAP + 'px;',
-    'padding:' + SCENE_PAD + 'px;',
-    'box-sizing:border-box;overflow:hidden;',
-  ].join('');
-
-  fetchServerState(params).then(function(state) {
-    _state = state;
-
-    el.appendChild(buildReceiptPanel(_state));
-
-    _rightCol = document.createElement('div');
-    _rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;overflow:hidden;';
-
-    _gridContainer = document.createElement('div');
-    _gridContainer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
-    _gridContainer.appendChild(buildGridView(_state));
-    _rightCol.appendChild(_gridContainer);
-
-    _rightCol.appendChild(buildBlockerBanner(_state));
-    _rightCol.appendChild(buildActionBar(_state));
-
-    el.appendChild(_rightCol);
-  });
-}
-
-// ─────────────────────────────────────────────────
-//  REGISTRATION
-// ─────────────────────────────────────────────────
-
-SceneManager.register({
-  name: 'server-checkout',
-  mount: function(container, params) {
-    setSceneName('Checkout: ' + (params.employeeName || ''));
-    setHeaderBack({ back: true, x: true, onBack: function() { SceneManager.closeTransactional('server-checkout'); } });
-    buildScene(container, params);
-  },
-  unmount: function() {
-    _state         = null;
-    _expandedIdx   = null;
-    _gridContainer = null;
-    _bannerEl      = null;
-    _receiptScroll = null;
-    _rightCol      = null;
-    _pinUnlocked   = false;
-  },
-  cache: false,
-  timeoutMs: 0,
-});
-
-// ─────────────────────────────────────────────────
-//  INTERRUPT: zero-confirm  (SM2)
-//  Confirms the "$0 ALL" action for unadjusted tips
-// ─────────────────────────────────────────────────
-
-defineScene({
-  name: 'zero-confirm',
-  render: function(container, params) {
-    var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:' + T.scenePad + 'px;min-width:280px;';
-
-    var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + RED + ';letter-spacing:2px;margin-bottom:4px;';
-    lbl.textContent = '// ZERO ALL TIPS //';
-    panel.appendChild(lbl);
-
-    var msg = document.createElement('div');
-    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
-    msg.textContent = 'Set ' + (params.count || 0) + ' unadjusted tip(s) to $0.00?';
-    panel.appendChild(msg);
-
-    var confirmBtn = buildButton('CONFIRM', {
-      fill: T.darkBtn, color: RED, fontSize: T.fsBtnSm, height: 44,
-      onTap: function() { params.onConfirm(); },
-    });
-    confirmBtn.style.width = '240px';
-    panel.appendChild(confirmBtn);
-
-    var cancelBtn = buildButton('CANCEL', {
-      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
-      onTap: function() { params.onCancel(); },
-    });
-    cancelBtn.style.width = '240px';
-    panel.appendChild(cancelBtn);
-    container.appendChild(panel);
-  },
-});
-
-// ─────────────────────────────────────────────────
-//  INTERRUPT: manager-pin  (SM2)
-//  Manager PIN gate for FINALIZE action
-// ─────────────────────────────────────────────────
-
-defineScene({
-  name: 'manager-pin',
-  render: function(container, params) {
-    container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
-    var numpad = buildNumpad({
-      maxDigits: 4,
-      masked: true,
-      onSubmit: function(pin) {
-        fetch('/api/v1/auth/verify-pin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: pin }),
-        })
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.valid) {
-              params.onConfirm(data);
-            } else {
-              numpad.setError('Invalid PIN');
-            }
-          })
-          .catch(function() { numpad.setError('PIN check failed'); });
-      },
-      onCancel: function() { params.onCancel(); },
-    });
-    container.appendChild(numpad);
-  },
-});
-
-// ─────────────────────────────────────────────────
-//  TRANSACTIONAL: adjust-pct  (SM2)
-//  Tip-out percentage adjustment overlay
-// ─────────────────────────────────────────────────
-
 defineScene({
   name: 'adjust-pct',
   render: function(container, params) {
     setHeaderBack({ back: true, onBack: function() {
-      if (params.onDismiss) params.onDismiss();
       SceneManager.closeTransactional('adjust-pct');
     }});
 
@@ -1036,7 +611,6 @@ defineScene({
       scrollArea.appendChild(buildAdjustRow(roles[i]));
     }
 
-    // One-time role
     if (params.workingOneTime) {
       var divider = document.createElement('div');
       divider.style.cssText = 'height:1px;background:' + T.border + ';margin:8px 0;';
@@ -1051,7 +625,6 @@ defineScene({
 
     container.appendChild(scrollArea);
 
-    // Action bar
     var actionBar = document.createElement('div');
     actionBar.style.cssText = 'flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;padding-top:10px;';
 
@@ -1062,14 +635,12 @@ defineScene({
     actionBar.appendChild(buildButton('SAVE', {
       fill: T.darkBtn, color: T.gold, fontSize: T.fsBtn, width: 120, height: 40,
       onTap: function() {
-        // Write updated roles back to state
         var st = params.state;
         if (st) {
           st.tipOutRoles = roles;
           if (params.workingOneTime) st.oneTimeRole = params.workingOneTime;
-          recalcTipOut(st);
+          if (params.recalcTipOut) params.recalcTipOut(st);
         }
-        // Persist to backend
         var payload = roles.map(function(r) { return { label: r.label, percent: r.percent, basis: r.basis }; });
         fetch('/api/v1/config/tipout', {
           method: 'PUT',
@@ -1077,7 +648,6 @@ defineScene({
           body: JSON.stringify(payload),
         }).catch(function(err) { console.error('[KINDpos] Tipout save failed:', err); });
 
-        if (params.onDismiss) params.onDismiss();
         SceneManager.closeTransactional('adjust-pct');
       },
     }));
@@ -1086,8 +656,7 @@ defineScene({
 });
 
 // ─────────────────────────────────────────────────
-//  INTERRUPT: cash-tip-declare  (SM2)
-//  Cash tip declaration before finalizing checkout
+//  INTERRUPT: cash-tip-declare (SM2)
 // ─────────────────────────────────────────────────
 
 defineScene({
@@ -1106,7 +675,6 @@ defineScene({
     msg.textContent = 'Declare cash tips received this shift:';
     panel.appendChild(msg);
 
-    // Display
     var display = document.createElement('div');
     display.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.gold + ';background:' + T.bgDark + ';padding:10px;margin-bottom:' + T.colGapSm + 'px;min-height:52px;min-width:200px;text-align:center;border:2px solid ' + T.border + ';';
     display.textContent = '$0.00';
@@ -1118,7 +686,6 @@ defineScene({
       display.textContent = '$' + (cents / 100).toFixed(2);
     }
 
-    // Numpad grid
     var grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;';
     var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'CLR', '0', 'DEL'];
@@ -1139,7 +706,6 @@ defineScene({
     }
     panel.appendChild(grid);
 
-    // Action buttons
     var btns = document.createElement('div');
     btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
     btns.appendChild(buildButton('DECLARE', {
@@ -1155,148 +721,5 @@ defineScene({
     }));
     panel.appendChild(btns);
     container.appendChild(panel);
-  },
-});
-
-// ─────────────────────────────────────────────────
-//  TRANSACTIONAL: sc-tip-adjust  (SM2)
-//  Inline unadjusted-tip adjustment (list + numpad)
-// ─────────────────────────────────────────────────
-
-defineScene({
-  name: 'sc-tip-adjust',
-  render: function(container, params) {
-    var _selected = null;
-    var _checks = [];
-    var _listEl = null;
-
-    setSceneName('Adjust Tips');
-    setHeaderBack({ back: true, onBack: function() {
-      SceneManager.closeTransactional('sc-tip-adjust');
-      if (params.onDone) params.onDone();
-    }});
-
-    container.style.cssText = 'width:100%;height:100%;display:flex;gap:' + COL_GAP + 'px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
-
-    // ── Left: check list ──
-    var leftCol = document.createElement('div');
-    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
-
-    var header = document.createElement('div');
-    header.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';letter-spacing:0.1em;margin-bottom:8px;';
-    header.textContent = 'UNADJUSTED TIPS';
-    leftCol.appendChild(header);
-
-    _listEl = document.createElement('div');
-    _listEl.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;';
-    leftCol.appendChild(_listEl);
-    container.appendChild(leftCol);
-
-    // ── Right: numpad ──
-    var rightCol = document.createElement('div');
-    rightCol.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-
-    var hintEl = document.createElement('div');
-    hintEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';margin-bottom:8px;text-align:center;';
-    hintEl.textContent = 'Tap a check to adjust';
-    rightCol.appendChild(hintEl);
-
-    var numpad = buildNumpad({
-      masked: false,
-      maxDigits: 6,
-      submitLabel: 'ent',
-      displayFormat: function(digits) {
-        var n = parseInt(digits || '0', 10);
-        return '$' + (n / 100).toFixed(2);
-      },
-      canSubmit: function() { return _selected !== null; },
-      onSubmit: function(digits) {
-        if (!_selected) return;
-        var tipAmount = parseInt(digits || '0', 10) / 100;
-        fetch('/api/v1/payments/tip-adjust', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order_id: _selected.check_id, payment_id: _selected.payment_id, tip_amount: tipAmount }),
-        }).then(function(r) {
-          if (r.ok) {
-            showToast('Tip adjusted', { bg: T.goGreen });
-            _selected.tip_amount = tipAmount;
-            _selected = null;
-            hintEl.textContent = 'Tap a check to adjust';
-            numpad.clear();
-            renderList();
-          } else {
-            showToast('Tip adjust failed', { bg: T.red });
-          }
-        }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
-      },
-      onCancel: function() {
-        SceneManager.closeTransactional('sc-tip-adjust');
-        if (params.onDone) params.onDone();
-      },
-    });
-    rightCol.appendChild(numpad);
-    container.appendChild(rightCol);
-
-    function renderList() {
-      _listEl.innerHTML = '';
-      var unadj = _checks.filter(function(c) { return c.tip_amount == null; });
-      if (unadj.length === 0) {
-        var done = document.createElement('div');
-        done.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';text-align:center;padding:20px;';
-        done.textContent = '\u2713 All tips adjusted';
-        _listEl.appendChild(done);
-        return;
-      }
-      for (var i = 0; i < unadj.length; i++) {
-        (function(check) {
-          var row = document.createElement('div');
-          var isActive = _selected === check;
-          row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;background:' + (isActive ? T.bg3 : T.bgDark) + ';border:2px solid ' + (isActive ? T.gold : T.border) + ';';
-          applySunkenStyle(row);
-
-          var label = document.createElement('span');
-          label.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
-          label.textContent = check.check_num || 'CHK';
-
-          var amt = document.createElement('span');
-          amt.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;';
-          amt.textContent = fmt(check.amount || 0);
-
-          row.appendChild(label);
-          row.appendChild(amt);
-          row.addEventListener('pointerup', function() {
-            _selected = check;
-            hintEl.textContent = (check.check_num || 'CHK') + ' — ' + fmt(check.amount || 0);
-            numpad.clear();
-            renderList();
-          });
-          _listEl.appendChild(row);
-        })(_checks.filter(function(c) { return c.tip_amount == null; })[i]);
-      }
-    }
-
-    // Fetch unadjusted checks
-    var url = '/api/v1/orders/day-summary';
-    if (params.employeeId) url += '?server_id=' + encodeURIComponent(params.employeeId);
-    fetch(url).then(function(r) { return r.json(); }).then(function(data) {
-      var raw = data.checks || [];
-      _checks = raw.filter(function(c) { return c.status === 'closed' && c.method === 'card'; }).map(function(c) {
-        return {
-          check_id: c.checkId,
-          check_num: c.checkLabel || c.checkId,
-          payment_id: c.paymentId,
-          amount: c.amount,
-          tip_amount: c.adjusted ? c.tip : null,
-        };
-      });
-      renderList();
-    }).catch(function() {
-      _listEl.innerHTML = '';
-      var err = document.createElement('div');
-      err.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.red + ';padding:20px;text-align:center;';
-      err.textContent = 'Failed to load checks';
-      _listEl.appendChild(err);
-    });
   },
 });
