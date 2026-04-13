@@ -36,16 +36,17 @@ HARDWARE_DB_PATH = os.path.join(
 
 # ── Port fingerprinting ───────────────────────────────────────────────────────
 PRINTER_PORTS = [9100, 9101, 9102]
-# Dejavoo SPIn — try default first, then fallbacks
-CARD_READER_PORTS = [9000, 8443, 9443, 443, 8080]
+# Dejavoo SPIn — default port first, then dedicated fallbacks only
+# (no 443/8080 — too many routers and NAS boxes respond on those)
+CARD_READER_PORTS = [9000, 8443, 9443]
 
 ALL_SCAN_PORTS = PRINTER_PORTS + CARD_READER_PORTS
 
 # ── Scan tuning ──────────────────────────────────────────────────────────────
-FAST_TIMEOUT  = 0.3   # Pass 1: wired devices
-SLOW_TIMEOUT  = 1.5   # Pass 2: WiFi / slow responders
-DIRECT_TIMEOUT = 1.5  # Direct IP probe (user-entered)
-BATCH_SIZE    = 50    # Hosts per concurrent batch
+FAST_TIMEOUT  = 0.5   # Pass 1: wired devices
+SLOW_TIMEOUT  = 2.5   # Pass 2: WiFi / slow responders
+DIRECT_TIMEOUT = 2.5  # Direct IP probe (user-entered)
+BATCH_SIZE    = 20    # Hosts per concurrent batch (conservative for WiFi)
 
 # ── DB bootstrap ──────────────────────────────────────────────────────────────
 
