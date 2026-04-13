@@ -10,6 +10,9 @@ import { SceneManager } from '../scene-manager.js';
 import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
+import { buildCard } from '../theme-manager.js';
+
+var CHROME = T.numpadChassis;
 
 // ── Layout constants ─────────────────────────────
 export var CARD_GAP  = 8;
@@ -74,63 +77,62 @@ export function buildMixBar(cashPct, cardPct) {
 // ─────────────────────────────────────────────────
 
 export function buildCardTile(def, idx, opts) {
-  var pair = buildStyledButton(T.darkBtn);
-  var wrap = pair.wrap;
-  var inner = pair.inner;
+  var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  var card = pair.card;
+  card.style.display = 'flex';
+  card.style.flexDirection = 'column';
+  card.style.overflow = 'hidden';
+  card.style.cursor = 'pointer';
+  card.style.position = 'relative';
 
-  inner.style.borderWidth = BEVEL + 'px';
-  inner.style.clipPath = chamfer(CHAM);
-  inner.style.flexDirection = 'column';
-  inner.style.alignItems = 'stretch';
-  inner.style.justifyContent = 'flex-start';
-  inner.style.padding = '8px 10px';
-  inner.style.position = 'relative';
-  inner.style.gap = '2px';
+  // Chrome header bar
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
+  var hdrTxt = document.createElement('div');
+  hdrTxt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;';
+  hdrTxt.textContent = def.title;
+  hdr.appendChild(hdrTxt);
+  card.appendChild(hdr);
 
-  if (def.border && def.border !== T.border) {
-    inner.style.borderColor = def.border;
-  }
-
-  var title = document.createElement('div');
-  title.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';font-weight:bold;text-align:center;';
-  title.textContent = def.title;
-  inner.appendChild(title);
-
-  var hr = document.createElement('div');
-  hr.style.cssText = 'height:1px;background:' + T.border + ';margin:4px 0;';
-  inner.appendChild(hr);
+  // Body
+  var body = document.createElement('div');
+  body.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 8px;gap:2px;';
 
   var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;';
+  hero.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;';
   hero.textContent = def.hero;
-  inner.appendChild(hero);
+  body.appendChild(hero);
 
   var sub = document.createElement('div');
   sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
   sub.textContent = def.subtitle;
-  inner.appendChild(sub);
+  body.appendChild(sub);
 
   var hint = document.createElement('div');
   hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;margin-top:1px;';
   hint.textContent = '\u25B8';
-  inner.appendChild(hint);
+  body.appendChild(hint);
 
+  card.appendChild(body);
+
+  // Status dot
   var dot = document.createElement('div');
   dot.style.cssText = 'position:absolute;bottom:8px;right:8px;width:8px;height:8px;clip-path:circle(50%);background:' + (def.statusColor || T.cyan) + ';opacity:' + (def.statusColor ? '1' : '0.4') + ';';
-  inner.appendChild(dot);
+  card.appendChild(dot);
 
+  // Shortcut buttons below body
   if (def.buildShortcuts) {
     var shortcuts = def.buildShortcuts();
-    shortcuts.style.marginTop = '4px';
-    inner.appendChild(shortcuts);
+    shortcuts.style.cssText += 'padding:0 8px 6px;flex-shrink:0;';
+    card.appendChild(shortcuts);
   }
 
-  wrap.addEventListener('pointerup', function(e) {
+  pair.wrap.addEventListener('pointerup', function(e) {
     if (e.target.closest && e.target.closest('[data-shortcut]')) return;
     if (opts && opts.onExpand) opts.onExpand(idx);
   });
 
-  return wrap;
+  return pair.wrap;
 }
 
 // ─────────────────────────────────────────────────
@@ -206,28 +208,28 @@ export function buildExpandedCard(defs, idx, opts) {
     wrap.appendChild(buildCardStrip(defs[i], i, opts));
   }
 
-  var expanded = document.createElement('div');
-  expanded.style.cssText = [
-    'flex:1;',
-    'background:' + T.bgDark + ';',
-    'border:2px solid ' + (defs[idx].border || T.border) + ';',
-    'clip-path:' + chamfer(CHAM) + ';',
-    'display:flex;flex-direction:column;',
-    'overflow:hidden;',
-  ].join('');
+  var expPair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  var expanded = expPair.card;
+  expanded.style.display = 'flex';
+  expanded.style.flexDirection = 'column';
+  expanded.style.flex = '1';
+  expanded.style.overflow = 'hidden';
+  expPair.wrap.style.flex = '1';
+  expPair.wrap.style.display = 'flex';
+  expPair.wrap.style.minHeight = '0';
 
+  // Chrome header bar (tappable to collapse)
   var hdr = document.createElement('div');
   hdr.style.cssText = [
-    'flex-shrink:0;padding:8px 14px;',
+    'background:' + CHROME + ';padding:5px 14px;flex-shrink:0;',
     'display:flex;justify-content:space-between;align-items:center;',
-    'background:' + T.bg3 + ';cursor:pointer;',
-    'user-select:none;-webkit-user-select:none;',
+    'cursor:pointer;user-select:none;-webkit-user-select:none;',
   ].join('');
   var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';font-weight:bold;';
+  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;';
   hTitle.textContent = defs[idx].title;
   var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';';
+  hHint.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';';
   hHint.textContent = '\u25BE';
   hdr.appendChild(hTitle);
   hdr.appendChild(hHint);
@@ -241,7 +243,7 @@ export function buildExpandedCard(defs, idx, opts) {
   defs[idx].buildExpanded(content);
   expanded.appendChild(content);
 
-  wrap.appendChild(expanded);
+  wrap.appendChild(expPair.wrap);
 
   for (var j = idx + 1; j < defs.length; j++) {
     wrap.appendChild(buildCardStrip(defs[j], j, opts));
