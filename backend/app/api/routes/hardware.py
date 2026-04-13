@@ -5,17 +5,25 @@ MAC-as-identity: IPs change, MACs don't.
 """
 
 import asyncio
+import json
+import logging
 import os
 import socket
+import subprocess
 import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 import aiosqlite
 import httpx
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+from ...config import settings
+
+logger = logging.getLogger("kindpos.hardware")
 
 router = APIRouter(prefix="/hardware", tags=["hardware"])
 
@@ -27,14 +35,17 @@ HARDWARE_DB_PATH = os.path.join(
 )
 
 # ── Port fingerprinting ───────────────────────────────────────────────────────
-# Standard ESC/POS raw socket ports
-PRINTER_PORTS     = [9100, 9101, 9102]
-# LPD, IPP, HTTP management (some Epson models expose HTTP)
-PRINTER_PORTS_EXT = [515, 631, 80]
-# Dejavoo SPIN and common card reader ports
-CARD_READER_PORTS = [8443, 9443, 443, 8080, 10009, 4443, 9000]
+PRINTER_PORTS = [9100, 9101, 9102]
+# Dejavoo SPIn — try default first, then fallbacks
+CARD_READER_PORTS = [9000, 8443, 9443, 443, 8080]
 
-ALL_SCAN_PORTS    = PRINTER_PORTS + PRINTER_PORTS_EXT + CARD_READER_PORTS
+ALL_SCAN_PORTS = PRINTER_PORTS + CARD_READER_PORTS
+
+# ── Scan tuning ──────────────────────────────────────────────────────────────
+FAST_TIMEOUT  = 0.3   # Pass 1: wired devices
+SLOW_TIMEOUT  = 1.5   # Pass 2: WiFi / slow responders
+DIRECT_TIMEOUT = 1.5  # Direct IP probe (user-entered)
+BATCH_SIZE    = 50    # Hosts per concurrent batch
 
 # ── DB bootstrap ──────────────────────────────────────────────────────────────
 
@@ -87,164 +98,34 @@ class TestPrintRequest(BaseModel):
     port: int = 9100
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  SCAN
+#  NETWORK SCANNER
 # ═══════════════════════════════════════════════════════════════════════════════
+
+def _subnet_targets() -> List[str]:
+    """Build the target IP list from settings.default_subnet (e.g. '10.0.0.0/24')."""
+    raw = settings.default_subnet
+    # Strip CIDR if present — we always scan the /24
+    base = raw.split('/')[0]
+    prefix = base.rsplit('.', 1)[0]
+    return [f"{prefix}.{i}" for i in range(1, 255)]
+
 
 def _ports_for_type(device_type: Optional[str]) -> list:
     """Return the port list to scan based on device type filter."""
     if device_type == 'card_reader':
         return CARD_READER_PORTS
     elif device_type in ('printer', 'kitchen', 'receipt'):
-        return PRINTER_PORTS + PRINTER_PORTS_EXT
+        return PRINTER_PORTS
     return ALL_SCAN_PORTS
 
 
-@router.get("/scan")
-async def scan_network(ip: Optional[str] = None, type: Optional[str] = None):
-    """
-    Scan for devices on known ESC/POS and card-reader ports.
-    ?ip=10.0.0.19    → probe that specific address only
-    ?type=card_reader → only scan card reader ports (much faster)
-    ?type=printer     → only scan printer ports
-    (no param)        → sweep default subnet, all ports
-    """
-    await _ensure_db()
-    ports = _ports_for_type(type)
+# ── Low-level probes ─────────────────────────────────────────────────────────
 
-    if ip:
-        targets = [ip]
-    else:
-        subnet = '10.0.0'
-        if '/' in subnet:
-            subnet = subnet.split('/')[0].rsplit('.', 1)[0]
-        targets = [f"{subnet}.{i}" for i in range(1, 255)]
-
-    found = await asyncio.gather(*[_probe_host(h, ports) for h in targets])
-    results = [r for r in found if r is not None]
-
-    # Annotate with saved info where MACs match
-    async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        async with db.execute("SELECT * FROM devices") as cur:
-            saved = {row['mac']: dict(row) async for row in cur}
-
-    for r in results:
-        if r['mac'] in saved:
-            r['saved_name'] = saved[r['mac']]['name']
-            r['saved_type'] = saved[r['mac']]['type']
-
-    return results
-
-
-@router.get("/scan/stream")
-async def scan_network_stream(ip: Optional[str] = None, type: Optional[str] = None):
-    """
-    Same as /scan but streams devices as they are found via Server-Sent Events.
-    Each discovered device fires immediately — no waiting for full sweep.
-
-    ?type=card_reader → only scan card reader ports (much faster)
-
-    SSE event types:
-        start    — scan started, includes target count
-        device   — a device was found (same shape as /scan results)
-        complete — sweep finished
-        error    — something went wrong
-    """
-    await _ensure_db()
-    ports = _ports_for_type(type)
-
-    if ip:
-        targets = [ip]
-    else:
-        subnet = '10.0.0'
-        if '/' in subnet:
-            subnet = subnet.split('/')[0].rsplit('.', 1)[0]
-        targets = [f"{subnet}.{i}" for i in range(1, 255)]
-
-    # Load saved devices for annotation
-    async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        async with db.execute("SELECT * FROM devices") as cur:
-            saved = {row['mac']: dict(row) async for row in cur}
-
-    async def stream():
-        import json
-
-        yield f"data: {json.dumps({'type': 'start', 'total': len(targets)})}\n\n"
-
-        # Probe in batches of 40 — higher concurrency for faster sweeps
-        BATCH = 40
-        for i in range(0, len(targets), BATCH):
-            batch = targets[i:i + BATCH]
-            results = await asyncio.gather(*[_probe_host(h, ports) for h in batch])
-            for r in results:
-                if r is not None:
-                    if r['mac'] in saved:
-                        r['saved_name'] = saved[r['mac']]['name']
-                        r['saved_type'] = saved[r['mac']]['type']
-                    yield f"data: {json.dumps({**r, 'type': 'device'})}\n\n"
-
-        yield f"data: {json.dumps({'type': 'complete'})}\n\n"
-
-    from fastapi.responses import StreamingResponse as SR
-    return SR(
-        stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-async def _probe_host(host: str, ports: list = None):
-    """Probe a host on given ports in parallel. Returns device dict or None."""
-    if ports is None:
-        ports = ALL_SCAN_PORTS
-    loop = asyncio.get_running_loop()
-
-    async def _try_port(port):
-        try:
-            hit = await asyncio.wait_for(
-                loop.run_in_executor(None, _tcp_probe, host, port),
-                timeout=0.8
-            )
-            return port if hit else None
-        except (asyncio.TimeoutError, Exception):
-            return None
-
-    # Probe all ports in parallel — first hit wins
-    results = await asyncio.gather(*[_try_port(p) for p in ports])
-    hit_port = next((p for p in results if p is not None), None)
-    if hit_port is None:
-        return None
-
-    mac   = _get_mac(host)
-    dtype = 'printer' if hit_port in PRINTER_PORTS + PRINTER_PORTS_EXT else 'card_reader'
-    result = {
-        'ip':   host,
-        'port': hit_port,
-        'mac':  mac or f"UNKNOWN-{host.replace('.', '-')}",
-        'type': dtype,
-        'name': 'Thermal Printer' if dtype == 'printer' else 'Card Reader',
-    }
-    # Auto-detect SPIn details for card readers
-    if dtype == 'card_reader':
-        spin = await _probe_spin(host, hit_port)
-        if spin.get('register_id'):
-            result['register_id'] = spin['register_id']
-        if spin.get('model'):
-            result['name'] = spin['model']
-        elif spin.get('status'):
-            result['name'] = 'Dejavoo'
-    return result
-
-
-def _tcp_probe(host: str, port: int) -> bool:
+def _tcp_probe(host: str, port: int, timeout: float) -> bool:
+    """Attempt a TCP connect. Returns True if the port is open."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.8)
+            s.settimeout(timeout)
             s.connect((host, port))
             return True
     except Exception:
@@ -253,11 +134,11 @@ def _tcp_probe(host: str, port: int) -> bool:
 
 def _get_mac(ip: str) -> Optional[str]:
     """Best-effort MAC from ARP cache — works on LAN without root."""
-    import subprocess
     for cmd in (['arp', '-a', ip], ['arp', '-n', ip]):
         try:
-            out = subprocess.check_output(cmd, timeout=2,
-                                          stderr=subprocess.DEVNULL).decode()
+            out = subprocess.check_output(
+                cmd, timeout=2, stderr=subprocess.DEVNULL
+            ).decode()
             for line in out.splitlines():
                 if ip in line:
                     for part in line.split():
@@ -269,17 +150,19 @@ def _get_mac(ip: str) -> Optional[str]:
 
 
 async def _probe_spin(ip: str, port: int) -> dict:
-    """Probe a Dejavoo device via SPIn GET to auto-detect RegisterId and serial."""
-    xml = "<request><function>GetStatus</function><RegisterId></RegisterId></request>"
+    """Probe a Dejavoo device via SPIn GET to auto-detect RegisterId and model."""
+    xml = "<request><TransType>GetStatus</TransType><RegisterId></RegisterId></request>"
     encoded = urllib.parse.quote(xml, safe='')
     url = f"http://{ip}:{port}/spin/cgi.html?TerminalTransaction={encoded}"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(url)
             if resp.status_code == 200 and resp.text.strip():
                 body = resp.text.strip()
-                if body.startswith("<xmp>"): body = body[5:]
-                if body.endswith("</xmp>"): body = body[:-6]
+                if "<xmp>" in body:
+                    body = body.split("<xmp>", 1)[-1]
+                if "</xmp>" in body:
+                    body = body.split("</xmp>", 1)[0]
                 body = urllib.parse.unquote(body.strip())
                 root = ET.fromstring(body)
                 return {
@@ -291,6 +174,203 @@ async def _probe_spin(ip: str, port: int) -> dict:
     except Exception:
         pass
     return {}
+
+
+# ── Host probing ─────────────────────────────────────────────────────────────
+
+async def _probe_host(host: str, ports: list, timeout: float) -> Optional[dict]:
+    """
+    Probe a single host on all given ports. Collects ALL open ports,
+    then classifies the device from the full picture.
+    Returns a device dict or None if nothing responded.
+    """
+    loop = asyncio.get_running_loop()
+
+    async def _try_port(port: int) -> Optional[int]:
+        try:
+            hit = await asyncio.wait_for(
+                loop.run_in_executor(None, _tcp_probe, host, port, timeout),
+                timeout=timeout + 0.1,
+            )
+            return port if hit else None
+        except Exception:
+            return None
+
+    results = await asyncio.gather(*[_try_port(p) for p in ports])
+    open_ports = [p for p in results if p is not None]
+
+    if not open_ports:
+        return None
+
+    # Classify from complete picture — printer ports take priority
+    printer_hits = [p for p in open_ports if p in PRINTER_PORTS]
+    reader_hits = [p for p in open_ports if p in CARD_READER_PORTS]
+
+    if printer_hits:
+        dtype = 'printer'
+        best_port = printer_hits[0]
+        name = 'Thermal Printer'
+    elif reader_hits:
+        dtype = 'card_reader'
+        best_port = reader_hits[0]  # 9000 is first in CARD_READER_PORTS
+        name = 'Card Reader'
+    else:
+        return None
+
+    # MAC resolution — small delay lets ARP cache settle after TCP connect
+    await asyncio.sleep(0.05)
+    mac = await loop.run_in_executor(None, _get_mac, host)
+
+    result = {
+        'ip':   host,
+        'port': best_port,
+        'mac':  mac or f"UNKNOWN-{host.replace('.', '-')}",
+        'type': dtype,
+        'name': name,
+    }
+
+    # Auto-detect SPIn details for card readers
+    if dtype == 'card_reader':
+        spin = await _probe_spin(host, best_port)
+        if spin.get('register_id'):
+            result['register_id'] = spin['register_id']
+        if spin.get('model'):
+            result['name'] = spin['model']
+        elif spin.get('status'):
+            result['name'] = 'Dejavoo'
+
+    return result
+
+
+async def _annotate_saved(devices: List[dict]) -> List[dict]:
+    """Annotate discovered devices with saved info from hardware_config.db."""
+    async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM devices") as cur:
+            saved = {row['mac']: dict(row) async for row in cur}
+    for d in devices:
+        if d['mac'] in saved:
+            d['saved_name'] = saved[d['mac']]['name']
+            d['saved_type'] = saved[d['mac']]['type']
+    return devices
+
+
+# ── Scan endpoints ───────────────────────────────────────────────────────────
+
+@router.get("/scan/stream")
+async def scan_network_stream(
+    ip: Optional[str] = None,
+    type: Optional[str] = None,
+):
+    """
+    SSE streaming network scan. Two modes:
+
+    Subnet sweep (default):
+        Pass 1 (fast, 300ms) — finds wired devices quickly
+        Pass 2 (slow, 1.5s)  — retries missed hosts for WiFi devices
+
+    Direct IP probe:
+        ?ip=10.0.0.19           → single host
+        ?ip=10.0.0.19,10.0.0.20 → multiple hosts (comma-separated)
+        Always uses the slower timeout.
+
+    Optional: ?type=card_reader|printer to filter ports scanned.
+
+    SSE event types:
+        start    — scan started, includes target count and mode
+        device   — a device was found
+        pass     — which scan pass is running (1 or 2)
+        complete — sweep finished, includes device count
+        error    — something went wrong
+    """
+    await _ensure_db()
+    ports = _ports_for_type(type)
+
+    # Determine mode: direct IPs vs subnet sweep
+    if ip:
+        direct_ips = [addr.strip() for addr in ip.split(',') if addr.strip()]
+        mode = 'direct'
+    else:
+        direct_ips = []
+        mode = 'sweep'
+
+    # Load saved devices for annotation
+    async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM devices") as cur:
+            saved = {row['mac']: dict(row) async for row in cur}
+
+    def _sse(data: dict) -> str:
+        return f"data: {json.dumps(data)}\n\n"
+
+    def _annotate(device: dict) -> dict:
+        if device['mac'] in saved:
+            device['saved_name'] = saved[device['mac']]['name']
+            device['saved_type'] = saved[device['mac']]['type']
+        return device
+
+    async def stream():
+        try:
+            if mode == 'direct':
+                # ── Direct IP probe ──────────────────────────────────
+                yield _sse({'type': 'start', 'total': len(direct_ips), 'mode': 'direct'})
+
+                results = await asyncio.gather(
+                    *[_probe_host(h, ports, DIRECT_TIMEOUT) for h in direct_ips]
+                )
+                for r in results:
+                    if r is not None:
+                        yield _sse({**_annotate(r), 'type': 'device'})
+
+            else:
+                # ── Subnet sweep — two passes ────────────────────────
+                targets = _subnet_targets()
+                yield _sse({'type': 'start', 'total': len(targets), 'mode': 'sweep'})
+
+                # Pass 1: fast (wired)
+                yield _sse({'type': 'pass', 'pass': 1, 'timeout': FAST_TIMEOUT})
+                found_ips = set()
+
+                for i in range(0, len(targets), BATCH_SIZE):
+                    batch = targets[i:i + BATCH_SIZE]
+                    results = await asyncio.gather(
+                        *[_probe_host(h, ports, FAST_TIMEOUT) for h in batch]
+                    )
+                    for r in results:
+                        if r is not None:
+                            found_ips.add(r['ip'])
+                            yield _sse({**_annotate(r), 'type': 'device'})
+
+                # Pass 2: slow (WiFi) — only hosts that didn't respond
+                missed = [t for t in targets if t not in found_ips]
+                if missed:
+                    yield _sse({'type': 'pass', 'pass': 2, 'timeout': SLOW_TIMEOUT, 'remaining': len(missed)})
+
+                    for i in range(0, len(missed), BATCH_SIZE):
+                        batch = missed[i:i + BATCH_SIZE]
+                        results = await asyncio.gather(
+                            *[_probe_host(h, ports, SLOW_TIMEOUT) for h in batch]
+                        )
+                        for r in results:
+                            if r is not None:
+                                found_ips.add(r['ip'])
+                                yield _sse({**_annotate(r), 'type': 'device'})
+
+            yield _sse({'type': 'complete'})
+
+        except Exception as e:
+            logger.error(f"Scan stream error: {e}")
+            yield _sse({'type': 'error', 'message': str(e)})
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -382,7 +462,7 @@ async def test_device(req: TestRequest):
 
     dev = dict(row)
     reachable = await asyncio.get_running_loop().run_in_executor(
-        None, _tcp_probe, dev['ip'], dev['port']
+        None, _tcp_probe, dev['ip'], dev['port'], DIRECT_TIMEOUT
     )
     return {
         "success": reachable,
@@ -456,9 +536,9 @@ async def hardware_status():
     return {
         "status": "online",
         "db_path": HARDWARE_DB_PATH,
-        "default_subnet": "10.0.0",
+        "default_subnet": settings.default_subnet,
         "endpoints": [
-            "/api/v1/hardware/scan",
+            "/api/v1/hardware/scan/stream",
             "/api/v1/hardware/devices",
             "/api/v1/hardware/test",
             "/api/v1/hardware/test-print",

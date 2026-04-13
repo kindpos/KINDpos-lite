@@ -2,7 +2,7 @@
 KINDpos Hardware Discovery API Tests
 =====================================
 Tests for the /api/v1/hardware/* endpoints:
-    - GET  /scan          — network scan for devices
+    - GET  /scan/stream   — SSE streaming network scan
     - POST /test          — test connectivity by MAC
     - POST /test-print    — send test print by IP
     - POST /devices       — persist device config
@@ -59,33 +59,58 @@ async def client(ledger):
         os.remove(HARDWARE_DB_PATH)
 
 
-# ── GET /api/v1/hardware/scan ─────────────────────────
+# ── GET /api/v1/hardware/scan/stream ─────────────────────────
+
+import json
+
+
+def _parse_sse(text: str) -> list:
+    """Parse SSE text into a list of JSON objects."""
+    events = []
+    for line in text.splitlines():
+        if line.startswith("data: "):
+            events.append(json.loads(line[6:]))
+    return events
 
 
 class TestHardwareScan:
-    """Tests for GET /api/v1/hardware/scan"""
+    """Tests for GET /api/v1/hardware/scan/stream (SSE)"""
 
-    async def test_scan_returns_list(self, client):
-        """Response is a JSON array of discovered devices."""
-        resp = await client.get("/api/v1/hardware/scan")
+    async def test_scan_stream_emits_start_and_complete(self, client):
+        """SSE stream emits start and complete events."""
+        resp = await client.get("/api/v1/hardware/scan/stream", params={"ip": "192.0.2.1"})
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        events = _parse_sse(resp.text)
+        types = [e['type'] for e in events]
+        assert 'start' in types
+        assert 'complete' in types
 
-    async def test_scan_handles_no_devices_found(self, client):
-        """Returns empty list in test environment (no real LAN)."""
-        resp = await client.get("/api/v1/hardware/scan")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+    async def test_scan_stream_start_has_mode(self, client):
+        """Start event includes the scan mode."""
+        resp = await client.get("/api/v1/hardware/scan/stream", params={"ip": "192.0.2.1"})
+        events = _parse_sse(resp.text)
+        start = next(e for e in events if e['type'] == 'start')
+        assert start['mode'] == 'direct'
 
-    async def test_scan_single_ip(self, client):
-        """Scan with ?ip= targets a single host."""
-        # Use RFC 5737 TEST-NET address — unreachable, but exercises the path
-        resp = await client.get("/api/v1/hardware/scan", params={"ip": "192.0.2.1"})
+    async def test_scan_stream_direct_multiple_ips(self, client):
+        """Direct IP mode accepts comma-separated addresses."""
+        resp = await client.get("/api/v1/hardware/scan/stream", params={"ip": "192.0.2.1,192.0.2.2"})
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        events = _parse_sse(resp.text)
+        start = next(e for e in events if e['type'] == 'start')
+        assert start['total'] == 2
+        assert start['mode'] == 'direct'
+
+    async def test_scan_stream_sweep_mode(self, client):
+        """Without ?ip, runs in sweep mode with two passes."""
+        # This will scan the full subnet — we just check it starts correctly
+        # Use a type filter to limit ports and speed up
+        resp = await client.get("/api/v1/hardware/scan/stream", params={"type": "card_reader"})
+        assert resp.status_code == 200
+        events = _parse_sse(resp.text)
+        start = next(e for e in events if e['type'] == 'start')
+        assert start['mode'] == 'sweep'
+        assert start['total'] == 254
 
 
 # ── POST /api/v1/hardware/test ────────────────────────
