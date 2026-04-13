@@ -164,7 +164,7 @@ defineScene({
       left: '12px',
       top: '12px',
       right: '12px',
-      height: '316px',
+      height: '252px',
       borderRadius: '5px',
       background: T.bg,
       borderTop: T.bevel + 'px solid ' + chassisEdges.light,
@@ -216,7 +216,7 @@ defineScene({
       padding: '6px',
       display: 'grid',
       gridTemplateColumns: 'repeat(3, 1fr)',
-      gridAutoRows: 'minmax(80px, auto)',
+      gridAutoRows: 'minmax(56px, auto)',
       gap: '6px',
       overflowY: 'auto',
       scrollbarWidth: 'none',
@@ -226,8 +226,8 @@ defineScene({
     // "+" tile (persistent, always at end)
     var addTile = document.createElement('div');
     Object.assign(addTile.style, {
-      borderRadius: '5px',
-      border: '2px dashed ' + T.mint,
+      border: '2px dashed ' + T.numpadChassis,
+      clipPath: chamfer(T.chamfer),
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -236,7 +236,7 @@ defineScene({
       boxSizing: 'border-box',
     });
     var plusText = document.createElement('div');
-    Object.assign(plusText.style, { fontFamily: T.fb, fontSize: '40px', color: T.mint });
+    Object.assign(plusText.style, { fontFamily: T.fb, fontSize: T.fsMed, color: T.numpadChassis });
     plusText.textContent = '+';
     addTile.appendChild(plusText);
 
@@ -268,6 +268,12 @@ defineScene({
       var btn = buildStyledButton({ variant: variant, disabled: isPaid });
       var wrap = btn.wrap;
       var inner = btn.inner;
+
+      // Selected seats match the header chassis green
+      if (variant === 'mint') {
+        wrap.style.background = T.numpadChassis;
+        inner.style.color = T.bgDark;
+      }
 
       // Override border-radius with chamfer
       wrap.style.borderRadius = '0';
@@ -304,6 +310,29 @@ defineScene({
 
       inner.appendChild(idEl);
       inner.appendChild(totalEl);
+
+      // X button to delete empty seats (min 1 seat)
+      if (!hasItems && !isPaid && state.seats.length > 1) {
+        wrap.style.position = 'relative';
+        var delBtn = document.createElement('div');
+        delBtn.style.cssText = 'position:absolute;top:2px;right:4px;z-index:5;width:18px;height:18px;display:flex;align-items:center;justify-content:center;'
+          + 'font-family:' + T.fb + ';font-size:12px;color:' + T.vermillion + ';cursor:pointer;user-select:none;';
+        delBtn.textContent = '\u2715';
+        track(delBtn, 'pointerup', (function(sId) {
+          return function(e) {
+            e.stopPropagation();
+            // Remove this seat
+            for (var di = 0; di < state.seats.length; di++) {
+              if (state.seats[di].id === sId) { state.seats.splice(di, 1); break; }
+            }
+            delete state.selected[sId];
+            delete state.seatEls[sId];
+            rebuildSeatGrid();
+            updateSummary();
+          };
+        })(seat.id));
+        wrap.appendChild(delBtn);
+      }
 
       state.seatEls[seat.id] = { wrap: wrap, inner: inner, idEl: idEl, totalEl: totalEl, isPaid: isPaid };
 
@@ -751,30 +780,33 @@ defineScene({
     SceneManager.on('payment:complete', onPaymentComplete);
     state.listeners.push({ el: null, event: 'payment:complete', handler: onPaymentComplete, bus: true });
 
-    // Row 1 (y:340): PRINT    RSND             DISC
-    // Row 2 (y:388): PAY      DRAWER    VOID
+    // Row 1 (y:272): PRINT    RSND    DISC
+    // Row 2 (y:318): PAY      DRAWER  VOID
+    var btnTop1 = '272px';
+    var btnTop2 = '318px';
+
     var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'md', onClick: handlePrint });
-    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '12px', top: '340px' });
+    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '12px', top: btnTop1 });
     root.appendChild(printBtn.wrap);
 
     var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
-    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '240px', top: '340px' });
+    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '240px', top: btnTop1 });
     root.appendChild(rsndBtn.wrap);
 
     var discBtn = buildStyledButton({ label: 'DISC', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
-    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '358px', top: '340px' });
+    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '358px', top: btnTop1 });
     root.appendChild(discBtn.wrap);
 
     var payBtn = buildStyledButton({ label: 'PAY', variant: 'mint', size: 'md', onClick: handlePay });
-    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '12px', top: '388px' });
+    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '12px', top: btnTop2 });
     root.appendChild(payBtn.wrap);
 
     var drawerBtn = buildStyledButton({ label: 'DRAWER', variant: 'dark', size: 'sm', onClick: handleDrawer });
-    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '240px', top: '388px' });
+    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '240px', top: btnTop2 });
     root.appendChild(drawerBtn.wrap);
 
     var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
-    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '358px', top: '388px' });
+    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '358px', top: btnTop2 });
     root.appendChild(voidBtn.wrap);
 
     // ═══════════════════════════════════════════════════
@@ -805,7 +837,7 @@ defineScene({
       },
     });
     Object.assign(addItemBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '448px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '380px', zIndex: '50',
     });
     root.appendChild(addItemBtn.wrap);
 
@@ -858,7 +890,7 @@ defineScene({
       },
     });
     Object.assign(editSeatsBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '336px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '272px', zIndex: '50',
       display: 'none',
     });
     root.appendChild(editSeatsBtn.wrap);
@@ -948,7 +980,7 @@ defineScene({
       },
     });
     Object.assign(roundBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '392px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '326px', zIndex: '50',
     });
     root.appendChild(roundBtn.wrap);
   },
