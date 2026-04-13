@@ -479,67 +479,6 @@ function buildMain(parentEl, params) {
   main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
   _mainArea = main;
 
-  // SAVE / RECALL toolbar
-  var topRow = document.createElement('div');
-  topRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;flex-shrink:0;margin-bottom:4px;';
-
-  saveBtn = buildButton('SAVE', {
-    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
-    onTap: function() { handleSave(); },
-  });
-  var recallBtnEl = buildButton('RECALL', {
-    fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 36, fontFamily: T.fh,
-    onTap: function() { handleRecall(); },
-  });
-  topRow.appendChild(saveBtn);
-  topRow.appendChild(recallBtnEl);
-  main.appendChild(topRow);
-
-  // Seat selector bar (check-overview mode only)
-  if (params.returnScene === 'check-overview' && params.seatNumbers && params.seatNumbers.length > 0) {
-    var seatBar = document.createElement('div');
-    seatBar.style.cssText = 'display:flex;gap:4px;flex-shrink:0;margin-bottom:4px;';
-    var seatBtns = {};
-
-    function _updateSeatBar() {
-      var keys = Object.keys(seatBtns);
-      for (var k = 0; k < keys.length; k++) {
-        var key = keys[k];
-        var b = seatBtns[key];
-        var active = (key === String(_activeSeat));
-        b.style.background = active ? T.mint : T.darkBtn;
-        if (b.firstChild) b.firstChild.style.color = active ? T.bgDark : T.mint;
-      }
-    }
-
-    // ALL button (when multiple seats)
-    if (params.seatNumbers.length > 1) {
-      var allSb = buildButton('ALL', {
-        fill: _activeSeat === 'all' ? T.mint : T.darkBtn,
-        color: _activeSeat === 'all' ? T.bgDark : T.mint,
-        fontSize: '20px', height: 32, fontFamily: T.fh,
-        onTap: function() { _activeSeat = 'all'; _updateSeatBar(); },
-      });
-      allSb.style.flex = '1';
-      seatBtns['all'] = allSb;
-      seatBar.appendChild(allSb);
-    }
-
-    params.seatNumbers.forEach(function(sn) {
-      var label = 'S-' + String(sn).padStart(3, '0');
-      var sb = buildButton(label, {
-        fill: sn === _activeSeat ? T.mint : T.darkBtn,
-        color: sn === _activeSeat ? T.bgDark : T.mint,
-        fontSize: '20px', height: 32, fontFamily: T.fh,
-        onTap: function() { _activeSeat = sn; _updateSeatBar(); },
-      });
-      sb.style.flex = '1';
-      seatBtns[String(sn)] = sb;
-      seatBar.appendChild(sb);
-    });
-    main.appendChild(seatBar);
-  }
-
   var canvas = document.createElement('div');
   canvas.id = 'hex-canvas';
   canvas.style.cssText = [
@@ -569,178 +508,29 @@ function buildMain(parentEl, params) {
 }
 
 // ── BOTTOM BAR — Three States ────────────────────
-var _payParams = null; // stash params for PAY handler
-
-function rebuildBottomBar(params) {
-  if (params !== undefined) _payParams = params;
+function rebuildBottomBar() {
   if (!_bottomBar) return;
   _bottomBar.innerHTML = '';
 
-  var selectedIds = modifierSession.selectedItems;
-  var hasSelection = selectedIds.length > 0;
+  var hasUnsent = ticket.some(function(i) { return !i.sent; });
 
-  if (modifierSession.active) {
-    // ── State C: Session Active — UNDO + FINALIZE ──
-    var undoBtn = buildButton('UNDO', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh });
-    undoBtn.style.gridColumn = '1 / 3';
-    undoBtn.style.gridRow = '1';
-    undoBtn.style.height = '100%';
-    undoBtn.style.position = 'relative';
-    undoBtn.style.overflow = 'hidden';
+  var finalizeBtn = buildButton('FINALIZE', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
+    onTap: async function() {
+      if (hasUnsent) { try { await handleSaveOnly(); } catch (e) { return; } }
+      handleClose();
+    },
+  });
+  var sendBtn = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+    onTap: async function() {
+      if (hasUnsent) { try { await handleSend(); } catch (e) { return; } }
+      handleClose();
+    },
+  });
 
-    // Hold-to-cancel fill indicator
-    var holdFill = document.createElement('div');
-    holdFill.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:0;background:' + T.mint + ';opacity:0.3;pointer-events:none;z-index:1;';
-    undoBtn.appendChild(holdFill);
-
-    var holdTimer = null;
-    var didHold = false;
-    undoBtn.addEventListener('pointerdown', function(e) {
-      e.stopPropagation();
-      didHold = false;
-      holdFill.style.transition = 'width 600ms linear';
-      holdFill.style.width = '100%';
-      holdTimer = setTimeout(function() {
-        didHold = true;
-        holdFill.style.transition = 'none';
-        holdFill.style.width = '0';
-        cancelSession();
-      }, 600);
-    });
-    undoBtn.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
-      clearTimeout(holdTimer);
-      holdFill.style.transition = 'none';
-      holdFill.style.width = '0';
-      if (!didHold) undoLastMod();
-    });
-    undoBtn.addEventListener('pointerleave', function() {
-      clearTimeout(holdTimer);
-      holdFill.style.transition = 'none';
-      holdFill.style.width = '0';
-    });
-
-    var finalizeBtn = buildButton('FINALIZE', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { finalizeSession(); },
-    });
-    finalizeBtn.style.gridColumn = '3 / 6';
-    finalizeBtn.style.gridRow = '1';
-    finalizeBtn.style.height = '100%';
-
-    _bottomBar.appendChild(undoBtn);
-    _bottomBar.appendChild(finalizeBtn);
-    return;
-  }
-
-  // ── Row 1: ADD ITEMS tab + optional MODIFY button ──
-  if (hasSelection && !modifierSession.active) {
-    var addBtn = buildButton('ADD ITEMS', {
-      fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { clearModifierSelection(); },
-    });
-    addBtn.style.gridColumn = '1 / 3';
-    addBtn.style.gridRow = '1';
-    addBtn.style.height = '100%';
-
-    // State B: Items Selected — show MODIFY
-    var modifyBtn = buildButton('MODIFY', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { openModifierSession(); },
-    });
-    modifyBtn.style.gridColumn = '3 / 6';
-    modifyBtn.style.gridRow = '1';
-    modifyBtn.style.height = '100%';
-
-    _bottomBar.appendChild(addBtn);
-    _bottomBar.appendChild(modifyBtn);
-  } else {
-    // State A: Idle — ADD ITEMS + DONE
-    var tabItems = buildButton('ADD ITEMS', {
-      fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-    });
-    tabItems.style.gridColumn = '1 / 4';
-    tabItems.style.gridRow    = '1';
-    tabItems.style.height = '100%';
-    _tabItemsBtn = tabItems;
-
-    _bottomBar.appendChild(tabItems);
-
-    if (ticket.length > 0) {
-      var doneBtn = buildButton('DONE', {
-        fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
-        onTap: function() {
-          clearModifierSelection();
-          showToast('Items confirmed', { bg: T.goGreen, duration: 1200 });
-        },
-      });
-      doneBtn.style.gridColumn = '4 / 6';
-      doneBtn.style.gridRow    = '1';
-      doneBtn.style.height = '100%';
-      _bottomBar.appendChild(doneBtn);
-    }
-  }
-
-  // ── Row 2: Action buttons ──
-  if (sceneParams.returnScene === 'check-overview') {
-    // Check-overview mode: only ADD + SEND
-    var hasUnsent = ticket.some(function(i) { return !i.sent; });
-
-    var addOnly = buildButton('ADD', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
-      onTap: async function() {
-        if (hasUnsent) { try { await handleSaveOnly(); } catch (e) { return; } }
-        handleClose();
-      },
-    });
-    var sendAndClose = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: async function() {
-        if (hasUnsent) { try { await handleSend(); } catch (e) { return; } }
-        handleClose();
-      },
-    });
-
-    addOnly.style.gridColumn = '1 / 3'; addOnly.style.gridRow = '2'; addOnly.style.height = '100%';
-    sendAndClose.style.gridColumn = '3 / 6'; sendAndClose.style.gridRow = '2'; sendAndClose.style.height = '100%';
-    _bottomBar.appendChild(addOnly);
-    _bottomBar.appendChild(sendAndClose);
-  } else {
-    // Normal mode: DISC, VOID, PRINT, PAY, SEND
-      onTap: function() { handleDiscount(); },
-    });
-    var voidB = buildButton('VOID', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { handleVoid(); },
-    });
-    voidB.id = 'void-btn';
-    var print = buildButton('PRINT', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() {
-        if (!currentOrderId) return;
-        fetch(API + '/print/receipt/' + currentOrderId + '?copy_type=itemized', { method: 'POST' })
-          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); })
-          .catch(function(err) { console.warn('[KINDpos] Itemized print failed:', err); });
-      },
-    });
-    var pay = buildButton('PAY', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { handlePay(_payParams); },
-    });
-    var allSent = ticket.length > 0 && ticket.every(function(i) { return i.sent; });
-    var sendLabel = allSent ? 'RESEND' : 'SEND';
-    var send = buildButton(sendLabel, { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: function() { handleSend(); },
-    });
-
-    disc.style.gridColumn  = '1'; disc.style.gridRow  = '2'; disc.style.height = '100%';
-    voidB.style.gridColumn = '2'; voidB.style.gridRow = '2'; voidB.style.height = '100%';
-    print.style.gridColumn = '3'; print.style.gridRow = '2'; print.style.height = '100%';
-    pay.style.gridColumn   = '4'; pay.style.gridRow   = '2'; pay.style.height = '100%';
-    send.style.gridColumn  = '5'; send.style.gridRow  = '2'; send.style.height = '100%';
-
-    [disc, voidB, print, pay, send].forEach(function(b) { _bottomBar.appendChild(b); });
-
-    // Update void/delete label
-    var selected = ticket.filter(function(i) { return i.selected; });
-    var unsentSelected = selected.length > 0 && selected.every(function(i) { return !i.sent; });
-    var vInner = voidB.firstElementChild;
-    if (vInner) vInner.textContent = unsentSelected ? 'DELETE' : 'VOID';
-  }
-
+  finalizeBtn.style.gridColumn = '1 / 3'; finalizeBtn.style.gridRow = '1'; finalizeBtn.style.height = '100%';
+  sendBtn.style.gridColumn = '3 / 6'; sendBtn.style.gridRow = '1'; sendBtn.style.height = '100%';
+  _bottomBar.appendChild(finalizeBtn);
+  _bottomBar.appendChild(sendBtn);
 }
 
 function clearModifierSelection() {
@@ -2043,7 +1833,7 @@ async function handleSaveOnly() {
         body: JSON.stringify({
           order_type:  'quick_service',
           guest_count: 1,
-          customer_name: customerName || null,
+          customer_name: null,
           server_id:   sceneParams.employeeId || null,
           server_name: sceneParams.employeeName || null,
         }),
@@ -2140,7 +1930,7 @@ async function handleSend() {
         body: JSON.stringify({
           order_type:  'quick_service',
           guest_count: 1,
-          customer_name: customerName || null,
+          customer_name: null,
           server_id:   sceneParams.employeeId || null,
           server_name: sceneParams.employeeName || null,
         }),
@@ -2240,31 +2030,13 @@ function deepCopyTicket(src) {
 
 // ── CLOSE (X button) ────────────────────────────
 function handleClose() {
-  var hasSent = ticket.some(function(i) { return i.sent; });
-  if (hasSent && ticket.length > 0) {
-    // Auto-save sent orders to recall so they don't vanish
-    var seq = ++saveSeq;
-    var label = currentCheckNumber || ('CHECK-' + String(seq).padStart(3, '0'));
-    savedTabs.push({
-      id:       seq,
-      checkNum: label,
-      label:    customerName || '',
-      ticket:   deepCopyTicket(ticket),
-      orderId:  currentOrderId,
-    });
-    showToast('Order saved to recall', { bg: T.goGreen, duration: 1500 });
-  }
   OrderSummary.hide();
-  if (sceneParams.returnScene === 'check-overview') {
-    SceneManager.mountWorking('check-overview', {
-      checkId: currentOrderId || sceneParams.recallOrderId,
-      pin: sceneParams.pin,
-      employeeId: sceneParams.employeeId,
-      employeeName: sceneParams.employeeName,
-    });
-  } else {
-    SceneManager.mountWorking(_landingScene(sceneParams.roles), { emp: { id: sceneParams.employeeId, name: sceneParams.employeeName, pin: sceneParams.pin, roles: sceneParams.roles || [] } });
-  }
+  SceneManager.mountWorking('check-overview', {
+    checkId: currentOrderId || sceneParams.recallOrderId,
+    pin: sceneParams.pin,
+    employeeId: sceneParams.employeeId,
+    employeeName: sceneParams.employeeName,
+  });
 }
 
 // ── RECALL FROM BACKEND (open saved check) ──────
@@ -2277,7 +2049,6 @@ function recallFromBackend(orderId) {
     .then(function(order) {
       currentOrderId = order.order_id;
       currentCheckNumber = order.check_number || null;
-      customerName = order.customer_name || '';
       if (currentCheckNumber) setSceneName(currentCheckNumber);
 
       // Convert backend items to frontend ticket format
