@@ -510,31 +510,31 @@ defineScene({
     SceneManager.on('payment:complete', refreshOrder);
     state.listeners.push({ el: null, event: 'payment:complete', handler: refreshOrder, bus: true });
 
-    // Row 1 (y:340): DISC    RSND             PRINT
-    // Row 2 (y:388): VOID    DRAWER    PAY
-    var discBtn = buildStyledButton({ label: 'DISC', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
-    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '12px', top: '340px' });
-    root.appendChild(discBtn.wrap);
-
-    var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
-    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '130px', top: '340px' });
-    root.appendChild(rsndBtn.wrap);
-
+    // Row 1 (y:340): PRINT    RSND             DISC
+    // Row 2 (y:388): PAY      DRAWER    VOID
     var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'md', onClick: handlePrint });
-    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '248px', top: '340px' });
+    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '12px', top: '340px' });
     root.appendChild(printBtn.wrap);
 
-    var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
-    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '12px', top: '388px' });
-    root.appendChild(voidBtn.wrap);
+    var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
+    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '240px', top: '340px' });
+    root.appendChild(rsndBtn.wrap);
 
-    var drawerBtn = buildStyledButton({ label: 'DRAWER', variant: 'dark', size: 'sm', onClick: handleDrawer });
-    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '130px', top: '388px' });
-    root.appendChild(drawerBtn.wrap);
+    var discBtn = buildStyledButton({ label: 'DISC', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
+    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '358px', top: '340px' });
+    root.appendChild(discBtn.wrap);
 
     var payBtn = buildStyledButton({ label: 'PAY', variant: 'mint', size: 'md', onClick: handlePay });
-    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '248px', top: '388px' });
+    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '12px', top: '388px' });
     root.appendChild(payBtn.wrap);
+
+    var drawerBtn = buildStyledButton({ label: 'DRAWER', variant: 'dark', size: 'sm', onClick: handleDrawer });
+    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '240px', top: '388px' });
+    root.appendChild(drawerBtn.wrap);
+
+    var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
+    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '358px', top: '388px' });
+    root.appendChild(voidBtn.wrap);
 
     // ═══════════════════════════════════════════════════
     //  Floating buttons
