@@ -334,7 +334,7 @@ SceneManager.register({
     _mainArea      = null;
     _modPanel      = null;
     _modPanelItem  = null;
-    _activeSeat    = (params.seatNumbers && params.seatNumbers.length > 0) ? params.seatNumbers[0] : 1;
+    _activeSeat    = (params.seatNumbers && params.seatNumbers.length > 1) ? 'all' : ((params.seatNumbers && params.seatNumbers[0]) || 1);
 
     container.style.cssText = [
       'width:100%;height:100%;',
@@ -509,24 +509,41 @@ function buildMain(parentEl, params) {
     var seatBar = document.createElement('div');
     seatBar.style.cssText = 'display:flex;gap:4px;flex-shrink:0;margin-bottom:4px;';
     var seatBtns = {};
+
+    function _updateSeatBar() {
+      var keys = Object.keys(seatBtns);
+      for (var k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        var b = seatBtns[key];
+        var active = (key === String(_activeSeat));
+        b.style.background = active ? T.mint : T.darkBtn;
+        if (b.firstChild) b.firstChild.style.color = active ? T.bgDark : T.mint;
+      }
+    }
+
+    // ALL button (when multiple seats)
+    if (params.seatNumbers.length > 1) {
+      var allSb = buildButton('ALL', {
+        fill: _activeSeat === 'all' ? T.mint : T.darkBtn,
+        color: _activeSeat === 'all' ? T.bgDark : T.mint,
+        fontSize: '20px', height: 32, fontFamily: T.fh,
+        onTap: function() { _activeSeat = 'all'; _updateSeatBar(); },
+      });
+      allSb.style.flex = '1';
+      seatBtns['all'] = allSb;
+      seatBar.appendChild(allSb);
+    }
+
     params.seatNumbers.forEach(function(sn) {
       var label = 'S-' + String(sn).padStart(3, '0');
       var sb = buildButton(label, {
         fill: sn === _activeSeat ? T.mint : T.darkBtn,
         color: sn === _activeSeat ? T.bgDark : T.mint,
         fontSize: '20px', height: 32, fontFamily: T.fh,
-        onTap: function() {
-          _activeSeat = sn;
-          params.seatNumbers.forEach(function(s) {
-            var b = seatBtns[s];
-            if (!b) return;
-            b.style.background = s === _activeSeat ? T.mint : T.darkBtn;
-            if (b.firstChild) b.firstChild.style.color = s === _activeSeat ? T.bgDark : T.mint;
-          });
-        },
+        onTap: function() { _activeSeat = sn; _updateSeatBar(); },
       });
       sb.style.flex = '1';
-      seatBtns[sn] = sb;
+      seatBtns[String(sn)] = sb;
       seatBar.appendChild(sb);
     });
     main.appendChild(seatBar);
@@ -672,8 +689,29 @@ function rebuildBottomBar(params) {
   }
 
   // ── Row 2: Action buttons ──
-  {
-    var disc  = buildButton('DISC', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+  if (sceneParams.returnScene === 'check-overview') {
+    // Check-overview mode: only ADD + SEND
+    var hasUnsent = ticket.some(function(i) { return !i.sent; });
+
+    var addOnly = buildButton('ADD', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
+      onTap: async function() {
+        if (hasUnsent) { try { await handleSaveOnly(); } catch (e) { return; } }
+        handleClose();
+      },
+    });
+    var sendAndClose = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: async function() {
+        if (hasUnsent) { try { await handleSend(); } catch (e) { return; } }
+        handleClose();
+      },
+    });
+
+    addOnly.style.gridColumn = '1 / 3'; addOnly.style.gridRow = '2'; addOnly.style.height = '100%';
+    sendAndClose.style.gridColumn = '3 / 6'; sendAndClose.style.gridRow = '2'; sendAndClose.style.height = '100%';
+    _bottomBar.appendChild(addOnly);
+    _bottomBar.appendChild(sendAndClose);
+  } else {
+    // Normal mode: DISC, VOID, PRINT, PAY, SEND
       onTap: function() { handleDiscount(); },
     });
     var voidB = buildButton('VOID', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
@@ -712,28 +750,6 @@ function rebuildBottomBar(params) {
     if (vInner) vInner.textContent = unsentSelected ? 'DELETE' : 'VOID';
   }
 
-  // ── Row 3: ADD + SEND (check-overview mode only) ──
-  if (sceneParams.returnScene === 'check-overview') {
-    var hasUnsent = ticket.some(function(i) { return !i.sent; });
-
-    var addOnly = buildButton('ADD', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
-      onTap: async function() {
-        if (hasUnsent) { try { await handleSaveOnly(); } catch (e) { return; } }
-        handleClose();
-      },
-    });
-    var sendAndClose = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-      onTap: async function() {
-        if (hasUnsent) { try { await handleSend(); } catch (e) { return; } }
-        handleClose();
-      },
-    });
-
-    addOnly.style.gridColumn = '4 / 5'; addOnly.style.gridRow = '3'; addOnly.style.height = '100%';
-    sendAndClose.style.gridColumn = '5 / 6'; sendAndClose.style.gridRow = '3'; sendAndClose.style.height = '100%';
-    _bottomBar.appendChild(addOnly);
-    _bottomBar.appendChild(sendAndClose);
-  }
 }
 
 function clearModifierSelection() {
@@ -2242,22 +2258,36 @@ async function handleSaveOnly() {
       currentCheckNumber = created.check_number;
     }
 
-    // Step 2 — post unsent items
-    var itemPromises = unsentInstances.map(function(inst) {
-      return fetch(API + '/orders/' + currentOrderId + '/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': inst.idemKey || _idemKey(),
-        },
-        body: JSON.stringify(_buildItemPayload(inst)),
-      });
-    });
-    var results = await Promise.allSettled(itemPromises);
+    // Step 2 — post unsent items (expand across all seats if _activeSeat === 'all')
+    var seatNums = (_activeSeat === 'all' && sceneParams.seatNumbers) ? sceneParams.seatNumbers : null;
+    var itemPromises = [];
+    for (var ui = 0; ui < unsentInstances.length; ui++) {
+      var inst = unsentInstances[ui];
+      if (seatNums) {
+        for (var sni = 0; sni < seatNums.length; sni++) {
+          var payload = _buildItemPayload(inst);
+          payload.seat_number = seatNums[sni];
+          itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': _idemKey() },
+            body: JSON.stringify(payload),
+          })});
+        }
+      } else {
+        itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': inst.idemKey || _idemKey() },
+          body: JSON.stringify(_buildItemPayload(inst)),
+        })});
+      }
+    }
+    var results = await Promise.allSettled(itemPromises.map(function(p) { return p.promise; }));
     var anyFailed = false;
+    var seenInst = {};
     results.forEach(function(r, idx) {
+      var instId = itemPromises[idx].inst.id;
       if (r.status === 'fulfilled' && r.value.ok) {
-        unsentInstances[idx].sent = true;
+        itemPromises[idx].inst.sent = true;
       } else {
         anyFailed = true;
       }
@@ -2326,25 +2356,37 @@ async function handleSend() {
       setSceneName(currentCheckNumber);
     }
 
-    // Step 2 — post only unsent instances, each with their own modifiers
-    var itemPromises = unsentInstances.map(function(inst) {
-      return fetch(API + '/orders/' + currentOrderId + '/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': inst.idemKey || _idemKey(),
-        },
-        body: JSON.stringify(_buildItemPayload(inst)),
-      });
-    });
-    var results = await Promise.allSettled(itemPromises);
+    // Step 2 — post unsent instances (expand across all seats if _activeSeat === 'all')
+    var seatNums = (_activeSeat === 'all' && sceneParams.seatNumbers) ? sceneParams.seatNumbers : null;
+    var itemPromises = [];
+    for (var ui = 0; ui < unsentInstances.length; ui++) {
+      var inst = unsentInstances[ui];
+      if (seatNums) {
+        for (var sni = 0; sni < seatNums.length; sni++) {
+          var payload = _buildItemPayload(inst);
+          payload.seat_number = seatNums[sni];
+          itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': _idemKey() },
+            body: JSON.stringify(payload),
+          })});
+        }
+      } else {
+        itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': inst.idemKey || _idemKey() },
+          body: JSON.stringify(_buildItemPayload(inst)),
+        })});
+      }
+    }
+    var results = await Promise.allSettled(itemPromises.map(function(p) { return p.promise; }));
     var anyFailed = false;
     results.forEach(function(r, idx) {
       if (r.status === 'fulfilled' && r.value.ok) {
-        unsentInstances[idx].sent = true;
+        itemPromises[idx].inst.sent = true;
       } else {
         anyFailed = true;
-        console.warn('[KINDpos] Item POST failed:', unsentInstances[idx].name,
+        console.warn('[KINDpos] Item POST failed:', itemPromises[idx].inst.name,
           r.status === 'rejected' ? r.reason : 'HTTP ' + r.value.status);
       }
     });
