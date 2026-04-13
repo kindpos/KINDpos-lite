@@ -67,6 +67,9 @@ function orderToSeats(order) {
       qty: item.quantity || 1,
       price: item.price || 0,
       item_id: item.item_id,
+      menu_item_id: item.menu_item_id || '',
+      category: item.category || null,
+      added_at: item.added_at || null,
     });
   }
   var seats = [];
@@ -370,6 +373,18 @@ defineScene({
       updateSummary();
     }
 
+    function forceSelectAll() {
+      // Select all unpaid seats (no toggle)
+      state.selected = {};
+      for (var si = 0; si < state.seats.length; si++) {
+        if (!state.paidSeats[state.seats[si].id]) {
+          state.selected[state.seats[si].id] = true;
+        }
+      }
+      updateSeatVisuals();
+      updateSummary();
+    }
+
     function selectAll() {
       // Toggle: if all selectable seats are selected, deselect all
       var allSelected = true;
@@ -378,13 +393,11 @@ defineScene({
           allSelected = false; break;
         }
       }
-      state.selected = {};
-      if (!allSelected) {
-        for (var si = 0; si < state.seats.length; si++) {
-          if (!state.paidSeats[state.seats[si].id]) {
-            state.selected[state.seats[si].id] = true;
-          }
-        }
+      if (allSelected) {
+        state.selected = {};
+      } else {
+        forceSelectAll();
+        return; // forceSelectAll already calls updateSeatVisuals + updateSummary
       }
       updateSeatVisuals();
       updateSummary();
@@ -543,12 +556,33 @@ defineScene({
             row.appendChild(qtyEl);
             row.appendChild(priceEl);
 
-            (function(k) {
+            (function(k, item) {
+              var _holdTimer = null;
+              var _didHold = false;
+              row.addEventListener('pointerdown', function() {
+                _didHold = false;
+                _holdTimer = setTimeout(function() {
+                  _didHold = true;
+                  var timeStr = '--';
+                  if (item.added_at) {
+                    var d = new Date(item.added_at);
+                    var h = d.getHours(), ampm = h >= 12 ? 'pm' : 'am';
+                    h = h % 12 || 12;
+                    timeStr = h + ':' + String(d.getMinutes()).padStart(2, '0') + ampm;
+                  }
+                  showToast(item.name + ' ordered at ' + timeStr, { bg: T.bg4, duration: 2500 });
+                }, 500);
+              });
               row.addEventListener('pointerup', function() {
+                clearTimeout(_holdTimer);
+                if (_didHold) return;
                 toggleItem(k);
                 updateSummary();
               });
-            })(key);
+              row.addEventListener('pointerleave', function() {
+                clearTimeout(_holdTimer);
+              });
+            })(key, it);
 
             body.appendChild(row);
           }
@@ -574,19 +608,19 @@ defineScene({
           state.seats = orderToSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
-          selectAll();
+          forceSelectAll();
         })
         .catch(function() {
           showToast('Failed to load check', { bg: T.red });
           state.seats = [{ id: 'S-001', items: [] }];
           rebuildSeatGrid();
-          selectAll();
+          forceSelectAll();
         });
     } else {
       // New check — start with one empty seat
       state.seats = [{ id: 'S-001', items: [] }];
       rebuildSeatGrid();
-      selectAll();
+      forceSelectAll();
     }
 
     // ═══════════════════════════════════════════════════
@@ -747,7 +781,7 @@ defineScene({
           state.seats = orderToSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
-          selectAll();
+          forceSelectAll();
           // If fully paid/closed, return to landing
           if (order.status === 'paid' || order.status === 'closed') {
             showToast('Check closed', { bg: T.goGreen });
@@ -929,9 +963,11 @@ defineScene({
           for (var rj = 0; rj < state.seats[ri].items.length; rj++) {
             var it = state.seats[ri].items[rj];
             itemsToAdd.push({
+              menu_item_id: it.menu_item_id || it.item_id,
               name: it.name,
               price: it.price,
               quantity: it.qty,
+              category: it.category || null,
               seat_number: seatNum,
             });
           }

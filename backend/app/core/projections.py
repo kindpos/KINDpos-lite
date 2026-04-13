@@ -201,6 +201,11 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                 order.voided_at = event.timestamp
                 order.void_reason = payload.get("reason")
 
+        elif event.event_type == EventType.ORDER_TRANSFERRED:
+            if order:
+                order.server_id = payload.get("server_id")
+                order.server_name = payload.get("server_name")
+
         # --- ITEMS ---
 
         elif event.event_type == EventType.ITEM_ADDED:
