@@ -654,9 +654,28 @@ defineScene({
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
           selectAll();
-          // If fully paid, return to landing
+          // If fully paid/closed, return to landing
           if (order.status === 'paid' || order.status === 'closed') {
             showToast('Check closed', { bg: T.goGreen });
+            SceneManager.mountWorking('manager-landing', params);
+            return;
+          }
+          // If all items voided (empty check at $0), void the order and return
+          if ((order.items || []).length === 0 && (order.total || 0) <= 0 && order.status !== 'voided') {
+            fetch('/api/v1/orders/' + state.orderId + '/void', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: 'All items removed', approved_by: 'system' }),
+            }).then(function() {
+              showToast('Check voided', { bg: T.goGreen });
+              SceneManager.mountWorking('manager-landing', params);
+            }).catch(function() {
+              SceneManager.mountWorking('manager-landing', params);
+            });
+            return;
+          }
+          if (order.status === 'voided') {
+            showToast('Check voided', { bg: T.goGreen });
             SceneManager.mountWorking('manager-landing', params);
             return;
           }
