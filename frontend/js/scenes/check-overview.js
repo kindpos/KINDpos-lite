@@ -67,6 +67,8 @@ function orderToSeats(order) {
       qty: item.quantity || 1,
       price: item.price || 0,
       item_id: item.item_id,
+      menu_item_id: item.menu_item_id || '',
+      category: item.category || null,
       added_at: item.added_at || null,
     });
   }
@@ -961,9 +963,11 @@ defineScene({
           for (var rj = 0; rj < state.seats[ri].items.length; rj++) {
             var it = state.seats[ri].items[rj];
             itemsToAdd.push({
+              menu_item_id: it.menu_item_id || it.item_id,
               name: it.name,
               price: it.price,
               quantity: it.qty,
+              category: it.category || null,
               seat_number: seatNum,
             });
           }
