@@ -751,11 +751,11 @@ function buildAdjustRow(role) {
   row.style.cssText = 'display:flex;align-items:center;gap:10px;font-family:' + T.fb + ';';
 
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-size:40px;color:' + T.mint + ';min-width:80px;';
+  nameEl.style.cssText = 'font-size:' + T.fsMed + ';color:' + T.mint + ';min-width:80px;';
   nameEl.textContent = role.label;
 
   var basisBtn = document.createElement('div');
-  basisBtn.style.cssText = 'font-size:40px;color:' + T.mint + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
+  basisBtn.style.cssText = 'font-size:' + T.fsMed + ';color:' + T.mint + ';cursor:pointer;min-width:90px;padding:4px 6px;border:1px solid ' + T.border + ';text-align:center;';
   basisBtn.textContent = role.basis;
   basisBtn.addEventListener('pointerup', function() {
     role.basis = role.basis === 'Net Sales' ? 'Liquor Sales' : 'Net Sales';
@@ -771,7 +771,7 @@ function buildAdjustRow(role) {
   });
 
   var pctEl = document.createElement('div');
-  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
+  pctEl.style.cssText = 'min-width:48px;text-align:center;font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.gold + ';border:2px solid ' + T.gold + ';padding:4px 6px;';
   pctEl.textContent = role.percent + '%';
 
   var incBtn = buildStyledButton(T.bgDark);
@@ -945,10 +945,10 @@ defineScene({
   name: 'zero-confirm',
   render: function(container, params) {
     var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:20px;min-width:280px;';
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + RED + ';padding:' + T.scenePad + 'px;min-width:280px;';
 
     var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + RED + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + RED + ';letter-spacing:2px;margin-bottom:4px;';
     lbl.textContent = '// ZERO ALL TIPS //';
     panel.appendChild(lbl);
 
@@ -958,7 +958,7 @@ defineScene({
     panel.appendChild(msg);
 
     var confirmBtn = buildButton('CONFIRM', {
-      fill: T.darkBtn, color: RED, fontSize: '26px', height: 44,
+      fill: T.darkBtn, color: RED, fontSize: T.fsBtnSm, height: 44,
       onTap: function() { params.onConfirm(); },
     });
     confirmBtn.style.width = '240px';
@@ -1024,12 +1024,12 @@ defineScene({
     container.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;padding:' + T.scenePad + 'px;box-sizing:border-box;';
 
     var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.mint + ';letter-spacing:1px;margin-bottom:12px;';
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';letter-spacing:1px;margin-bottom:' + T.colGapSm + 'px;';
     title.textContent = 'ADJUST TIP-OUT %';
     container.appendChild(title);
 
     var scrollArea = document.createElement('div');
-    scrollArea.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;';
+    scrollArea.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:' + T.colGapSm + 'px;';
 
     var roles = params.workingRoles || [];
     for (var i = 0; i < roles.length; i++) {
@@ -1094,10 +1094,10 @@ defineScene({
   name: 'cash-tip-declare',
   render: function(container, params) {
     var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:20px;min-width:300px;';
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:' + T.scenePad + 'px;min-width:300px;';
 
     var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
     lbl.textContent = '// CASH TIPS //';
     panel.appendChild(lbl);
 
@@ -1108,7 +1108,7 @@ defineScene({
 
     // Display
     var display = document.createElement('div');
-    display.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';background:' + T.bgDark + ';padding:10px;margin-bottom:12px;min-height:52px;min-width:200px;text-align:center;border:2px solid ' + T.border + ';';
+    display.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsMed + ';color:' + T.gold + ';background:' + T.bgDark + ';padding:10px;margin-bottom:' + T.colGapSm + 'px;min-height:52px;min-width:200px;text-align:center;border:2px solid ' + T.border + ';';
     display.textContent = '$0.00';
     panel.appendChild(display);
 
@@ -1127,7 +1127,7 @@ defineScene({
         grid.appendChild(buildButton(key, {
           fill: T.darkBtn,
           color: key === 'CLR' ? T.vermillion : (key === 'DEL' ? T.gold : T.mint),
-          fontSize: '22px', fontFamily: T.fb, height: 44,
+          fontSize: T.fsSmall, fontFamily: T.fb, height: 44,
           onTap: function() {
             if (key === 'CLR') { buffer = ''; }
             else if (key === 'DEL') { buffer = buffer.slice(0, -1); }
