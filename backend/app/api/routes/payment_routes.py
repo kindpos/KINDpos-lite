@@ -264,6 +264,7 @@ class CashPaymentRequest(BaseModel):
     amount: float
     tip: float = 0.0
     payment_method: str = "cash"
+    seat_numbers: Optional[list[int]] = None
 
 
 @router.post("/cash")
@@ -330,6 +331,7 @@ async def process_cash_payment(
         payment_id=payment_id,
         amount=sale_amount,
         method="cash",
+        seat_numbers=request.seat_numbers,
     )
     await ledger.append(init_evt)
 
@@ -341,6 +343,7 @@ async def process_cash_payment(
         transaction_id=f"cash_{uuid.uuid4().hex[:8]}",
         amount=sale_amount,
         tax=order.tax,
+        seat_numbers=request.seat_numbers,
     )
     await ledger.append(confirm_evt)
 

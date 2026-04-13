@@ -70,6 +70,7 @@ class TransactionRequest(BaseModel):
     server_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
     split_info: Optional[SplitInfo] = None
+    seat_numbers: Optional[List[int]] = None
 
     @field_validator("amount", "tip_amount", "service_charge_amount", mode="before")
     @classmethod

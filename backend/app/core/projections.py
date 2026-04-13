@@ -57,6 +57,7 @@ class Payment:
     confirmed_at: Optional[datetime] = None
     tip_amount: float = 0.0
     tax_amount: float = 0.0  # Tax captured at payment time
+    seat_numbers: list[int] = field(default_factory=list)  # Seats covered by this payment
 
 
 @dataclass
@@ -140,6 +141,15 @@ class Order:
     def balance_due(self) -> float:
         """Remaining balance."""
         return money_round(self.total - self.amount_paid)
+
+    @property
+    def paid_seats(self) -> list[int]:
+        """Seat numbers covered by confirmed payments."""
+        seats = set()
+        for p in self.payments:
+            if p.status == "confirmed" and p.seat_numbers:
+                seats.update(p.seat_numbers)
+        return sorted(seats)
 
     @property
     def is_fully_paid(self) -> bool:
@@ -301,6 +311,7 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                     method=payload.get("method", payload.get("payment_type", "card")),
                     status="pending",
                     initiated_at=event.timestamp,
+                    seat_numbers=payload.get("seat_numbers", []),
                 )
                 order.payments.append(payment)
 
@@ -313,6 +324,8 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                         payment.transaction_id = payload.get("transaction_id")
                         payment.confirmed_at = event.timestamp
                         payment.tax_amount = payload.get("tax", 0.0)
+                        if payload.get("seat_numbers"):
+                            payment.seat_numbers = payload["seat_numbers"]
                         break
 
                 # Auto-update order status if fully paid

@@ -173,6 +173,7 @@ class PaymentResponse(BaseModel):
     status: str
     tip_amount: float = 0.0
     transaction_id: Optional[str] = None
+    seat_numbers: list[int] = []
 
 
 class OrderResponse(BaseModel):
@@ -194,6 +195,7 @@ class OrderResponse(BaseModel):
     total: float
     amount_paid: float
     balance_due: float
+    paid_seats: list[int] = []
     created_at: Optional[datetime]
 
     @classmethod
@@ -234,6 +236,7 @@ class OrderResponse(BaseModel):
                     status=p.status,
                     tip_amount=p.tip_amount,
                     transaction_id=p.transaction_id,
+                    seat_numbers=p.seat_numbers,
                 )
                 for p in order.payments
             ],
@@ -243,6 +246,7 @@ class OrderResponse(BaseModel):
             total=order.total,
             amount_paid=money_round(order.amount_paid),
             balance_due=order.balance_due,
+            paid_seats=order.paid_seats,
             created_at=order.created_at,
         )
 

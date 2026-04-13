@@ -590,15 +590,17 @@ async function handleConfirm() {
 
   try {
     if (isCash) {
-      var res = await fetch(API + '/payments/cash', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      var cashBody = {
           order_id:       sceneData.orderId,
           amount:         paymentAmount,
           tip:            0.0,
           payment_method: 'cash',
-        }),
+      };
+      if (sceneData.seatNumbers) cashBody.seat_numbers = sceneData.seatNumbers;
+      var res = await fetch(API + '/payments/cash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cashBody),
       });
       if (!res.ok) {
         var err = await res.json().catch(function() { return {}; });
@@ -612,14 +614,16 @@ async function handleConfirm() {
       var controller = new AbortController();
       var cardTimeout = setTimeout(function() { controller.abort(); }, 95000);
 
-      var res = await fetch(API + '/payments/sale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      var saleBody = {
           order_id:    sceneData.orderId,
           amount:      paymentAmount,
           terminal_id: 'terminal_01',
-        }),
+      };
+      if (sceneData.seatNumbers) saleBody.seat_numbers = sceneData.seatNumbers;
+      var res = await fetch(API + '/payments/sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saleBody),
         signal: controller.signal,
       });
 

@@ -490,18 +490,22 @@ def payment_initiated(
         payment_id: str,
         amount: float,
         method: str,  # card, cash, gift_card
+        seat_numbers: Optional[list[int]] = None,
         **kwargs
 ) -> Event:
     """Create a PAYMENT_INITIATED event."""
+    payload = {
+        "order_id": order_id,
+        "payment_id": payment_id,
+        "amount": amount,
+        "method": method,
+    }
+    if seat_numbers:
+        payload["seat_numbers"] = seat_numbers
     return create_event(
         event_type=EventType.PAYMENT_INITIATED,
         terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "payment_id": payment_id,
-            "amount": amount,
-            "method": method,
-        },
+        payload=payload,
         correlation_id=order_id,
         **kwargs
     )
@@ -514,19 +518,23 @@ def payment_confirmed(
         transaction_id: str,
         amount: float,
         tax: float = 0.0,
+        seat_numbers: Optional[list[int]] = None,
         **kwargs
 ) -> Event:
     """Create a PAYMENT_CONFIRMED event.  Captures tax at payment time."""
+    payload = {
+        "order_id": order_id,
+        "payment_id": payment_id,
+        "transaction_id": transaction_id,
+        "amount": amount,
+        "tax": money_round(tax),
+    }
+    if seat_numbers:
+        payload["seat_numbers"] = seat_numbers
     return create_event(
         event_type=EventType.PAYMENT_CONFIRMED,
         terminal_id=terminal_id,
-        payload={
-            "order_id": order_id,
-            "payment_id": payment_id,
-            "transaction_id": transaction_id,
-            "amount": amount,
-            "tax": money_round(tax),
-        },
+        payload=payload,
         correlation_id=order_id,
         **kwargs
     )
