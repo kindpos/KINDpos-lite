@@ -69,9 +69,9 @@ async def _ensure_devices(manager: PaymentManager):
                             manager.map_terminal_to_device(settings.terminal_id, device['mac'])
                             manager.map_terminal_to_device("T-001", device['mac'])
                             reader_found = True
-                            print(f"  Card reader loaded: {device.get('name', device['mac'])} @ {device['ip']}:{device.get('port', 8443)}")
+                            print(f"  Card reader loaded: {device.get('name', device['mac'])} @ {device['ip']}:{device.get('port', 9000)}")
                         else:
-                            print(f"  Card reader saved but unreachable: {device['ip']}:{device.get('port', 8443)}")
+                            print(f"  Card reader saved but unreachable: {device['ip']}:{device.get('port', 9000)}")
         except Exception as e:
             print(f"  Warning: could not load card reader: {e}")
 
@@ -84,7 +84,7 @@ async def _ensure_devices(manager: PaymentManager):
             device_type=PaymentDeviceType.SMART_TERMINAL,
             ip_address="127.0.0.1",
             mac_address="00:00:00:00:00:00",
-            port=8443,
+            port=9000,
             protocol="mock",
             processor_id="mock_processor",
         )

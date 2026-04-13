@@ -29,7 +29,7 @@ class PaymentDeviceConfig(BaseModel):
     device_type: PaymentDeviceType
     ip_address: str
     mac_address: str
-    port: int = 8443
+    port: int = 9000
     protocol: str  # 'spin', 'stripe', or 'mock'
     location_notes: Optional[str] = None
     enabled: bool = True
