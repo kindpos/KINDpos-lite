@@ -576,36 +576,26 @@ defineScene({
     function handleVoid() {
       if (!state.orderId) { showToast('No check to void', { bg: T.red }); return; }
       var itemIds = getSelectedItemIds();
+      if (itemIds.length === 0) {
+        // No items selected — require confirmation for full check void
+        showToast('Select items to void, or tap seat header for all', { bg: T.gold });
+        return;
+      }
       SceneManager.interrupt('disc-pin', {
         onConfirm: function(pin) {
-          if (itemIds.length > 0) {
-            // Item-level void: delete each selected item
-            var pending = itemIds.length;
-            var failed = 0;
-            for (var vi = 0; vi < itemIds.length; vi++) {
-              fetch('/api/v1/orders/' + state.orderId + '/items/' + itemIds[vi], { method: 'DELETE' })
-                .then(function(r) { if (!r.ok) failed++; if (--pending === 0) finishVoid(); })
-                .catch(function() { failed++; if (--pending === 0) finishVoid(); });
-            }
-            function finishVoid() {
-              if (failed > 0) showToast(failed + ' item(s) failed to void', { bg: T.red });
-              else showToast('Items voided', { bg: T.goGreen });
-              state.selectedItems = {};
-              refreshOrder();
-            }
-          } else {
-            // Full check void
-            fetch('/api/v1/orders/' + state.orderId + '/void', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ reason: 'Voided from check overview', approved_by: pin }),
-            }).then(function(r) {
-              if (r.ok) {
-                showToast('Check voided', { bg: T.goGreen });
-                fetch('/api/v1/print/ticket/' + state.orderId + '?void=true', { method: 'POST' });
-                SceneManager.mountWorking('manager-landing', params);
-              } else showToast('Void failed', { bg: T.red });
-            }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          // Item-level void: delete each selected item
+          var pending = itemIds.length;
+          var failed = 0;
+          for (var vi = 0; vi < itemIds.length; vi++) {
+            fetch('/api/v1/orders/' + state.orderId + '/items/' + itemIds[vi], { method: 'DELETE' })
+              .then(function(r) { if (!r.ok) failed++; if (--pending === 0) finishVoid(); })
+              .catch(function() { failed++; if (--pending === 0) finishVoid(); });
+          }
+          function finishVoid() {
+            if (failed > 0) showToast(failed + ' item(s) failed to void', { bg: T.red });
+            else showToast('Items voided', { bg: T.goGreen });
+            state.selectedItems = {};
+            refreshOrder();
           }
         },
         onCancel: function() {},
