@@ -33,6 +33,7 @@ from app.api.dependencies import get_ledger
 from app.core.event_ledger import EventLedger
 from app.core.events import (
     order_created,
+    order_transferred,
     item_added,
     item_removed,
     item_modified,
@@ -160,6 +161,8 @@ class OrderItemResponse(BaseModel):
     seat_number: Optional[int] = None
     modifiers: list[dict]
     subtotal: float
+    added_at: Optional[datetime] = None
+    sent_at: Optional[datetime] = None
 
 
 class PaymentResponse(BaseModel):
@@ -218,6 +221,8 @@ class OrderResponse(BaseModel):
                     seat_number=item.seat_number,
                     modifiers=item.modifiers,
                     subtotal=money_round(item.subtotal),
+                    added_at=item.added_at,
+                    sent_at=item.sent_at,
                 )
                 for item in order.items
             ],
@@ -625,6 +630,34 @@ async def get_order(
         ledger: EventLedger = Depends(get_ledger),
 ):
     """Get a specific order by ID."""
+    order = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(order)
+
+
+class PatchOrderRequest(BaseModel):
+    """Request to update order-level fields (e.g. server transfer)."""
+    server_id: Optional[str] = None
+    server_name: Optional[str] = None
+
+
+@router.patch("/{order_id}", response_model=OrderResponse)
+async def patch_order(
+        order_id: str,
+        request: PatchOrderRequest,
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Update order fields. Currently supports server transfer."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if request.server_id is not None:
+        event = order_transferred(
+            terminal_id="terminal-1",
+            order_id=order_id,
+            server_id=request.server_id,
+            server_name=request.server_name or "",
+        )
+        await ledger.append(event)
+
     order = await get_order_or_404(ledger, order_id)
     return OrderResponse.from_order(order)
 

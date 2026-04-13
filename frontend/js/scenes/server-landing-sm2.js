@@ -665,6 +665,68 @@ defineScene({
         container.appendChild(numpad);
       },
     },
+
+    'sl-server-picker': {
+      render: function(container, params) {
+        params = params || {};
+        var excludeId = (params.params || {}).excludeId || null;
+
+        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+        var panel = document.createElement('div');
+        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';border-radius:5px;padding:16px;min-width:320px;max-width:440px;max-height:460px;display:flex;flex-direction:column;gap:8px;';
+
+        var title = document.createElement('div');
+        title.style.cssText = 'font-family:' + T.fh + ';font-size:11px;letter-spacing:3px;color:' + T.mint + ';text-transform:uppercase;text-align:center;padding:4px 0 8px;';
+        title.textContent = 'TRANSFER TO SERVER';
+        panel.appendChild(title);
+
+        var list = document.createElement('div');
+        list.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;';
+
+        var loading = document.createElement('div');
+        loading.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;padding:20px 0;';
+        loading.textContent = 'Loading...';
+        list.appendChild(loading);
+        panel.appendChild(list);
+
+        var cancelBtn = buildStyledButton({ label: 'CANCEL', variant: 'vermillion', size: 'sm', onClick: function() { params.onCancel(); } });
+        cancelBtn.wrap.style.alignSelf = 'center';
+        panel.appendChild(cancelBtn.wrap);
+
+        container.appendChild(panel);
+
+        fetch('/api/v1/servers/clocked-in')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            list.innerHTML = '';
+            var staff = (data.staff || []).filter(function(s) { return s.employee_id !== excludeId; });
+
+            if (staff.length === 0) {
+              var empty = document.createElement('div');
+              empty.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;padding:20px 0;';
+              empty.textContent = 'No other servers clocked in';
+              list.appendChild(empty);
+              return;
+            }
+
+            for (var i = 0; i < staff.length; i++) {
+              (function(srv) {
+                var btn = buildStyledButton({ label: srv.employee_name, variant: 'dark', size: 'md', onClick: function() { params.onConfirm({ employee_id: srv.employee_id, employee_name: srv.employee_name }); } });
+                btn.wrap.style.width = '100%';
+                list.appendChild(btn.wrap);
+              })(staff[i]);
+            }
+          })
+          .catch(function() {
+            list.innerHTML = '';
+            var err = document.createElement('div');
+            err.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.red + ';text-align:center;padding:20px 0;';
+            err.textContent = 'Failed to load servers';
+            list.appendChild(err);
+          });
+      },
+    },
   },
 
   transactionals: {
@@ -1124,15 +1186,29 @@ function renderOpsPanel(state) {
   voidBtn.style.border = '2px solid ' + T.vermillion;
   grid.appendChild(voidBtn);
 
-  // Row 3: TRANSFER
+  // Row 3: TRANSFER (supports multi-select)
   grid.appendChild(buildButton('TRANSFER', Object.assign({}, btnStyle, { onTap: function() {
-    var selectedOrders = ids.map(function(id) { return state.selected[id]; });
-    SceneManager.interrupt('sl-transfer-choice', {
-      onConfirm: function(choice) {
-        if (choice === 'internal') { SceneManager.openTransactional('sl-internal-transfer', { checks: selectedOrders, emp: emp }); }
-        else { showToast('External transfer — not yet wired', { bg: T.gold }); }
+    SceneManager.interrupt('sl-server-picker', {
+      onConfirm: function(server) {
+        var pending = ids.length;
+        var failed = 0;
+        ids.forEach(function(id) {
+          fetch('/api/v1/orders/' + id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ server_id: server.employee_id, server_name: server.employee_name }),
+          }).then(function(r) { if (!r.ok) failed++; if (--pending === 0) finishTransfer(); })
+            .catch(function() { failed++; if (--pending === 0) finishTransfer(); });
+        });
+        function finishTransfer() {
+          if (failed > 0) showToast(failed + ' transfer(s) failed', { bg: T.red });
+          else showToast((ids.length > 1 ? ids.length + ' checks transferred' : 'Transferred') + ' to ' + server.employee_name, { bg: T.goGreen });
+          state.selected = {};
+          refreshData(state);
+        }
       },
       onCancel: function() {},
+      params: { excludeId: emp.id },
     });
   }})));
 

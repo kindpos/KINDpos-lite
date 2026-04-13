@@ -39,6 +39,7 @@ class EventType(str, Enum):
     ORDER_CLOSED = "order.closed"
     ORDER_REOPENED = "order.reopened"
     ORDER_VOIDED = "order.voided"
+    ORDER_TRANSFERRED = "order.transferred"
 
     # ── Item management (LEDGER_CORE) ────────────────────────────────
     ITEM_ADDED = "item.added"
@@ -304,6 +305,27 @@ def order_created(
             "guest_count": guest_count,
             "customer_name": customer_name,
         },
+        **kwargs
+    )
+
+
+def order_transferred(
+        terminal_id: str,
+        order_id: str,
+        server_id: str,
+        server_name: str,
+        **kwargs
+) -> Event:
+    """Create an ORDER_TRANSFERRED event (server reassignment)."""
+    return create_event(
+        event_type=EventType.ORDER_TRANSFERRED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "server_id": server_id,
+            "server_name": server_name,
+        },
+        correlation_id=order_id,
         **kwargs
     )
 
