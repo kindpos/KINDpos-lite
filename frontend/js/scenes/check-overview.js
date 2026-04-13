@@ -1038,15 +1038,9 @@ SceneManager.register({
           }
         }).catch(function() { numpad.setError('NETWORK ERROR'); });
       },
+      onCancel: function() { SceneManager.resolveInterrupt('disc-pin'); params.onCancel(); },
     });
     panel.appendChild(numpad);
-
-    var cancelBtn = buildButton('CANCEL', {
-      fill: T.darkBtn, color: T.mint, fontSize: T.fsSmall, height: 40,
-      onTap: function() { SceneManager.resolveInterrupt('disc-pin'); params.onCancel(); },
-    });
-    cancelBtn.style.width = '332px';
-    panel.appendChild(cancelBtn);
     container.appendChild(panel);
 
     container.addEventListener('pointerup', function(e) {
