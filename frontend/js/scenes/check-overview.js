@@ -98,9 +98,7 @@ defineScene({
       state.listeners.push({ el: el, event: event, handler: handler });
     }
 
-    var mintEdges = bevelEdges(T.mint);
     var chassisEdges = bevelEdges(T.numpadChassis);
-    var darkEdges = bevelEdges(T.darkBtn);
 
     state.orderId = params.checkId || null;
     state.checkNumber = '';
@@ -243,75 +241,67 @@ defineScene({
     seatsCard.appendChild(seatsGrid);
     root.appendChild(seatsCard);
 
-    // ── Build a seat tile ──
-    var goldEdges = bevelEdges(T.gold);
+    // ── Build a seat button (embossed + chamfered) ──
+
+    function seatVariant(seat) {
+      if (state.paidSeats[seat.id]) return 'gold';
+      if (state.selected[seat.id]) return 'mint';
+      return 'dark';
+    }
 
     function buildSeatTile(seat) {
       var hasItems = seat.items.length > 0;
       var isPaid = !!state.paidSeats[seat.id];
-      var frameColor = isPaid ? T.gold : (hasItems ? T.mint : T.darkBtn);
-      var edges = isPaid ? goldEdges : (hasItems ? mintEdges : darkEdges);
       var total = seatTotal(seat);
+      var variant = seatVariant(seat);
 
-      var tile = document.createElement('div');
-      Object.assign(tile.style, {
-        borderRadius: '5px',
-        background: isPaid ? T.gold : T.bgDark,
-        borderTop: T.bevelBtn + 'px solid ' + edges.light,
-        borderLeft: T.bevelBtn + 'px solid ' + edges.light,
-        borderBottom: T.bevelBtn + 'px solid ' + edges.dark,
-        borderRight: T.bevelBtn + 'px solid ' + edges.dark,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        cursor: isPaid ? 'default' : 'pointer',
-      });
+      var btn = buildStyledButton({ variant: variant, disabled: isPaid });
+      var wrap = btn.wrap;
+      var inner = btn.inner;
 
-      var header = document.createElement('div');
-      Object.assign(header.style, {
-        background: isPaid ? T.goldD : frameColor,
-        height: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: isPaid ? 'space-between' : '',
-        padding: '0 6px',
-        fontFamily: T.fh,
-        fontSize: '8px',
-        color: isPaid ? T.gold : T.bgDark,
-        textTransform: 'uppercase',
-      });
-      header.textContent = seat.id;
-      if (isPaid) {
-        var paidTag = document.createElement('span');
-        paidTag.style.cssText = 'font-family:' + T.fb + ';font-size:7px;letter-spacing:1px;';
-        paidTag.textContent = 'PAID';
-        header.appendChild(paidTag);
+      // Override border-radius with chamfer
+      wrap.style.borderRadius = '0';
+      wrap.style.clipPath = chamfer(T.chamfer);
+      wrap.style.width = '100%';
+      wrap.style.height = '100%';
+      wrap.style.minWidth = '0';
+
+      // Custom inner layout: seat ID top, total bottom
+      inner.innerHTML = '';
+      inner.style.flexDirection = 'column';
+      inner.style.gap = '2px';
+      inner.style.padding = '6px 8px';
+      inner.style.fontFamily = T.fb;
+      inner.style.lineHeight = '1.2';
+
+      var idEl = document.createElement('div');
+      idEl.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';letter-spacing:2px;text-transform:uppercase;';
+      idEl.textContent = seat.id;
+
+      var totalEl = document.createElement('div');
+      totalEl.style.cssText = 'font-size:' + T.fsCon + ';';
+      if (variant === 'dark' && hasItems) {
+        totalEl.style.color = T.gold;
       }
-      tile.appendChild(header);
+      totalEl.textContent = hasItems ? fmt(total) : '--';
 
-      var body = document.createElement('div');
-      Object.assign(body.style, {
-        flex: '1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: T.fb,
-        fontSize: T.fsConSm,
-        color: isPaid ? T.bgDark : (hasItems ? T.gold : T.mutedText),
-      });
-      body.textContent = hasItems ? fmt(total) : '--';
-      tile.appendChild(body);
+      if (isPaid) {
+        var paidEl = document.createElement('div');
+        paidEl.style.cssText = 'font-size:8px;letter-spacing:2px;opacity:0.7;';
+        paidEl.textContent = 'PAID';
+        inner.appendChild(paidEl);
+      }
 
-      state.seatEls[seat.id] = {
-        tile: tile, header: header, body: body,
-        frameColor: frameColor, edges: edges, isPaid: isPaid,
-      };
+      inner.appendChild(idEl);
+      inner.appendChild(totalEl);
 
-      track(tile, 'pointerup', (function(seatId) {
+      state.seatEls[seat.id] = { wrap: wrap, inner: inner, idEl: idEl, totalEl: totalEl, isPaid: isPaid };
+
+      track(wrap, 'pointerup', (function(seatId) {
         return function() { toggleSeat(seatId); };
       })(seat.id));
 
-      return tile;
+      return wrap;
     }
 
     function rebuildSeatGrid() {
@@ -357,24 +347,19 @@ defineScene({
       for (var si = 0; si < state.seats.length; si++) {
         var seat = state.seats[si];
         var el = state.seatEls[seat.id];
-        if (!el) continue;
-        // Paid seats keep their gold infill — skip selection styling
-        if (el.isPaid) continue;
+        if (!el || el.isPaid) continue;
         var sel = !!state.selected[seat.id];
         var hasItems = seat.items.length > 0;
         if (sel) anySelected = true;
 
-        if (sel) {
-          el.header.style.background = T.bgDark;
-          el.header.style.color = el.frameColor;
-          el.body.style.background = el.frameColor;
-          el.body.style.color = T.bgDark;
-        } else {
-          el.header.style.background = el.frameColor;
-          el.header.style.color = T.bgDark;
-          el.body.style.background = '';
-          el.body.style.color = hasItems ? T.gold : T.mutedText;
-        }
+        // Rebuild button with correct variant by swapping to a fresh button
+        var parent = el.wrap.parentNode;
+        if (!parent) continue;
+        var next = el.wrap.nextSibling;
+        parent.removeChild(el.wrap);
+        var freshBtn = buildSeatTile(seat);
+        if (next) parent.insertBefore(freshBtn, next);
+        else parent.appendChild(freshBtn);
       }
       // EDIT SEATS only visible when seats are selected
       if (editSeatsBtn) editSeatsBtn.wrap.style.display = anySelected ? '' : 'none';
