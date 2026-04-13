@@ -22,7 +22,7 @@ var ACTION_H    = 48;
 var BANNER_H    = 36;
 var BEVEL       = 4;
 var CHAM        = 8;
-var RED         = '#ff3355';
+var RED         = T.vermillion;
 
 // ── Scene state ──────────────────────────────────
 var _state         = null;
@@ -132,8 +132,8 @@ function buildReceiptContent(state) {
   var BASE   = T.fsBtn;
   var HEADER = T.fsBtn;
   var SMALL  = T.fsSmall;
-  var COL    = '#333';
-  var DIM    = '#999';
+  var COL    = T.bg;
+  var DIM    = T.subtleText;
 
   var wrap = document.createElement('div');
   wrap.style.cssText = 'padding:12px 14px;font-family:' + T.fb + ';color:' + COL + ';display:flex;flex-direction:column;gap:0;';
@@ -264,7 +264,7 @@ function detailRow(label, value, valueColor) {
 
 function detailDivider() {
   var el = document.createElement('div');
-  el.style.cssText = 'border-top:1px solid #333;margin:4px 0;';
+  el.style.cssText = 'border-top:1px solid ' + T.bg + ';margin:4px 0;';
   return el;
 }
 
@@ -677,14 +677,14 @@ function buildActionBar(state) {
   if (blocked) {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = '#555';
+    finPair.inner.style.color = T.dimText;
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.style.pointerEvents = 'none';
     finPair.wrap.style.opacity = '0.5';
   } else if (!_pinUnlocked) {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = '#888';
+    finPair.inner.style.color = T.mutedText;
     finPair.inner.textContent = '🔒 //FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       openPinGate(function() {
@@ -698,7 +698,7 @@ function buildActionBar(state) {
   } else {
     finPair.inner.style.fontFamily = T.fb;
     finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = '#1a1a1a';
+    finPair.inner.style.color = T.bgDark;
     finPair.inner.textContent = '//FINALIZE//';
     finPair.wrap.addEventListener('pointerup', function() {
       if (isBlocked(state)) return;
