@@ -450,7 +450,7 @@ defineScene({
 
   events: {
     'transactional:closed': function(e) {
-      if (e && e.sceneName === 'tip-adjustment' && _state) {
+      if (e && (e.sceneName === 'sc-tip-adjust' || e.sceneName === 'cd-tip-adjust') && _state) {
         refreshData(_state);
       }
     },

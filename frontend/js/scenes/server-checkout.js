@@ -283,7 +283,7 @@ function buildShortcutRow(state) {
   uPair.inner.style.color = T.lavender;
   uPair.inner.textContent = 'UNADJUSTED';
   uPair.wrap.addEventListener('pointerup', function() {
-    SceneManager.openTransactional('tip-adjustment', { filter: 'unadjusted', employeeId: state.employeeId, employeeName: state.employeeName });
+    SceneManager.openTransactional('sc-tip-adjust', { employeeId: state.employeeId, employeeName: state.employeeName, onDone: refreshScene });
   });
   row.appendChild(uPair.wrap);
 
@@ -1155,5 +1155,148 @@ defineScene({
     }));
     panel.appendChild(btns);
     container.appendChild(panel);
+  },
+});
+
+// ─────────────────────────────────────────────────
+//  TRANSACTIONAL: sc-tip-adjust  (SM2)
+//  Inline unadjusted-tip adjustment (list + numpad)
+// ─────────────────────────────────────────────────
+
+defineScene({
+  name: 'sc-tip-adjust',
+  render: function(container, params) {
+    var _selected = null;
+    var _checks = [];
+    var _listEl = null;
+
+    setSceneName('Adjust Tips');
+    setHeaderBack({ back: true, onBack: function() {
+      SceneManager.closeTransactional('sc-tip-adjust');
+      if (params.onDone) params.onDone();
+    }});
+
+    container.style.cssText = 'width:100%;height:100%;display:flex;gap:' + COL_GAP + 'px;padding:' + SCENE_PAD + 'px;box-sizing:border-box;';
+
+    // ── Left: check list ──
+    var leftCol = document.createElement('div');
+    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+
+    var header = document.createElement('div');
+    header.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';letter-spacing:0.1em;margin-bottom:8px;';
+    header.textContent = 'UNADJUSTED TIPS';
+    leftCol.appendChild(header);
+
+    _listEl = document.createElement('div');
+    _listEl.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;';
+    leftCol.appendChild(_listEl);
+    container.appendChild(leftCol);
+
+    // ── Right: numpad ──
+    var rightCol = document.createElement('div');
+    rightCol.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+
+    var hintEl = document.createElement('div');
+    hintEl.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';margin-bottom:8px;text-align:center;';
+    hintEl.textContent = 'Tap a check to adjust';
+    rightCol.appendChild(hintEl);
+
+    var numpad = buildNumpad({
+      masked: false,
+      maxDigits: 6,
+      submitLabel: 'ent',
+      displayFormat: function(digits) {
+        var n = parseInt(digits || '0', 10);
+        return '$' + (n / 100).toFixed(2);
+      },
+      canSubmit: function() { return _selected !== null; },
+      onSubmit: function(digits) {
+        if (!_selected) return;
+        var tipAmount = parseInt(digits || '0', 10) / 100;
+        fetch('/api/v1/payments/tip-adjust', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: _selected.check_id, payment_id: _selected.payment_id, tip_amount: tipAmount }),
+        }).then(function(r) {
+          if (r.ok) {
+            showToast('Tip adjusted', { bg: T.goGreen });
+            _selected.tip_amount = tipAmount;
+            _selected = null;
+            hintEl.textContent = 'Tap a check to adjust';
+            numpad.clear();
+            renderList();
+          } else {
+            showToast('Tip adjust failed', { bg: T.red });
+          }
+        }).catch(function() { showToast('Tip adjust failed', { bg: T.red }); });
+      },
+      onCancel: function() {
+        SceneManager.closeTransactional('sc-tip-adjust');
+        if (params.onDone) params.onDone();
+      },
+    });
+    rightCol.appendChild(numpad);
+    container.appendChild(rightCol);
+
+    function renderList() {
+      _listEl.innerHTML = '';
+      var unadj = _checks.filter(function(c) { return c.tip_amount == null; });
+      if (unadj.length === 0) {
+        var done = document.createElement('div');
+        done.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';text-align:center;padding:20px;';
+        done.textContent = '\u2713 All tips adjusted';
+        _listEl.appendChild(done);
+        return;
+      }
+      for (var i = 0; i < unadj.length; i++) {
+        (function(check) {
+          var row = document.createElement('div');
+          var isActive = _selected === check;
+          row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;background:' + (isActive ? T.bg3 : T.bgDark) + ';border:2px solid ' + (isActive ? T.gold : T.border) + ';';
+          applySunkenStyle(row);
+
+          var label = document.createElement('span');
+          label.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
+          label.textContent = check.check_num || 'CHK';
+
+          var amt = document.createElement('span');
+          amt.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;';
+          amt.textContent = fmt(check.amount || 0);
+
+          row.appendChild(label);
+          row.appendChild(amt);
+          row.addEventListener('pointerup', function() {
+            _selected = check;
+            hintEl.textContent = (check.check_num || 'CHK') + ' — ' + fmt(check.amount || 0);
+            numpad.clear();
+            renderList();
+          });
+          _listEl.appendChild(row);
+        })(_checks.filter(function(c) { return c.tip_amount == null; })[i]);
+      }
+    }
+
+    // Fetch unadjusted checks
+    var url = '/api/v1/orders/day-summary';
+    if (params.employeeId) url += '?server_id=' + encodeURIComponent(params.employeeId);
+    fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+      var raw = data.checks || [];
+      _checks = raw.filter(function(c) { return c.status === 'closed' && c.method === 'card'; }).map(function(c) {
+        return {
+          check_id: c.checkId,
+          check_num: c.checkLabel || c.checkId,
+          payment_id: c.paymentId,
+          amount: c.amount,
+          tip_amount: c.adjusted ? c.tip : null,
+        };
+      });
+      renderList();
+    }).catch(function() {
+      _listEl.innerHTML = '';
+      var err = document.createElement('div');
+      err.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.red + ';padding:20px;text-align:center;';
+      err.textContent = 'Failed to load checks';
+      _listEl.appendChild(err);
+    });
   },
 });
