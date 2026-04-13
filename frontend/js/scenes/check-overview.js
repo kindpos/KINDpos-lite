@@ -315,8 +315,8 @@ defineScene({
       if (!hasItems && !isPaid && state.seats.length > 1) {
         wrap.style.position = 'relative';
         var delBtn = document.createElement('div');
-        delBtn.style.cssText = 'position:absolute;top:2px;right:4px;z-index:5;width:18px;height:18px;display:flex;align-items:center;justify-content:center;'
-          + 'font-family:' + T.fb + ';font-size:12px;color:' + T.vermillion + ';cursor:pointer;user-select:none;';
+        delBtn.style.cssText = 'position:absolute;top:2px;right:4px;z-index:5;width:26px;height:26px;display:flex;align-items:center;justify-content:center;'
+          + 'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.vermillion + ';cursor:pointer;user-select:none;';
         delBtn.textContent = '\u2715';
         track(delBtn, 'pointerup', (function(sId) {
           return function(e) {
@@ -783,7 +783,7 @@ defineScene({
     // Row 1 (y:272): PRINT    RSND    DISC
     // Row 2 (y:318): PAY      DRAWER  VOID
     var btnTop1 = '272px';
-    var btnTop2 = '318px';
+    var btnTop2 = '334px';
 
     var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'md', onClick: handlePrint });
     Object.assign(printBtn.wrap.style, { position: 'absolute', left: '12px', top: btnTop1 });
@@ -837,7 +837,7 @@ defineScene({
       },
     });
     Object.assign(addItemBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '380px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '401px', zIndex: '50',
     });
     root.appendChild(addItemBtn.wrap);
 
@@ -980,7 +980,7 @@ defineScene({
       },
     });
     Object.assign(roundBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '326px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '340px', zIndex: '50',
     });
     root.appendChild(roundBtn.wrap);
   },
