@@ -514,6 +514,11 @@ function buildMain(parentEl, params) {
   // Store refs
   _tabCanvas   = canvas;
 
+  // Bottom action bar
+  _bottomBar = document.createElement('div');
+  _bottomBar.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:auto;gap:4px;flex-shrink:0;margin-top:4px;';
+  main.appendChild(_bottomBar);
+
   requestAnimationFrame(function() {
     hexNav = new HexNav(canvas, {
       data: MENU_DATA,
