@@ -11,7 +11,9 @@ import { defineScene } from '../scene-manager-2.js';
 import { buildCard, cardFilter } from '../theme-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
-import { createSVG, svgEl } from '../chart-helpers.js';
+import { createSVG, svgEl, CHART } from '../chart-helpers.js';
+import { injectChartDefs, PAT } from '../chart-patterns.js';
+import { DATA } from '../chart-colors.js';
 
 // ── Constants ────────────────────────────────────
 var CHROME = T.numpadChassis;
@@ -130,31 +132,6 @@ function refreshData(state) {
 }
 
 // ═══════════════════════════════════════════════════
-//  WIN98 DITHER PATTERNS (unique to server charts)
-// ═══════════════════════════════════════════════════
-
-function injectDitherDefs(svg) {
-  var defs = svg.querySelector('defs');
-  if (!defs) { defs = svgEl('defs', {}); svg.appendChild(defs); }
-
-  if (!svg.getElementById('dither-hi')) {
-    var phi = svgEl('pattern', { id: 'dither-hi', patternUnits: 'userSpaceOnUse', width: '2', height: '2' });
-    phi.appendChild(svgEl('rect', { width: '2', height: '2', fill: 'transparent' }));
-    phi.appendChild(svgEl('rect', { x: '0', y: '0', width: '1', height: '1', fill: 'white', opacity: '0.55' }));
-    phi.appendChild(svgEl('rect', { x: '1', y: '1', width: '1', height: '1', fill: 'white', opacity: '0.55' }));
-    defs.appendChild(phi);
-  }
-
-  if (!svg.getElementById('dither-lo')) {
-    var plo = svgEl('pattern', { id: 'dither-lo', patternUnits: 'userSpaceOnUse', width: '2', height: '2' });
-    plo.appendChild(svgEl('rect', { width: '2', height: '2', fill: 'transparent' }));
-    plo.appendChild(svgEl('rect', { x: '0', y: '0', width: '1', height: '1', fill: 'black', opacity: '0.55' }));
-    plo.appendChild(svgEl('rect', { x: '1', y: '1', width: '1', height: '1', fill: 'black', opacity: '0.55' }));
-    defs.appendChild(plo);
-  }
-}
-
-// ═══════════════════════════════════════════════════
 //  PARETO CHART — Horizontal category bars + cumulative %
 // ═══════════════════════════════════════════════════
 
@@ -177,7 +154,7 @@ function drawParetoChart(container, data, opts) {
   }
 
   var svg = createSVG(W, H);
-  injectDitherDefs(svg);
+  injectChartDefs(svg);
 
   var maxRev = 0;
   var grandTotal = 0;
@@ -204,39 +181,36 @@ function drawParetoChart(container, data, opts) {
     var cashW = tot > 0 ? (cash / tot) * barW : 0;
     var cardW = barW - cashW;
 
-    // CASH segment with dither
+    // CASH segment — pattern fill with stroke
     if (cashW > 0) {
-      svg.appendChild(svgEl('rect', { x: padL, y: y, width: cashW, height: barH, fill: catColor }));
-      var hiH = Math.round(barH * 0.25);
-      svg.appendChild(svgEl('rect', { x: padL, y: y, width: cashW, height: hiH, fill: 'url(#dither-hi)' }));
-      svg.appendChild(svgEl('rect', { x: padL, y: y + barH - hiH, width: cashW, height: hiH, fill: 'url(#dither-lo)' }));
+      svg.appendChild(svgEl('rect', { x: padL, y: y, width: cashW, height: barH, fill: PAT.orange, stroke: catColor, 'stroke-width': '1.5' }));
     }
 
     // Divider between CASH and CARD
     if (cashW > 0 && cardW > 0) {
-      svg.appendChild(svgEl('line', { x1: padL + cashW, y1: y, x2: padL + cashW, y2: y + barH, stroke: T.bgDark, 'stroke-width': '1.5' }));
+      svg.appendChild(svgEl('line', { x1: padL + cashW, y1: y, x2: padL + cashW, y2: y + barH, stroke: CHART.panelBg, 'stroke-width': '1.5' }));
     }
 
-    // CARD segment — solid, no dither
+    // CARD segment — solid catColor with stroke
     if (cardW > 0) {
-      svg.appendChild(svgEl('rect', { x: padL + cashW, y: y, width: cardW, height: barH, fill: catColor }));
+      svg.appendChild(svgEl('rect', { x: padL + cashW, y: y, width: cardW, height: barH, fill: catColor, stroke: catColor, 'stroke-width': '1.5' }));
     }
 
     // Category label
     var labelText = d.category || '';
     if (barW > 60) {
-      svg.appendChild(svgEl('rect', { x: padL + 2, y: y + barH / 2 - 8, width: labelText.length * 7 + 6, height: 16, fill: T.bgDark, opacity: '0.82' }));
-      var lbl = svgEl('text', { x: padL + 4, y: y + barH / 2 + 5, fill: '#ffffff', 'font-size': '12', 'font-family': T.fb, 'font-weight': 'bold' });
+      svg.appendChild(svgEl('rect', { x: padL + 2, y: y + barH / 2 - 8, width: labelText.length * 7 + 6, height: 16, fill: CHART.calloutBg, opacity: '0.82' }));
+      var lbl = svgEl('text', { x: padL + 4, y: y + barH / 2 + 5, fill: CHART.axisFill, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
       lbl.textContent = labelText;
       svg.appendChild(lbl);
     } else {
-      var lbl = svgEl('text', { x: padL + barW + 3, y: y + barH / 2 + 5, fill: catColor, 'font-size': '11', 'font-family': T.fb, 'font-weight': 'bold' });
+      var lbl = svgEl('text', { x: padL + barW + 3, y: y + barH / 2 + 5, fill: catColor, 'font-size': '11', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
       lbl.textContent = labelText;
       svg.appendChild(lbl);
     }
 
-    // Revenue value — gold, right-aligned
-    var revLabel = svgEl('text', { x: W - 4, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '12', 'font-family': T.fb, 'font-weight': 'bold', 'text-anchor': 'end' });
+    // Revenue value — right-aligned
+    var revLabel = svgEl('text', { x: W - 4, y: y + barH / 2 + 5, fill: CHART.money, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' });
     revLabel.textContent = fmt(tot);
     svg.appendChild(revLabel);
 
@@ -246,18 +220,18 @@ function drawParetoChart(container, data, opts) {
     linePoints.push({ x: padL + (pct / 100) * chartW, y: y + barH, pct: pct });
   }
 
-  // Gold cumulative % line
+  // Cumulative % line (coral = money/axes)
   if (linePoints.length > 1) {
     var pathD = 'M ' + padL + ' ' + (padT + gap);
     for (var i = 0; i < linePoints.length; i++) {
       pathD += ' L ' + linePoints[i].x + ' ' + linePoints[i].y;
     }
-    svg.appendChild(svgEl('path', { d: pathD, fill: 'none', stroke: T.gold, 'stroke-width': '1.5' }));
+    svg.appendChild(svgEl('path', { d: pathD, fill: 'none', stroke: DATA.coral, 'stroke-width': '1.5' }));
     for (var i = 0; i < linePoints.length; i++) {
       var pt = linePoints[i];
-      svg.appendChild(svgEl('rect', { x: pt.x - 3, y: pt.y - 3, width: 6, height: 6, fill: T.gold }));
+      svg.appendChild(svgEl('rect', { x: pt.x - 3, y: pt.y - 3, width: 6, height: 6, fill: DATA.coral }));
       if (i === linePoints.length - 1 || Math.abs(pt.pct - (linePoints[i - 1] || { pct: 0 }).pct) > 8) {
-        var pctLbl = svgEl('text', { x: pt.x + 6, y: pt.y + 4, fill: T.gold, 'font-size': '10', 'font-family': T.fb });
+        var pctLbl = svgEl('text', { x: pt.x + 6, y: pt.y + 4, fill: DATA.coral, 'font-size': '10', 'font-family': CHART.dataFont });
         pctLbl.textContent = Math.round(pt.pct) + '%';
         svg.appendChild(pctLbl);
       }
@@ -292,7 +266,7 @@ function drawTableHistogram(container, ts) {
   var n = data.length;
 
   var svg = createSVG(W, H);
-  injectDitherDefs(svg);
+  injectChartDefs(svg);
 
   var maxAvg = 0;
   for (var i = 0; i < n; i++) {
@@ -307,9 +281,9 @@ function drawTableHistogram(container, ts) {
   var gridSteps = 4;
   for (var g = 0; g <= gridSteps; g++) {
     var gx = padL + (g / gridSteps) * chartW;
-    svg.appendChild(svgEl('line', { x1: gx, y1: padT, x2: gx, y2: H - padB, stroke: T.bg3, 'stroke-width': '1', 'stroke-dasharray': '3,3' }));
+    svg.appendChild(svgEl('line', { x1: gx, y1: padT, x2: gx, y2: H - padB, stroke: CHART.gridStroke, 'stroke-width': '1', 'stroke-dasharray': '3,3' }));
     if (g > 0) {
-      var gVal = svgEl('text', { x: gx, y: H - 4, fill: T.gold, 'font-size': '10', 'font-family': T.fb, 'text-anchor': 'middle' });
+      var gVal = svgEl('text', { x: gx, y: H - 4, fill: CHART.money, 'font-size': '10', 'font-family': CHART.dataFont, 'text-anchor': 'middle' });
       gVal.textContent = '$' + Math.round(maxAvg * g / gridSteps);
       svg.appendChild(gVal);
     }
@@ -322,34 +296,25 @@ function drawTableHistogram(container, ts) {
 
     // Y-axis label — party size
     var sizeLabel = d.size >= 4 ? '4+' : String(d.size);
-    svg.appendChild(svgEl('text', { x: padL - 6, y: y + barH / 2 + 5, fill: '#ffffff', 'font-size': '13', 'font-family': T.fb, 'font-weight': 'bold', 'text-anchor': 'end' })).textContent = sizeLabel;
+    svg.appendChild(svgEl('text', { x: padL - 6, y: y + barH / 2 + 5, fill: CHART.axisFill, 'font-size': '13', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' })).textContent = sizeLabel;
 
-    // Bar
-    svg.appendChild(svgEl('rect', { x: padL, y: y, width: Math.max(barW, 2), height: barH, fill: T.lime }));
-
-    // Dither highlight + shadow
-    var hiH = Math.round(barH * 0.25);
-    svg.appendChild(svgEl('rect', { x: padL, y: y, width: Math.max(barW, 2), height: hiH, fill: 'url(#dither-hi)' }));
-    svg.appendChild(svgEl('rect', { x: padL, y: y + barH - hiH, width: Math.max(barW, 2), height: hiH, fill: 'url(#dither-lo)' }));
-
-    // Bevel edges
-    svg.appendChild(svgEl('line', { x1: padL, y1: y, x2: padL + barW, y2: y, stroke: 'white', 'stroke-width': '1', opacity: '0.4' }));
-    svg.appendChild(svgEl('line', { x1: padL, y1: y + barH, x2: padL + barW, y2: y + barH, stroke: 'black', 'stroke-width': '1', opacity: '0.6' }));
+    // Bar — v4 pattern fill with stroke
+    svg.appendChild(svgEl('rect', { x: padL, y: y, width: Math.max(barW, 2), height: barH, fill: PAT.orange, stroke: DATA.orange, 'stroke-width': '1.5' }));
 
     // Count badge inside bar
     if (barW > 30) {
       var badgeW = d.tableCount.toString().length * 8 + 16;
-      svg.appendChild(svgEl('rect', { x: padL + 3, y: y + barH / 2 - 7, width: badgeW, height: 14, fill: T.bgDark, opacity: '0.85' }));
-      svg.appendChild(svgEl('text', { x: padL + 6, y: y + barH / 2 + 4, fill: '#ffffff', 'font-size': '11', 'font-family': T.fb })).textContent = '\u00d7' + d.tableCount;
+      svg.appendChild(svgEl('rect', { x: padL + 3, y: y + barH / 2 - 7, width: badgeW, height: 14, fill: CHART.calloutBg, opacity: '0.85' }));
+      svg.appendChild(svgEl('text', { x: padL + 6, y: y + barH / 2 + 4, fill: CHART.axisFill, 'font-size': '11', 'font-family': CHART.dataFont })).textContent = '\u00d7' + d.tableCount;
     }
 
-    // Avg value — gold, right of bar
-    svg.appendChild(svgEl('text', { x: padL + Math.max(barW, 2) + 4, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '12', 'font-family': T.fb, 'font-weight': 'bold' })).textContent = fmt(d.avgCheck);
+    // Avg value — right of bar
+    svg.appendChild(svgEl('text', { x: padL + Math.max(barW, 2) + 4, y: y + barH / 2 + 5, fill: CHART.money, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold' })).textContent = fmt(d.avgCheck);
   }
 
   // Axis labels
-  svg.appendChild(svgEl('text', { x: 3, y: H / 2, fill: '#ffffff', 'font-size': '9', 'font-family': T.fb, transform: 'rotate(-90,' + 3 + ',' + H / 2 + ')', 'text-anchor': 'middle' })).textContent = 'PARTY SIZE';
-  svg.appendChild(svgEl('text', { x: padL + chartW / 2, y: H - 1, fill: T.gold, 'font-size': '9', 'font-family': T.fb, 'text-anchor': 'middle' })).textContent = 'AVG CHECK';
+  svg.appendChild(svgEl('text', { x: 3, y: H / 2, fill: CHART.axisFill, 'font-size': '9', 'font-family': CHART.labelFont, transform: 'rotate(-90,' + 3 + ',' + H / 2 + ')', 'text-anchor': 'middle' })).textContent = 'PARTY SIZE';
+  svg.appendChild(svgEl('text', { x: padL + chartW / 2, y: H - 1, fill: CHART.money, 'font-size': '9', 'font-family': CHART.labelFont, 'text-anchor': 'middle' })).textContent = 'AVG CHECK';
 
   container.appendChild(svg);
 }
