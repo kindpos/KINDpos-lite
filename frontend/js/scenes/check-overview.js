@@ -85,6 +85,7 @@ defineScene({
     orderId: null,
     checkNumber: '',
     order: null,
+    selectedItems: {},  // { 'seatIdx:itemIdx': true }
   },
 
   render: function(container, params, state) {
@@ -347,9 +348,48 @@ defineScene({
       if (editSeatsBtn) editSeatsBtn.wrap.style.display = anySelected ? '' : 'none';
     }
 
+    function toggleItem(key) {
+      if (state.selectedItems[key]) {
+        delete state.selectedItems[key];
+      } else {
+        state.selectedItems[key] = true;
+      }
+    }
+
+    function toggleSeatItems(seatIdx) {
+      var seat = state.seats[seatIdx];
+      if (!seat) return;
+      // Check if all items in this seat are already selected
+      var allSelected = true;
+      for (var ti = 0; ti < seat.items.length; ti++) {
+        if (!state.selectedItems[seatIdx + ':' + ti]) { allSelected = false; break; }
+      }
+      // Toggle: if all selected → deselect all, else select all
+      for (var tj = 0; tj < seat.items.length; tj++) {
+        var key = seatIdx + ':' + tj;
+        if (allSelected) { delete state.selectedItems[key]; }
+        else { state.selectedItems[key] = true; }
+      }
+    }
+
+    function getSelectedItemIds() {
+      // Return item_ids of all selected items (for API calls)
+      var ids = [];
+      var keys = Object.keys(state.selectedItems);
+      for (var ki = 0; ki < keys.length; ki++) {
+        var parts = keys[ki].split(':');
+        var seatIdx = parseInt(parts[0]);
+        var itemIdx = parseInt(parts[1]);
+        var seat = state.seats[seatIdx];
+        if (seat && seat.items[itemIdx] && seat.items[itemIdx].item_id) {
+          ids.push(seat.items[itemIdx].item_id);
+        }
+      }
+      return ids;
+    }
+
     function updateSummary() {
       var totals = collectSummary(state.seats, state.selected);
-      // Update totals (skip items — we render seat cards ourselves)
       OrderSummary.update({
         checkId: state.checkNumber || '',
         skipItems: true,
@@ -358,14 +398,17 @@ defineScene({
         cardTotal: totals.cardTotal,
         cashPrice: totals.cashPrice,
       });
-      // Render seat-grouped collapsible cards into the ticket list
       var ticketList = document.getElementById('ticket-list');
       if (!ticketList) return;
       ticketList.innerHTML = '';
 
       var selectedSeats = [];
+      var seatIndices = [];
       for (var ui = 0; ui < state.seats.length; ui++) {
-        if (state.selected[state.seats[ui].id]) selectedSeats.push(state.seats[ui]);
+        if (state.selected[state.seats[ui].id]) {
+          selectedSeats.push(state.seats[ui]);
+          seatIndices.push(ui);
+        }
       }
 
       if (selectedSeats.length === 0) {
@@ -378,13 +421,13 @@ defineScene({
 
       for (var si = 0; si < selectedSeats.length; si++) {
         var seat = selectedSeats[si];
+        var seatIdx = seatIndices[si];
         var total = seatTotal(seat);
 
-        // Seat card container
         var card = document.createElement('div');
         card.style.cssText = 'margin-bottom:2px;';
 
-        // Seat header (tappable to collapse/expand)
+        // Seat header — tap to select/deselect all items on this seat
         var hdr = document.createElement('div');
         hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:2px 8px;background:' + T.bg3 + ';cursor:pointer;user-select:none;border-bottom:1px solid ' + T.border + ';';
         var hdrLabel = document.createElement('span');
@@ -397,7 +440,14 @@ defineScene({
         hdr.appendChild(hdrTotal);
         card.appendChild(hdr);
 
-        // Items body (collapsible)
+        (function(idx) {
+          hdr.addEventListener('pointerup', function() {
+            toggleSeatItems(idx);
+            updateSummary();
+          });
+        })(seatIdx);
+
+        // Items body
         var body = document.createElement('div');
         body.style.cssText = 'overflow:hidden;';
 
@@ -409,35 +459,37 @@ defineScene({
         } else {
           for (var ii = 0; ii < seat.items.length; ii++) {
             var it = seat.items[ii];
+            var key = seatIdx + ':' + ii;
+            var isSel = !!state.selectedItems[key];
+
             var row = document.createElement('div');
-            row.style.cssText = 'display:grid;grid-template-columns:1fr 30px 58px;gap:0 4px;padding:1px 8px;font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';border-bottom:1px solid ' + T.bg3 + ';';
+            row.style.cssText = 'display:grid;grid-template-columns:1fr 30px 58px;gap:0 4px;padding:1px 8px;font-family:' + T.fb + ';font-size:' + T.fsCon + ';cursor:pointer;user-select:none;border-bottom:1px solid ' + T.bg3 + ';'
+              + 'background:' + (isSel ? T.gold : '') + ';color:' + (isSel ? T.bgDark : T.textPrimary) + ';';
             var nameEl = document.createElement('div');
             nameEl.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
             nameEl.textContent = it.name;
             var qtyEl = document.createElement('div');
-            qtyEl.style.cssText = 'text-align:right;color:' + T.gold + ';';
+            qtyEl.style.cssText = 'text-align:right;color:' + (isSel ? T.bgDark : T.gold) + ';';
             qtyEl.textContent = it.qty + '\u00D7';
             var priceEl = document.createElement('div');
-            priceEl.style.cssText = 'text-align:right;color:' + T.gold + ';';
+            priceEl.style.cssText = 'text-align:right;color:' + (isSel ? T.bgDark : T.gold) + ';';
             priceEl.textContent = fmt(it.qty * it.price);
             row.appendChild(nameEl);
             row.appendChild(qtyEl);
             row.appendChild(priceEl);
+
+            (function(k) {
+              row.addEventListener('pointerup', function() {
+                toggleItem(k);
+                updateSummary();
+              });
+            })(key);
+
             body.appendChild(row);
           }
         }
 
         card.appendChild(body);
-
-        // Toggle collapse on header tap
-        (function(bodyEl) {
-          var collapsed = false;
-          hdr.addEventListener('pointerup', function() {
-            collapsed = !collapsed;
-            bodyEl.style.display = collapsed ? 'none' : '';
-          });
-        })(body);
-
         ticketList.appendChild(card);
       }
     }
@@ -490,6 +542,7 @@ defineScene({
 
     function handleDiscount() {
       if (!state.orderId) { showToast('No check to discount', { bg: T.red }); return; }
+      var itemIds = getSelectedItemIds();
       SceneManager.interrupt('disc-pin', {
         onConfirm: function(pin) {
           SceneManager.interrupt('disc-select', {
@@ -497,13 +550,18 @@ defineScene({
               var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
               var totals = collectSummary(state.seats, state.selected);
               var amount = Math.round(totals.subtotal * pct * 100) / 100;
+              var body = { discount_type: opt, amount: amount, approved_by: pin };
+              if (itemIds.length > 0) body.item_ids = itemIds;
               fetch('/api/v1/orders/' + state.orderId + '/discount', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ discount_type: opt, amount: amount, approved_by: pin }),
+                body: JSON.stringify(body),
               }).then(function(r) {
-                if (r.ok) { showToast('Discount applied: ' + opt, { bg: T.goGreen }); refreshOrder(); }
-                else showToast('Discount failed', { bg: T.red });
+                if (r.ok) {
+                  showToast('Discount applied: ' + opt, { bg: T.goGreen });
+                  state.selectedItems = {};
+                  refreshOrder();
+                } else showToast('Discount failed', { bg: T.red });
               }).catch(function() { showToast('Discount failed', { bg: T.red }); });
             },
             onCancel: function() {},
@@ -515,19 +573,37 @@ defineScene({
 
     function handleVoid() {
       if (!state.orderId) { showToast('No check to void', { bg: T.red }); return; }
+      var itemIds = getSelectedItemIds();
       SceneManager.interrupt('disc-pin', {
         onConfirm: function(pin) {
-          fetch('/api/v1/orders/' + state.orderId + '/void', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason: 'Voided from check overview', approved_by: pin }),
-          }).then(function(r) {
-            if (r.ok) {
-              showToast('Check voided', { bg: T.goGreen });
-              fetch('/api/v1/print/ticket/' + state.orderId + '?void=true', { method: 'POST' });
-              SceneManager.mountWorking('manager-landing', params);
-            } else showToast('Void failed', { bg: T.red });
-          }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          if (itemIds.length > 0) {
+            // Item-level void: delete each selected item
+            var pending = itemIds.length;
+            var failed = 0;
+            for (var vi = 0; vi < itemIds.length; vi++) {
+              fetch('/api/v1/orders/' + state.orderId + '/items/' + itemIds[vi], { method: 'DELETE' })
+                .then(function(r) { if (!r.ok) failed++; if (--pending === 0) finishVoid(); })
+                .catch(function() { failed++; if (--pending === 0) finishVoid(); });
+            }
+            function finishVoid() {
+              if (failed > 0) showToast(failed + ' item(s) failed to void', { bg: T.red });
+              else showToast('Items voided', { bg: T.goGreen });
+              state.selectedItems = {};
+              refreshOrder();
+            }
+          } else {
+            // Full check void
+            fetch('/api/v1/orders/' + state.orderId + '/void', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: 'Voided from check overview', approved_by: pin }),
+            }).then(function(r) {
+              if (r.ok) {
+                showToast('Check voided', { bg: T.goGreen });
+                fetch('/api/v1/print/ticket/' + state.orderId + '?void=true', { method: 'POST' });
+                SceneManager.mountWorking('manager-landing', params);
+              } else showToast('Void failed', { bg: T.red });
+            }).catch(function() { showToast('Void failed', { bg: T.red }); });
         },
         onCancel: function() {},
       });
