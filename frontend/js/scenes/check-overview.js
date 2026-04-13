@@ -606,6 +606,7 @@ defineScene({
                 SceneManager.mountWorking('manager-landing', params);
               } else showToast('Void failed', { bg: T.red });
             }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          }
         },
         onCancel: function() {},
       });
