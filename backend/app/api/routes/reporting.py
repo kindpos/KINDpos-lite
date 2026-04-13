@@ -684,7 +684,7 @@ async def _hourly_for_date(ledger: EventLedger, date_str: str, open_hour: int = 
     orders = project_orders(events)
 
     hourly = defaultdict(lambda: Decimal("0"))
-    for order in orders:
+    for order in orders.values():
         if order.status == "voided":
             continue
         ts = order.created_at
