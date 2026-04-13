@@ -1583,10 +1583,10 @@ function buildLeftCard(params, sales, labor) {
     if (!compact) {
       var btnArea = document.createElement('div');
       btnArea.style.cssText = 'margin-top:auto;align-self:stretch;display:flex;flex-direction:column;gap:4px;';
-      [['Sales Detail','sales-summary'],['Close Day','close-day'],['Tip Adjustment','tip-adjustment']].forEach(function(b) {
+      [['Close Day','close-day'],['Tip Adjustment','tip-adjustment']].forEach(function(b) {
         var pair = buildStyledButton(T.darkBtn);
         pair.inner.textContent = b[0]; pair.inner.style.fontFamily = T.fh; pair.inner.style.fontSize = btnFs; pair.inner.style.color = T.mint; pair.inner.style.padding = btnPad; pair.wrap.style.alignSelf = 'stretch';
-        pair.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); SceneManager.openTransactional(b[1], b[1] === 'sales-summary' ? { role: params.role, employeeId: params.employeeId } : params); });
+        pair.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); SceneManager.openTransactional(b[1], params); });
         btnArea.appendChild(pair.wrap);
       });
       card.appendChild(btnArea);
@@ -1623,12 +1623,12 @@ function buildLeftCardButtons(params, sales) {
   var btnArea = document.createElement('div');
   btnArea.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-self:stretch;';
   var buttons = params.role === 'manager'
-    ? [['Sales Detail','sales-summary'],['Close Day','close-day'],['Tip Adjustment','tip-adjustment']]
+    ? [['Close Day','close-day'],['Tip Adjustment','tip-adjustment']]
     : [['Checkout','server-checkout'],['Tip Adjustment','tip-adjustment']];
   buttons.forEach(function(b) {
     var pair = buildStyledButton(T.darkBtn);
     pair.inner.textContent = b[0]; pair.inner.style.fontFamily = T.fh; pair.inner.style.fontSize = btnFs; pair.inner.style.color = T.mint; pair.inner.style.padding = btnPad; pair.wrap.style.alignSelf = 'stretch';
-    pair.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); SceneManager.openTransactional(b[1], b[1] === 'sales-summary' ? { role: params.role, employeeId: params.employeeId } : params); });
+    pair.wrap.addEventListener('pointerup', function(e) { e.stopPropagation(); SceneManager.openTransactional(b[1], params); });
     btnArea.appendChild(pair.wrap);
   });
   var activeChecks = document.createElement('div');

@@ -20,7 +20,6 @@ import './scenes/dashboard-charts.js?v=1';
 import './scenes/manager-landing-sm2.js?v=1';  // SM2 format
 import './scenes/server-checkout.js?v=2';
 import './scenes/close-day.js?v=2';
-import './scenes/sales-summary.js?v=2';
 import './scenes/landing.js?v=2';
 import './scenes/server-landing-sm2.js?v=1';  // SM2 format
 import './scenes/clock-in.js?v=3';  // SM2 format
