@@ -1202,7 +1202,7 @@ function renderDeviceOps(opsEl, dev, parentBody, catInfo) {
       payload = { ip: dev.ip, port: dev.port || 9100 };
     } else {
       url = '/api/v1/hardware/test-connection';
-      payload = { ip: dev.ip, port: dev.port || 8443 };
+      payload = { ip: dev.ip, port: dev.port || 9000 };
     }
     fetch(url, {
       method: 'POST',
