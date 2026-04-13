@@ -535,11 +535,7 @@ defineScene({
 
     function handlePay() {
       if (!state.orderId) { showToast('No check to pay', { bg: T.red }); return; }
-      var totals = collectSummary(state.seats, { ALL: true });
-      // Select all for payment totals
-      var allSelected = {};
-      for (var si = 0; si < state.seats.length; si++) allSelected[state.seats[si].id] = true;
-      totals = collectSummary(state.seats, allSelected);
+      var totals = collectSummary(state.seats, state.selected);
       SceneManager.openTransactional('payment-console', {
         orderId: state.orderId,
         checkId: state.checkNumber,
