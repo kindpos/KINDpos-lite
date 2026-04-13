@@ -113,6 +113,7 @@ class ModifyItemRequest(BaseModel):
     quantity: Optional[int] = Field(default=None, ge=1)
     price: Optional[float] = None
     notes: Optional[str] = None
+    seat_number: Optional[int] = None
 
 
 class ApplyModifierRequest(BaseModel):
@@ -759,6 +760,7 @@ async def modify_item(
         quantity=request.quantity,
         price=request.price,
         notes=request.notes,
+        seat_number=request.seat_number,
     )
     await ledger.append(event)
 

@@ -878,17 +878,30 @@ defineScene({
             }
             rebuildSeatGrid();
             selectAll();
-            // Persist seat_number changes via API
+            // Persist changes via API
             if (state.orderId) {
               for (var pi = 0; pi < columns.length; pi++) {
                 var seatNum = pi + 1;
                 var colItems = columns[pi].items;
                 for (var qi = 0; qi < colItems.length; qi++) {
                   if (colItems[qi].item_id) {
+                    // Existing item — update seat_number and price
                     fetch('/api/v1/orders/' + state.orderId + '/items/' + colItems[qi].item_id, {
                       method: 'PATCH',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ seat_number: seatNum }),
+                      body: JSON.stringify({ seat_number: seatNum, price: colItems[qi].price }),
+                    }).catch(function() {});
+                  } else {
+                    // New item (e.g. from split) — add to order
+                    fetch('/api/v1/orders/' + state.orderId + '/items', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        name: colItems[qi].name,
+                        price: colItems[qi].price,
+                        quantity: colItems[qi].qty || 1,
+                        seat_number: seatNum,
+                      }),
                     }).catch(function() {});
                   }
                 }

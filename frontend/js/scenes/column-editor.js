@@ -511,11 +511,17 @@ defineScene({
           var tIdx = state.splitTargets[t];
           var price = splitPrice;
           if (t === 0) price = splitPrice + remainder; // first target absorbs rounding
-          state.columns[tIdx].items.push({
+          var splitItem = {
             name: item.name,
             qty: item.qty,
             price: price,
-          });
+          };
+          // First copy keeps original item_id so the backend item
+          // gets its price PATCHed; extra copies are POSTed as new items.
+          if (t === 0 && item.item_id) {
+            splitItem.item_id = item.item_id;
+          }
+          state.columns[tIdx].items.push(splitItem);
         }
       }
 

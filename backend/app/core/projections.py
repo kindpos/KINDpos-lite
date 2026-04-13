@@ -234,6 +234,8 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                             item.price = payload["price"]
                         if "notes" in payload:
                             item.notes = payload["notes"]
+                        if "seat_number" in payload:
+                            item.seat_number = payload["seat_number"]
                         break
 
         elif event.event_type == EventType.MODIFIER_APPLIED:

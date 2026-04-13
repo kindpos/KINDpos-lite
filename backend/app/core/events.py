@@ -398,6 +398,7 @@ def item_modified(
         quantity: Optional[int] = None,
         price: Optional[float] = None,
         notes: Optional[str] = None,
+        seat_number: Optional[int] = None,
         **kwargs
 ) -> Event:
     """Create an ITEM_MODIFIED event."""
@@ -411,6 +412,8 @@ def item_modified(
         payload["price"] = price
     if notes is not None:
         payload["notes"] = notes
+    if seat_number is not None:
+        payload["seat_number"] = seat_number
 
     return create_event(
         event_type=EventType.ITEM_MODIFIED,
