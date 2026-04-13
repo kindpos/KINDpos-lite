@@ -1,16 +1,16 @@
 // ═══════════════════════════════════════════════════
-//  KINDpos Terminal — Order Entry Scene
-//  Ticket panel left | Hex Nav canvas right
+//  KINDpos Terminal — Order Entry Scene (SM2)
+//  Item entry tool — child of check-overview
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, buildStyledButton, applySunkenStyle } from '../tokens.js';
-import { buildButton, showToast } from '../components.js';
+import { defineScene } from '../scene-manager-2.js';
 import { SceneManager } from '../scene-manager.js';
+import { T, buildStyledButton, applySunkenStyle, chamfer, bevelEdges } from '../tokens.js';
+import { buildButton, showToast } from '../components.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { OrderSummary } from '../order-summary.js';
 import { HexNav } from '../hex-nav.js';
-import { buildNumpad } from '../numpad.js';
 import { showKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
@@ -79,7 +79,7 @@ var PIZZA_BUILDER_DATA = null;
 // ── Menu data (fallback — overwritten by API fetch) ──
 var MENU_DATA = [
   {
-    id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
+    id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: T.bgDark,
     subcats: [
       { id: 'pizza-items', label: 'Pizza', items: [
         { label: 'Pizza', price: 0 },
@@ -87,7 +87,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'apps', label: 'APPS', color: T.catColor('APPS'), textColor: '#1a1a00',
+    id: 'apps', label: 'APPS', color: T.catColor('APPS'), textColor: T.bgDark,
     subcats: [
       { id: 'apps-items', label: 'Appetizers', items: [
         { label: 'Garlic Knots', price: 6.00 },
@@ -98,7 +98,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'subs', label: 'SUBS', color: T.catColor('SUBS'), textColor: '#1a2a1a',
+    id: 'subs', label: 'SUBS', color: T.catColor('SUBS'), textColor: T.bgDark,
     subcats: [
       { id: 'subs-items', label: 'Subs', items: [
         { label: 'Italian Sub', price: 10.00 },
@@ -108,7 +108,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: '#001a1a',
+    id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: T.bgDark,
     subcats: [
       { id: 'side-items', label: 'Sides', items: [
         { label: 'House Salad', price: 7.00 },
@@ -118,7 +118,7 @@ var MENU_DATA = [
     ]
   },
   {
-    id: 'drinks', label: 'DRINKS', color: T.catColor('DRINKS'), textColor: '#001a1a',
+    id: 'drinks', label: 'DRINKS', color: T.catColor('DRINKS'), textColor: T.bgDark,
     subcats: [
       { id: 'drinks-items', label: 'Drinks', items: [
         { label: 'Soda', price: 2.50 },
@@ -131,7 +131,7 @@ var MENU_DATA = [
 
 var MOD_DATA = [
   {
-    id: 'toppings', label: 'TOPPINGS', color: T.red, textColor: '#fff',
+    id: 'toppings', label: 'TOPPINGS', color: T.red, textColor: T.textPrimary,
     half_placement: true,
     subcats: [
       { id: 'toppings-items', label: 'Toppings', items: [
@@ -145,7 +145,7 @@ var MOD_DATA = [
     ]
   },
   {
-    id: 'dressing', label: 'DRESSING', color: T.cyan, textColor: '#001a1a',
+    id: 'dressing', label: 'DRESSING', color: T.cyan, textColor: T.bgDark,
     subcats: [
       { id: 'dressing-items', label: 'Dressing', items: [
         { label: 'Ranch', price: 0 },
@@ -188,7 +188,7 @@ function fetchMenuFromAPI() {
           if (item.mods) hexItem.requiredMods = item.mods;
           return hexItem;
         });
-      var textColor = _textColorForHex(cat.color || '#888888');
+      var textColor = _textColorForHex(cat.color || T.mutedText);
       return {
         id: cat.category_id,
         label: cat.label || cat.name.toUpperCase(),
@@ -231,7 +231,7 @@ function fetchMenuFromAPI() {
             id: g.group_id,
             label: g.name.toUpperCase(),
             color: g.color || T.mint,
-            textColor: g.text_color || '#1a1a1a',
+            textColor: g.text_color || T.bgDark,
             subcats: subcats,
           };
         });
@@ -252,7 +252,7 @@ function _textColorForHex(hex) {
   var g = parseInt(hex.slice(3, 5), 16);
   var b = parseInt(hex.slice(5, 7), 16);
   var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum > 0.5 ? '#1a1a1a' : '#ffffff';
+  return lum > 0.5 ? T.bgDark : T.textPrimary;
 }
 
 // ── Combo flow state ─────────────────────────────
@@ -292,31 +292,35 @@ var modifierSession = {
 
 // ── Prefix definitions ────────────────────────────
 var PREFIXES = [
-  { id: 'add',     label: 'Add',     color: T.goGreen,  textColor: '#1a2a1a' },
-  { id: 'no',      label: 'No',      color: T.red,      textColor: '#fff'    },
-  { id: 'on-side', label: 'On Side', color: T.gold,     textColor: '#1a1000' },
-  { id: 'extra',   label: 'Extra',   color: T.cyan,     textColor: '#001a1a' },
-  { id: 'sub',     label: 'Sub',     color: T.lavender, textColor: '#1a0030' },
+  { id: 'add',     label: 'Add',     color: T.goGreen,  textColor: T.bgDark },
+  { id: 'no',      label: 'No',      color: T.red,      textColor: T.textPrimary    },
+  { id: 'on-side', label: 'On Side', color: T.gold,     textColor: T.bgDark },
+  { id: 'extra',   label: 'Extra',   color: T.cyan,     textColor: T.bgDark },
+  { id: 'sub',     label: 'Sub',     color: T.lavender, textColor: T.bgDark },
 ];
 
-SceneManager.register({
+defineScene({
   name: 'order-entry',
 
-  mount: function(container, params) {
+  state: {},
+
+  render: function(container, params) {
     params = params || {};
-    setSceneName('NEW ORDER');
-    setHeaderBack({ x: true, onClose: function() { handleClose(); } });
+    setSceneName(params.recallOrderId ? 'ADD ITEMS' : 'NEW ORDER');
+    setHeaderBack({
+      back: true,
+      onBack: function() { handleClose(); },
+      x: true,
+    });
     activeTab      = 'items';
     activePrefix   = 'add';
     ticket         = [];
     ticketSeq      = 0;
     sceneParams    = params;
     prefixCard     = null;
-    saveBtn        = null;
     currentOrderId = null;
     isSending      = false;
     currentCheckNumber = null;
-    customerName   = '';
     modHistory     = [];
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _bottomBar     = null;
@@ -333,7 +337,7 @@ SceneManager.register({
     ].join('');
 
     // Show persistent order summary panel (left column)
-    OrderSummary.show({ checkId: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 });
+    OrderSummary.show({ checkId: params.recallOrderId || '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 });
 
     var mainArea = buildMain(container, params);
     container.appendChild(mainArea);
@@ -342,8 +346,6 @@ SceneManager.register({
 
     if (params.recallOrderId) {
       recallFromBackend(params.recallOrderId);
-    } else if (params.autoRecall) {
-      setTimeout(function() { handleRecall(); }, 100);
     }
   },
 
@@ -375,7 +377,7 @@ function buildPrefixCard() {
   var card = document.createElement('div');
   card.style.cssText = [
     'display:none;flex-shrink:0;',
-    'background:#1a1a1a;',
+    'background:' + T.bgDark + ';',
     'border:2px solid ' + T.gold + ';',
     'border-bottom:none;',
     'padding:6px 8px;',
@@ -559,7 +561,7 @@ function buildMain(parentEl, params) {
     hexNav = new HexNav(canvas, {
       data: MENU_DATA,
       onSelect: function(item) { handleItemSelect(item); },
-      onToast: function(msg) { showToast(msg, { bg: '#555', duration: 2000 }); },
+      onToast: function(msg) { showToast(msg, { bg: T.dimText, duration: 2000 }); },
     });
   });
 
@@ -755,7 +757,7 @@ function openModifierSession() {
   var ids = modifierSession.selectedItems;
   var items = ticket.filter(function(i) { return ids.indexOf(i.id) !== -1 && !i.sent; });
   if (items.length === 0) {
-    showToast('No unsent items selected', { bg: '#555', duration: 2000 });
+    showToast('No unsent items selected', { bg: T.dimText, duration: 2000 });
     return;
   }
   modifierSession.active = true;
@@ -791,7 +793,7 @@ function openModifierSession() {
 function buildPlacementBar() {
   var plColor = MOD_COLORS.pizza.color;
   var plText  = MOD_COLORS.pizza.textColor;
-  var dimText = '#7a4045';
+  var dimText = T.mutedText;
 
   var styled = buildStyledButton(T.darkBtn);
   styled.wrap.style.flexShrink = '0';
@@ -872,7 +874,7 @@ function buildModifierPanel(catIds) {
     var isActive = modifierSession.activePrefix === p.id;
     var pDef = PREFIXES.find(function(x) { return x.id === p.id; }) || {};
     var pColor = pDef.color || T.bgLight;
-    var pTextColor = pDef.textColor || '#fff';
+    var pTextColor = pDef.textColor || T.textPrimary;
 
     var btn = buildButton(p.label, {
       fill: isActive ? pColor : T.darkBtn,
@@ -968,7 +970,7 @@ function buildModifierPanel(catIds) {
 
 function applyModifier(mod) {
   if (!modifierSession.activePrefix) {
-    showToast('Select a prefix first', { bg: '#555', duration: 2000 });
+    showToast('Select a prefix first', { bg: T.dimText, duration: 2000 });
     return;
   }
   var prefix = UNI_PREFIXES.find(function(p) { return p.id === modifierSession.activePrefix; });
@@ -1018,7 +1020,7 @@ function refreshModifierPanel() {
     var isActive = modifierSession.activePrefix === p.id;
     var pDef = PREFIXES.find(function(x) { return x.id === p.id; }) || {};
     var pColor = pDef.color || T.bgLight;
-    var pTextColor = pDef.textColor || '#fff';
+    var pTextColor = pDef.textColor || T.textPrimary;
     var inner = btn.firstElementChild || btn.querySelector('div');
     if (inner) {
       inner.style.background = isActive ? pColor : T.darkBtn;
@@ -1076,7 +1078,7 @@ function renderModButtonGrid(panel) {
 
       btn.addEventListener('pointerdown', function() {
         btn.style.background = catColor;
-        btn.style.color = activeCat.textColor === catText ? '#fff' : catText;
+        btn.style.color = activeCat.textColor === catText ? T.textPrimary : catText;
       });
       btn.addEventListener('pointerup', function() {
         btn.style.background = T.darkBtn;
@@ -1464,7 +1466,7 @@ function addToTicket(item) {
     // Apply modifier to all selected instances
     var selected = ticket.filter(function(i) { return i.selected; });
     if (selected.length === 0) {
-      showToast('Select an item first', { bg: '#555', duration: 2000 });
+      showToast('Select an item first', { bg: T.dimText, duration: 2000 });
       return;
     }
 
@@ -1713,7 +1715,7 @@ function _renderTicketGroup(list, displayTicket) {
       // ── Individual instance cards ─────────────────
       instances.forEach(function(inst) {
         var active = isSelected(inst);
-        var bg     = active ? '#2a3a28' : '#333333';
+        var bg     = active ? T.bg3 : T.bg;
         var fg     = T.mint;
         var fsName = active ? T.fsItem : '26px';
         var fsMod  = active ? T.fsMod  : '24px';
@@ -1869,7 +1871,7 @@ function buildModRow(name, price, dark, showPrice) {
     'display:flex;justify-content:space-between;',
     'padding:2px 8px 2px 20px;',
     'font-family:' + T.fb + ';font-size:' + T.fsMod + ';font-weight:bold;',
-    'color:' + (dark ? '#1a1a1a' : T.gold) + ';',
+    'color:' + (dark ? T.bgDark : T.gold) + ';',
   ].join('');
   var n = document.createElement('span');
   n.textContent = name;
