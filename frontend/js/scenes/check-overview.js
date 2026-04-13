@@ -388,11 +388,11 @@ defineScene({
         var hdr = document.createElement('div');
         hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:2px 8px;background:' + T.bg3 + ';cursor:pointer;user-select:none;border-bottom:1px solid ' + T.border + ';';
         var hdrLabel = document.createElement('span');
-        hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';color:' + T.numpadChassis + ';letter-spacing:2px;';
+        hdrLabel.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.numpadChassis + ';letter-spacing:2px;';
         hdrLabel.textContent = seat.id;
         hdr.appendChild(hdrLabel);
         var hdrTotal = document.createElement('span');
-        hdrTotal.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.gold + ';';
+        hdrTotal.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.gold + ';';
         hdrTotal.textContent = fmt(total);
         hdr.appendChild(hdrTotal);
         card.appendChild(hdr);
@@ -403,14 +403,14 @@ defineScene({
 
         if (seat.items.length === 0) {
           var emptyRow = document.createElement('div');
-          emptyRow.style.cssText = 'padding:1px 8px;font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';';
+          emptyRow.style.cssText = 'padding:1px 8px;font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.mutedText + ';';
           emptyRow.textContent = 'Empty';
           body.appendChild(emptyRow);
         } else {
           for (var ii = 0; ii < seat.items.length; ii++) {
             var it = seat.items[ii];
             var row = document.createElement('div');
-            row.style.cssText = 'display:grid;grid-template-columns:1fr 30px 58px;gap:0 4px;padding:1px 8px;font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.textPrimary + ';border-bottom:1px solid ' + T.bg3 + ';';
+            row.style.cssText = 'display:grid;grid-template-columns:1fr 30px 58px;gap:0 4px;padding:1px 8px;font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';border-bottom:1px solid ' + T.bg3 + ';';
             var nameEl = document.createElement('div');
             nameEl.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
             nameEl.textContent = it.name;
