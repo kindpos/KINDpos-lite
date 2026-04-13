@@ -357,7 +357,7 @@ async def list_active_orders(
     """Get all active (open or printed) orders."""
     events = await get_current_day_events(ledger, limit=10000)
     orders = project_orders(events)
-    active_orders = [o for o in orders.values() if o.status in ["open", "printed"]]
+    active_orders = [o for o in orders.values() if o.status == "open"]
     active_orders.sort(key=lambda o: o.created_at or datetime.min, reverse=True)
     return [OrderResponse.from_order(o) for o in active_orders]
 
@@ -1036,7 +1036,7 @@ async def apply_discount(
     """Apply a manager-approved discount to an order."""
     order = await get_order_or_404(ledger, order_id)
 
-    if order.status not in ("open", "printed"):
+    if order.status != "open":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot discount a {order.status} order"
@@ -1141,7 +1141,10 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     for oid in open_ids:
         events = await ledger.get_events_by_correlation(oid)
         order = project_order(events)
-        if order and order.status == "open":
+        if not order or order.status in ("closed", "voided"):
+            # Already closed/voided between get_open_orders and now — skip
+            continue
+        if order.status in ("open", "paid"):
             if order.is_fully_paid:
                 # Fully paid — safe to close
                 evt = order_closed(
@@ -1267,7 +1270,10 @@ async def close_day(
     for oid in open_ids:
         events = await ledger.get_events_by_correlation(oid)
         order = project_order(events)
-        if order and order.status in ("open", "paid"):
+        if not order or order.status in ("closed", "voided"):
+            # Already closed/voided between get_open_orders and now — skip
+            continue
+        if order.status in ("open", "paid"):
             if order.is_fully_paid:
                 evt = order_closed(
                     terminal_id=settings.terminal_id,
@@ -1420,7 +1426,7 @@ async def split_by_seat(
     """
     order = await get_order_or_404(ledger, order_id)
 
-    if order.status not in ("open", "printed"):
+    if order.status != "open":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot split a {order.status} order",
@@ -1445,7 +1451,9 @@ async def split_by_seat(
     child_orders = []
     for seat_num, items in sorted(seat_items.items()):
         child_id = f"order_{uuid.uuid4().hex[:8]}"
-        # Create child order
+        # Create child order (set correlation_id so the CREATE event
+        # is returned by get_events_by_correlation — without this,
+        # individual order lookups would 404 for split children)
         create_evt = order_created(
             terminal_id=settings.terminal_id,
             order_id=child_id,
@@ -1455,6 +1463,7 @@ async def split_by_seat(
             server_id=order.server_id,
             server_name=order.server_name,
         )
+        create_evt = create_evt.model_copy(update={"correlation_id": child_id})
         await ledger.append(create_evt)
 
         # Add items to child order
@@ -1512,7 +1521,7 @@ async def split_evenly(
     """
     order = await get_order_or_404(ledger, order_id)
 
-    if order.status not in ("open", "printed", "closed"):
+    if order.status not in ("open", "closed"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot split a {order.status} order",
