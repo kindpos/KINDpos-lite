@@ -106,6 +106,13 @@ defineScene({
     // Determine which landing to return to
     var _landing = params.returnLanding || 'server-landing';
 
+    // Build correct params shape for the landing scene.
+    // Landing scenes expect { emp: { id, name, pin } }, but check-overview
+    // receives flat params { employeeId, employeeName, pin, ... }.
+    // Without this, returning to the landing fetches with an empty server_id
+    // and checks from other servers bleed in or disappear.
+    var _landingParams = { emp: { id: params.employeeId, name: params.employeeName, pin: params.pin } };
+
     // ── Header ──
     setSceneName(params.checkId ? 'CHECK' : 'NEW CHECK');
     setHeaderBack({
@@ -116,14 +123,14 @@ defineScene({
           showToast('Unsaved check \u2014 items will be lost', { bg: T.gold, duration: 2000 });
           // Double-tap to confirm: set a flag, second tap exits
           if (state._backConfirmed) {
-            SceneManager.mountWorking(_landing, params);
+            SceneManager.mountWorking(_landing, _landingParams);
             return;
           }
           state._backConfirmed = true;
           setTimeout(function() { state._backConfirmed = false; }, 3000);
           return;
         }
-        SceneManager.mountWorking(_landing, params);
+        SceneManager.mountWorking(_landing, _landingParams);
       },
       x: true,
     });
@@ -698,7 +705,7 @@ defineScene({
           // If fully paid/closed, return to landing
           if (order.status === 'paid' || order.status === 'closed') {
             showToast('Check closed', { bg: T.goGreen });
-            SceneManager.mountWorking(_landing, params);
+            SceneManager.mountWorking(_landing, _landingParams);
             return;
           }
           // If all items voided (empty check at $0), void the order and return
@@ -709,15 +716,15 @@ defineScene({
               body: JSON.stringify({ reason: 'All items removed', approved_by: 'system' }),
             }).then(function() {
               showToast('Check voided', { bg: T.goGreen });
-              SceneManager.mountWorking(_landing, params);
+              SceneManager.mountWorking(_landing, _landingParams);
             }).catch(function() {
-              SceneManager.mountWorking(_landing, params);
+              SceneManager.mountWorking(_landing, _landingParams);
             });
             return;
           }
           if (order.status === 'voided') {
             showToast('Check voided', { bg: T.goGreen });
-            SceneManager.mountWorking(_landing, params);
+            SceneManager.mountWorking(_landing, _landingParams);
             return;
           }
         })
