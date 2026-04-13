@@ -11,6 +11,7 @@ import { buildButton } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildChartGrid } from '../chart-helpers.js';
+import './check-overview.js';
 import {
   fetchReportData, buildLeftCard, buildLeftCardButtons, buildRightCard, buildCardWrap,
   buildServerShiftPanels, buildServerHoursPanels,
@@ -334,13 +335,11 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
   function handleEditAction(action, ids) {
     if (action === 'OPEN') {
       var order = selected[ids[0]];
-      SceneManager.mountWorking('order-entry', {
-        mode: 'service',
+      SceneManager.mountWorking('check-overview', {
+        checkId: order.order_id,
         pin: emp.pin,
         employeeId: emp.id,
         employeeName: emp.name,
-        roles: empRoles,
-        recallOrderId: order.order_id,
       });
     }
     // MERGE, SPLIT, PRINT, VOID — placeholder for future implementation
@@ -377,8 +376,7 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
         newCheckEmpty.textContent = '+';
         newCheckEmpty.addEventListener('pointerup', function() {
 
-          SceneManager.mountWorking('order-entry', {
-            mode: 'service',
+          SceneManager.mountWorking('check-overview', {
             pin: emp.pin,
             employeeId: emp.id,
             employeeName: emp.name,
@@ -430,12 +428,10 @@ function fetchOpenTabs(tabGrid, editBar, emp, empRoles) {
       newCheckBtn.style.cssText = 'width:100%;height:100px;display:flex;align-items:center;justify-content:center;border:3px dashed ' + T.mint + ';box-sizing:border-box;cursor:pointer;font-family:' + T.fb + ';font-size:48px;color:' + T.mint + ';user-select:none;';
       newCheckBtn.textContent = '+';
       newCheckBtn.addEventListener('pointerup', function() {
-        SceneManager.mountWorking('order-entry', {
-          mode: 'service',
+        SceneManager.mountWorking('check-overview', {
           pin: emp.pin,
           employeeId: emp.id,
           employeeName: emp.name,
-          roles: empRoles,
         });
       });
       tabGrid.appendChild(newCheckBtn);
