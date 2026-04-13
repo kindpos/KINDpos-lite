@@ -544,6 +544,13 @@ defineScene({
     var addItemBtn = buildStyledButton({
       label: 'ADD ITEM(S)', variant: 'gold', size: 'lg',
       onClick: function() {
+        var selectedSeatNums = [];
+        for (var ai = 0; ai < state.seats.length; ai++) {
+          if (state.selected[state.seats[ai].id]) selectedSeatNums.push(ai + 1);
+        }
+        if (selectedSeatNums.length === 0) {
+          for (var aj = 0; aj < state.seats.length; aj++) selectedSeatNums.push(aj + 1);
+        }
         SceneManager.mountWorking('order-entry', {
           recallOrderId: state.orderId || undefined,
           mode: 'service',
@@ -551,6 +558,7 @@ defineScene({
           employeeId: params.employeeId,
           employeeName: params.employeeName,
           returnScene: 'check-overview',
+          seatNumbers: selectedSeatNums,
         });
       },
     });

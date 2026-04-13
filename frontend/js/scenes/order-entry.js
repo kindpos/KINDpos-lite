@@ -280,6 +280,7 @@ var _tabItemsBtn = null;
 var _tabModsBtn  = null;
 var _bottomBar   = null;  // DOM ref for bottom action bar
 var _mainArea    = null;  // DOM ref for right panel
+var _activeSeat  = 1;     // current seat number for new items
 
 // ── Modifier Panel (overlay on hex-canvas) ──
 var _modPanel      = null;   // ModifierPanel instance
@@ -333,6 +334,7 @@ SceneManager.register({
     _mainArea      = null;
     _modPanel      = null;
     _modPanelItem  = null;
+    _activeSeat    = (params.seatNumbers && params.seatNumbers.length > 0) ? params.seatNumbers[0] : 1;
 
     container.style.cssText = [
       'width:100%;height:100%;',
@@ -501,6 +503,34 @@ function buildMain(parentEl, params) {
   topRow.appendChild(saveBtn);
   topRow.appendChild(recallBtnEl);
   main.appendChild(topRow);
+
+  // Seat selector bar (check-overview mode only)
+  if (params.returnScene === 'check-overview' && params.seatNumbers && params.seatNumbers.length > 0) {
+    var seatBar = document.createElement('div');
+    seatBar.style.cssText = 'display:flex;gap:4px;flex-shrink:0;margin-bottom:4px;';
+    var seatBtns = {};
+    params.seatNumbers.forEach(function(sn) {
+      var label = 'S-' + String(sn).padStart(3, '0');
+      var sb = buildButton(label, {
+        fill: sn === _activeSeat ? T.mint : T.darkBtn,
+        color: sn === _activeSeat ? T.bgDark : T.mint,
+        fontSize: '20px', height: 32, fontFamily: T.fh,
+        onTap: function() {
+          _activeSeat = sn;
+          params.seatNumbers.forEach(function(s) {
+            var b = seatBtns[s];
+            if (!b) return;
+            b.style.background = s === _activeSeat ? T.mint : T.darkBtn;
+            if (b.firstChild) b.firstChild.style.color = s === _activeSeat ? T.bgDark : T.mint;
+          });
+        },
+      });
+      sb.style.flex = '1';
+      seatBtns[sn] = sb;
+      seatBar.appendChild(sb);
+    });
+    main.appendChild(seatBar);
+  }
 
   var canvas = document.createElement('div');
   canvas.id = 'hex-canvas';
@@ -1377,6 +1407,7 @@ function handleItemSelect(item) {
       selected:  false,
       sent:      false,
       category:  'combo',
+      seat_number: _activeSeat,
     };
     ticket.push(ticketItem);
     comboFlow = { step: 'side', ticketItem: ticketItem };
@@ -1400,6 +1431,7 @@ function handleItemSelect(item) {
         selected:  false,
         sent:      false,
         category:  'pizza',
+        seat_number: _activeSeat,
       });
       renderTicket();
       rebuildBottomBar();
@@ -1485,6 +1517,7 @@ function addToTicket(item) {
       selected:  false,
       sent:      false,
       category:  hexNav ? hexNav.getCatId() : null,
+      seat_number: _activeSeat,
     });
   }
   renderTicket();
@@ -2118,6 +2151,7 @@ function _buildItemPayload(inst) {
     price:        inst.unitPrice,
     quantity:     1,
     category:     inst.category || 'general',
+    seat_number:  inst.seat_number || _activeSeat || 1,
     modifiers:    inst.mods.map(function(m) {
       return {
         name: m.name, price: m.price, modifier_price: m.price,
