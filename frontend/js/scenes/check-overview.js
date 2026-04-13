@@ -88,6 +88,8 @@ defineScene({
     checkNumber: '',
     order: null,
     selectedItems: {},  // { 'seatIdx:itemIdx': true }
+    paidSeats: {},      // { 'S-001': true } — seats involved in completed payment
+    _payingSeats: [],   // stashed seat IDs during active payment
   },
 
   render: function(container, params, state) {
@@ -242,16 +244,19 @@ defineScene({
     root.appendChild(seatsCard);
 
     // ── Build a seat tile ──
+    var goldEdges = bevelEdges(T.gold);
+
     function buildSeatTile(seat) {
       var hasItems = seat.items.length > 0;
-      var frameColor = hasItems ? T.mint : T.darkBtn;
-      var edges = hasItems ? mintEdges : darkEdges;
+      var isPaid = !!state.paidSeats[seat.id];
+      var frameColor = isPaid ? T.gold : (hasItems ? T.mint : T.darkBtn);
+      var edges = isPaid ? goldEdges : (hasItems ? mintEdges : darkEdges);
       var total = seatTotal(seat);
 
       var tile = document.createElement('div');
       Object.assign(tile.style, {
         borderRadius: '5px',
-        background: T.bgDark,
+        background: isPaid ? T.gold : T.bgDark,
         borderTop: T.bevelBtn + 'px solid ' + edges.light,
         borderLeft: T.bevelBtn + 'px solid ' + edges.light,
         borderBottom: T.bevelBtn + 'px solid ' + edges.dark,
@@ -259,22 +264,29 @@ defineScene({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        cursor: 'pointer',
+        cursor: isPaid ? 'default' : 'pointer',
       });
 
       var header = document.createElement('div');
       Object.assign(header.style, {
-        background: frameColor,
+        background: isPaid ? T.goldD : frameColor,
         height: '20px',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: isPaid ? 'space-between' : '',
         padding: '0 6px',
         fontFamily: T.fh,
         fontSize: '8px',
-        color: T.bgDark,
+        color: isPaid ? T.gold : T.bgDark,
         textTransform: 'uppercase',
       });
       header.textContent = seat.id;
+      if (isPaid) {
+        var paidTag = document.createElement('span');
+        paidTag.style.cssText = 'font-family:' + T.fb + ';font-size:7px;letter-spacing:1px;';
+        paidTag.textContent = 'PAID';
+        header.appendChild(paidTag);
+      }
       tile.appendChild(header);
 
       var body = document.createElement('div');
@@ -285,14 +297,14 @@ defineScene({
         justifyContent: 'center',
         fontFamily: T.fb,
         fontSize: T.fsConSm,
-        color: hasItems ? T.gold : T.mutedText,
+        color: isPaid ? T.bgDark : (hasItems ? T.gold : T.mutedText),
       });
       body.textContent = hasItems ? fmt(total) : '--';
       tile.appendChild(body);
 
       state.seatEls[seat.id] = {
         tile: tile, header: header, body: body,
-        frameColor: frameColor, edges: edges,
+        frameColor: frameColor, edges: edges, isPaid: isPaid,
       };
 
       track(tile, 'pointerup', (function(seatId) {
@@ -318,6 +330,8 @@ defineScene({
     // ═══════════════════════════════════════════════════
 
     function toggleSeat(seatId) {
+      // Paid seats cannot be re-selected
+      if (state.paidSeats[seatId]) return;
       if (state.selected[seatId]) {
         delete state.selected[seatId];
       } else {
@@ -330,7 +344,9 @@ defineScene({
     function selectAll() {
       state.selected = {};
       for (var si = 0; si < state.seats.length; si++) {
-        state.selected[state.seats[si].id] = true;
+        if (!state.paidSeats[state.seats[si].id]) {
+          state.selected[state.seats[si].id] = true;
+        }
       }
       updateSeatVisuals();
       updateSummary();
@@ -342,6 +358,8 @@ defineScene({
         var seat = state.seats[si];
         var el = state.seatEls[seat.id];
         if (!el) continue;
+        // Paid seats keep their gold infill — skip selection styling
+        if (el.isPaid) continue;
         var sel = !!state.selected[seat.id];
         var hasItems = seat.items.length > 0;
         if (sel) anySelected = true;
@@ -653,6 +671,11 @@ defineScene({
     function handlePay() {
       if (!state.orderId) { showToast('No check to pay', { bg: T.red }); return; }
       var totals = collectSummary(state.seats, state.selected);
+      // Stash which seats are part of this payment
+      state._payingSeats = [];
+      for (var pi = 0; pi < state.seats.length; pi++) {
+        if (state.selected[state.seats[pi].id]) state._payingSeats.push(state.seats[pi].id);
+      }
       SceneManager.openTransactional('payment-console', {
         orderId: state.orderId,
         checkId: state.checkNumber,
@@ -721,9 +744,17 @@ defineScene({
         .catch(function() { showToast('Refresh failed', { bg: T.red }); });
     }
 
-    // Listen for payment completion — refresh to check if check is fully paid or partial
-    SceneManager.on('payment:complete', refreshOrder);
-    state.listeners.push({ el: null, event: 'payment:complete', handler: refreshOrder, bus: true });
+    // Listen for payment completion — mark seats paid, then refresh
+    function onPaymentComplete() {
+      // Mark the stashed seats as paid
+      for (var ps = 0; ps < state._payingSeats.length; ps++) {
+        state.paidSeats[state._payingSeats[ps]] = true;
+      }
+      state._payingSeats = [];
+      refreshOrder();
+    }
+    SceneManager.on('payment:complete', onPaymentComplete);
+    state.listeners.push({ el: null, event: 'payment:complete', handler: onPaymentComplete, bus: true });
 
     // Row 1 (y:340): PRINT    RSND             DISC
     // Row 2 (y:388): PAY      DRAWER    VOID
