@@ -7,6 +7,7 @@
 import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
+import { defineScene } from '../scene-manager-2.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 import './check-overview.js';
@@ -1611,6 +1612,38 @@ SceneManager.register({
     container.appendChild(card);
   },
   unmount: function() {},
+});
+
+// ── Void PIN Gate (SM2) ──────────────────────────
+// Manager PIN required after void confirmation
+
+defineScene({
+  name: 'void-pin',
+  render: function(container, params) {
+    container.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+    var numpad = buildNumpad({
+      maxDigits: 4,
+      masked: true,
+      onSubmit: function(pin) {
+        fetch('/api/v1/auth/verify-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: pin }),
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.valid) {
+              params.onConfirm(data);
+            } else {
+              numpad.setError('Invalid PIN');
+            }
+          })
+          .catch(function() { numpad.setError('PIN check failed'); });
+      },
+      onCancel: function() { params.onCancel(); },
+    });
+    container.appendChild(numpad);
+  },
 });
 
 // ── Checkout Gate ─────────────────────────────────

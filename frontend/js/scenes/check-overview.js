@@ -88,6 +88,8 @@ defineScene({
     checkNumber: '',
     order: null,
     selectedItems: {},  // { 'seatIdx:itemIdx': true }
+    paidSeats: {},      // { 'S-001': true } — seats involved in completed payment
+    _payingSeats: [],   // stashed seat IDs during active payment
   },
 
   render: function(container, params, state) {
@@ -96,9 +98,7 @@ defineScene({
       state.listeners.push({ el: el, event: event, handler: handler });
     }
 
-    var mintEdges = bevelEdges(T.mint);
     var chassisEdges = bevelEdges(T.numpadChassis);
-    var darkEdges = bevelEdges(T.darkBtn);
 
     state.orderId = params.checkId || null;
     state.checkNumber = '';
@@ -251,65 +251,67 @@ defineScene({
     seatsCard.appendChild(seatsGrid);
     root.appendChild(seatsCard);
 
-    // ── Build a seat tile ──
+    // ── Build a seat button (embossed + chamfered) ──
+
+    function seatVariant(seat) {
+      if (state.paidSeats[seat.id]) return 'gold';
+      if (state.selected[seat.id]) return 'mint';
+      return 'dark';
+    }
+
     function buildSeatTile(seat) {
       var hasItems = seat.items.length > 0;
-      var frameColor = hasItems ? T.mint : T.darkBtn;
-      var edges = hasItems ? mintEdges : darkEdges;
+      var isPaid = !!state.paidSeats[seat.id];
       var total = seatTotal(seat);
+      var variant = seatVariant(seat);
 
-      var tile = document.createElement('div');
-      Object.assign(tile.style, {
-        borderRadius: '5px',
-        background: T.bgDark,
-        borderTop: T.bevelBtn + 'px solid ' + edges.light,
-        borderLeft: T.bevelBtn + 'px solid ' + edges.light,
-        borderBottom: T.bevelBtn + 'px solid ' + edges.dark,
-        borderRight: T.bevelBtn + 'px solid ' + edges.dark,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        cursor: 'pointer',
-      });
+      var btn = buildStyledButton({ variant: variant, disabled: isPaid });
+      var wrap = btn.wrap;
+      var inner = btn.inner;
 
-      var header = document.createElement('div');
-      Object.assign(header.style, {
-        background: frameColor,
-        height: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 6px',
-        fontFamily: T.fh,
-        fontSize: '8px',
-        color: T.bgDark,
-        textTransform: 'uppercase',
-      });
-      header.textContent = seat.id;
-      tile.appendChild(header);
+      // Override border-radius with chamfer
+      wrap.style.borderRadius = '0';
+      wrap.style.clipPath = chamfer(T.chamfer);
+      wrap.style.width = '100%';
+      wrap.style.height = '100%';
+      wrap.style.minWidth = '0';
 
-      var body = document.createElement('div');
-      Object.assign(body.style, {
-        flex: '1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: T.fb,
-        fontSize: T.fsConSm,
-        color: hasItems ? T.gold : T.mutedText,
-      });
-      body.textContent = hasItems ? fmt(total) : '--';
-      tile.appendChild(body);
+      // Custom inner layout: seat ID top, total bottom
+      inner.innerHTML = '';
+      inner.style.flexDirection = 'column';
+      inner.style.gap = '2px';
+      inner.style.padding = '6px 8px';
+      inner.style.fontFamily = T.fb;
+      inner.style.lineHeight = '1.2';
 
-      state.seatEls[seat.id] = {
-        tile: tile, header: header, body: body,
-        frameColor: frameColor, edges: edges,
-      };
+      var idEl = document.createElement('div');
+      idEl.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';letter-spacing:2px;text-transform:uppercase;';
+      idEl.textContent = seat.id;
 
-      track(tile, 'pointerup', (function(seatId) {
+      var totalEl = document.createElement('div');
+      totalEl.style.cssText = 'font-size:' + T.fsCon + ';';
+      if (variant === 'dark' && hasItems) {
+        totalEl.style.color = T.gold;
+      }
+      totalEl.textContent = hasItems ? fmt(total) : '--';
+
+      if (isPaid) {
+        var paidEl = document.createElement('div');
+        paidEl.style.cssText = 'font-size:8px;letter-spacing:2px;opacity:0.7;';
+        paidEl.textContent = 'PAID';
+        inner.appendChild(paidEl);
+      }
+
+      inner.appendChild(idEl);
+      inner.appendChild(totalEl);
+
+      state.seatEls[seat.id] = { wrap: wrap, inner: inner, idEl: idEl, totalEl: totalEl, isPaid: isPaid };
+
+      track(wrap, 'pointerup', (function(seatId) {
         return function() { toggleSeat(seatId); };
       })(seat.id));
 
-      return tile;
+      return wrap;
     }
 
     function rebuildSeatGrid() {
@@ -328,6 +330,8 @@ defineScene({
     // ═══════════════════════════════════════════════════
 
     function toggleSeat(seatId) {
+      // Paid seats cannot be re-selected
+      if (state.paidSeats[seatId]) return;
       if (state.selected[seatId]) {
         delete state.selected[seatId];
       } else {
@@ -340,7 +344,9 @@ defineScene({
     function selectAll() {
       state.selected = {};
       for (var si = 0; si < state.seats.length; si++) {
-        state.selected[state.seats[si].id] = true;
+        if (!state.paidSeats[state.seats[si].id]) {
+          state.selected[state.seats[si].id] = true;
+        }
       }
       updateSeatVisuals();
       updateSummary();
@@ -351,22 +357,19 @@ defineScene({
       for (var si = 0; si < state.seats.length; si++) {
         var seat = state.seats[si];
         var el = state.seatEls[seat.id];
-        if (!el) continue;
+        if (!el || el.isPaid) continue;
         var sel = !!state.selected[seat.id];
         var hasItems = seat.items.length > 0;
         if (sel) anySelected = true;
 
-        if (sel) {
-          el.header.style.background = T.bgDark;
-          el.header.style.color = el.frameColor;
-          el.body.style.background = el.frameColor;
-          el.body.style.color = T.bgDark;
-        } else {
-          el.header.style.background = el.frameColor;
-          el.header.style.color = T.bgDark;
-          el.body.style.background = '';
-          el.body.style.color = hasItems ? T.gold : T.mutedText;
-        }
+        // Rebuild button with correct variant by swapping to a fresh button
+        var parent = el.wrap.parentNode;
+        if (!parent) continue;
+        var next = el.wrap.nextSibling;
+        parent.removeChild(el.wrap);
+        var freshBtn = buildSeatTile(seat);
+        if (next) parent.insertBefore(freshBtn, next);
+        else parent.appendChild(freshBtn);
       }
       // EDIT SEATS only visible when seats are selected
       if (editSeatsBtn) editSeatsBtn.wrap.style.display = anySelected ? '' : 'none';
@@ -663,6 +666,11 @@ defineScene({
     function handlePay() {
       if (!state.orderId) { showToast('No check to pay', { bg: T.red }); return; }
       var totals = collectSummary(state.seats, state.selected);
+      // Stash which seats are part of this payment
+      state._payingSeats = [];
+      for (var pi = 0; pi < state.seats.length; pi++) {
+        if (state.selected[state.seats[pi].id]) state._payingSeats.push(state.seats[pi].id);
+      }
       SceneManager.openTransactional('payment-console', {
         orderId: state.orderId,
         checkId: state.checkNumber,
@@ -731,9 +739,17 @@ defineScene({
         .catch(function() { showToast('Refresh failed', { bg: T.red }); });
     }
 
-    // Listen for payment completion — refresh to check if check is fully paid or partial
-    SceneManager.on('payment:complete', refreshOrder);
-    state.listeners.push({ el: null, event: 'payment:complete', handler: refreshOrder, bus: true });
+    // Listen for payment completion — mark seats paid, then refresh
+    function onPaymentComplete() {
+      // Mark the stashed seats as paid
+      for (var ps = 0; ps < state._payingSeats.length; ps++) {
+        state.paidSeats[state._payingSeats[ps]] = true;
+      }
+      state._payingSeats = [];
+      refreshOrder();
+    }
+    SceneManager.on('payment:complete', onPaymentComplete);
+    state.listeners.push({ el: null, event: 'payment:complete', handler: onPaymentComplete, bus: true });
 
     // Row 1 (y:340): PRINT    RSND             DISC
     // Row 2 (y:388): PAY      DRAWER    VOID
