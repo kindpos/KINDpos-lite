@@ -49,7 +49,7 @@ SceneManager.register({
     enteredAmount     = 0;
     denomAccum        = 0;
     numpadStr         = '';
-    paymentMode       = 'card';
+    paymentMode       = params.paymentMode || 'card';
     confirmProcessing = false;
     payments          = [];
     totalPaid         = 0;
@@ -140,7 +140,7 @@ function buildCenterColumn(params) {
   col.appendChild(toggle);
 
   // Apply initial active mode after DOM is built
-  setTimeout(function() { setPaymentMode('card'); }, 0);
+  setTimeout(function() { setPaymentMode(paymentMode); }, 0);
 
   return col;
 }

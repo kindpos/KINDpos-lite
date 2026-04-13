@@ -199,7 +199,7 @@ function buildMethodPanel(params) {
     fill: T.darkBtn,
     textColor: T.mint,
     onTap: function() {
-      SceneManager.openTransactional('payment', makePaymentParams(params, 'card'));
+      SceneManager.openTransactional('payment-console', makePaymentParams(params, 'card'));
     },
   }));
 
@@ -211,7 +211,7 @@ function buildMethodPanel(params) {
     fill: T.darkBtn,
     textColor: T.mint,
     onTap: function() {
-      SceneManager.openTransactional('payment', makePaymentParams(params, 'cash'));
+      SceneManager.openTransactional('payment-console', makePaymentParams(params, 'cash'));
     },
   }));
 
@@ -228,7 +228,7 @@ function buildMethodPanel(params) {
     fill: T.darkBtn,
     textColor: T.mint,
     onTap: function() {
-      SceneManager.openTransactional('payment', makePaymentParams(params, 'gift_card'));
+      SceneManager.openTransactional('payment-console', makePaymentParams(params, 'gc'));
     },
   }));
 
