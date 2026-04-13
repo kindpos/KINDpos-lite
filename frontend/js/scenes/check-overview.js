@@ -130,7 +130,7 @@ defineScene({
       left: '12px',
       top: '12px',
       right: '12px',
-      height: '336px',
+      height: '316px',
       borderRadius: '5px',
       background: T.bg,
       borderTop: T.bevel + 'px solid ' + mintEdges.light,
@@ -384,9 +384,9 @@ defineScene({
     Object.assign(optCard.style, {
       position: 'absolute',
       left: '12px',
-      top: '360px',
-      width: '440px',
-      height: '168px',
+      top: '340px',
+      width: '468px',
+      height: '196px',
       borderRadius: '5px',
       background: T.bg,
       borderTop: T.bevel + 'px solid ' + mintEdges.light,
@@ -594,7 +594,7 @@ defineScene({
       },
     });
     Object.assign(addItemBtn.wrap.style, {
-      position: 'absolute', left: '520px', top: '468px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '473px', zIndex: '50',
     });
     root.appendChild(addItemBtn.wrap);
 
@@ -647,7 +647,7 @@ defineScene({
       },
     });
     Object.assign(editSeatsBtn.wrap.style, {
-      position: 'absolute', left: '520px', top: '360px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '340px', zIndex: '50',
     });
     root.appendChild(editSeatsBtn.wrap);
 
@@ -713,7 +713,7 @@ defineScene({
       },
     });
     Object.assign(roundBtn.wrap.style, {
-      position: 'absolute', left: '300px', top: '336px', zIndex: '50',
+      position: 'absolute', left: '492px', top: '410px', zIndex: '50',
     });
     root.appendChild(roundBtn.wrap);
   },
