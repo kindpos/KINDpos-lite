@@ -119,15 +119,7 @@ function _build() {
   _summaryBox.style.clipPath = chamfer();
   _summaryRowEl.appendChild(_summaryBox);
 
-  // Split button
-  _splitBtn = buildButton('Split', {
-    fill: T.darkBtn, color: T.vermillion, fontSize: T.fsBtnSm,
-    onTap: function() { SceneManager.emit('split:tap'); },
-  });
-  _splitBtn.style.cssText += 'flex-shrink:0;width:90px;';
-  _splitBtn.style.outline = '3px solid ' + T.vermillion;
-  _splitBtn.style.outlineOffset = '-1px';
-  _summaryRowEl.appendChild(_splitBtn);
+  _splitBtn = null;
   el.appendChild(_summaryRowEl);
 
   // ── Prices box ──
