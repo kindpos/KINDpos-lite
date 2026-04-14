@@ -176,6 +176,10 @@ export function ModifierPanel(container, opts) {
     if (mandatoryContentEl) mandatoryContentEl.style.display = expandedSection === 'mandatory' ? '' : 'none';
     if (includedContentEl) includedContentEl.style.display = expandedSection === 'included' ? '' : 'none';
     if (optionalContentEl) optionalContentEl.style.display = expandedSection === 'optional' ? '' : 'none';
+    // Prefixes: only for optional
+    if (prefixBarEl) prefixBarEl.style.display = expandedSection === 'optional' ? 'flex' : 'none';
+    // Placement: optional + included
+    if (placementBarEl) placementBarEl.style.display = (expandedSection === 'optional' || expandedSection === 'included') ? '' : 'none';
   }
 
   // ── Build the panel ──
