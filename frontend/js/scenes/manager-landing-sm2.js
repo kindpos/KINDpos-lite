@@ -95,12 +95,12 @@ function statRow(label, value, color) {
 
 function gateRow(met, label) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:2px 8px;';
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;';
   var icon = document.createElement('span');
-  icon.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + (met ? T.green : T.vermillion) + ';';
+  icon.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + (met ? T.green : T.vermillion) + ';';
   icon.textContent = met ? '\u2713' : '\u2717';
   var text = document.createElement('span');
-  text.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + (met ? T.green : T.vermillion) + ';font-weight:bold;';
+  text.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + (met ? T.green : T.vermillion) + ';font-weight:bold;';
   text.textContent = label;
   row.appendChild(icon);
   row.appendChild(text);
@@ -1980,16 +1980,21 @@ function buildServerCheckoutsCard(state) {
   var servers = sd.servers || [];
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
   card.style.overflow = 'hidden';
+  card.style.flex = '1';
 
   card.appendChild(buildCardHeader('SERVER CHECKOUTS'));
 
   // ── Scrollable server list ──
   var list = document.createElement('div');
-  list.style.cssText = 'flex:1;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;padding:4px 0;';
+  list.style.cssText = 'flex:1;min-height:0;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none;padding:6px 0;display:flex;flex-direction:column;justify-content:center;';
 
   // Sort: active/pending first, checked_out at bottom
   var sorted = servers.slice().sort(function(a, b) {
@@ -2001,16 +2006,16 @@ function buildServerCheckoutsCard(state) {
   for (var i = 0; i < sorted.length; i++) {
     (function(srv) {
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;padding:4px 8px;cursor:pointer;border-bottom:1px solid ' + T.border + ';';
+      row.style.cssText = 'display:flex;align-items:center;padding:8px 12px;cursor:pointer;border-bottom:1px solid ' + T.border + ';flex-shrink:0;';
 
       var name = document.createElement('span');
-      name.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + T.textPrimary + ';font-weight:bold;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      name.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
 
       if (srv.checked_out) {
         name.textContent = srv.name;
         name.style.color = T.green;
         var badge = document.createElement('span');
-        badge.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.green + ';font-weight:bold;';
+        badge.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.green + ';font-weight:bold;';
         badge.textContent = '\u2713 COMPLETE';
         row.appendChild(name);
         row.appendChild(badge);
@@ -2019,13 +2024,13 @@ function buildServerCheckoutsCard(state) {
         row.appendChild(name);
 
         var closedBadge = document.createElement('span');
-        closedBadge.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.textPrimary + ';font-weight:bold;margin-right:12px;';
+        closedBadge.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.textPrimary + ';font-weight:bold;margin-right:12px;';
         closedBadge.textContent = srv.closed_checks + ' closed';
         row.appendChild(closedBadge);
 
         var unadjBadge = document.createElement('span');
         var unadjColor = srv.unadj_tips === 0 ? T.green : T.vermillion;
-        unadjBadge.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + unadjColor + ';font-weight:bold;';
+        unadjBadge.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + unadjColor + ';font-weight:bold;';
         unadjBadge.textContent = srv.unadj_tips + ' unadj';
         row.appendChild(unadjBadge);
       }
@@ -2049,14 +2054,19 @@ function buildCloseDayCard(state) {
   var cd = state.closeDayData || {};
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
+  card.style.flex = '1';
 
   card.appendChild(buildCardHeader('CLOSE DAY'));
 
   var body = document.createElement('div');
-  body.style.cssText = 'padding:6px 0;';
+  body.style.cssText = 'flex:1;display:flex;flex-direction:column;justify-content:center;padding:8px 0;';
   body.appendChild(gateRow(
     cd.all_checked_out,
     cd.all_checked_out ? 'All servers checked out' : (cd.pending_count || 0) + ' servers pending'
