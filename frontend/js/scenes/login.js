@@ -49,38 +49,32 @@ defineScene({
 
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';padding:0 20px;';
 
-    // ── Shared side-button style ────────────
-    var SIDE_BTN_W = '180px';
-    var SIDE_BTN_H = '120px';
-    var SIDE_BTN_FS = '26px';
-
-    // ── LEFT COLUMN — Clock In/Out centered, Config packed at bottom ─────
+    // ── LEFT COLUMN — Logo + store name, Config at bottom ─────
     var leftCol = document.createElement('div');
     leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;';
 
-    // Clock In/Out — vertically centered in remaining space
-    var clockCenter = document.createElement('div');
-    clockCenter.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;';
+    // Logo + store name — vertically centered
+    var brandCenter = document.createElement('div');
+    brandCenter.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;';
 
-    var clockPair = buildStyledButton({ label: 'TIMECLOCK', variant: 'cyan', size: 'md', onClick: function() {
-      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
-      if (currentPin.length === 0) {
-        if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
-        return;
-      }
-      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
-      if (!emp) {
-        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
-        return;
-      }
-      var empRoles = emp.roles || [emp.role || 'server'];
-      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-      SceneManager.closeGate('login');
-      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-      SceneManager.openTransactional('clock-in', { emp: empData });
-    } });
-    clockCenter.appendChild(clockPair.wrap);
-    leftCol.appendChild(clockCenter);
+    var logo = document.createElement('img');
+    logo.src = '/assets/logo-placeholder.png';
+    logo.alt = 'Store logo';
+    logo.style.cssText = 'max-width:140px;max-height:140px;object-fit:contain;';
+    brandCenter.appendChild(logo);
+
+    var storeName = document.createElement('div');
+    storeName.style.cssText = 'font-family:' + T.fhr + ';font-size:22px;color:' + T.textPrimary + ';text-align:center;text-transform:uppercase;letter-spacing:2px;line-height:1.2;max-width:180px;word-wrap:break-word;';
+    storeName.textContent = 'KINDpos';
+    brandCenter.appendChild(storeName);
+
+    // Fetch store name from API
+    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).then(function(data) {
+      var name = (data.store && data.store.info && data.store.info.restaurant_name) || 'KINDpos';
+      storeName.textContent = name;
+    }).catch(function() {});
+
+    leftCol.appendChild(brandCenter);
 
     // Config — small vermillion button, packed at bottom center
     var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'sm', onClick: function() { SceneManager.openTransactional('settings'); } });
@@ -114,9 +108,28 @@ defineScene({
     });
     container.appendChild(state.numpadRef);
 
-    // ── RIGHT COLUMN — New Order ─────────
+    // ── RIGHT COLUMN — Timeclock + New Order, vertically centered ─────
     var rightCol = document.createElement('div');
-    rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;';
+    rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;gap:16px;';
+
+    var clockPair = buildStyledButton({ label: 'TIMECLOCK', variant: 'cyan', size: 'md', onClick: function() {
+      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
+      if (currentPin.length === 0) {
+        if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
+        return;
+      }
+      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
+      if (!emp) {
+        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
+        return;
+      }
+      var empRoles = emp.roles || [emp.role || 'server'];
+      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
+      SceneManager.closeGate('login');
+      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+      SceneManager.openTransactional('clock-in', { emp: empData });
+    } });
+    rightCol.appendChild(clockPair.wrap);
 
     var quickOrderPair = buildStyledButton({ label: 'NEW\nORDER', variant: 'mint', size: 'md', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
