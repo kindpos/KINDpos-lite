@@ -199,17 +199,17 @@ export function ModifierPanel(container, opts) {
       // Optional section needs overflow:visible for floating prefix bar
       var needsVisible = s.key === 'optional' && prefixBarEl;
       if (isExpanded) {
-        s.wrap.style.flex = '1';
+        s.wrap.style.flex = '1 1 auto';
         s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = needsVisible ? 'visible' : 'hidden';
+        s.wrap.style.overflow = needsVisible ? 'visible' : 'auto';
       } else if (hasExpanded) {
         s.wrap.style.flex = '0 0 auto';
         s.wrap.style.minHeight = '';
         s.wrap.style.overflow = needsVisible ? 'visible' : '';
       } else {
-        s.wrap.style.flex = '1';
+        s.wrap.style.flex = '1 1 auto';
         s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = needsVisible ? 'visible' : 'hidden';
+        s.wrap.style.overflow = needsVisible ? 'visible' : 'auto';
       }
     }
   }
