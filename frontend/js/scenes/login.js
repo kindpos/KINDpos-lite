@@ -54,9 +54,13 @@ defineScene({
     var SIDE_BTN_H = '120px';
     var SIDE_BTN_FS = '26px';
 
-    // ── LEFT COLUMN — Clock In/Out above Config ─────
+    // ── LEFT COLUMN — Clock In/Out centered, Config packed at bottom ─────
     var leftCol = document.createElement('div');
-    leftCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
+    leftCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;align-self:stretch;';
+
+    // Clock In/Out — vertically centered in remaining space
+    var clockCenter = document.createElement('div');
+    clockCenter.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;';
 
     var clockPair = buildStyledButton({ label: 'CLOCK\nIN/OUT', variant: 'gold', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
@@ -78,12 +82,12 @@ defineScene({
     clockPair.wrap.style.width = SIDE_BTN_W;
     clockPair.wrap.style.height = SIDE_BTN_H;
     clockPair.inner.style.fontSize = SIDE_BTN_FS;
-    leftCol.appendChild(clockPair.wrap);
+    clockCenter.appendChild(clockPair.wrap);
+    leftCol.appendChild(clockCenter);
 
-    var configPair = buildStyledButton({ label: 'CONFIG', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
-    configPair.wrap.style.width = SIDE_BTN_W;
-    configPair.wrap.style.height = SIDE_BTN_H;
-    configPair.inner.style.fontSize = SIDE_BTN_FS;
+    // Config — small vermillion button, packed at bottom center
+    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'sm', onClick: function() { SceneManager.openTransactional('settings'); } });
+    configPair.wrap.style.marginBottom = '8px';
     leftCol.appendChild(configPair.wrap);
 
     container.appendChild(leftCol);
