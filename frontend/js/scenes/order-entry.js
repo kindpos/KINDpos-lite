@@ -1537,6 +1537,9 @@ function renderTicket() {
 
 function _appendModPreview(list) {
   if (!_modPanelItem) return;
+  // Guard against double-append
+  if (list.querySelector('[data-mod-preview]')) return;
+
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
   var previewPrice = _modPanelItem.basePrice + previewModTotal;
@@ -1544,13 +1547,14 @@ function _appendModPreview(list) {
   var fsMod = T.fsConSm;
 
   var pc = document.createElement('div');
+  pc.setAttribute('data-mod-preview', '1');
   pc.style.cssText = 'flex-shrink:0;margin-bottom:2px;background:' + T.bg3 + ';border-left:3px solid ' + T.gold + ';';
   _applyCardBevel(pc);
 
   var pRow = document.createElement('div');
   pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;';
   var pName = document.createElement('span');
-  pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + fs + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+  pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + fs + ';font-weight:bold;color:' + T.mint + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
   pName.textContent = '\u270E ' + _modPanelItem.itemLabel;
   var pPrice = document.createElement('span');
   pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + fs + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
@@ -1570,7 +1574,7 @@ function _appendModPreview(list) {
     else wholeMods.push(pm);
   }
 
-  // Whole mods with X buttons
+  // Whole mods with X buttons — mint text, gold prices
   wholeMods.forEach(function(m) {
     var removeHandler = function() {
       if (_modPanel && m._source != null) _modPanel.removeMod(m._source, m._idx);
@@ -2019,7 +2023,7 @@ function buildModRowSized(name, price, fontSize, onRemove) {
     'display:flex;align-items:center;',
     'padding:1px 8px 1px 16px;',
     'font-family:' + T.fb + ';font-size:' + fontSize + ';font-weight:bold;',
-    'color:' + T.gold + ';',
+    'color:' + T.mint + ';',
   ].join('');
   // Remove button (shown for unsent items)
   if (onRemove) {
@@ -2041,7 +2045,7 @@ function buildModRowSized(name, price, fontSize, onRemove) {
   n.style.cssText = 'flex:1;';
   n.textContent = name;
   var p = document.createElement('span');
-  p.style.cssText = 'flex-shrink:0;';
+  p.style.cssText = 'flex-shrink:0;color:' + T.gold + ';';
   p.textContent = price > 0 ? '+$' + price.toFixed(2) : '';
   row.appendChild(n);
   if (price > 0) row.appendChild(p);
@@ -2101,7 +2105,7 @@ function buildHalfTable(leftMods, rightMods, fontSize, removableInst) {
     cellL.appendChild(lText);
 
     var sep = document.createElement('div');
-    sep.style.cssText = 'width:1px;background:' + T.mintEdgeD + ';margin:0 4px;';
+    sep.style.cssText = 'width:1px;align-self:stretch;background:' + T.mintEdgeD + ';margin:0 4px;flex-shrink:0;';
 
     var cellR = document.createElement('div');
     cellR.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:flex-end;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + T.mint + ';padding:0 4px;';
