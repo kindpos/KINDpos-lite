@@ -1538,7 +1538,8 @@ function renderTicket() {
   }
 
   _renderTicketGroup(list, displayTicket);
-  console.log('[renderTicket] normal path, children before preview:', list.children.length);
+  console.log('[renderTicket] normal path, children before preview:', list.children.length, 'displayTicket:', displayTicket.length);
+  for (var _di = 0; _di < list.children.length; _di++) console.log('[renderTicket] child', _di, ':', list.children[_di].tagName, list.children[_di].textContent.substring(0, 80), list.children[_di].getAttribute('data-mod-preview'));
   _appendModPreview(list);
   _updateTicketTotals();
 }
