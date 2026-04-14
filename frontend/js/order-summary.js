@@ -23,6 +23,7 @@ var _headerTitle = null; // header title element ref
 var _colHead = null;     // column header container ref
 var _summaryRowEl = null; // summary row (contains summary box + split btn)
 var _mode = 'order';     // 'order' or 'checkout'
+var _collapsible = false; // when true, items start collapsed with tap-to-expand
 
 function _container() {
   if (!_el) _el = document.getElementById('order-summary');
@@ -205,17 +206,19 @@ function _summaryRow(label, value, color, bold) {
 function _renderItems(items) {
   if (!_itemScroll) return;
   _itemScroll.innerHTML = '';
+  var isCollapsible = _collapsible;
   (items || []).forEach(function(item) {
     var mods = item.mods || [];
     var hasMods = mods.length > 0;
 
-    // ── Item header row (tappable to expand/collapse) ──
+    // ── Item header row ──
     var row = document.createElement('div');
     row.style.cssText = [
       'display:flex;justify-content:space-between;align-items:center;',
-      'padding:3px 0 1px;cursor:' + (hasMods ? 'pointer' : 'default') + ';',
+      'padding:3px 0 1px;',
       'font-family:' + T.fb + ';font-size:24px;color:' + T.textPrimary + ';',
-      'border-bottom:1px solid ' + T.bg3 + ';user-select:none;',
+      'border-bottom:1px solid ' + T.bg3 + ';',
+      (isCollapsible && hasMods) ? 'cursor:pointer;user-select:none;' : '',
     ].join('');
     var name = document.createElement('span');
     name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
@@ -226,9 +229,10 @@ function _renderItems(items) {
     row.appendChild(name);
     row.appendChild(rightInfo);
 
-    // Expand arrow for items with mods
-    if (hasMods) {
-      var arrow = document.createElement('span');
+    // Collapse arrow only in checkout mode
+    var arrow = null;
+    if (isCollapsible && hasMods) {
+      arrow = document.createElement('span');
       arrow.style.cssText = 'flex-shrink:0;margin-left:4px;font-size:10px;color:' + T.mutedText + ';';
       arrow.textContent = '\u25BC';
       row.appendChild(arrow);
@@ -238,9 +242,10 @@ function _renderItems(items) {
 
     if (!hasMods) return;
 
-    // ── Collapsible modifier detail ──
+    // ── Modifier detail container ──
     var modDetail = document.createElement('div');
-    modDetail.style.cssText = 'display:none;';
+    // Collapsed by default only in checkout mode
+    if (isCollapsible) modDetail.style.display = 'none';
 
     // Partition into whole / left / right
     var wholeMods = [];
@@ -305,14 +310,16 @@ function _renderItems(items) {
 
     _itemScroll.appendChild(modDetail);
 
-    // Toggle expand/collapse on tap
-    (function(detail, arrowEl) {
-      row.addEventListener('pointerup', function() {
-        var isOpen = detail.style.display !== 'none';
-        detail.style.display = isOpen ? 'none' : '';
-        if (arrowEl) arrowEl.textContent = isOpen ? '\u25BC' : '\u25B2';
-      });
-    })(modDetail, arrow);
+    // Toggle expand/collapse on tap (checkout mode only)
+    if (isCollapsible && hasMods) {
+      (function(detail, arrowEl) {
+        row.addEventListener('pointerup', function() {
+          var isOpen = detail.style.display !== 'none';
+          detail.style.display = isOpen ? 'none' : '';
+          if (arrowEl) arrowEl.textContent = isOpen ? '\u25BC' : '\u25B2';
+        });
+      })(modDetail, arrow);
+    }
   });
 }
 
@@ -455,6 +462,7 @@ export var OrderSummary = {
 
     // Build DOM on first show
     if (!_itemScroll) _build();
+    _collapsible = !!params.collapsible;
     _configureForMode('order');
 
     if (_checkIdEl) _checkIdEl.textContent = params.checkId || '';

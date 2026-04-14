@@ -145,7 +145,7 @@ defineScene({
     });
 
     // Show persistent OrderSummary panel
-    OrderSummary.show({ checkId: '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: function() {
+    OrderSummary.show({ checkId: '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, collapsible: true, onNameTap: function() {
       if (!state.orderId) { showToast('Save items first', { bg: T.gold }); return; }
       SceneManager.interrupt('co-name-input', {
         onConfirm: function(name) {
