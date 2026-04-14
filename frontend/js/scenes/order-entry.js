@@ -1554,14 +1554,21 @@ function _updateTicketTotals() {
       mods: previewMods,
     });
   }
-  OrderSummary.update({
+  var updateParams = {
     checkId: currentCheckNumber || '',
-    skipItems: true,
     subtotal: totals.subtotal,
     tax: totals.tax,
     cardTotal: totals.cardTotal,
     cashPrice: totals.cashPrice,
-  });
+  };
+  // When modifier panel is open, render items (shows preview).
+  // Otherwise skip items so renderTicket's interactive X buttons survive.
+  if (_modPanelItem) {
+    updateParams.items = items;
+  } else {
+    updateParams.skipItems = true;
+  }
+  OrderSummary.update(updateParams);
 }
 
 // ── Swipe-to-delete wrapper ──────────────────────
