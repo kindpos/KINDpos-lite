@@ -807,7 +807,7 @@ function renderLayout(state) {
 
   el.innerHTML = '';
   el.style.cssText = 'width:100%;height:100%;background:' + T.bg
-    + ';display:grid;grid-template-columns:25fr 50fr 25fr;gap:6px;padding:6px;box-sizing:border-box;position:relative;overflow:hidden;';
+    + ';display:grid;grid-template-columns:30fr 40fr 30fr;gap:6px;padding:6px;box-sizing:border-box;position:relative;overflow:hidden;';
 
   el.appendChild(buildLeftColumn(state));
   el.appendChild(buildCenterColumn(state));
@@ -989,9 +989,9 @@ function renderCheckGrid(state) {
   // + NEW CHECK tile (open tab only)
   if (state.activeTab === 'open') {
     var newTile = document.createElement('div');
-    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
+    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:60px;cursor:pointer;user-select:none;box-sizing:border-box;';
     var plus = document.createElement('div');
-    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + CHROME + ';';
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + CHROME + ';';
     plus.textContent = '+';
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
@@ -1012,7 +1012,7 @@ function buildCheckTile(state, order) {
   var emp = state.params ? (state.params.emp || state.params) : {};
 
   var tile = document.createElement('div');
-  tile.style.cssText = 'background:' + T.bgDark + ';border:2px solid ' + T.mint + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;clip-path:' + chamfer(6) + ';';
+  tile.style.cssText = 'background:' + T.bgDark + ';border:2px solid ' + T.mint + ';padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:60px;cursor:pointer;user-select:none;box-sizing:border-box;clip-path:' + chamfer(6) + ';';
   if (isClosed) tile.style.opacity = '0.7';
   if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
 
