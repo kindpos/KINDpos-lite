@@ -538,10 +538,9 @@ export function ModifierPanel(container, opts) {
       var hasSelection = !!currentSel;
 
       var tile = document.createElement('div');
-      var borderColor = hasSelection ? T.mint : T.vermillion;
       tile.style.cssText = [
         'background:' + T.bgDark + ';',
-        'border:2px solid ' + borderColor + ';',
+        'border:2px solid ' + T.numpadChassis + ';',
         'padding:10px 8px;',
         'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
         'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
@@ -557,12 +556,12 @@ export function ModifierPanel(container, opts) {
       // Selection value (shown below label when selected)
       if (hasSelection) {
         var val = document.createElement('div');
-        val.style.cssText = 'font-family:' + T.fh + ';font-size:20px;font-weight:bold;color:' + T.mint + ';';
+        val.style.cssText = 'font-family:' + T.fh + ';font-size:20px;font-weight:bold;color:' + catColor + ';';
         val.textContent = currentSel.label;
         tile.appendChild(val);
       } else {
         var prompt = document.createElement('div');
-        prompt.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.vermillion + ';';
+        prompt.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';';
         prompt.textContent = 'tap to select';
         tile.appendChild(prompt);
       }
@@ -616,8 +615,8 @@ export function ModifierPanel(container, opts) {
 
       var card = document.createElement('div');
       card.style.cssText = [
-        'background:' + (isSelected ? T.mint : T.bgDark) + ';',
-        'border:2px solid ' + (isSelected ? T.mint : T.numpadChassis) + ';',
+        'background:' + (isSelected ? catColor : T.bgDark) + ';',
+        'border:2px solid ' + (isSelected ? catColor : T.numpadChassis) + ';',
         'padding:10px 8px;',
         'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;',
         'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
