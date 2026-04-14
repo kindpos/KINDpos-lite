@@ -488,7 +488,6 @@ export function ModifierPanel(container, opts) {
       seg.addEventListener('pointerup', function(e) {
         e.stopPropagation();
         activePlacement = pl.id;
-        console.log('[ModPanel] placement changed to: ' + activePlacement);
         _refreshPlacement(placeSegs);
       });
 
@@ -797,7 +796,6 @@ export function ModifierPanel(container, opts) {
       groupKey: groupKey,
       placement: activePlacement || 'whole',
     };
-    console.log('[ModPanel] applyOptionalMod placement=' + activePlacement + ' prefix=' + activeOptPrefix + ' label=' + opt.label);
     if (opt.special && opt.includes) {
       mod.special = true;
       mod.includes = opt.includes.slice();
@@ -899,7 +897,6 @@ export function ModifierPanel(container, opts) {
     // Optional modifiers (removable)
     activeItem.optionalModifiers.forEach(function(m, idx) {
       var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
-      console.log('[ModPanel] buildOutput mod=' + m.label + ' placement=' + m.placement + ' halfSide=' + halfSide);
       var parentMod = {
         name: m.prefix + ' ' + m.label,
         price: m.prefix === 'NO' ? 0 : m.price,

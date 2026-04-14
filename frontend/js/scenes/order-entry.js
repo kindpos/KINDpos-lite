@@ -1892,12 +1892,10 @@ function _renderTicketGroup(list, displayTicket) {
     var pLeft = [];
     var pRight = [];
     pMods.forEach(function(m) {
-      console.log('[Preview] mod=' + m.name + ' prefix=' + m.prefix);
       if (m.prefix === 'Left') pLeft.push(m);
       else if (m.prefix === 'Right') pRight.push(m);
       else pWhole.push(m);
     });
-    console.log('[Preview] pWhole=' + pWhole.length + ' pLeft=' + pLeft.length + ' pRight=' + pRight.length);
 
     if (pWhole.length > 0) {
       previewCard.appendChild(buildSeparator());
@@ -1923,6 +1921,11 @@ function _renderTicketGroup(list, displayTicket) {
     }
 
     list.appendChild(previewCard);
+
+    // Auto-scroll to show the latest preview content
+    requestAnimationFrame(function() {
+      list.scrollTop = list.scrollHeight;
+    });
   }
 
 }
