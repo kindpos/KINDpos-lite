@@ -148,6 +148,7 @@ export function ModifierPanel(container, opts) {
 
   // ── Tab references ──
   var _tabEls = {};
+  var _tabColors = {};
   var _sectionKeys = [];
 
   function _renderTabs() {
@@ -157,9 +158,10 @@ export function ModifierPanel(container, opts) {
       var tab = _tabEls[key];
       if (!tab) continue;
       var isActive = expandedSection === key;
-      tab.style.background = isActive ? T.numpadChassis : T.bgDark;
-      tab.style.color = isActive ? T.bgDark : T.textPrimary;
-      tab.style.borderBottom = isActive ? '3px solid ' + T.numpadChassis : '3px solid transparent';
+      var color = _tabColors[key] || T.mint;
+      tab.style.background = isActive ? color : T.bgDark;
+      tab.style.color = isActive ? T.bgDark : color;
+      tab.style.borderBottom = isActive ? '3px solid ' + color : '3px solid transparent';
     }
     // Show/hide content panels
     if (mandatoryContentEl) mandatoryContentEl.style.display = expandedSection === 'mandatory' ? '' : 'none';
@@ -213,8 +215,9 @@ export function ModifierPanel(container, opts) {
     ].join('');
     _sectionKeys = [];
 
-    function _addTab(label, key) {
+    function _addTab(label, key, color) {
       _sectionKeys.push(key);
+      _tabColors[key] = color;
       var tab = document.createElement('div');
       tab.style.cssText = [
         'flex:1;text-align:center;padding:6px 4px;cursor:pointer;user-select:none;',
@@ -230,9 +233,9 @@ export function ModifierPanel(container, opts) {
       _tabBar.appendChild(tab);
     }
 
-    if (mandatoryGroups.length > 0) _addTab('MAND', 'mandatory');
-    if (includedItems.length > 0) _addTab('INCL', 'included');
-    if (optionalGroups.length > 0) _addTab('OPT', 'optional');
+    if (mandatoryGroups.length > 0) _addTab('MAND', 'mandatory', catColor);
+    if (includedItems.length > 0) _addTab('INCL', 'included', T.cyan);
+    if (optionalGroups.length > 0) _addTab('OPT', 'optional', T.mint);
 
     card.appendChild(_tabBar);
 
