@@ -548,6 +548,7 @@ function buildMain(parentEl, params) {
 // ── SEAT ASSIGNMENT AT COMMIT TIME ───────────────
 function assignSeatsIfNeeded(callback) {
   var unsent = ticket.filter(function(i) { return !i.sent; });
+  console.log('[assignSeats] unsent=' + unsent.length + ' seatNumbers=' + JSON.stringify(sceneParams.seatNumbers));
   if (unsent.length === 0) { callback(); return; }
 
   var seats = (sceneParams.seatNumbers && sceneParams.seatNumbers.length > 0)
