@@ -223,21 +223,22 @@ function drawParetoChart(container, data, opts) {
       svg.appendChild(svgEl('rect', { x: padL + cashW, y: y, width: cardW, height: barH, fill: catColor, stroke: catColor, 'stroke-width': '1.5' }));
     }
 
-    // Category label
+    // Category label — inside bar if wide enough, else outside
     var labelText = d.category || '';
-    if (barW > 60) {
-      svg.appendChild(svgEl('rect', { x: padL + 2, y: y + barH / 2 - 10, width: labelText.length * 9 + 8, height: 20, fill: CHART.calloutBg, opacity: '0.82' }));
-      var lbl = svgEl('text', { x: padL + 4, y: y + barH / 2 + 6, fill: CHART.axisFill, 'font-size': '16', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
+    var lblW = labelText.length * 9 + 8;
+    if (barW > lblW + 8) {
+      svg.appendChild(svgEl('rect', { x: padL + 2, y: y + barH / 2 - 10, width: lblW, height: 20, fill: CHART.calloutBg, opacity: '0.82' }));
+      var lbl = svgEl('text', { x: padL + 4, y: y + barH / 2 + 6, fill: CHART.axisFill, 'font-size': '14', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
       lbl.textContent = labelText;
       svg.appendChild(lbl);
     } else {
-      var lbl = svgEl('text', { x: padL + barW + 3, y: y + barH / 2 + 6, fill: catColor, 'font-size': '15', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
+      var lbl = svgEl('text', { x: padL + barW + 3, y: y + barH / 2 + 6, fill: catColor, 'font-size': '13', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
       lbl.textContent = labelText;
       svg.appendChild(lbl);
     }
 
     // Revenue value — right-aligned
-    var revLabel = svgEl('text', { x: W - 4, y: y + barH / 2 + 6, fill: CHART.money, 'font-size': '16', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' });
+    var revLabel = svgEl('text', { x: W - 2, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '14', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' });
     revLabel.textContent = fmt(tot);
     svg.appendChild(revLabel);
 
@@ -247,18 +248,18 @@ function drawParetoChart(container, data, opts) {
     linePoints.push({ x: padL + (pct / 100) * chartW, y: y + barH, pct: pct });
   }
 
-  // Cumulative % line (coral = money/axes)
+  // Cumulative % line (gold — stands out against category bars)
   if (linePoints.length > 1) {
     var pathD = 'M ' + padL + ' ' + (padT + gap);
     for (var i = 0; i < linePoints.length; i++) {
       pathD += ' L ' + linePoints[i].x + ' ' + linePoints[i].y;
     }
-    svg.appendChild(svgEl('path', { d: pathD, fill: 'none', stroke: DATA.coral, 'stroke-width': '1.5' }));
+    svg.appendChild(svgEl('path', { d: pathD, fill: 'none', stroke: T.gold, 'stroke-width': '2.5', 'stroke-linejoin': 'round' }));
     for (var i = 0; i < linePoints.length; i++) {
       var pt = linePoints[i];
-      svg.appendChild(svgEl('rect', { x: pt.x - 4, y: pt.y - 4, width: 8, height: 8, fill: DATA.coral }));
-      if (i === linePoints.length - 1 || Math.abs(pt.pct - (linePoints[i - 1] || { pct: 0 }).pct) > 8) {
-        var pctLbl = svgEl('text', { x: pt.x + 6, y: pt.y + 5, fill: DATA.coral, 'font-size': '14', 'font-family': CHART.dataFont });
+      svg.appendChild(svgEl('circle', { cx: pt.x, cy: pt.y, r: '4', fill: T.gold, stroke: T.bgDark, 'stroke-width': '1.5' }));
+      if (i === linePoints.length - 1 || Math.abs(pt.pct - (linePoints[i - 1] || { pct: 0 }).pct) > 12) {
+        var pctLbl = svgEl('text', { x: pt.x + 7, y: pt.y - 4, fill: T.gold, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
         pctLbl.textContent = Math.round(pt.pct) + '%';
         svg.appendChild(pctLbl);
       }
