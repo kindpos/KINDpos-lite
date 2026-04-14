@@ -1725,7 +1725,7 @@ function buildCheckTile(state, order) {
   // Customer name
   if (order.customer_name) {
     var name = document.createElement('div');
-    name.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.mutedText + ';';
+    name.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.mint + ';';
     name.textContent = order.customer_name;
     name.dataset.role = 'name';
     tile.appendChild(name);
@@ -1788,7 +1788,7 @@ function applyTileSelected(tile, sColor, selected) {
   } else {
     tile.style.background = T.bgDark;
     tile.style.borderColor = sColor;
-    var roleColors = { num: T.mint, server: sColor, name: T.mutedText, count: T.textPrimary, total: T.gold };
+    var roleColors = { num: T.mint, server: sColor, name: T.mint, count: T.textPrimary, total: T.gold };
     for (var i = 0; i < tile.children.length; i++) {
       var role = tile.children[i].dataset.role;
       if (roleColors[role]) tile.children[i].style.color = roleColors[role];

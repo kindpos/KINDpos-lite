@@ -1039,7 +1039,7 @@ function buildCheckTile(state, order) {
 
   if (order.customer_name) {
     var name = document.createElement('div');
-    name.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    name.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.mint + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     name.textContent = order.customer_name;
     name.dataset.role = 'name';
     tile.appendChild(name);
@@ -1093,7 +1093,7 @@ function applyTileSelected(tile, selected) {
     for (var i = 0; i < tile.children.length; i++) tile.children[i].style.color = T.bgDark;
   } else {
     tile.style.background = T.bgDark;
-    var roleColors = { num: T.mint, name: T.mutedText, count: T.textPrimary, total: T.gold };
+    var roleColors = { num: T.mint, name: T.mint, count: T.textPrimary, total: T.gold };
     for (var i = 0; i < tile.children.length; i++) {
       var role = tile.children[i].dataset.role;
       if (roleColors[role]) tile.children[i].style.color = roleColors[role];

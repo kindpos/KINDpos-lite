@@ -70,7 +70,7 @@ function _build() {
   _nameEl = document.createElement('div');
   _nameEl.style.cssText = [
     'font-family:' + T.fb + ';font-size:11px;',
-    'color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;',
+    'color:' + T.mint + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;',
   ].join('');
   checkWrap.appendChild(_checkIdEl);
   checkWrap.appendChild(_nameEl);
