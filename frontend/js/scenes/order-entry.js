@@ -386,16 +386,25 @@ defineScene({
 function computeTotals() {
   var subtotal = 0;
   var counts = {};
+  var summaryItems = [];  // item summary for ORDER RECAP
   ticket.forEach(function(inst) {
-    var lineTotal = inst.unitPrice + inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
+    var modTotal = inst.mods.reduce(function(s, m) { return s + m.price; }, 0);
+    var lineTotal = inst.unitPrice + modTotal;
     counts[inst.name] = counts[inst.name] || { unitPrice: inst.unitPrice, qty: 0 };
     counts[inst.name].qty += 1;
     subtotal += lineTotal;
+    summaryItems.push({
+      name: inst.name,
+      unitPrice: lineTotal,
+      qty: 1,
+      sent: inst.sent,
+      mods: inst.mods.filter(function(m) { return m.charged || m.name; }),
+    });
   });
   var tax       = Math.round(subtotal * TAX_RATE * 100) / 100;
   var cardTotal = Math.round((subtotal + tax) * 100) / 100;
   var cashPrice = Math.round(cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
-  return { counts: counts, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
+  return { counts: counts, summaryItems: summaryItems, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
 }
 
 
@@ -1524,16 +1533,27 @@ function renderTicket() {
 
 function _updateTicketTotals() {
   var totals = computeTotals();
+  var items = totals.summaryItems.slice();
   if (_modPanelItem) {
-    var previewPrice = _modPanelItem.basePrice + (_modPanelItem.mods || []).reduce(function(s, m) { return s + m.price; }, 0);
+    var previewMods = (_modPanelItem.mods || []);
+    var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
+    var previewPrice = _modPanelItem.basePrice + previewModTotal;
     totals.subtotal += previewPrice;
     totals.tax = Math.round(totals.subtotal * TAX_RATE * 100) / 100;
     totals.cardTotal = Math.round((totals.subtotal + totals.tax) * 100) / 100;
     totals.cashPrice = Math.round(totals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
+    // Add preview item to summary
+    items.push({
+      name: '\u270E ' + _modPanelItem.itemLabel,
+      unitPrice: previewPrice,
+      qty: 1,
+      sent: false,
+      mods: previewMods,
+    });
   }
   OrderSummary.update({
     checkId: currentCheckNumber || '',
-    skipItems: true,
+    items: items,
     subtotal: totals.subtotal,
     tax: totals.tax,
     cardTotal: totals.cardTotal,

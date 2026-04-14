@@ -168,15 +168,16 @@ function _renderItems(items) {
   if (!_itemScroll) return;
   _itemScroll.innerHTML = '';
   (items || []).forEach(function(item) {
+    // ── Item header row ──
     var row = document.createElement('div');
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
-      'padding:3px 0;',
+      'padding:3px 0 1px;',
       'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var name = document.createElement('div');
-    name.textContent = item.name;
+    name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
     name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
     var qty = document.createElement('div');
     qty.style.cssText = 'text-align:right;color:' + T.gold + ';';
@@ -188,6 +189,28 @@ function _renderItems(items) {
     row.appendChild(qty);
     row.appendChild(price);
     _itemScroll.appendChild(row);
+
+    // ── Modifier sub-rows ──
+    var mods = item.mods || [];
+    for (var m = 0; m < mods.length; m++) {
+      var mod = mods[m];
+      var modRow = document.createElement('div');
+      modRow.style.cssText = [
+        'display:grid;grid-template-columns:1fr 108px;gap:0 6px;',
+        'padding:0 0 1px 10px;',
+        'font-family:' + T.fb + ';font-size:11px;',
+        'color:' + (mod.charged ? T.gold : T.mutedText) + ';',
+      ].join('');
+      var modName = document.createElement('div');
+      modName.textContent = mod.name;
+      modName.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      var modPrice = document.createElement('div');
+      modPrice.style.cssText = 'text-align:right;';
+      modPrice.textContent = mod.price > 0 ? '+$' + mod.price.toFixed(2) : '';
+      modRow.appendChild(modName);
+      modRow.appendChild(modPrice);
+      _itemScroll.appendChild(modRow);
+    }
   });
 }
 
