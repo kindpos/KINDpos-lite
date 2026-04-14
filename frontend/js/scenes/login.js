@@ -56,7 +56,7 @@ defineScene({
 
     // ── LEFT COLUMN — Clock In/Out centered, Config packed at bottom ─────
     var leftCol = document.createElement('div');
-    leftCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;align-self:stretch;';
+    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;';
 
     // Clock In/Out — vertically centered in remaining space
     var clockCenter = document.createElement('div');
@@ -116,7 +116,7 @@ defineScene({
 
     // ── RIGHT COLUMN — New Order ─────────
     var rightCol = document.createElement('div');
-    rightCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;';
+    rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;';
 
     var quickOrderPair = buildStyledButton({ label: 'NEW\nORDER', variant: 'mint', size: 'md', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
