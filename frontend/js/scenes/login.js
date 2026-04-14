@@ -49,42 +49,32 @@ defineScene({
 
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';padding:0 20px;';
 
-    // ── Shared side-button style ────────────
-    var SIDE_BTN_W = '180px';
-    var SIDE_BTN_H = '120px';
-    var SIDE_BTN_FS = '26px';
-
-    // ── LEFT COLUMN — Clock In/Out above Config ─────
+    // ── LEFT COLUMN — Logo + store name ─────
     var leftCol = document.createElement('div');
-    leftCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
+    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;';
 
-    var clockPair = buildStyledButton({ label: 'CLOCK\nIN/OUT', variant: 'gold', size: 'lg', onClick: function() {
-      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
-      if (currentPin.length === 0) {
-        if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
-        return;
-      }
-      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
-      if (!emp) {
-        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
-        return;
-      }
-      var empRoles = emp.roles || [emp.role || 'server'];
-      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-      SceneManager.closeGate('login');
-      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-      SceneManager.openTransactional('clock-in', { emp: empData });
-    } });
-    clockPair.wrap.style.width = SIDE_BTN_W;
-    clockPair.wrap.style.height = SIDE_BTN_H;
-    clockPair.inner.style.fontSize = SIDE_BTN_FS;
-    leftCol.appendChild(clockPair.wrap);
+    // Logo + store name — vertically centered
+    var brandCenter = document.createElement('div');
+    brandCenter.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;';
 
-    var configPair = buildStyledButton({ label: 'CONFIG', variant: 'dark', size: 'lg', onClick: function() { SceneManager.openTransactional('settings'); } });
-    configPair.wrap.style.width = SIDE_BTN_W;
-    configPair.wrap.style.height = SIDE_BTN_H;
-    configPair.inner.style.fontSize = SIDE_BTN_FS;
-    leftCol.appendChild(configPair.wrap);
+    var logo = document.createElement('img');
+    logo.src = '/assets/images/palm.jpg';
+    logo.alt = 'Store logo';
+    logo.style.cssText = 'max-width:280px;max-height:320px;object-fit:contain;';
+    brandCenter.appendChild(logo);
+
+    var storeName = document.createElement('div');
+    storeName.style.cssText = 'font-family:' + T.fhr + ';font-size:32px;color:' + T.textPrimary + ';text-align:center;text-transform:uppercase;letter-spacing:2px;line-height:1.2;max-width:180px;word-wrap:break-word;';
+    storeName.textContent = 'KINDpos';
+    brandCenter.appendChild(storeName);
+
+    // Fetch store name from API
+    fetch('/api/v1/config/store').then(function(r) { return r.json(); }).then(function(data) {
+      var name = (data.store && data.store.info && data.store.info.restaurant_name) || 'KINDpos';
+      storeName.textContent = name;
+    }).catch(function() {});
+
+    leftCol.appendChild(brandCenter);
 
     container.appendChild(leftCol);
 
@@ -113,11 +103,30 @@ defineScene({
     });
     container.appendChild(state.numpadRef);
 
-    // ── RIGHT COLUMN — Quick Order ─────────
+    // ── RIGHT COLUMN — Timeclock + New Order, vertically centered ─────
     var rightCol = document.createElement('div');
-    rightCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
+    rightCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;gap:16px;';
 
-    var quickOrderPair = buildStyledButton({ label: 'QUICK\nORDER', variant: 'mint', size: 'lg', onClick: function() {
+    var clockPair = buildStyledButton({ label: 'TIMECLOCK', variant: 'cyan', size: 'md', onClick: function() {
+      var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
+      if (currentPin.length === 0) {
+        if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
+        return;
+      }
+      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
+      if (!emp) {
+        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
+        return;
+      }
+      var empRoles = emp.roles || [emp.role || 'server'];
+      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
+      SceneManager.closeGate('login');
+      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+      SceneManager.openTransactional('clock-in', { emp: empData });
+    } });
+    rightCol.appendChild(clockPair.wrap);
+
+    var quickOrderPair = buildStyledButton({ label: 'NEW\nORDER', variant: 'mint', size: 'md', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
         if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
@@ -133,10 +142,25 @@ defineScene({
       SceneManager.closeGate('login');
       SceneManager.mountWorking('order-entry', { emp: empData });
     } });
-    quickOrderPair.wrap.style.width = SIDE_BTN_W;
-    quickOrderPair.wrap.style.height = SIDE_BTN_H;
-    quickOrderPair.inner.style.fontSize = SIDE_BTN_FS;
     rightCol.appendChild(quickOrderPair.wrap);
+
+    // Config — vermillion button, extra padding above
+    // Transactional layer (z:20) is below gate (z:100), so temporarily
+    // promote it while settings is open from the login screen.
+    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'md', onClick: function() {
+      if (state.numpadRef) state.numpadRef.clear();
+      var tLayer = document.getElementById('layer-transactional');
+      if (tLayer) tLayer.style.zIndex = T.zGate + 1;
+      SceneManager.openTransactional('settings');
+      var restore = function(evt) {
+        if (evt.sceneName !== 'settings') return;
+        if (tLayer) tLayer.style.zIndex = T.zTransactional;
+        SceneManager.off('transactional:closed', restore);
+      };
+      SceneManager.on('transactional:closed', restore);
+    } });
+    configPair.wrap.style.marginTop = '52px';
+    rightCol.appendChild(configPair.wrap);
 
     container.appendChild(rightCol);
 

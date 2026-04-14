@@ -168,15 +168,18 @@ T.green = '#39b54a';
 // Embossed Button System tokens
 T.embDarkBg    = '#2c2926';
 T.embGoldBg    = '#c07800';
-T.embMintBg    = '#1e8a38';
+T.embMintBg    = '#87f79c';
 T.embVermBg    = '#aa1a00';
+T.embCyanBg    = '#007a7a';
 T.embGhostBg   = '#201e1b';
 T.embGoldLabel = '#1a0e00';
 T.embMintLabel = '#001a0a';
+T.embCyanLabel = '#001a1a';
 T.embVermLabel = '#ffffff';
 T.embEdge      = '#111111';
 T.embGoldEdge  = '#7a4400';
-T.embMintEdge  = '#0a5020';
+T.embMintEdge  = '#2e8040';
+T.embCyanEdge  = '#005050';
 T.embVermEdge  = '#5a0800';
 
 export function chamfer(s) {
@@ -246,8 +249,13 @@ var _EMB_VARIANTS = {
   },
   mint: {
     bg: T.embMintBg, label: T.embMintLabel,
-    shadow: 'inset 0 2px 0 rgba(180,255,200,0.45),inset 0 -2px 0 rgba(0,0,0,0.40),inset 0 4px 8px rgba(0,80,20,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(135,247,156,0.15),0 0 0 1px ' + T.embMintEdge,
-    shadowActive: 'inset 0 2px 0 rgba(180,255,200,0.45),inset 0 -2px 0 rgba(0,0,0,0.40),inset 0 8px 16px rgba(0,80,20,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(135,247,156,0.15),0 0 0 1px ' + T.embMintEdge,
+    shadow: 'inset 0 2px 0 rgba(220,255,230,0.60),inset 0 -2px 0 rgba(0,0,0,0.35),inset 0 4px 8px rgba(0,80,20,0.20),0 2px 10px rgba(0,0,0,0.50),0 0 16px rgba(135,247,156,0.25),0 0 0 1px ' + T.embMintEdge,
+    shadowActive: 'inset 0 2px 0 rgba(220,255,230,0.60),inset 0 -2px 0 rgba(0,0,0,0.35),inset 0 8px 16px rgba(0,80,20,0.20),0 2px 10px rgba(0,0,0,0.50),0 0 16px rgba(135,247,156,0.25),0 0 0 1px ' + T.embMintEdge,
+  },
+  cyan: {
+    bg: T.embCyanBg, label: T.embCyanLabel,
+    shadow: 'inset 0 2px 0 rgba(140,255,255,0.45),inset 0 -2px 0 rgba(0,0,0,0.45),inset 0 4px 8px rgba(0,80,80,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(51,255,255,0.15),0 0 0 1px ' + T.embCyanEdge,
+    shadowActive: 'inset 0 2px 0 rgba(140,255,255,0.45),inset 0 -2px 0 rgba(0,0,0,0.45),inset 0 8px 16px rgba(0,80,80,0.30),0 2px 10px rgba(0,0,0,0.60),0 0 16px rgba(51,255,255,0.15),0 0 0 1px ' + T.embCyanEdge,
   },
   vermillion: {
     bg: T.embVermBg, label: T.embVermLabel,
@@ -271,6 +279,7 @@ function _fillToVariant(fill) {
   if (fill === T.darkBtn || fill === T.bg) return 'dark';
   if (fill === T.gold) return 'gold';
   if (fill === T.mint || fill === T.goGreen || fill === T.green || fill === T.numpadChassis || fill === T.mintB) return 'mint';
+  if (fill === T.cyan) return 'cyan';
   if (fill === T.red || fill === T.vermillion || fill === T.redB) return 'vermillion';
   return 'ghost';
 }
@@ -476,6 +485,8 @@ function _recomputeEmbossed() {
   _EMB_VARIANTS.gold.label = T.embGoldLabel;
   _EMB_VARIANTS.mint.bg = T.embMintBg;
   _EMB_VARIANTS.mint.label = T.embMintLabel;
+  _EMB_VARIANTS.cyan.bg = T.embCyanBg;
+  _EMB_VARIANTS.cyan.label = T.embCyanLabel;
   _EMB_VARIANTS.vermillion.bg = T.embVermBg;
   _EMB_VARIANTS.vermillion.label = T.embVermLabel;
   _EMB_VARIANTS.ghost.bg = T.embGhostBg;

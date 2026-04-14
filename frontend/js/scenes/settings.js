@@ -1394,7 +1394,7 @@ SceneManager.register({
     setSceneName('Configuration');
     setHeaderBack({
       x: true,
-      onBack: function() { SceneManager.closeTransactional('settings'); },
+      onClose: function() { SceneManager.closeTransactional('settings'); },
     });
 
     buildScene(container);
