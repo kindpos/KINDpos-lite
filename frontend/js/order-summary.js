@@ -213,11 +213,14 @@ function _renderItems(items) {
     var hasMods = mods.length > 0;
 
     // ── Item header row ──
+    var isSel = !!item.selected;
     var row = document.createElement('div');
     row.style.cssText = [
       'display:flex;justify-content:space-between;align-items:center;',
       'padding:3px 0 1px;',
-      'font-family:' + T.fb + ';font-size:24px;color:' + T.textPrimary + ';',
+      'font-family:' + T.fb + ';font-size:24px;',
+      'color:' + (isSel ? T.bgDark : T.textPrimary) + ';',
+      isSel ? 'background:' + T.gold + ';' : '',
       'border-bottom:1px solid ' + T.bg3 + ';',
       isCollapsible ? 'cursor:pointer;user-select:none;' : '',
     ].join('');
@@ -225,7 +228,7 @@ function _renderItems(items) {
     name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
     name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
     var rightInfo = document.createElement('span');
-    rightInfo.style.cssText = 'white-space:nowrap;flex-shrink:0;margin-left:6px;color:' + T.gold + ';';
+    rightInfo.style.cssText = 'white-space:nowrap;flex-shrink:0;margin-left:6px;color:' + (isSel ? T.bgDark : T.gold) + ';';
     rightInfo.textContent = item.qty + '\u00D7  $' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
     row.appendChild(name);
     row.appendChild(rightInfo);
