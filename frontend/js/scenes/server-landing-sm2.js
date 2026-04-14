@@ -975,6 +975,10 @@ function applyTabStyle(el, active) {
 
 function renderCheckGrid(state) {
   if (!state.centerGrid) return;
+  if (state._holdTimers) {
+    for (var ht = 0; ht < state._holdTimers.length; ht++) clearTimeout(state._holdTimers[ht]);
+  }
+  state._holdTimers = [];
   state.centerGrid.innerHTML = '';
   var orders = ordersByTab(state);
   var emp = state.params ? (state.params.emp || state.params) : {};
@@ -1062,6 +1066,7 @@ function buildCheckTile(state, order) {
           pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'server-landing',
         });
       }, 400);
+      if (state._holdTimers) state._holdTimers.push(_holdTimer);
     });
     tile.addEventListener('pointerup', function() {
       clearTimeout(_holdTimer);

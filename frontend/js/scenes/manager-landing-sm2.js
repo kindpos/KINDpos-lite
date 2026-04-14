@@ -1663,6 +1663,11 @@ function ordersByTab(state) {
 
 function renderCheckGrid(state) {
   if (!state.centerGrid) return;
+  // Clear pending hold timers from previous render
+  if (state._holdTimers) {
+    for (var ht = 0; ht < state._holdTimers.length; ht++) clearTimeout(state._holdTimers[ht]);
+  }
+  state._holdTimers = [];
   state.centerGrid.innerHTML = '';
   var orders = ordersByTab(state);
   var isOpen = state.activeTab === 'open';
@@ -1770,6 +1775,7 @@ function buildCheckTile(state, order) {
           pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'manager-landing',
         });
       }, 400);
+      if (state._holdTimers) state._holdTimers.push(_holdTimer);
     });
     tile.addEventListener('pointerup', function() {
       clearTimeout(_holdTimer);
@@ -1882,6 +1888,7 @@ function renderOpsPanel(state) {
   grid.appendChild(buildButton('DISC', Object.assign({}, btnStyle, { onTap: function() {
     SceneManager.interrupt('disc-pin', {
       onConfirm: function(pin) {
+        if (!pin) { showToast('PIN required', { bg: T.gold }); return; }
         SceneManager.interrupt('disc-select', {
           onConfirm: function(opt) {
             var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
@@ -1933,12 +1940,16 @@ function renderOpsPanel(state) {
             return fetch('/api/v1/orders/' + id + '/void', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: emp.id || 'manager' }),
-            });
-          })).then(function() {
-            showToast(ids.length + ' checks voided', { bg: T.goGreen });
+            }).then(function(r) { return { id: id, ok: r.ok }; })
+              .catch(function() { return { id: id, ok: false }; });
+          })).then(function(results) {
+            var ok = results.filter(function(r) { return r.ok; }).length;
+            var fail = results.length - ok;
+            if (fail === 0) { showToast(ok + ' checks voided', { bg: T.goGreen }); }
+            else { showToast(ok + ' voided, ' + fail + ' failed', { bg: fail === results.length ? T.red : T.gold }); }
             state.selected = {};
             refreshData(state);
-          }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          });
         }
       },
       onCancel: function() {},
