@@ -231,7 +231,7 @@ export function ModifierPanel(container, opts) {
   // ── Build the panel ──
   function build() {
     rootEl = document.createElement('div');
-    rootEl.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;display:flex;flex-direction:column;gap:3px;';
+    rootEl.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;display:flex;flex-direction:column;gap:8px;';
 
     // Main card: beveled border
     var card = document.createElement('div');
@@ -488,6 +488,7 @@ export function ModifierPanel(container, opts) {
       seg.addEventListener('pointerup', function(e) {
         e.stopPropagation();
         activePlacement = pl.id;
+        console.log('[ModPanel] placement changed to: ' + activePlacement);
         _refreshPlacement(placeSegs);
       });
 
@@ -794,8 +795,9 @@ export function ModifierPanel(container, opts) {
       price: price,
       priceMap: opt.priceMap || null,
       groupKey: groupKey,
-      placement: activePlacement,
+      placement: activePlacement || 'whole',
     };
+    console.log('[ModPanel] applyOptionalMod placement=' + activePlacement + ' prefix=' + activeOptPrefix + ' label=' + opt.label);
     if (opt.special && opt.includes) {
       mod.special = true;
       mod.includes = opt.includes.slice();
