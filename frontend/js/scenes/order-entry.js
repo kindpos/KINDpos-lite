@@ -364,7 +364,9 @@ defineScene({
     ].join('');
 
     // Show persistent order summary panel (left column)
+    // Lock _renderItems so stale check-overview updates can't write into our ticket list
     OrderSummary.show({ checkId: params.recallCheckNumber || '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: _handleNameTap });
+    OrderSummary.lockItemRender();
 
     var mainArea = buildMain(container, params);
     container.appendChild(mainArea);
@@ -379,6 +381,8 @@ defineScene({
   },
 
   unmount: function() {
+    OrderSummary.unlockItemRender();
+    OrderSummary.hide();
     if (hexNav) { hexNav.destroy(); hexNav = null; }
     if (_modPanel) { _modPanel.destroy(); _modPanel = null; }
   },
@@ -1540,7 +1544,6 @@ function _appendModPreview(list) {
   // Remove any stale preview before adding fresh one
   var old = list.querySelector('[data-mod-preview]');
   if (old) old.parentNode.removeChild(old);
-  console.log('[PREVIEW] appending preview, list children before:', list.children.length, 'caller:', new Error().stack.split('\n')[2]);
 
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
