@@ -81,12 +81,12 @@ function buildCardHeader(label) {
 
 function statRow(label, value, color) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;min-width:0;';
+  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:4px 12px;min-width:0;';
   var l = document.createElement('span');
-  l.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
+  l.style.cssText = 'font-family:' + T.fh + ';font-size:26px;color:' + T.textPrimary + ';font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
   l.textContent = label;
   var v = document.createElement('span');
-  v.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
+  v.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
@@ -589,15 +589,21 @@ function buildSalesOverviewCard(state) {
   var hc = state.hourlyCompare || {};
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
+  card.style.flex = '1';
+  card.style.overflow = 'hidden';
 
   card.appendChild(buildCardHeader('SALES OVERVIEW'));
 
   // ── Sparkline: today (gold) vs last week (mint dashed) ──
   var chartWrap = document.createElement('div');
-  chartWrap.style.cssText = 'padding:4px 6px 0;pointer-events:none;';
+  chartWrap.style.cssText = 'flex:1;min-height:0;padding:4px 6px 0;pointer-events:none;overflow:hidden;';
 
   var todayData = (hc.today || []).map(function(h) {
     return { label: h.hour, value: h.net_sales || 0 };
@@ -633,18 +639,18 @@ function buildSalesOverviewCard(state) {
 
   // ── KPIs (single row) ──
   var kpiRow = document.createElement('div');
-  kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:4px 8px 6px;';
+  kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:6px 10px 8px;flex-shrink:0;';
   var netLabel = document.createElement('span');
-  netLabel.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
+  netLabel.style.cssText = 'font-family:' + T.fh + ';font-size:26px;color:' + T.textPrimary + ';font-weight:bold;';
   netLabel.textContent = 'Net ';
   var netVal = document.createElement('span');
-  netVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  netVal.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';font-weight:bold;';
   netVal.textContent = fmt(d.net_sales);
   var avgLabel = document.createElement('span');
-  avgLabel.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
+  avgLabel.style.cssText = 'font-family:' + T.fh + ';font-size:26px;color:' + T.textPrimary + ';font-weight:bold;';
   avgLabel.textContent = 'Avg ';
   var avgVal = document.createElement('span');
-  avgVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  avgVal.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';font-weight:bold;';
   avgVal.textContent = fmt(d.avg_check);
   var netWrap = document.createElement('span');
   netWrap.appendChild(netLabel);
@@ -1293,15 +1299,21 @@ function buildSalesBreakdownCard(state) {
   var hc = bd.hourlyCats || { hours: [], series: [] };
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
+  card.style.flex = '1';
+  card.style.overflow = 'hidden';
 
   card.appendChild(buildCardHeader('SALES BREAKDOWN'));
 
   // ── Stacked area sparkline ──
   var chartWrap = document.createElement('div');
-  chartWrap.style.cssText = 'padding:4px 6px 0;pointer-events:none;';
+  chartWrap.style.cssText = 'flex:1;min-height:0;padding:4px 6px 0;pointer-events:none;overflow:hidden;';
   if (hc.series.length > 0) {
     var opH = state.operatingHours || { openHour: 11, closeHour: 22 };
     var shifts = getShifts(state.storeConfig || {});
@@ -1321,22 +1333,22 @@ function buildSalesBreakdownCard(state) {
 
   // ── KPI row: Cash | Card ──
   var kpiRow = document.createElement('div');
-  kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:4px 8px 6px;';
+  kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:6px 10px 8px;flex-shrink:0;';
   var cashWrap = document.createElement('span');
   var cashLbl = document.createElement('span');
-  cashLbl.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
+  cashLbl.style.cssText = 'font-family:' + T.fh + ';font-size:26px;color:' + T.textPrimary + ';font-weight:bold;';
   cashLbl.textContent = 'Cash ';
   var cashVal = document.createElement('span');
-  cashVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  cashVal.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';font-weight:bold;';
   cashVal.textContent = fmt(bd.cash);
   cashWrap.appendChild(cashLbl);
   cashWrap.appendChild(cashVal);
   var cardWrap = document.createElement('span');
   var cardLbl = document.createElement('span');
-  cardLbl.style.cssText = 'font-family:' + T.fh + ';font-size:22px;color:' + T.textPrimary + ';font-weight:bold;';
+  cardLbl.style.cssText = 'font-family:' + T.fh + ';font-size:26px;color:' + T.textPrimary + ';font-weight:bold;';
   cardLbl.textContent = 'Card ';
   var cardVal = document.createElement('span');
-  cardVal.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.gold + ';font-weight:bold;';
+  cardVal.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';font-weight:bold;';
   cardVal.textContent = fmt(bd.card);
   cardWrap.appendChild(cardLbl);
   cardWrap.appendChild(cardVal);
