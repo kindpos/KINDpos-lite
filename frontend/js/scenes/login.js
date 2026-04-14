@@ -77,7 +77,10 @@ defineScene({
     leftCol.appendChild(brandCenter);
 
     // Config — small vermillion button, packed at bottom center
-    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'sm', onClick: function() { SceneManager.openTransactional('settings'); } });
+    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'sm', onClick: function() {
+      if (state.numpadRef) state.numpadRef.clear();
+      SceneManager.openTransactional('settings');
+    } });
     configPair.wrap.style.marginBottom = '8px';
     leftCol.appendChild(configPair.wrap);
 
