@@ -45,7 +45,7 @@ function collectSummary(seats, selected) {
     if (anySelected && !selected[seats[i].id]) continue;
     for (var j = 0; j < seats[i].items.length; j++) {
       var it = seats[i].items[j];
-      items.push({ name: it.name, qty: it.qty, unitPrice: it.price });
+      items.push({ name: it.name, qty: it.qty, unitPrice: it.price, mods: it.mods || [] });
       subtotal += it.qty * it.price;
     }
   }
@@ -72,6 +72,9 @@ function orderToSeats(order) {
       menu_item_id: item.menu_item_id || '',
       category: item.category || null,
       added_at: item.added_at || null,
+      mods: (item.modifiers || []).map(function(m) {
+        return { name: m.name || '', price: m.price || 0, charged: (m.price || 0) > 0, prefix: m.prefix || null, children: m.children || [] };
+      }),
     });
   }
   var seats = [];

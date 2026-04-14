@@ -206,30 +206,43 @@ function _renderItems(items) {
   if (!_itemScroll) return;
   _itemScroll.innerHTML = '';
   (items || []).forEach(function(item) {
-    // ── Item header row ──
+    var mods = item.mods || [];
+    var hasMods = mods.length > 0;
+
+    // ── Item header row (tappable to expand/collapse) ──
     var row = document.createElement('div');
     row.style.cssText = [
-      'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
-      'padding:3px 0 1px;',
+      'display:flex;justify-content:space-between;align-items:center;',
+      'padding:3px 0 1px;cursor:' + (hasMods ? 'pointer' : 'default') + ';',
       'font-family:' + T.fb + ';font-size:24px;color:' + T.textPrimary + ';',
-      'border-bottom:1px solid ' + T.bg3 + ';',
+      'border-bottom:1px solid ' + T.bg3 + ';user-select:none;',
     ].join('');
-    var name = document.createElement('div');
+    var name = document.createElement('span');
     name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
-    name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-    var qty = document.createElement('div');
-    qty.style.cssText = 'text-align:right;color:' + T.gold + ';';
-    qty.textContent = item.qty + '\u00D7';
-    var price = document.createElement('div');
-    price.style.cssText = 'text-align:right;color:' + T.gold + ';';
-    price.textContent = '$' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
+    name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
+    var rightInfo = document.createElement('span');
+    rightInfo.style.cssText = 'white-space:nowrap;flex-shrink:0;margin-left:6px;color:' + T.gold + ';';
+    rightInfo.textContent = item.qty + '\u00D7  $' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
     row.appendChild(name);
-    row.appendChild(qty);
-    row.appendChild(price);
+    row.appendChild(rightInfo);
+
+    // Expand arrow for items with mods
+    if (hasMods) {
+      var arrow = document.createElement('span');
+      arrow.style.cssText = 'flex-shrink:0;margin-left:4px;font-size:10px;color:' + T.mutedText + ';';
+      arrow.textContent = '\u25BC';
+      row.appendChild(arrow);
+    }
+
     _itemScroll.appendChild(row);
 
-    // ── Modifier sub-rows: partition into whole / 1st / 2nd ──
-    var mods = item.mods || [];
+    if (!hasMods) return;
+
+    // ── Collapsible modifier detail ──
+    var modDetail = document.createElement('div');
+    modDetail.style.cssText = 'display:none;';
+
+    // Partition into whole / left / right
     var wholeMods = [];
     var leftMods = [];
     var rightMods = [];
@@ -239,26 +252,25 @@ function _renderItems(items) {
       else wholeMods.push(mods[m]);
     }
 
-    // Render whole mods flat + children (special exclusions)
+    // Whole mods + children
     for (var w = 0; w < wholeMods.length; w++) {
-      _itemScroll.appendChild(_modRow(wholeMods[w]));
+      modDetail.appendChild(_modRow(wholeMods[w]));
       if (wholeMods[w].children && wholeMods[w].children.length > 0) {
         for (var c = 0; c < wholeMods[w].children.length; c++) {
           var childRow = _modRow(wholeMods[w].children[c]);
           childRow.style.paddingLeft = '20px';
           childRow.style.color = T.vermillion;
           childRow.style.fontStyle = 'italic';
-          _itemScroll.appendChild(childRow);
+          modDetail.appendChild(childRow);
         }
       }
     }
 
-    // Render 1st/2nd as a table
+    // 1st/2nd table
     if (leftMods.length > 0 || rightMods.length > 0) {
       var halfTable = document.createElement('div');
       halfTable.style.cssText = 'padding:2px 0 2px 10px;';
 
-      // Headers
       var hdrRow = document.createElement('div');
       hdrRow.style.cssText = 'display:flex;border-bottom:1px solid ' + T.mutedText + ';margin-bottom:1px;font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.mint + ';';
       var hdrL = document.createElement('div');
@@ -274,25 +286,33 @@ function _renderItems(items) {
       hdrRow.appendChild(hdrR);
       halfTable.appendChild(hdrRow);
 
-      // Content rows
       var maxRows = Math.max(leftMods.length, rightMods.length);
       for (var r = 0; r < maxRows; r++) {
         var tr = document.createElement('div');
         tr.style.cssText = 'display:flex;font-family:' + T.fb + ';line-height:1.3;';
-        var lMod = leftMods[r];
-        var rMod = rightMods[r];
-        var tdL = _halfCell(lMod);
-        var tdSep = document.createElement('div');
-        tdSep.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;flex-shrink:0;';
-        var tdR = _halfCell(rMod);
+        var tdL = _halfCell(leftMods[r]);
+        var tdSep2 = document.createElement('div');
+        tdSep2.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;flex-shrink:0;';
+        var tdR = _halfCell(rightMods[r]);
         tr.appendChild(tdL);
-        tr.appendChild(tdSep);
+        tr.appendChild(tdSep2);
         tr.appendChild(tdR);
         halfTable.appendChild(tr);
       }
 
-      _itemScroll.appendChild(halfTable);
+      modDetail.appendChild(halfTable);
     }
+
+    _itemScroll.appendChild(modDetail);
+
+    // Toggle expand/collapse on tap
+    (function(detail, arrowEl) {
+      row.addEventListener('pointerup', function() {
+        var isOpen = detail.style.display !== 'none';
+        detail.style.display = isOpen ? 'none' : '';
+        if (arrowEl) arrowEl.textContent = isOpen ? '\u25BC' : '\u25B2';
+      });
+    })(modDetail, arrow);
   });
 }
 
