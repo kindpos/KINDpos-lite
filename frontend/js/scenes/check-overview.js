@@ -293,16 +293,24 @@ defineScene({
     addTile.appendChild(plusText);
 
     track(addTile, 'pointerup', function() {
-      var nextNum = state.seats.length + 1;
+      // Find first gap in seat numbering (e.g. S-002 if S-001, S-003 exist)
+      var existing = {};
+      for (var ei = 0; ei < state.seats.length; ei++) {
+        var num = parseInt(state.seats[ei].id.replace('S-', ''), 10);
+        if (!isNaN(num)) existing[num] = true;
+      }
+      var nextNum = 1;
+      while (existing[nextNum]) nextNum++;
       var newSeat = { id: 'S-' + String(nextNum).padStart(3, '0'), items: [] };
       state.seats.push(newSeat);
-      seatsGrid.insertBefore(buildSeatTile(newSeat), addTile);
+      state.seats.sort(function(a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+      rebuildSeatGrid();
       // Persist seat count so empty seats survive refresh
       if (state.orderId) {
         fetch('/api/v1/orders/' + state.orderId, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ guest_count: state.seats.length }),
+          body: JSON.stringify({ guest_count: Math.max.apply(null, state.seats.map(function(s) { return parseInt(s.id.replace('S-', ''), 10) || 0; })) }),
         }).catch(function() {});
       }
     });
