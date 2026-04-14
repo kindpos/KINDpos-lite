@@ -114,9 +114,9 @@ defineScene({
     });
     container.appendChild(state.numpadRef);
 
-    // ── RIGHT COLUMN — Quick Order ─────────
+    // ── RIGHT COLUMN — New Order ─────────
     var rightCol = document.createElement('div');
-    rightCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
+    rightCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;';
 
     var quickOrderPair = buildStyledButton({ label: 'NEW\nORDER', variant: 'mint', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
