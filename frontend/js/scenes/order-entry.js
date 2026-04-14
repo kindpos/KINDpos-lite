@@ -1489,6 +1489,7 @@ function renderTicket() {
   var list = document.getElementById('ticket-list');
   if (!list) return;
   list.innerHTML = '';
+  console.log('[renderTicket] cleared, returnScene:', sceneParams.returnScene, 'ticket:', ticket.length, 'modPanel:', !!_modPanelItem);
 
   // In check-overview mode, only show newly added (unsent) items
   var displayTicket = ticket;
@@ -1530,12 +1531,14 @@ function renderTicket() {
       var seatTicket = seatItems[sn];
       _renderTicketGroup(list, seatTicket);
     }
+    console.log('[renderTicket] hasSeatGroups path, children before preview:', list.children.length);
     _appendModPreview(list);
     _updateTicketTotals();
     return;
   }
 
   _renderTicketGroup(list, displayTicket);
+  console.log('[renderTicket] normal path, children before preview:', list.children.length);
   _appendModPreview(list);
   _updateTicketTotals();
 }
