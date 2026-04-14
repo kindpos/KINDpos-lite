@@ -237,9 +237,12 @@ function drawParetoChart(container, data, opts) {
       svg.appendChild(lbl);
     }
 
-    // Revenue value — right-aligned
-    var revLabel = svgEl('text', { x: W - 2, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '14', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' });
-    revLabel.textContent = fmt(tot);
+    // Revenue value — right-aligned with dark bg
+    var revText = fmt(tot);
+    var revBoxW = revText.length * 8 + 6;
+    svg.appendChild(svgEl('rect', { x: W - 2 - revBoxW, y: y + barH / 2 - 8, width: revBoxW, height: 18, fill: T.bgDark, opacity: '0.85', rx: '2' }));
+    var revLabel = svgEl('text', { x: W - 4, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '14', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' });
+    revLabel.textContent = revText;
     svg.appendChild(revLabel);
 
     // Cumulative % point
@@ -259,8 +262,11 @@ function drawParetoChart(container, data, opts) {
       var pt = linePoints[i];
       svg.appendChild(svgEl('circle', { cx: pt.x, cy: pt.y, r: '4', fill: T.gold, stroke: T.bgDark, 'stroke-width': '1.5' }));
       if (i === linePoints.length - 1 || Math.abs(pt.pct - (linePoints[i - 1] || { pct: 0 }).pct) > 12) {
-        var pctLbl = svgEl('text', { x: pt.x + 7, y: pt.y - 4, fill: T.gold, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
-        pctLbl.textContent = Math.round(pt.pct) + '%';
+        var pctText = Math.round(pt.pct) + '%';
+        var pctBoxW = pctText.length * 8 + 4;
+        svg.appendChild(svgEl('rect', { x: pt.x + 5, y: pt.y - 15, width: pctBoxW, height: 16, fill: T.bgDark, opacity: '0.85', rx: '2' }));
+        var pctLbl = svgEl('text', { x: pt.x + 7, y: pt.y - 3, fill: T.gold, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
+        pctLbl.textContent = pctText;
         svg.appendChild(pctLbl);
       }
     }
@@ -336,8 +342,12 @@ function drawTableHistogram(container, ts) {
       svg.appendChild(svgEl('text', { x: padL + 6, y: y + barH / 2 + 5, fill: CHART.axisFill, 'font-size': '15', 'font-family': CHART.dataFont })).textContent = '\u00d7' + d.tableCount;
     }
 
-    // Avg value — right of bar
-    svg.appendChild(svgEl('text', { x: padL + Math.max(barW, 2) + 4, y: y + barH / 2 + 6, fill: CHART.money, 'font-size': '16', 'font-family': CHART.dataFont, 'font-weight': 'bold' })).textContent = fmt(d.avgCheck);
+    // Avg value — right of bar with dark bg
+    var avgText = fmt(d.avgCheck);
+    var avgBoxX = padL + Math.max(barW, 2) + 2;
+    var avgBoxW = avgText.length * 9 + 6;
+    svg.appendChild(svgEl('rect', { x: avgBoxX, y: y + barH / 2 - 9, width: avgBoxW, height: 18, fill: T.bgDark, opacity: '0.85', rx: '2' }));
+    svg.appendChild(svgEl('text', { x: avgBoxX + 3, y: y + barH / 2 + 5, fill: T.gold, 'font-size': '14', 'font-family': CHART.dataFont, 'font-weight': 'bold' })).textContent = avgText;
   }
 
   // Axis labels
