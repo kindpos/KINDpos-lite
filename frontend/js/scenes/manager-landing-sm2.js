@@ -558,7 +558,7 @@ function renderLayout(state) {
 
   el.innerHTML = '';
   el.style.cssText = 'width:100%;height:100%;background:' + T.bg
-    + ';display:grid;grid-template-columns:29fr 42fr 29fr;gap:' + T.colGap
+    + ';display:grid;grid-template-columns:33fr 34fr 33fr;gap:' + T.colGap
     + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
 
   state.leftCol = buildLeftColumn(state);
@@ -1665,7 +1665,7 @@ function renderCheckGrid(state) {
   // + NEW CHECK tile (OPEN tab only)
   if (isOpen) {
     var newTile = document.createElement('div');
-    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:90px;cursor:pointer;user-select:none;';
+    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:60px;cursor:pointer;user-select:none;';
     newTile.style.clipPath = chamfer(6);
     var plus = document.createElement('div');
     plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + CHROME + ';';
@@ -1689,7 +1689,7 @@ function buildCheckTile(state, order) {
   var checkNum = order.check_number || ('C-' + String(order.order_id).slice(0, 3).toUpperCase());
 
   var tile = document.createElement('div');
-  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + sColor + ';padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-height:86px;cursor:pointer;user-select:none;box-sizing:border-box;';
+  tile.style.cssText = 'background:' + T.bgDark + ';border:1px solid ' + sColor + ';padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:60px;cursor:pointer;user-select:none;box-sizing:border-box;';
   tile.style.clipPath = chamfer(6);
   if (isClosed) tile.style.opacity = '0.7';
   if (isVoid) { tile.style.opacity = '0.5'; tile.style.cursor = 'default'; }
