@@ -145,11 +145,11 @@ defineScene({
     rightCol.appendChild(quickOrderPair.wrap);
 
     // Config — small vermillion button, extra padding above
-    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'sm', onClick: function() {
+    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'md', onClick: function() {
       if (state.numpadRef) state.numpadRef.clear();
       SceneManager.openTransactional('settings');
     } });
-    configPair.wrap.style.marginTop = '32px';
+    configPair.wrap.style.marginTop = '52px';
     rightCol.appendChild(configPair.wrap);
 
     container.appendChild(rightCol);
