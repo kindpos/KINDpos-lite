@@ -297,6 +297,14 @@ defineScene({
       var newSeat = { id: 'S-' + String(nextNum).padStart(3, '0'), items: [] };
       state.seats.push(newSeat);
       seatsGrid.insertBefore(buildSeatTile(newSeat), addTile);
+      // Persist seat count so empty seats survive refresh
+      if (state.orderId) {
+        fetch('/api/v1/orders/' + state.orderId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guest_count: state.seats.length }),
+        }).catch(function() {});
+      }
     });
 
     seatsGrid.appendChild(addTile);
