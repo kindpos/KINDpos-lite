@@ -150,7 +150,12 @@ function fetchAllData(state) {
 }
 
 function refreshData(state) {
-  fetchAllData(state).then(function() { if (state.el) renderLayout(state); });
+  if (state._refreshing || !state.el) return;
+  state._refreshing = true;
+  fetchAllData(state).then(function() {
+    state._refreshing = false;
+    if (state.el) renderLayout(state);
+  }).catch(function() { state._refreshing = false; });
 }
 
 // ═══════════════════════════════════════════════════

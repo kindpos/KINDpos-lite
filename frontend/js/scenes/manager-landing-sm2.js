@@ -168,7 +168,12 @@ function fetchAllData(state) {
 }
 
 function refreshData(state) {
-  fetchAllData(state).then(function() { if (state.el) renderLayout(state); });
+  if (state._refreshing || !state.el) return;
+  state._refreshing = true;
+  fetchAllData(state).then(function() {
+    state._refreshing = false;
+    if (state.el) renderLayout(state);
+  }).catch(function() { state._refreshing = false; });
 }
 
 // ── Operating Hours ──────────────────────────────
@@ -420,17 +425,19 @@ function wireTipAdjData(state, daySummary) {
 
 function wireCloseDayData(state) {
   var pendingCount = 0;
-  var srvList = state.staffData.servers;
+  var srvList = (state.staffData || {}).servers || [];
   for (var i = 0; i < srvList.length; i++) {
-    if (srvList[i].status !== 'checked_out') pendingCount++;
+    if (!srvList[i].checked_out) pendingCount++;
   }
-  var unadj = state.tipAdjData.unadjusted_count;
+  var unadj = ((state.tipAdjData || {}).unadjusted_count) || 0;
+  var allOut = srvList.length > 0 && pendingCount === 0;
+  var allAdj = unadj === 0;
   state.closeDayData = {
-    all_checked_out: pendingCount === 0,
+    all_checked_out: allOut,
     pending_count: pendingCount,
-    all_tips_adjusted: unadj === 0,
+    all_tips_adjusted: allAdj,
     unadjusted_count: unadj,
-    batch_ready: false,
+    batch_ready: allOut && allAdj,
     day_closed: false,
   };
 }
