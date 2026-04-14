@@ -26,6 +26,7 @@ var _mode = 'order';     // 'order' or 'checkout'
 var _collapsible = false; // when true, items start collapsed with tap-to-expand
 var _onItemTap = null;   // callback(itemIndex) when an item row is tapped
 var _onSeatHeaderTap = null; // callback(seatIdx) when a seat header is tapped
+var _expandedItems = {};  // { itemIndex: true } — tracks which items are expanded across re-renders
 
 function _container() {
   if (!_el) _el = document.getElementById('order-summary');
@@ -263,18 +264,19 @@ function _renderItems(items) {
     row.appendChild(name);
     row.appendChild(rightInfo);
 
-    // Collapse arrow only in checkout mode
+    // Collapse arrow only in collapsible mode
     var arrow = null;
+    var isExpanded = !!_expandedItems[itemIndex];
     if (isCollapsible && hasMods) {
       arrow = document.createElement('span');
       arrow.style.cssText = 'flex-shrink:0;margin-left:4px;font-size:10px;color:' + T.mutedText + ';';
-      arrow.textContent = '\u25BC';
+      arrow.textContent = isExpanded ? '\u25B2' : '\u25BC';
       row.appendChild(arrow);
     }
 
     _itemScroll.appendChild(row);
 
-    // Attach tap handler for item selection (works for ALL items, not just ones with mods)
+    // Attach tap handler for item selection + expand/collapse
     if (isCollapsible) {
       (function(idx) {
         row.addEventListener('pointerup', function() {
@@ -287,8 +289,8 @@ function _renderItems(items) {
 
     // ── Modifier detail container ──
     var modDetail = document.createElement('div');
-    // Collapsed by default only in checkout mode
-    if (isCollapsible) modDetail.style.display = 'none';
+    // Collapsed by default; expanded if previously toggled
+    if (isCollapsible && !isExpanded) modDetail.style.display = 'none';
 
     // Partition into whole / left / right
     var wholeMods = [];
@@ -355,15 +357,18 @@ function _renderItems(items) {
 
     // Toggle expand/collapse on tap (item selection handled above for all items)
     if (isCollapsible && hasMods) {
-      (function(detail, arrowEl) {
+      (function(detail, arrowEl, idx) {
         row.addEventListener('pointerup', function() {
           if (detail && arrowEl) {
             var isOpen = detail.style.display !== 'none';
             detail.style.display = isOpen ? 'none' : '';
             arrowEl.textContent = isOpen ? '\u25BC' : '\u25B2';
+            // Persist expand state across re-renders
+            if (isOpen) delete _expandedItems[idx];
+            else _expandedItems[idx] = true;
           }
         });
-      })(modDetail, arrow);
+      })(modDetail, arrow, itemIndex);
     }
   });
 }
