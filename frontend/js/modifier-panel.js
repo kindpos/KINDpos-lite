@@ -190,7 +190,7 @@ export function ModifierPanel(container, opts) {
       'background:' + T.bgDark + ';',
     ].join('');
     var nameSpan = document.createElement('span');
-    nameSpan.style.color = T.vermillion;
+    nameSpan.style.color = catColor;
     nameSpan.textContent = activeItem.itemLabel;
     var modSpan = document.createElement('span');
     modSpan.style.color = T.textPrimary;
