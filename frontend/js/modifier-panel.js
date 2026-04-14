@@ -231,12 +231,12 @@ export function ModifierPanel(container, opts) {
   // ── Build the panel ──
   function build() {
     rootEl = document.createElement('div');
-    rootEl.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;';
+    rootEl.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;display:flex;flex-direction:column;gap:3px;';
 
-    // Inner card: beveled border
+    // Main card: beveled border
     var card = document.createElement('div');
     card.style.cssText = [
-      'width:100%;height:100%;',
+      'width:100%;flex:1;min-height:0;',
       'background:' + T.bg + ';',
       'border-top:5px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
       'border-left:5px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
@@ -246,7 +246,6 @@ export function ModifierPanel(container, opts) {
       'box-sizing:border-box;overflow:hidden;',
     ].join('');
     card.style.clipPath = chamfer(8);
-    rootEl.appendChild(card);
 
     // ── Header: "Item Name: Modifiers" (compact) ──
     var headerEl = document.createElement('div');
@@ -296,34 +295,33 @@ export function ModifierPanel(container, opts) {
     }
 
     card.appendChild(sectionsArea);
+    rootEl.appendChild(card);
 
-    // ── Prefix bar (single horizontal row) ──
+    // ── Bottom controls card (separate from main) ──
+    var bottomCard = document.createElement('div');
+    bottomCard.style.cssText = [
+      'flex-shrink:0;',
+      'background:' + T.bgDark + ';',
+      'border:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'display:flex;flex-direction:column;gap:2px;',
+      'padding:3px 4px;box-sizing:border-box;',
+    ].join('');
+    bottomCard.style.clipPath = chamfer(6);
+
+    // Prefix bar
     if (optionalGroups.length > 0) {
       prefixBarEl = document.createElement('div');
-      prefixBarEl.style.cssText = [
-        'flex-shrink:0;display:flex;flex-direction:row;gap:3px;',
-        'padding:2px 4px;',
-        'background:' + T.bgDark + ';',
-      ].join('');
-      card.appendChild(prefixBarEl);
+      prefixBarEl.style.cssText = 'display:flex;flex-direction:row;gap:3px;';
+      bottomCard.appendChild(prefixBarEl);
     }
 
-    // ── Placement bar (own row below prefixes) ──
+    // Placement bar
     placementBarEl = document.createElement('div');
-    placementBarEl.style.cssText = [
-      'flex-shrink:0;padding:1px 4px;',
-      'background:' + T.bgDark + ';',
-    ].join('');
-    card.appendChild(placementBarEl);
+    bottomCard.appendChild(placementBarEl);
 
-    // ── Bottom action bar: <<< | NOTE | ALRG | CONFIRM (compact) ──
+    // Action buttons
     var actionBar = document.createElement('div');
-    actionBar.style.cssText = [
-      'display:flex;gap:4px;flex-shrink:0;',
-      'padding:3px 4px 4px 4px;',
-      'border-top:2px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'background:' + T.bgDark + ';',
-    ].join('');
+    actionBar.style.cssText = 'display:flex;gap:4px;';
 
     // Cancel/Undo button
     var undoPair = buildStyledButton({ label: '<<<', variant: 'vermillion', size: 'sm' });
@@ -423,8 +421,9 @@ export function ModifierPanel(container, opts) {
     actionBar.appendChild(_notePairRef.wrap);
     actionBar.appendChild(_alrgPairRef.wrap);
     actionBar.appendChild(confirmPair.wrap);
-    card.appendChild(actionBar);
+    bottomCard.appendChild(actionBar);
 
+    rootEl.appendChild(bottomCard);
     container.appendChild(rootEl);
 
     _applySectionStates();
