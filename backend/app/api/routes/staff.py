@@ -107,21 +107,19 @@ async def get_clocked_in(ledger: EventLedger = Depends(get_ledger)):
     login_events = await ledger.get_events_by_type(EventType.USER_LOGGED_IN)
     logout_events = await ledger.get_events_by_type(EventType.USER_LOGGED_OUT)
 
-    # Track latest clock-in per employee
+    # Replay login/logout events in sequence order to determine current state
     clocked_in = {}
-    for e in sorted(login_events, key=lambda x: x.sequence_number or 0):
+    all_events = sorted(login_events + logout_events, key=lambda x: x.sequence_number or 0)
+    for e in all_events:
         eid = e.payload["employee_id"]
-        clocked_in[eid] = {
-            "employee_id": eid,
-            "employee_name": e.payload["employee_name"],
-            "clocked_in_at": e.timestamp.isoformat(),
-        }
-
-    # Remove anyone who clocked out after their last clock-in
-    for e in sorted(logout_events, key=lambda x: x.sequence_number or 0):
-        eid = e.payload["employee_id"]
-        if eid in clocked_in:
-            del clocked_in[eid]
+        if e.event_type == EventType.USER_LOGGED_IN:
+            clocked_in[eid] = {
+                "employee_id": eid,
+                "employee_name": e.payload["employee_name"],
+                "clocked_in_at": e.timestamp.isoformat(),
+            }
+        else:
+            clocked_in.pop(eid, None)
 
     return {"staff": list(clocked_in.values())}
 
