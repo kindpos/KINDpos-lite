@@ -523,6 +523,7 @@ export var OrderSummary = {
     if (_checkIdEl) _checkIdEl.textContent = params.checkId || '';
     if (_nameEl) _nameEl.textContent = params.customerName || '';
     _onNameTap = params.onNameTap || null;
+    _itemRenderLocked = false; // New scene is taking ownership via show()
 
     _renderItems(params.items);
     _renderSummary(params);
@@ -534,7 +535,6 @@ export var OrderSummary = {
   hide: function() {
     _onNameTap = null;
     _onItemTap = null;
-    _itemRenderLocked = false;
     SceneManager.hideSummary();
   },
 
