@@ -27,6 +27,7 @@ var _collapsible = false; // when true, items start collapsed with tap-to-expand
 var _onItemTap = null;   // callback(itemIndex) when an item row is tapped
 var _onSeatHeaderTap = null; // callback(seatIdx) when a seat header is tapped
 var _expandedItems = {};  // { itemIndex: true } — tracks which items are expanded across re-renders
+var _itemRenderLocked = false; // when true, _renderItems is a no-op (order-entry owns the list)
 
 function _container() {
   if (!_el) _el = document.getElementById('order-summary');
@@ -208,7 +209,7 @@ function _summaryRow(label, value, color, bold) {
 
 function _renderItems(items) {
   if (!_itemScroll) return;
-  console.log('[_renderItems] called with', (items || []).length, 'items, collapsible:', _collapsible, 'caller:', new Error().stack.split('\n')[2]);
+  if (_itemRenderLocked) return;
   _itemScroll.innerHTML = '';
   var isCollapsible = _collapsible;
   (items || []).forEach(function(item, itemIndex) {
@@ -532,8 +533,12 @@ export var OrderSummary = {
   hide: function() {
     _onNameTap = null;
     _onItemTap = null;
+    _itemRenderLocked = false;
     SceneManager.hideSummary();
   },
+
+  lockItemRender: function() { _itemRenderLocked = true; },
+  unlockItemRender: function() { _itemRenderLocked = false; },
 
   update: function(params) {
     params = params || {};
