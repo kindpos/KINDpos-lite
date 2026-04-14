@@ -31,7 +31,7 @@ var CASH_DISCOUNT = 0.03;
 
 function seatTotal(seat) {
   var t = 0;
-  for (var i = 0; i < seat.items.length; i++) t += seat.items[i].qty * seat.items[i].price;
+  for (var i = 0; i < seat.items.length; i++) t += seat.items[i].qty * (seat.items[i].effectivePrice || seat.items[i].price);
   return t;
 }
 
@@ -45,8 +45,9 @@ function collectSummary(seats, selected) {
     if (anySelected && !selected[seats[i].id]) continue;
     for (var j = 0; j < seats[i].items.length; j++) {
       var it = seats[i].items[j];
-      items.push({ name: it.name, qty: it.qty, unitPrice: it.price, mods: it.mods || [] });
-      subtotal += it.qty * it.price;
+      var ep = it.effectivePrice || it.price;
+      items.push({ name: it.name, qty: it.qty, unitPrice: ep, mods: it.mods || [] });
+      subtotal += it.qty * ep;
     }
   }
   var tax = Math.round(subtotal * TAX_RATE * 100) / 100;
@@ -64,17 +65,20 @@ function orderToSeats(order) {
     var sn = item.seat_number || 1;
     var key = 'S-' + String(sn).padStart(3, '0');
     if (!seatMap[key]) seatMap[key] = { id: key, items: [] };
+    var mods = (item.modifiers || []).map(function(m) {
+      return { name: m.name || '', price: m.price || 0, charged: (m.price || 0) > 0, prefix: m.prefix || null, children: m.children || [] };
+    });
+    var modTotal = mods.reduce(function(s, m) { return s + (m.price || 0); }, 0);
     seatMap[key].items.push({
       name: item.name,
       qty: item.quantity || 1,
       price: item.price || 0,
+      effectivePrice: (item.price || 0) + modTotal,
       item_id: item.item_id,
       menu_item_id: item.menu_item_id || '',
       category: item.category || null,
       added_at: item.added_at || null,
-      mods: (item.modifiers || []).map(function(m) {
-        return { name: m.name || '', price: m.price || 0, charged: (m.price || 0) > 0, prefix: m.prefix || null, children: m.children || [] };
-      }),
+      mods: mods,
     });
   }
   var seats = [];
@@ -777,7 +781,7 @@ defineScene({
         var seat = state.seats[sIdx];
         if (seat && seat.items[iIdx]) {
           var it = seat.items[iIdx];
-          voidedSnapshot.push({ name: it.name, price: it.price, quantity: it.qty, seat_number: sIdx + 1 });
+          voidedSnapshot.push({ name: it.name, price: it.effectivePrice || it.price, quantity: it.qty, seat_number: sIdx + 1 });
         }
       }
 
@@ -1059,7 +1063,7 @@ defineScene({
             itemsToAdd.push({
               menu_item_id: it.menu_item_id || it.item_id,
               name: it.name,
-              price: it.price,
+              price: it.effectivePrice || it.price,
               quantity: it.qty,
               category: it.category || null,
               seat_number: seatNum,
