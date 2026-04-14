@@ -39,8 +39,9 @@ function fmt(n) { return '$' + (n || 0).toFixed(2); }
 function collectSummary(seats, selected) {
   var items = [];
   var subtotal = 0;
+  var anySelected = Object.keys(selected).length > 0;
   for (var i = 0; i < seats.length; i++) {
-    if (!selected[seats[i].id]) continue;
+    if (anySelected && !selected[seats[i].id]) continue;
     for (var j = 0; j < seats[i].items.length; j++) {
       var it = seats[i].items[j];
       items.push({ name: it.name, qty: it.qty, unitPrice: it.price });
@@ -512,10 +513,11 @@ defineScene({
       if (!ticketList) return;
       ticketList.innerHTML = '';
 
+      var anySelected = Object.keys(state.selected).length > 0;
       var selectedSeats = [];
       var seatIndices = [];
       for (var ui = 0; ui < state.seats.length; ui++) {
-        if (state.selected[state.seats[ui].id]) {
+        if (!anySelected || state.selected[state.seats[ui].id]) {
           selectedSeats.push(state.seats[ui]);
           seatIndices.push(ui);
         }
@@ -524,7 +526,7 @@ defineScene({
       if (selectedSeats.length === 0) {
         var empty = document.createElement('div');
         empty.style.cssText = 'padding:16px 8px;font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;';
-        empty.textContent = 'No seats selected';
+        empty.textContent = 'No items';
         ticketList.appendChild(empty);
         return;
       }
@@ -649,19 +651,19 @@ defineScene({
           syncPaidSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
-          forceSelectAll();
+          updateSummary();
         })
         .catch(function() {
           showToast('Failed to load check', { bg: T.red });
           state.seats = [{ id: 'S-001', items: [] }];
           rebuildSeatGrid();
-          forceSelectAll();
+          updateSummary();
         });
     } else {
       // New check — start with one empty seat
       state.seats = [{ id: 'S-001', items: [] }];
       rebuildSeatGrid();
-      forceSelectAll();
+      updateSummary();
     }
 
     // ═══════════════════════════════════════════════════

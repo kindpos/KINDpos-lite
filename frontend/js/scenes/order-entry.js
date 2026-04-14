@@ -327,7 +327,7 @@ defineScene({
     _mainArea      = null;
     _modPanel      = null;
     _modPanelItem  = null;
-    _activeSeat    = (params.seatNumbers && params.seatNumbers.length > 1) ? 'all' : ((params.seatNumbers && params.seatNumbers[0]) || 1);
+    _activeSeat    = (params.seatNumbers && params.seatNumbers[0]) || 1;
 
     container.style.cssText = [
       'width:100%;height:100%;',
@@ -507,6 +507,41 @@ function buildMain(parentEl, params) {
   return main;
 }
 
+// ── SEAT ASSIGNMENT AT COMMIT TIME ───────────────
+function assignSeatsIfNeeded(callback) {
+  var unsent = ticket.filter(function(i) { return !i.sent; });
+  if (unsent.length === 0) { callback(); return; }
+
+  var seats = (sceneParams.seatNumbers && sceneParams.seatNumbers.length > 0)
+    ? sceneParams.seatNumbers : [1];
+
+  // 1 seat → auto-assign all pending items
+  if (seats.length === 1) {
+    for (var i = 0; i < unsent.length; i++) unsent[i].seat_number = seats[0];
+    callback();
+    return;
+  }
+
+  // 2+ seats → open seat assignment interrupt
+  var itemsForAssign = unsent.map(function(inst) {
+    return { id: inst.id, name: inst.name, mods: inst.mods };
+  });
+
+  SceneManager.interrupt('seat-assign', {
+    params: { items: itemsForAssign, seatNumbers: seats },
+    onConfirm: function(assignments) {
+      // Apply assignments: { itemId: seatNumber }
+      for (var j = 0; j < unsent.length; j++) {
+        if (assignments[unsent[j].id]) {
+          unsent[j].seat_number = assignments[unsent[j].id];
+        }
+      }
+      callback();
+    },
+    onCancel: function() { /* do nothing — stay on order scene */ },
+  });
+}
+
 // ── BOTTOM BAR — Three States ────────────────────
 function rebuildBottomBar() {
   if (!_bottomBar) return;
@@ -515,15 +550,21 @@ function rebuildBottomBar() {
   var hasUnsent = ticket.some(function(i) { return !i.sent; });
 
   var finalizeBtn = buildButton('FINALIZE', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
-    onTap: async function() {
-      if (hasUnsent) { try { await handleSaveOnly(); } catch (e) { return; } }
-      handleClose();
+    onTap: function() {
+      if (!hasUnsent) { handleClose(); return; }
+      assignSeatsIfNeeded(async function() {
+        try { await handleSaveOnly(); } catch (e) { return; }
+        handleClose();
+      });
     },
   });
   var sendBtn = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
-    onTap: async function() {
-      if (hasUnsent) { try { await handleSend(); } catch (e) { return; } }
-      handleClose();
+    onTap: function() {
+      if (!hasUnsent) { handleClose(); return; }
+      assignSeatsIfNeeded(async function() {
+        try { await handleSend(); } catch (e) { return; }
+        handleClose();
+      });
     },
   });
 
@@ -1879,7 +1920,7 @@ function _buildItemPayload(inst) {
     price:        inst.unitPrice,
     quantity:     1,
     category:     inst.category || 'general',
-    seat_number:  inst.seat_number || _activeSeat || 1,
+    seat_number:  inst.seat_number || 1,
     modifiers:    inst.mods.map(function(m) {
       return {
         name: m.name, price: m.price, modifier_price: m.price,
@@ -1935,34 +1976,19 @@ async function handleSaveOnly() {
       currentCheckNumber = created.check_number;
     }
 
-    // Step 2 — post unsent items (expand across all seats if _activeSeat === 'all')
-    var seatNums = (_activeSeat === 'all' && sceneParams.seatNumbers) ? sceneParams.seatNumbers : null;
+    // Step 2 — post unsent items (seat already assigned per-item)
     var itemPromises = [];
     for (var ui = 0; ui < unsentInstances.length; ui++) {
       var inst = unsentInstances[ui];
-      if (seatNums) {
-        for (var sni = 0; sni < seatNums.length; sni++) {
-          var payload = _buildItemPayload(inst);
-          payload.seat_number = seatNums[sni];
-          itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': _idemKey() },
-            body: JSON.stringify(payload),
-          })});
-        }
-      } else {
-        itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': inst.idemKey || _idemKey() },
-          body: JSON.stringify(_buildItemPayload(inst)),
-        })});
-      }
+      itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': inst.idemKey || _idemKey() },
+        body: JSON.stringify(_buildItemPayload(inst)),
+      })});
     }
     var results = await Promise.allSettled(itemPromises.map(function(p) { return p.promise; }));
     var anyFailed = false;
-    var seenInst = {};
     results.forEach(function(r, idx) {
-      var instId = itemPromises[idx].inst.id;
       if (r.status === 'fulfilled' && r.value.ok) {
         itemPromises[idx].inst.sent = true;
       } else {
@@ -2033,28 +2059,15 @@ async function handleSend() {
       setSceneName(currentCheckNumber);
     }
 
-    // Step 2 — post unsent instances (expand across all seats if _activeSeat === 'all')
-    var seatNums = (_activeSeat === 'all' && sceneParams.seatNumbers) ? sceneParams.seatNumbers : null;
+    // Step 2 — post unsent instances (seat already assigned per-item)
     var itemPromises = [];
     for (var ui = 0; ui < unsentInstances.length; ui++) {
       var inst = unsentInstances[ui];
-      if (seatNums) {
-        for (var sni = 0; sni < seatNums.length; sni++) {
-          var payload = _buildItemPayload(inst);
-          payload.seat_number = seatNums[sni];
-          itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': _idemKey() },
-            body: JSON.stringify(payload),
-          })});
-        }
-      } else {
-        itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': inst.idemKey || _idemKey() },
-          body: JSON.stringify(_buildItemPayload(inst)),
-        })});
-      }
+      itemPromises.push({ inst: inst, promise: fetch(API + '/orders/' + currentOrderId + '/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': inst.idemKey || _idemKey() },
+        body: JSON.stringify(_buildItemPayload(inst)),
+      })});
     }
     var results = await Promise.allSettled(itemPromises.map(function(p) { return p.promise; }));
     var anyFailed = false;
@@ -2173,4 +2186,142 @@ function recallFromBackend(orderId) {
       showToast('Failed to load saved check', { bg: T.red, duration: 2000 });
     });
 }
+
+// ═══════════════════════════════════════════════════
+//  Seat Assignment Interrupt — shown at commit time
+//  when check has 2+ seats
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'seat-assign',
+  mount: function(container, params) {
+    var items = params.items || [];       // [ { id, name, mods } ]
+    var seatNumbers = params.seatNumbers || [1]; // available seats [1, 2, 3, ...]
+    var assignments = {};                 // { itemId: seatNumber }
+
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+    var panel = document.createElement('div');
+    panel.style.cssText = [
+      'display:flex;flex-direction:column;gap:8px;',
+      'background:' + T.bgDark + ';',
+      'border:4px solid ' + T.mint + ';border-radius:5px;',
+      'padding:16px;min-width:420px;max-width:520px;',
+      'max-height:460px;overflow:hidden;',
+    ].join('');
+
+    // Title
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:11px;color:' + T.mint + ';letter-spacing:2px;text-align:center;margin-bottom:4px;';
+    title.textContent = '// ASSIGN SEATS //';
+    panel.appendChild(title);
+
+    // Scrollable item list
+    var list = document.createElement('div');
+    list.className = 'co-scroll';
+    list.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:340px;';
+
+    var seatBtnRefs = {}; // { itemId: [ { btn, seatNum } ] }
+
+    for (var i = 0; i < items.length; i++) {
+      (function(item) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+        // Item label
+        var label = document.createElement('div');
+        label.style.cssText = [
+          'flex:1;min-width:0;',
+          'font-family:' + T.fb + ';font-size:14px;color:' + T.textPrimary + ';',
+          'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+        ].join('');
+        var displayName = item.name;
+        if (item.mods && item.mods.length > 0) {
+          displayName += ' (' + item.mods.map(function(m) { return m.name; }).join(', ') + ')';
+        }
+        label.textContent = displayName;
+        row.appendChild(label);
+
+        // Seat buttons
+        var btnGroup = document.createElement('div');
+        btnGroup.style.cssText = 'display:flex;gap:4px;';
+        seatBtnRefs[item.id] = [];
+
+        for (var si = 0; si < seatNumbers.length; si++) {
+          (function(sn) {
+            var btn = document.createElement('div');
+            btn.style.cssText = [
+              'width:40px;height:32px;display:flex;align-items:center;justify-content:center;',
+              'border-radius:3px;cursor:pointer;user-select:none;',
+              'font-family:' + T.fh + ';font-size:12px;letter-spacing:1px;',
+              'background:' + T.darkBtn + ';color:' + T.dimText + ';',
+              'border:2px solid ' + T.darkBtn + ';',
+            ].join('');
+            btn.textContent = 'S' + sn;
+            seatBtnRefs[item.id].push({ btn: btn, seatNum: sn });
+
+            btn.addEventListener('pointerup', function() {
+              assignments[item.id] = sn;
+              // Update visual: highlight selected, dim others
+              var refs = seatBtnRefs[item.id];
+              for (var ri = 0; ri < refs.length; ri++) {
+                if (refs[ri].seatNum === sn) {
+                  refs[ri].btn.style.background = T.mint;
+                  refs[ri].btn.style.color = T.bgDark;
+                  refs[ri].btn.style.borderColor = T.mint;
+                } else {
+                  refs[ri].btn.style.background = T.darkBtn;
+                  refs[ri].btn.style.color = T.dimText;
+                  refs[ri].btn.style.borderColor = T.darkBtn;
+                }
+              }
+              updateConfirmState();
+            });
+            btnGroup.appendChild(btn);
+          })(seatNumbers[si]);
+        }
+        row.appendChild(btnGroup);
+        list.appendChild(row);
+      })(items[i]);
+    }
+    panel.appendChild(list);
+
+    // Bottom bar: confirm + cancel
+    var bottomBar = document.createElement('div');
+    bottomBar.style.cssText = 'display:flex;gap:8px;margin-top:8px;';
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.dimText, fontSize: '20px', height: 40,
+      onTap: function() { params.onCancel(); },
+    });
+    cancelBtn.style.flex = '1';
+    bottomBar.appendChild(cancelBtn);
+
+    var confirmBtn = buildButton('CONFIRM', {
+      fill: T.darkBtn, color: T.dimText, fontSize: '20px', height: 40,
+      onTap: function() {
+        // Only proceed if all items assigned
+        if (Object.keys(assignments).length < items.length) return;
+        params.onConfirm(assignments);
+      },
+    });
+    confirmBtn.style.flex = '1';
+    bottomBar.appendChild(confirmBtn);
+    panel.appendChild(bottomBar);
+    container.appendChild(panel);
+
+    function updateConfirmState() {
+      var allAssigned = Object.keys(assignments).length >= items.length;
+      confirmBtn.style.color = allAssigned ? T.mint : T.dimText;
+      confirmBtn.style.borderColor = allAssigned ? T.mint : T.darkBtn;
+    }
+    updateConfirmState();
+
+    // Tap scrim to cancel
+    container.addEventListener('pointerup', function(e) {
+      if (e.target === container) { params.onCancel(); }
+    });
+  },
+  unmount: function() {},
+});
 
