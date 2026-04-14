@@ -1538,8 +1538,9 @@ function renderTicket() {
 
 function _appendModPreview(list) {
   if (!_modPanelItem) return;
-  // Guard against double-append
-  if (list.querySelector('[data-mod-preview]')) return;
+  // Remove any stale preview before adding fresh one
+  var old = list.querySelector('[data-mod-preview]');
+  if (old) old.parentNode.removeChild(old);
 
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
@@ -1596,7 +1597,6 @@ function _appendModPreview(list) {
 
 function _updateTicketTotals() {
   var totals = computeTotals();
-  var items = totals.summaryItems.slice();
   if (_modPanelItem) {
     var previewMods = (_modPanelItem.mods || []);
     var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
@@ -1605,14 +1605,6 @@ function _updateTicketTotals() {
     totals.tax = Math.round(totals.subtotal * TAX_RATE * 100) / 100;
     totals.cardTotal = Math.round((totals.subtotal + totals.tax) * 100) / 100;
     totals.cashPrice = Math.round(totals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
-    // Add preview item to summary
-    items.push({
-      name: '\u270E ' + _modPanelItem.itemLabel,
-      unitPrice: previewPrice,
-      qty: 1,
-      sent: false,
-      mods: previewMods,
-    });
   }
   OrderSummary.update({
     checkId: currentCheckNumber || '',
