@@ -209,8 +209,7 @@ function _summaryRow(label, value, color, bold) {
 
 function _renderItems(items) {
   if (!_itemScroll) return;
-  if (_itemRenderLocked) { console.log('[_renderItems] BLOCKED by lock, items:', (items||[]).length); return; }
-  console.log('[_renderItems] rendering', (items||[]).length, 'items, caller:', new Error().stack.split('\n')[2]);
+  if (_itemRenderLocked) return;
   _itemScroll.innerHTML = '';
   var isCollapsible = _collapsible;
   (items || []).forEach(function(item, itemIndex) {
@@ -538,8 +537,8 @@ export var OrderSummary = {
     SceneManager.hideSummary();
   },
 
-  lockItemRender: function() { console.log('[OrderSummary] LOCK'); _itemRenderLocked = true; },
-  unlockItemRender: function() { console.log('[OrderSummary] UNLOCK'); _itemRenderLocked = false; },
+  lockItemRender: function() { _itemRenderLocked = true; },
+  unlockItemRender: function() { _itemRenderLocked = false; },
 
   update: function(params) {
     params = params || {};

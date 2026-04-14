@@ -1489,7 +1489,6 @@ function renderTicket() {
   var list = document.getElementById('ticket-list');
   if (!list) return;
   list.innerHTML = '';
-  console.log('[renderTicket] cleared, returnScene:', sceneParams.returnScene, 'ticket:', ticket.length, 'modPanel:', !!_modPanelItem);
 
   // In check-overview mode, only show newly added (unsent) items
   var displayTicket = ticket;
@@ -1531,25 +1530,25 @@ function renderTicket() {
       var seatTicket = seatItems[sn];
       _renderTicketGroup(list, seatTicket);
     }
-    console.log('[renderTicket] hasSeatGroups path, children before preview:', list.children.length);
     _appendModPreview(list);
     _updateTicketTotals();
     return;
   }
 
   _renderTicketGroup(list, displayTicket);
-  console.log('[renderTicket] normal path, children before preview:', list.children.length, 'displayTicket:', displayTicket.length);
-  for (var _di = 0; _di < list.children.length; _di++) console.log('[renderTicket] child', _di, ':', list.children[_di].tagName, list.children[_di].textContent.substring(0, 80), list.children[_di].getAttribute('data-mod-preview'));
   _appendModPreview(list);
   _updateTicketTotals();
 }
 
 function _appendModPreview(list) {
   if (!_modPanelItem) return;
-  // Remove any stale preview before adding fresh one
-  var old = list.querySelector('[data-mod-preview]');
-  if (old) old.parentNode.removeChild(old);
-  console.log('[PREVIEW] appending, list children:', list.children.length, '_itemRenderLocked:', typeof OrderSummary.lockItemRender);
+  // Remove ALL stale previews (may lack data-mod-preview from interrupted renders)
+  var children = list.children;
+  for (var ri = children.length - 1; ri >= 0; ri--) {
+    if (children[ri].textContent.indexOf('\u270E') !== -1) {
+      list.removeChild(children[ri]);
+    }
+  }
 
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
