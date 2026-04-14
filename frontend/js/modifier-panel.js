@@ -544,7 +544,7 @@ export function ModifierPanel(container, opts) {
         'border:2px solid ' + borderColor + ';',
         'padding:10px 8px;',
         'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
-        'min-height:60px;cursor:pointer;user-select:none;box-sizing:border-box;',
+        'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
       ].join('');
       tile.style.clipPath = chamfer(6);
 
@@ -618,9 +618,9 @@ export function ModifierPanel(container, opts) {
       card.style.cssText = [
         'background:' + (isSelected ? T.mint : T.bgDark) + ';',
         'border:2px solid ' + (isSelected ? T.mint : T.numpadChassis) + ';',
-        'padding:12px 8px;',
+        'padding:10px 8px;',
         'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;',
-        'min-height:54px;cursor:pointer;user-select:none;box-sizing:border-box;',
+        'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
       ].join('');
       card.style.clipPath = chamfer(6);
 
@@ -690,7 +690,7 @@ export function ModifierPanel(container, opts) {
     includedContentEl.innerHTML = '';
 
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;';
 
     includedItems.slice().sort(function(a, b) { return a.label.localeCompare(b.label); }).forEach(function(incl) {
       var isRemoved = activeItem.includedRemovals.indexOf(incl.id) !== -1;
@@ -699,11 +699,12 @@ export function ModifierPanel(container, opts) {
       card.style.cssText = [
         'border:2px solid ' + (isRemoved ? T.vermillion : T.numpadChassis) + ';',
         'background:' + (isRemoved ? T.vermillion : T.numpadChassis) + ';',
-        'padding:5px 8px;text-align:center;cursor:pointer;user-select:none;',
+        'padding:10px 8px;display:flex;align-items:center;justify-content:center;',
+        'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
         'font-family:' + T.fh + ';font-size:14px;font-weight:bold;',
-        'color:' + T.bgDark + ';',
+        'color:' + T.bgDark + ';text-align:center;',
       ].join('');
-      card.style.clipPath = chamfer(5);
+      card.style.clipPath = chamfer(6);
       card.textContent = isRemoved ? 'NO ' + incl.label : incl.label;
 
       card.addEventListener('pointerup', function() {
@@ -726,7 +727,7 @@ export function ModifierPanel(container, opts) {
     optionalContentEl.innerHTML = '';
 
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding-bottom:16px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-bottom:16px;';
 
     var mandKey = _currentMandatoryKey();
 
@@ -751,11 +752,12 @@ export function ModifierPanel(container, opts) {
       card.style.cssText = [
         'border:2px solid ' + borderColor + ';',
         'background:' + T.bgDark + ';',
-        'padding:5px 4px;text-align:center;cursor:pointer;user-select:none;',
+        'padding:10px 4px;display:flex;align-items:center;justify-content:center;',
+        'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
         'font-family:' + T.fh + ';font-size:13px;font-weight:bold;',
-        'color:' + T.textPrimary + ';',
+        'color:' + T.textPrimary + ';text-align:center;',
       ].join('');
-      card.style.clipPath = chamfer(5);
+      card.style.clipPath = chamfer(6);
       card.textContent = opt.label;
 
       // Special: short tap = add, long press = customize popout
