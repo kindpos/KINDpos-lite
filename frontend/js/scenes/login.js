@@ -118,7 +118,7 @@ defineScene({
     var rightCol = document.createElement('div');
     rightCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;align-items:center;';
 
-    var quickOrderPair = buildStyledButton({ label: 'QUICK\nORDER', variant: 'mint', size: 'lg', onClick: function() {
+    var quickOrderPair = buildStyledButton({ label: 'NEW\nORDER', variant: 'mint', size: 'lg', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
         if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
