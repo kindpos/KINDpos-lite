@@ -144,7 +144,12 @@ export function ModifierPanel(container, opts) {
     section.style.display = 'flex';
     section.style.flexDirection = 'column';
     section.style.overflow = 'hidden';
+    section.style.flex = '1';
+    section.style.minHeight = '0';
+    section.style.height = '100%';
     pair.wrap.style.overflow = 'hidden';
+    pair.wrap.style.display = 'flex';
+    pair.wrap.style.flexDirection = 'column';
 
     var hdr = document.createElement('div');
     hdr.style.cssText = [
