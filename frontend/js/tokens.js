@@ -94,7 +94,7 @@ export const T = {
   scenePad: 20,
   colGap:   20,
   colGapSm: 12,
-  pcLeftW:  280,
+  pcLeftW:  320,
 
   // Chart viewBox dimensions (internal coordinate space — SVG renders at width:100%)
   chartVB:       '500 180',   // standard panel chart (category bars, breakdowns)
