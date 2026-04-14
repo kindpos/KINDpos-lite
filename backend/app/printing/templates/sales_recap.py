@@ -97,6 +97,10 @@ class SalesRecapTemplate(BaseTemplate):
             label = f"Discounts ({discounts_count})" if discounts_count else "Discounts"
             cmds.append({'type': 'text', 'content': self._money_line(label, -discounts_total, cpl)})
 
+        refunds_total = ctx.get('refunds_total', 0.0)
+        if refunds_total > 0:
+            cmds.append({'type': 'text', 'content': self._money_line('Refunds', -refunds_total, cpl)})
+
         cmds.append({'type': 'divider'})
 
         net_sales = ctx.get('net_sales', 0.0)

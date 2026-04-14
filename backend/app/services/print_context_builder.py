@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 
 from ..core.event_ledger import EventLedger
-from ..core.projections import project_order
+from ..core.projections import project_order, project_orders
 from ..core.events import EventType
 from decimal import Decimal
 from ..core.money import money_round
@@ -240,40 +240,26 @@ class PrintContextBuilder:
         all_events = await self.ledger.get_events_since(boundary, limit=50000)
 
         # ── Filter to this server's orders ────────────────────────────────────
-        # Collect order IDs where this server is the owner
-        server_order_ids = set()
-        for e in all_events:
-            if e.event_type == EventType.ORDER_CREATED:
-                payload = e.payload or {}
-                if payload.get("server_id") == server_id or payload.get("server_name") == server_name:
-                    server_order_ids.add(e.correlation_id)
+        # Use projections (current state after transfers) to find this server's orders
+        all_orders = project_orders(all_events)
+        server_orders = [
+            o for o in all_orders.values()
+            if o.server_id == server_id and o.status == "closed"
+        ]
 
-        # ── Project each order ────────────────────────────────────────────────
+        # ── Aggregate across closed orders ────────────────────────────────────
         checks_closed = 0
         gross_sales = _ZERO
         voids_total = _ZERO
         comps_total = _ZERO
         discounts_total = _ZERO
-        refunds_total = _ZERO
         tax_collected = _ZERO
         cash_sales = _ZERO
         card_sales = _ZERO
         cc_transactions = []
         open_tip_count = 0
 
-        for order_id in server_order_ids:
-            order_events = await self.ledger.get_events_by_correlation(order_id)
-            if not order_events:
-                continue
-
-            order = project_order(order_events)
-
-            # Only count closed orders
-            is_closed = any(
-                e.event_type == EventType.ORDER_CLOSED for e in order_events
-            )
-            if not is_closed:
-                continue
+        for order in server_orders:
 
             checks_closed += 1
 
@@ -284,7 +270,7 @@ class PrintContextBuilder:
 
             # Use projection totals for consistent deduction model
             discounts_total += Decimal(str(order.discount_total or 0))
-            refunds_total += Decimal(str(order.refund_total or 0))
+            voids_total += Decimal(str(order.refund_total or 0))
 
             # ── Payment details ───────────────────────────────────────────────
             for p in (order.payments or []):
@@ -302,7 +288,7 @@ class PrintContextBuilder:
                         last4 = p.transaction_id[-4:]
 
                     # Determine ticket number for CC detail line
-                    ticket_num = await _get_ticket_number(self.ledger, order_id)
+                    ticket_num = await _get_ticket_number(self.ledger, order.order_id)
 
                     tip_open = getattr(p, "tip_open", False) or (tip == 0.0)
                     if tip_open:
@@ -316,7 +302,7 @@ class PrintContextBuilder:
                         "tip_open": tip_open,
                     })
 
-        net_sales = float(gross_sales - discounts_total - refunds_total)
+        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
         cc_tips_total = sum(t["tip"] for t in cc_transactions)
         gross_tips = cc_tips_total + (declared_cash_tips or 0.0)
 
@@ -595,6 +581,7 @@ class PrintContextBuilder:
             "comps_count": comps_count,
             "discounts_total": money_round(float(discounts_total)),
             "discounts_count": discounts_count,
+            "refunds_total": money_round(float(refunds_total)),
             "net_sales": money_round(net_sales),
             "tax_collected": money_round(float(tax_collected)),
             "tax_lines": tax_lines,
