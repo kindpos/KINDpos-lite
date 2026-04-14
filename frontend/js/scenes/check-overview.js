@@ -943,6 +943,7 @@ defineScene({
         for (var aj = 0; aj < state.seats.length; aj++) allSeatNums.push(aj + 1);
         SceneManager.mountWorking('order-entry', {
           recallOrderId: state.orderId || undefined,
+          recallCheckNumber: state.checkNumber || undefined,
           mode: 'service',
           pin: params.pin,
           employeeId: params.employeeId,
