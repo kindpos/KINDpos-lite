@@ -148,8 +148,8 @@ export function ModifierPanel(container, opts) {
 
     var hdr = document.createElement('div');
     hdr.style.cssText = [
-      'flex-shrink:0;padding:4px 10px;cursor:pointer;user-select:none;',
-      'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.textPrimary + ';',
+      'flex-shrink:0;padding:8px 12px;cursor:pointer;user-select:none;',
+      'font-family:' + T.fh + ';font-size:18px;font-weight:bold;color:' + T.textPrimary + ';',
       'display:flex;justify-content:space-between;align-items:center;',
     ].join('');
     var hdrLabel = document.createElement('span');
@@ -169,7 +169,7 @@ export function ModifierPanel(container, opts) {
     content.style.cssText = [
       'flex:1;min-height:0;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      'padding:4px 6px;',
+      'padding:8px 10px;',
     ].join('');
     section.appendChild(content);
     section._content = content;
@@ -648,19 +648,23 @@ export function ModifierPanel(container, opts) {
     includedContentEl.innerHTML = '';
 
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
 
     includedItems.slice().sort(function(a, b) { return a.label.localeCompare(b.label); }).forEach(function(incl) {
       var isRemoved = activeItem.includedRemovals.indexOf(incl.id) !== -1;
-      var variant = isRemoved ? 'vermillion' : 'dark';
-      var label = isRemoved ? 'NO ' + incl.label : incl.label;
-      var pair = buildStyledButton({ label: label, variant: variant, size: 'md' });
-      pair.wrap.style.width = '100%';
-      pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '20px';
-      pair.inner.style.fontFamily = T.fb;
 
-      pair.wrap.addEventListener('pointerup', function() {
+      var card = document.createElement('div');
+      card.style.cssText = [
+        'border:2px solid ' + (isRemoved ? T.vermillion : T.numpadChassis) + ';',
+        'background:' + (isRemoved ? T.vermillion : T.numpadChassis) + ';',
+        'padding:5px 8px;text-align:center;cursor:pointer;user-select:none;',
+        'font-family:' + T.fh + ';font-size:14px;font-weight:bold;',
+        'color:' + T.bgDark + ';',
+      ].join('');
+      card.style.clipPath = chamfer(5);
+      card.textContent = isRemoved ? 'NO ' + incl.label : incl.label;
+
+      card.addEventListener('pointerup', function() {
         var idx = activeItem.includedRemovals.indexOf(incl.id);
         if (idx !== -1) { activeItem.includedRemovals.splice(idx, 1); }
         else { activeItem.includedRemovals.push(incl.id); }
@@ -668,7 +672,7 @@ export function ModifierPanel(container, opts) {
         renderIncluded();
       });
 
-      grid.appendChild(pair.wrap);
+      grid.appendChild(card);
     });
 
     includedContentEl.appendChild(grid);
@@ -698,26 +702,25 @@ export function ModifierPanel(container, opts) {
     allOpts.forEach(function(entry) {
       var opt = entry.opt;
       var price = _resolvePrice(opt, mandKey);
-      var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'sm' });
-      pair.wrap.style.width = '100%';
-      pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '13px';
-      pair.inner.style.fontFamily = T.fb;
-      pair.inner.style.padding = '5px 2px';
-      pair.inner.style.lineHeight = '1.1';
-      pair.inner.style.textAlign = 'center';
 
-      // Specials get yellow border to stand out
-      if (opt.special) {
-        pair.wrap.style.outline = '2px solid ' + T.gold;
-        pair.wrap.style.outlineOffset = '-2px';
-      }
+      // Card-style button matching mandatory theme
+      var card = document.createElement('div');
+      var borderColor = opt.special ? T.gold : T.numpadChassis;
+      card.style.cssText = [
+        'border:2px solid ' + borderColor + ';',
+        'background:' + T.bgDark + ';',
+        'padding:5px 4px;text-align:center;cursor:pointer;user-select:none;',
+        'font-family:' + T.fh + ';font-size:13px;font-weight:bold;',
+        'color:' + T.textPrimary + ';',
+      ].join('');
+      card.style.clipPath = chamfer(5);
+      card.textContent = opt.label;
 
       // Special: short tap = add, long press = customize popout
       if (opt.special && opt.includes) {
         var _holdTimer = null;
         var _didHold = false;
-        pair.wrap.addEventListener('pointerdown', function(e) {
+        card.addEventListener('pointerdown', function(e) {
           _didHold = false;
           _holdTimer = setTimeout(function() {
             _didHold = true;
@@ -729,20 +732,20 @@ export function ModifierPanel(container, opts) {
             if (existing) showSpecialPopout(existing, opt);
           }, 400);
         });
-        pair.wrap.addEventListener('pointerup', function() {
+        card.addEventListener('pointerup', function() {
           clearTimeout(_holdTimer);
           if (!_didHold) applyOptionalMod(entry.groupKey, opt, mandKey);
         });
-        pair.wrap.addEventListener('pointerleave', function() {
+        card.addEventListener('pointerleave', function() {
           clearTimeout(_holdTimer);
         });
       } else {
-        pair.wrap.addEventListener('pointerup', function() {
+        card.addEventListener('pointerup', function() {
           applyOptionalMod(entry.groupKey, opt, mandKey);
         });
       }
 
-      grid.appendChild(pair.wrap);
+      grid.appendChild(card);
     });
 
     optionalContentEl.appendChild(grid);
