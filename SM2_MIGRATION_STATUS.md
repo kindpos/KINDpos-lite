@@ -43,6 +43,12 @@ SM2 style uses `defineScene({ name, state, render, unmount, events, interrupts, 
 | `tip-adjustment.js` | 605 | inlined as `sc-tip-adjust` / `cd-tip-adjust` |
 | `server-picker.js` | 143 | interrupt in `check-overview.js` |
 
+### `modifier-panel.js` — 2 interrupt scenes (converted to SM2)
+- `special-customize` (interrupt — long-press special customization)
+- `allergen-select` (interrupt — allergen selection from action bar)
+
+Note: `ModifierPanel` itself is a component, not a scene — it overlays on `order-entry`.
+
 ## Remaining — Not Yet Converted to SM2
 
 ### `settings.js` — 2 scenes (all old-style)
