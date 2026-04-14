@@ -279,14 +279,14 @@ export function ModifierPanel(container, opts) {
       optionalSectionEl = optPair.wrap;
       optionalContentEl = optPair.card._content;
 
-      // Prefix bar pinned at bottom of optional section
+      // Floating prefix bar — overhangs the bottom edge of the optional card
+      optPair.wrap.style.position = 'relative';
       prefixBarEl = document.createElement('div');
       prefixBarEl.style.cssText = [
-        'flex-shrink:0;display:flex;gap:4px;',
-        'padding:3px 4px;',
-        'border-top:1px solid ' + _darkenHex(T.numpadChassis, 0.2) + ';',
+        'position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);',
+        'display:flex;gap:6px;z-index:2;',
       ].join('');
-      optPair.card.appendChild(prefixBarEl);
+      optPair.wrap.appendChild(prefixBarEl);
       sectionsArea.appendChild(optPair.wrap);
     }
 
@@ -495,7 +495,7 @@ export function ModifierPanel(container, opts) {
     });
   }
 
-  // ═══ PREFIX BAR (bottom of optional section) ═══
+  // ═══ PREFIX BAR (floating buttons on optional card edge) ═══
   function renderPrefixBar() {
     if (!prefixBarEl) return;
     prefixBarEl.innerHTML = '';
@@ -504,13 +504,16 @@ export function ModifierPanel(container, opts) {
       var isActive = activeOptPrefix === pfx.id;
       var v = isActive ? pfx.variant : 'dark';
       var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
-      pair.wrap.style.flex = '1';
       pair.wrap.style.minWidth = '0';
       pair.inner.style.fontSize = '11px';
       pair.inner.style.letterSpacing = '1px';
-      pair.inner.style.padding = '6px 2px';
+      pair.inner.style.padding = '3px 8px';
+      // Outline to make floating buttons stand out
+      pair.wrap.style.outline = '2px solid ' + T.numpadChassis;
+      pair.wrap.style.outlineOffset = '-1px';
 
-      pair.wrap.addEventListener('pointerup', function() {
+      pair.wrap.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
         activeOptPrefix = pfx.id;
         renderPrefixBar();
       });
@@ -659,7 +662,7 @@ export function ModifierPanel(container, opts) {
     optionalContentEl.innerHTML = '';
 
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding-bottom:16px;';
 
     var mandKey = _currentMandatoryKey();
 
@@ -680,10 +683,11 @@ export function ModifierPanel(container, opts) {
       var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '16px';
+      pair.inner.style.fontSize = '13px';
       pair.inner.style.fontFamily = T.fb;
-      pair.inner.style.padding = '3px 4px';
+      pair.inner.style.padding = '5px 2px';
       pair.inner.style.lineHeight = '1.1';
+      pair.inner.style.textAlign = 'center';
 
       // Specials get yellow border to stand out
       if (opt.special) {
