@@ -539,9 +539,8 @@ defineScene({
       // Items with mods rendered by OrderSummary._renderItems (collapsible)
     }
 
-    // (Seat card rendering removed — OrderSummary handles items with mods)
-
-    var _legacySkip = true; if (!_legacySkip) { var selectedSeats = [];
+    /* -- Seat card rendering removed: OrderSummary handles items with mods --
+    var selectedSeats = [];
       var seatIndices = [];
       for (var ui = 0; ui < state.seats.length; ui++) {
         if (!anySelected || state.selected[state.seats[ui].id]) {
@@ -652,7 +651,7 @@ defineScene({
         card.appendChild(body);
         ticketList.appendChild(card);
       }
-    }}
+    -- end removed block */
 
     track(allBtn, 'pointerup', function() { selectAll(); });
 
