@@ -529,18 +529,19 @@ defineScene({
       OrderSummary.update({
         checkId: state.checkNumber || '',
         customerName: state.customerName || '',
-        skipItems: true,
+        items: totals.items,
         subtotal: totals.subtotal,
         tax: totals.tax,
         cardTotal: totals.cardTotal,
         cashPrice: totals.cashPrice,
       });
-      var ticketList = document.getElementById('ticket-list');
-      if (!ticketList) return;
-      ticketList.innerHTML = '';
 
-      var anySelected = Object.keys(state.selected).length > 0;
-      var selectedSeats = [];
+      // Items with mods rendered by OrderSummary._renderItems (collapsible)
+    }
+
+    // (Seat card rendering removed — OrderSummary handles items with mods)
+
+    var _legacySkip = true; if (!_legacySkip) { var selectedSeats = [];
       var seatIndices = [];
       for (var ui = 0; ui < state.seats.length; ui++) {
         if (!anySelected || state.selected[state.seats[ui].id]) {
@@ -651,7 +652,7 @@ defineScene({
         card.appendChild(body);
         ticketList.appendChild(card);
       }
-    }
+    }}
 
     track(allBtn, 'pointerup', function() { selectAll(); });
 
