@@ -157,6 +157,26 @@ function _modRow(mod) {
   return modRow;
 }
 
+function _halfCell(mod) {
+  var td = document.createElement('div');
+  td.style.cssText = 'flex:1;padding:1px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  if (!mod) return td;
+  if (mod.price > 0) {
+    td.style.fontSize = '11px';
+    td.style.color = T.mint;
+    td.textContent = mod.name;
+    var pr = document.createElement('span');
+    pr.style.color = T.gold;
+    pr.textContent = ' +$' + mod.price.toFixed(2);
+    td.appendChild(pr);
+  } else {
+    td.style.fontSize = '13px';
+    td.style.color = T.mint;
+    td.textContent = mod.name;
+  }
+  return td;
+}
+
 function _summaryRow(label, value, color, bold) {
   var row = document.createElement('div');
   row.style.cssText = [
@@ -243,27 +263,13 @@ function _renderItems(items) {
       var maxRows = Math.max(leftMods.length, rightMods.length);
       for (var r = 0; r < maxRows; r++) {
         var tr = document.createElement('div');
-        tr.style.cssText = 'display:flex;font-family:' + T.fb + ';font-size:12px;line-height:1.2;';
+        tr.style.cssText = 'display:flex;font-family:' + T.fb + ';line-height:1.3;';
         var lMod = leftMods[r];
         var rMod = rightMods[r];
-        var tdL = document.createElement('div');
-        tdL.style.cssText = 'flex:1;padding:0 2px;color:' + T.mint + ';';
-        if (lMod) {
-          var lName = document.createElement('div');
-          lName.textContent = lMod.name;
-          tdL.appendChild(lName);
-          if (lMod.price > 0) { var lp = document.createElement('div'); lp.style.cssText = 'font-size:10px;color:' + T.gold + ';'; lp.textContent = '+$' + lMod.price.toFixed(2); tdL.appendChild(lp); }
-        }
+        var tdL = _halfCell(lMod);
         var tdSep = document.createElement('div');
-        tdSep.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;';
-        var tdR = document.createElement('div');
-        tdR.style.cssText = 'flex:1;padding:0 2px;color:' + T.mint + ';';
-        if (rMod) {
-          var rName = document.createElement('div');
-          rName.textContent = rMod.name;
-          tdR.appendChild(rName);
-          if (rMod.price > 0) { var rp = document.createElement('div'); rp.style.cssText = 'font-size:10px;color:' + T.gold + ';'; rp.textContent = '+$' + rMod.price.toFixed(2); tdR.appendChild(rp); }
-        }
+        tdSep.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;flex-shrink:0;';
+        var tdR = _halfCell(rMod);
         tr.appendChild(tdL);
         tr.appendChild(tdSep);
         tr.appendChild(tdR);
