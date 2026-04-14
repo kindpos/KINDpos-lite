@@ -742,6 +742,7 @@ defineScene({
       fetch('/api/v1/orders/' + state.orderId)
         .then(function(r) { return r.json(); })
         .then(function(order) {
+          if (SceneManager.getActiveWorking() !== 'check-overview') return;
           state.order = order;
           state.checkNumber = order.check_number || '';
           state.customerName = order.customer_name || '';
@@ -922,6 +923,7 @@ defineScene({
       fetch('/api/v1/orders/' + state.orderId)
         .then(function(r) { return r.json(); })
         .then(function(order) {
+          if (SceneManager.getActiveWorking() !== 'check-overview') return;
           state.order = order;
           state.checkNumber = order.check_number || '';
           state.customerName = order.customer_name || '';
