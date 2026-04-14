@@ -208,6 +208,7 @@ function _summaryRow(label, value, color, bold) {
 
 function _renderItems(items) {
   if (!_itemScroll) return;
+  console.log('[_renderItems] called with', (items || []).length, 'items, collapsible:', _collapsible, 'caller:', new Error().stack.split('\n')[2]);
   _itemScroll.innerHTML = '';
   var isCollapsible = _collapsible;
   (items || []).forEach(function(item, itemIndex) {
