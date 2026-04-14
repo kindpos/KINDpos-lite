@@ -25,6 +25,7 @@ var _summaryRowEl = null; // summary row (contains summary box + split btn)
 var _mode = 'order';     // 'order' or 'checkout'
 var _collapsible = false; // when true, items start collapsed with tap-to-expand
 var _onItemTap = null;   // callback(itemIndex) when an item row is tapped
+var _onSeatHeaderTap = null; // callback(seatIdx) when a seat header is tapped
 
 function _container() {
   if (!_el) _el = document.getElementById('order-summary');
@@ -218,6 +219,7 @@ function _renderItems(items) {
         'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';',
         'color:' + T.mint + ';letter-spacing:2px;',
         'border-bottom:2px solid ' + T.mint + ';',
+        'cursor:pointer;user-select:none;',
       ].join('');
       var hdrLabel = document.createElement('span');
       hdrLabel.textContent = item.seatId;
@@ -226,6 +228,13 @@ function _renderItems(items) {
       hdrTotal.textContent = '$' + (item.seatTotal || 0).toFixed(2);
       hdr.appendChild(hdrLabel);
       hdr.appendChild(hdrTotal);
+      if (_onSeatHeaderTap && item.seatIdx != null) {
+        (function(idx) {
+          hdr.addEventListener('pointerup', function() {
+            _onSeatHeaderTap(idx);
+          });
+        })(item.seatIdx);
+      }
       _itemScroll.appendChild(hdr);
       return;
     }
@@ -500,6 +509,7 @@ export var OrderSummary = {
     if (!_itemScroll) _build();
     _collapsible = !!params.collapsible;
     _onItemTap = params.onItemTap || null;
+    _onSeatHeaderTap = params.onSeatHeaderTap || null;
     _configureForMode('order');
 
     if (_checkIdEl) _checkIdEl.textContent = params.checkId || '';
@@ -525,6 +535,7 @@ export var OrderSummary = {
     if (_nameEl && params.customerName !== undefined) _nameEl.textContent = params.customerName || '';
     if (params.onNameTap !== undefined) _onNameTap = params.onNameTap;
     if (params.onItemTap !== undefined) _onItemTap = params.onItemTap;
+    if (params.onSeatHeaderTap !== undefined) _onSeatHeaderTap = params.onSeatHeaderTap;
     if (params.items && !params.skipItems) _renderItems(params.items);
     _renderSummary(params);
     _renderPrices(params);

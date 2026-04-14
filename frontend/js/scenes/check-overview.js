@@ -47,7 +47,7 @@ function collectSummary(seats, selected) {
     var seatSub = 0;
     if (showHeaders) {
       for (var k = 0; k < seats[i].items.length; k++) seatSub += seats[i].items[k].qty * (seats[i].items[k].effectivePrice || seats[i].items[k].price);
-      items.push({ seatHeader: true, seatId: seats[i].id, seatTotal: seatSub });
+      items.push({ seatHeader: true, seatId: seats[i].id, seatTotal: seatSub, seatIdx: i });
     }
     for (var j = 0; j < seats[i].items.length; j++) {
       var it = seats[i].items[j];
@@ -86,6 +86,18 @@ function orderToSeats(order) {
       added_at: item.added_at || null,
       mods: mods,
     });
+  }
+  // Ensure all seats up to the max seat_number exist (preserve empty seats)
+  var maxSeat = 0;
+  for (var mi = 0; mi < items.length; mi++) {
+    var msn = items[mi].seat_number || 1;
+    if (msn > maxSeat) maxSeat = msn;
+  }
+  // Also check guest_count as a seat count hint
+  if (order.guest_count && order.guest_count > maxSeat) maxSeat = order.guest_count;
+  for (var si = 1; si <= maxSeat; si++) {
+    var sKey = 'S-' + String(si).padStart(3, '0');
+    if (!seatMap[sKey]) seatMap[sKey] = { id: sKey, items: [] };
   }
   var seats = [];
   var keys = Object.keys(seatMap).sort();
@@ -573,6 +585,10 @@ defineScene({
             toggleItem(key);
             updateSummary();
           }
+        },
+        onSeatHeaderTap: function(seatIdx) {
+          toggleSeatItems(seatIdx);
+          updateSummary();
         },
       });
     }
