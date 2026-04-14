@@ -299,7 +299,7 @@ export function ModifierPanel(container, opts) {
     if (optionalGroups.length > 0) {
       prefixBarEl = document.createElement('div');
       prefixBarEl.style.cssText = [
-        'flex-shrink:0;display:flex;gap:3px;',
+        'flex-shrink:0;display:flex;flex-direction:row;gap:3px;',
         'padding:2px 4px;',
         'background:' + T.bgDark + ';',
       ].join('');
@@ -517,12 +517,13 @@ export function ModifierPanel(container, opts) {
       var isActive = activeOptPrefix === pfx.id;
       var btn = document.createElement('div');
       btn.style.cssText = [
-        'flex:1;text-align:center;cursor:pointer;user-select:none;',
+        'flex:1 1 0;text-align:center;cursor:pointer;user-select:none;',
         'font-family:' + T.fh + ';font-size:11px;font-weight:bold;letter-spacing:1px;',
-        'padding:3px 4px;',
+        'padding:3px 8px;white-space:nowrap;',
         'border:2px solid ' + T.numpadChassis + ';',
         'background:' + (isActive ? T.numpadChassis : T.bgDark) + ';',
         'color:' + (isActive ? T.bgDark : T.textPrimary) + ';',
+        'box-sizing:border-box;',
       ].join('');
       btn.style.clipPath = chamfer(4);
       btn.textContent = pfx.label;
