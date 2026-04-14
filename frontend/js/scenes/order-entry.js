@@ -2091,6 +2091,7 @@ function showQtyEditor(itemName, instances) {
             selected:  false,
             sent:      false,
             category:  template.category,
+            seat_number: template.seat_number,
           });
         }
       } else {
@@ -2323,6 +2324,7 @@ function deepCopyTicket(src) {
       selected:  false,   // always reset selection on copy
       sent:      inst.sent,
       category:  inst.category || null,
+      seat_number: inst.seat_number,
     };
   });
 }
@@ -2371,6 +2373,7 @@ function recallFromBackend(orderId) {
           selected:  false,
           sent:      true,  // items from backend have already been sent
           category:  item.category || null,
+          seat_number: item.seat_number || null,
         };
       });
 
@@ -2475,8 +2478,11 @@ SceneManager.register({
               var arr = assignments[item.id];
               var idx = arr.indexOf(sn);
               if (idx >= 0) {
-                arr.splice(idx, 1);
+                // Deselect — clear the array
+                arr.length = 0;
               } else {
+                // Single-select — replace any previous selection
+                arr.length = 0;
                 arr.push(sn);
               }
               // Update visuals for this item's seat buttons

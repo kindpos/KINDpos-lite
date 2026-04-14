@@ -241,6 +241,15 @@ function _renderItems(items) {
 
     _itemScroll.appendChild(row);
 
+    // Attach tap handler for item selection (works for ALL items, not just ones with mods)
+    if (isCollapsible) {
+      (function(idx) {
+        row.addEventListener('pointerup', function() {
+          if (_onItemTap) _onItemTap(idx);
+        });
+      })(itemIndex);
+    }
+
     if (!hasMods) return;
 
     // ── Modifier detail container ──
@@ -311,20 +320,17 @@ function _renderItems(items) {
 
     _itemScroll.appendChild(modDetail);
 
-    // Toggle expand/collapse on tap + notify parent for selection
-    if (isCollapsible) {
-      (function(detail, arrowEl, idx) {
+    // Toggle expand/collapse on tap (item selection handled above for all items)
+    if (isCollapsible && hasMods) {
+      (function(detail, arrowEl) {
         row.addEventListener('pointerup', function() {
-          // Expand collapsed mods
           if (detail && arrowEl) {
             var isOpen = detail.style.display !== 'none';
             detail.style.display = isOpen ? 'none' : '';
             arrowEl.textContent = isOpen ? '\u25BC' : '\u25B2';
           }
-          // Notify parent for item selection
-          if (_onItemTap) _onItemTap(idx);
         });
-      })(hasMods ? modDetail : null, arrow, itemIndex);
+      })(modDetail, arrow);
     }
   });
 }

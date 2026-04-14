@@ -556,7 +556,7 @@ defineScene({
           var key = _summaryItemMap[idx];
           if (key) {
             toggleItem(key);
-            renderSeats();
+            updateSummary();
           }
         },
       });
