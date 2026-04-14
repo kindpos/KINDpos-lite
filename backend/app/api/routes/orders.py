@@ -34,6 +34,7 @@ from app.core.event_ledger import EventLedger
 from app.core.events import (
     order_created,
     order_transferred,
+    check_named,
     item_added,
     item_removed,
     item_modified,
@@ -639,9 +640,10 @@ async def get_order(
 
 
 class PatchOrderRequest(BaseModel):
-    """Request to update order-level fields (e.g. server transfer)."""
+    """Request to update order-level fields (e.g. server transfer, check name)."""
     server_id: Optional[str] = None
     server_name: Optional[str] = None
+    customer_name: Optional[str] = None
 
 
 @router.patch("/{order_id}", response_model=OrderResponse)
@@ -650,7 +652,7 @@ async def patch_order(
         request: PatchOrderRequest,
         ledger: EventLedger = Depends(get_ledger),
 ):
-    """Update order fields. Currently supports server transfer."""
+    """Update order fields. Supports server transfer and check naming."""
     order = await get_order_or_404(ledger, order_id)
 
     if request.server_id is not None:
@@ -659,6 +661,14 @@ async def patch_order(
             order_id=order_id,
             server_id=request.server_id,
             server_name=request.server_name or "",
+        )
+        await ledger.append(event)
+
+    if request.customer_name is not None:
+        event = check_named(
+            terminal_id=settings.terminal_id,
+            order_id=order_id,
+            customer_name=request.customer_name,
         )
         await ledger.append(event)
 

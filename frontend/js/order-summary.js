@@ -16,6 +16,8 @@ var _pricesBox = null;   // card/cash prices box
 var _paidRow = null;     // dynamic paid row
 var _remainRow = null;   // dynamic remaining row
 var _checkIdEl = null;   // check ID display
+var _nameEl = null;      // customer name display (tappable)
+var _onNameTap = null;   // callback when check ID / name is tapped
 var _splitBtn = null;    // split button ref
 var _headerTitle = null; // header title element ref
 var _colHead = null;     // column header container ref
@@ -58,13 +60,25 @@ function _build() {
     'color:' + T.textPrimary + ';letter-spacing:0.08em;',
   ].join('');
   _headerTitle.textContent = 'ORDER RECAP';
+  var checkWrap = document.createElement('div');
+  checkWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;cursor:pointer;';
   _checkIdEl = document.createElement('div');
   _checkIdEl.style.cssText = [
     'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';',
     'color:' + T.mint + ';white-space:nowrap;',
   ].join('');
+  _nameEl = document.createElement('div');
+  _nameEl.style.cssText = [
+    'font-family:' + T.fb + ';font-size:11px;',
+    'color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;',
+  ].join('');
+  checkWrap.appendChild(_checkIdEl);
+  checkWrap.appendChild(_nameEl);
+  checkWrap.addEventListener('pointerup', function() {
+    if (_onNameTap) _onNameTap();
+  });
   header.appendChild(_headerTitle);
-  header.appendChild(_checkIdEl);
+  header.appendChild(checkWrap);
   el.appendChild(header);
 
   // ── Column headers ──
@@ -319,6 +333,8 @@ export var OrderSummary = {
     _configureForMode('order');
 
     if (_checkIdEl) _checkIdEl.textContent = params.checkId || '';
+    if (_nameEl) _nameEl.textContent = params.customerName || '';
+    _onNameTap = params.onNameTap || null;
 
     _renderItems(params.items);
     _renderSummary(params);
@@ -328,12 +344,15 @@ export var OrderSummary = {
   },
 
   hide: function() {
+    _onNameTap = null;
     SceneManager.hideSummary();
   },
 
   update: function(params) {
     params = params || {};
     if (_checkIdEl && params.checkId !== undefined) _checkIdEl.textContent = params.checkId;
+    if (_nameEl && params.customerName !== undefined) _nameEl.textContent = params.customerName || '';
+    if (params.onNameTap !== undefined) _onNameTap = params.onNameTap;
     if (params.items && !params.skipItems) _renderItems(params.items);
     _renderSummary(params);
     _renderPrices(params);

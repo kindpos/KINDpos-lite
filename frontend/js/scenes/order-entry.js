@@ -72,6 +72,32 @@ function _idemKey() {
   return 'ik_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 var currentCheckNumber = null;
+var currentCustomerName = null;
+
+function _handleNameTap() {
+  if (!currentOrderId) {
+    showToast('Send items first to name this check', { bg: T.gold, duration: 2000 });
+    return;
+  }
+  SceneManager.interrupt('oe-name-input', {
+    onConfirm: function(name) {
+      fetch(API + '/orders/' + currentOrderId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_name: name }),
+      }).then(function(r) {
+        if (r.ok) {
+          currentCustomerName = name;
+          OrderSummary.update({ customerName: name });
+          showToast(name ? 'Named: ' + name : 'Name cleared', { bg: T.goGreen, duration: 1500 });
+        } else { showToast('Name update failed', { bg: T.red }); }
+      }).catch(function() { showToast('Name update failed', { bg: T.red }); });
+    },
+    onCancel: function() {},
+    checkLabel: currentCheckNumber || 'check',
+    currentName: currentCustomerName || '',
+  });
+}
 
 // ── Pizza builder data (populated by API or fallback) ──
 var PIZZA_BUILDER_DATA = null;
@@ -321,6 +347,7 @@ defineScene({
     currentOrderId = null;
     isSending      = false;
     currentCheckNumber = null;
+    currentCustomerName = null;
     modHistory     = [];
     modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
     _bottomBar     = null;
@@ -337,7 +364,7 @@ defineScene({
     ].join('');
 
     // Show persistent order summary panel (left column)
-    OrderSummary.show({ checkId: params.recallOrderId || '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 });
+    OrderSummary.show({ checkId: params.recallOrderId || '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: _handleNameTap });
 
     var mainArea = buildMain(container, params);
     container.appendChild(mainArea);
@@ -2320,6 +2347,57 @@ SceneManager.register({
     // Tap scrim to cancel
     container.addEventListener('pointerup', function(e) {
       if (e.target === container) { params.onCancel(); }
+    });
+  },
+  unmount: function() {},
+});
+
+// ═══════════════════════════════════════════════════
+//  CHECK NAME INPUT — interrupt for naming a check
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'oe-name-input',
+  mount: function(container, params) {
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+    var panel = document.createElement('div');
+    panel.style.cssText = [
+      'background:' + T.bgDark + ';',
+      'border:4px solid ' + T.mint + ';border-radius:5px;',
+      'padding:24px 32px;min-width:360px;max-width:420px;',
+      'text-align:center;',
+    ].join('');
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:16px;';
+    msg.textContent = 'Name for ' + (params.checkLabel || 'check') + ':';
+    panel.appendChild(msg);
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 40;
+    input.placeholder = 'Enter name';
+    input.value = params.currentName || '';
+    input.style.cssText = 'width:100%;box-sizing:border-box;padding:10px 12px;font-family:' + T.fb + ';font-size:20px;color:' + T.textPrimary + ';background:' + T.bg + ';border:2px solid ' + T.mint + ';border-radius:4px;outline:none;margin-bottom:16px;text-align:center;';
+    panel.appendChild(input);
+    setTimeout(function() { input.focus(); }, 80);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+    btns.appendChild(buildButton('SAVE', { fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 110, height: 44, onTap: function() { params.onConfirm(input.value.trim()); } }));
+    btns.appendChild(buildButton('CLEAR', { fill: T.darkBtn, color: T.gold, fontSize: T.fsBtn, width: 110, height: 44, onTap: function() { params.onConfirm(''); } }));
+    btns.appendChild(buildButton('CANCEL', { fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtn, width: 110, height: 44, onTap: function() { params.onCancel(); } }));
+    panel.appendChild(btns);
+    container.appendChild(panel);
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') params.onConfirm(input.value.trim());
+      if (e.key === 'Escape') params.onCancel();
+    });
+
+    container.addEventListener('pointerup', function(e) {
+      if (e.target === container) params.onCancel();
     });
   },
   unmount: function() {},

@@ -40,6 +40,7 @@ class EventType(str, Enum):
     ORDER_REOPENED = "order.reopened"
     ORDER_VOIDED = "order.voided"
     ORDER_TRANSFERRED = "order.transferred"
+    CHECK_NAMED = "check.named"
 
     # ── Item management (LEDGER_CORE) ────────────────────────────────
     ITEM_ADDED = "item.added"
@@ -324,6 +325,25 @@ def order_transferred(
             "order_id": order_id,
             "server_id": server_id,
             "server_name": server_name,
+        },
+        correlation_id=order_id,
+        **kwargs
+    )
+
+
+def check_named(
+        terminal_id: str,
+        order_id: str,
+        customer_name: str,
+        **kwargs
+) -> Event:
+    """Create a CHECK_NAMED event (set/update customer name on a check)."""
+    return create_event(
+        event_type=EventType.CHECK_NAMED,
+        terminal_id=terminal_id,
+        payload={
+            "order_id": order_id,
+            "customer_name": customer_name,
         },
         correlation_id=order_id,
         **kwargs

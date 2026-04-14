@@ -666,6 +666,41 @@ defineScene({
       },
     },
 
+    'sl-name-input': {
+      render: function(container, params) {
+        var pair = buildCard({ bg: T.bgDark, padding: '24px 32px', chamferSize: 10, borderWidth: 7, glow: true });
+        pair.card.style.maxWidth = '420px';
+        pair.card.style.textAlign = 'center';
+
+        var msg = document.createElement('div');
+        msg.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + T.mint + ';margin-bottom:16px;';
+        msg.textContent = 'Name for ' + (params.checkLabel || 'check') + ':';
+        pair.card.appendChild(msg);
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 40;
+        input.placeholder = 'Enter name';
+        input.value = params.currentName || '';
+        input.style.cssText = 'width:100%;box-sizing:border-box;padding:10px 12px;font-family:' + T.fb + ';font-size:20px;color:' + T.textPrimary + ';background:' + T.bg + ';border:2px solid ' + T.mint + ';border-radius:4px;outline:none;margin-bottom:16px;text-align:center;';
+        pair.card.appendChild(input);
+        setTimeout(function() { input.focus(); }, 80);
+
+        var btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+        btns.appendChild(buildButton('SAVE', { fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44, onTap: function() { params.onConfirm(input.value.trim()); } }));
+        btns.appendChild(buildButton('CLEAR', { fill: T.darkBtn, color: T.gold, fontSize: T.fsBtn, width: 130, height: 44, onTap: function() { params.onConfirm(''); } }));
+        btns.appendChild(buildButton('CANCEL', { fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtn, width: 130, height: 44, onTap: function() { params.onCancel(); } }));
+        pair.card.appendChild(btns);
+        container.appendChild(pair.wrap);
+
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') params.onConfirm(input.value.trim());
+          if (e.key === 'Escape') params.onCancel();
+        });
+      },
+    },
+
     'sl-server-picker': {
       render: function(container, params) {
         params = params || {};
@@ -1004,7 +1039,7 @@ function buildCheckTile(state, order) {
 
   if (order.customer_name) {
     var name = document.createElement('div');
-    name.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mutedText + ';';
+    name.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     name.textContent = order.customer_name;
     name.dataset.role = 'name';
     tile.appendChild(name);
@@ -1186,7 +1221,31 @@ function renderOpsPanel(state) {
   voidBtn.style.border = '2px solid ' + T.vermillion;
   grid.appendChild(voidBtn);
 
-  // Row 3: TRANSFER (supports multi-select)
+  // Row 3: NAME | TRANSFER
+  if (isSingle) {
+    var nameOrder = state.selected[ids[0]];
+    grid.appendChild(buildButton('NAME', Object.assign({}, btnStyle, { onTap: function() {
+      SceneManager.interrupt('sl-name-input', {
+        onConfirm: function(name) {
+          fetch('/api/v1/orders/' + nameOrder.order_id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_name: name }),
+          }).then(function(r) {
+            if (r.ok) {
+              showToast(name ? 'Named: ' + name : 'Name cleared', { bg: T.goGreen });
+              state.selected = {};
+              refreshData(state);
+            } else { showToast('Name update failed', { bg: T.red }); }
+          }).catch(function() { showToast('Name update failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+        checkLabel: checkNum(nameOrder),
+        currentName: nameOrder.customer_name || '',
+      });
+    }})));
+  }
+
   grid.appendChild(buildButton('TRANSFER', Object.assign({}, btnStyle, { onTap: function() {
     SceneManager.interrupt('sl-server-picker', {
       onConfirm: function(server) {

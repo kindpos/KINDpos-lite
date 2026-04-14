@@ -106,6 +106,7 @@ defineScene({
 
     state.orderId = params.checkId || null;
     state.checkNumber = '';
+    state.customerName = '';
 
     // Determine which landing to return to
     var _landing = params.returnLanding || 'server-landing';
@@ -140,7 +141,27 @@ defineScene({
     });
 
     // Show persistent OrderSummary panel
-    OrderSummary.show({ checkId: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0 });
+    OrderSummary.show({ checkId: '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: function() {
+      if (!state.orderId) { showToast('Save items first', { bg: T.gold }); return; }
+      SceneManager.interrupt('co-name-input', {
+        onConfirm: function(name) {
+          fetch('/api/v1/orders/' + state.orderId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_name: name }),
+          }).then(function(r) {
+            if (r.ok) {
+              state.customerName = name;
+              OrderSummary.update({ customerName: name });
+              showToast(name ? 'Named: ' + name : 'Name cleared', { bg: T.goGreen, duration: 1500 });
+            } else { showToast('Name update failed', { bg: T.red }); }
+          }).catch(function() { showToast('Name update failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+        checkLabel: state.checkNumber || 'check',
+        currentName: state.customerName || '',
+      });
+    }});
     // Hide split button — split is available via EDIT SEATS column-editor
     var summaryEl = OrderSummary.getElement();
     if (summaryEl) {
@@ -503,6 +524,7 @@ defineScene({
       var totals = collectSummary(state.seats, state.selected);
       OrderSummary.update({
         checkId: state.checkNumber || '',
+        customerName: state.customerName || '',
         skipItems: true,
         subtotal: totals.subtotal,
         tax: totals.tax,
@@ -647,6 +669,7 @@ defineScene({
         .then(function(order) {
           state.order = order;
           state.checkNumber = order.check_number || '';
+          state.customerName = order.customer_name || '';
           state.seats = orderToSeats(order);
           syncPaidSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
@@ -826,6 +849,7 @@ defineScene({
         .then(function(order) {
           state.order = order;
           state.checkNumber = order.check_number || '';
+          state.customerName = order.customer_name || '';
           state.seats = orderToSeats(order);
           syncPaidSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
@@ -1106,6 +1130,46 @@ defineScene({
   },
 
   interrupts: {
+    'co-name-input': {
+      render: function(container, params) {
+        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+        var panel = document.createElement('div');
+        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';border-radius:5px;padding:24px 32px;min-width:360px;max-width:420px;text-align:center;';
+
+        var msg = document.createElement('div');
+        msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';margin-bottom:16px;';
+        msg.textContent = 'Name for ' + (params.checkLabel || 'check') + ':';
+        panel.appendChild(msg);
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 40;
+        input.placeholder = 'Enter name';
+        input.value = params.currentName || '';
+        input.style.cssText = 'width:100%;box-sizing:border-box;padding:10px 12px;font-family:' + T.fb + ';font-size:20px;color:' + T.textPrimary + ';background:' + T.bg + ';border:2px solid ' + T.mint + ';border-radius:4px;outline:none;margin-bottom:16px;text-align:center;';
+        panel.appendChild(input);
+        setTimeout(function() { input.focus(); }, 80);
+
+        var btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+        btns.appendChild(buildButton('SAVE', { fill: T.darkBtn, color: T.mint, fontSize: '18px', width: 110, height: 44, onTap: function() { params.onConfirm(input.value.trim()); } }));
+        btns.appendChild(buildButton('CLEAR', { fill: T.darkBtn, color: T.gold, fontSize: '18px', width: 110, height: 44, onTap: function() { params.onConfirm(''); } }));
+        btns.appendChild(buildButton('CANCEL', { fill: T.darkBtn, color: T.mutedText, fontSize: '18px', width: 110, height: 44, onTap: function() { params.onCancel(); } }));
+        panel.appendChild(btns);
+        container.appendChild(panel);
+
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') params.onConfirm(input.value.trim());
+          if (e.key === 'Escape') params.onCancel();
+        });
+
+        container.addEventListener('pointerup', function(e) {
+          if (e.target === container) params.onCancel();
+        });
+      },
+    },
+
     'server-picker': {
       render: function(container, params) {
         params = params || {};
