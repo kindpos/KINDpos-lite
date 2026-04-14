@@ -544,6 +544,12 @@ defineScene({
         }
       }
 
+      // Mark selected items so OrderSummary can highlight them
+      for (var mi = 0; mi < totals.items.length; mi++) {
+        var mapKey = _summaryItemMap[mi];
+        totals.items[mi].selected = mapKey ? !!state.selectedItems[mapKey] : false;
+      }
+
       OrderSummary.update({
         checkId: state.checkNumber || '',
         customerName: state.customerName || '',

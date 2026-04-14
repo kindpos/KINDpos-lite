@@ -560,12 +560,8 @@ function assignSeatsIfNeeded(callback) {
     return;
   }
 
-  // Items already assigned to a seat don't need re-assignment
-  var needsAssign = unsent.filter(function(i) { return !i.seat_number; });
-  if (needsAssign.length === 0) { callback(); return; }
-
-  // 2+ seats → open seat assignment interrupt for unassigned items only
-  var itemsForAssign = needsAssign.map(function(inst) {
+  // 2+ seats → open seat assignment interrupt
+  var itemsForAssign = unsent.map(function(inst) {
     return { id: inst.id, name: inst.name, mods: inst.mods };
   });
 
@@ -575,19 +571,19 @@ function assignSeatsIfNeeded(callback) {
       // Apply assignments: { itemId: [seatNumber, ...] }
       // Items assigned to multiple seats get duplicated (one per extra seat)
       var dupes = [];
-      for (var j = 0; j < needsAssign.length; j++) {
-        var seatList = assignments[needsAssign[j].id];
+      for (var j = 0; j < unsent.length; j++) {
+        var seatList = assignments[unsent[j].id];
         if (!seatList || seatList.length === 0) continue;
         // First seat goes on the original item
-        needsAssign[j].seat_number = seatList[0];
+        unsent[j].seat_number = seatList[0];
         // Additional seats → duplicate the item
         for (var s = 1; s < seatList.length; s++) {
-          var clone = Object.assign({}, needsAssign[j]);
-          clone.id = needsAssign[j].id + '_s' + seatList[s];
+          var clone = Object.assign({}, unsent[j]);
+          clone.id = unsent[j].id + '_s' + seatList[s];
           clone.idemKey = _idemKey();
           clone.seat_number = seatList[s];
           clone.sent = false;
-          clone.mods = (needsAssign[j].mods || []).slice();
+          clone.mods = (unsent[j].mods || []).slice();
           dupes.push(clone);
         }
       }
