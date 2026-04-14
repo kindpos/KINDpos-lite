@@ -97,15 +97,15 @@ export const T = {
   pcLeftW:  320,
 
   // Chart viewBox dimensions (internal coordinate space — SVG renders at width:100%)
-  chartVB:       '500 180',   // standard panel chart (category bars, breakdowns)
-  chartVBSm:     '500 160',   // short panel chart (trend lines)
+  chartVB:       '500 240',   // standard panel chart (category bars, breakdowns)
+  chartVBSm:     '500 200',   // short panel chart (trend lines)
   chartVBFull:   '900 380',   // expanded / drill-down chart
   chartW:        500,          // viewBox width (standard)
-  chartH:        180,          // viewBox height (standard)
-  chartHSm:      160,          // viewBox height (short)
+  chartH:        240,          // viewBox height (standard)
+  chartHSm:      200,          // viewBox height (short)
   chartFullW:    900,          // viewBox width (expanded)
   chartFullH:    380,          // viewBox height (expanded)
-  chartDonut:    140,          // donut diameter (square viewBox)
+  chartDonut:    160,          // donut diameter (square viewBox)
   chartPt:       8,            // data point marker size
   chartLblW:     70,           // axis label area (left pad)
   chartPadR:     8,            // right padding
