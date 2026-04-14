@@ -524,8 +524,22 @@ defineScene({
       return ids;
     }
 
+    // Map from flat item index → seatIdx:itemIdx for selection
+    var _summaryItemMap = [];
+
     function updateSummary() {
       var totals = collectSummary(state.seats, state.selected);
+
+      // Build index map: flat item index → 'seatIdx:itemIdx'
+      _summaryItemMap = [];
+      var anySelected = Object.keys(state.selected).length > 0;
+      for (var si = 0; si < state.seats.length; si++) {
+        if (anySelected && !state.selected[state.seats[si].id]) continue;
+        for (var ii = 0; ii < state.seats[si].items.length; ii++) {
+          _summaryItemMap.push(si + ':' + ii);
+        }
+      }
+
       OrderSummary.update({
         checkId: state.checkNumber || '',
         customerName: state.customerName || '',
@@ -534,9 +548,14 @@ defineScene({
         tax: totals.tax,
         cardTotal: totals.cardTotal,
         cashPrice: totals.cashPrice,
+        onItemTap: function(idx) {
+          var key = _summaryItemMap[idx];
+          if (key) {
+            toggleItem(key);
+            renderSeats();
+          }
+        },
       });
-
-      // Items with mods rendered by OrderSummary._renderItems (collapsible)
     }
 
     /* -- Seat card rendering removed: OrderSummary handles items with mods --

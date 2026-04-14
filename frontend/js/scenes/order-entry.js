@@ -372,6 +372,8 @@ defineScene({
     if (!_menuFetched) fetchMenuFromAPI();
 
     if (params.recallOrderId) {
+      currentOrderId = params.recallOrderId;
+      currentCheckNumber = params.recallCheckNumber || null;
       recallFromBackend(params.recallOrderId);
     }
   },

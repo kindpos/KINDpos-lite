@@ -24,6 +24,7 @@ var _colHead = null;     // column header container ref
 var _summaryRowEl = null; // summary row (contains summary box + split btn)
 var _mode = 'order';     // 'order' or 'checkout'
 var _collapsible = false; // when true, items start collapsed with tap-to-expand
+var _onItemTap = null;   // callback(itemIndex) when an item row is tapped
 
 function _container() {
   if (!_el) _el = document.getElementById('order-summary');
@@ -207,7 +208,7 @@ function _renderItems(items) {
   if (!_itemScroll) return;
   _itemScroll.innerHTML = '';
   var isCollapsible = _collapsible;
-  (items || []).forEach(function(item) {
+  (items || []).forEach(function(item, itemIndex) {
     var mods = item.mods || [];
     var hasMods = mods.length > 0;
 
@@ -218,7 +219,7 @@ function _renderItems(items) {
       'padding:3px 0 1px;',
       'font-family:' + T.fb + ';font-size:24px;color:' + T.textPrimary + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
-      (isCollapsible && hasMods) ? 'cursor:pointer;user-select:none;' : '',
+      isCollapsible ? 'cursor:pointer;user-select:none;' : '',
     ].join('');
     var name = document.createElement('span');
     name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
@@ -310,15 +311,20 @@ function _renderItems(items) {
 
     _itemScroll.appendChild(modDetail);
 
-    // Toggle expand/collapse on tap (checkout mode only)
-    if (isCollapsible && hasMods) {
-      (function(detail, arrowEl) {
+    // Toggle expand/collapse on tap + notify parent for selection
+    if (isCollapsible) {
+      (function(detail, arrowEl, idx) {
         row.addEventListener('pointerup', function() {
-          var isOpen = detail.style.display !== 'none';
-          detail.style.display = isOpen ? 'none' : '';
-          if (arrowEl) arrowEl.textContent = isOpen ? '\u25BC' : '\u25B2';
+          // Expand collapsed mods
+          if (detail && arrowEl) {
+            var isOpen = detail.style.display !== 'none';
+            detail.style.display = isOpen ? 'none' : '';
+            arrowEl.textContent = isOpen ? '\u25BC' : '\u25B2';
+          }
+          // Notify parent for item selection
+          if (_onItemTap) _onItemTap(idx);
         });
-      })(modDetail, arrow);
+      })(hasMods ? modDetail : null, arrow, itemIndex);
     }
   });
 }
@@ -463,6 +469,7 @@ export var OrderSummary = {
     // Build DOM on first show
     if (!_itemScroll) _build();
     _collapsible = !!params.collapsible;
+    _onItemTap = params.onItemTap || null;
     _configureForMode('order');
 
     if (_checkIdEl) _checkIdEl.textContent = params.checkId || '';
@@ -478,6 +485,7 @@ export var OrderSummary = {
 
   hide: function() {
     _onNameTap = null;
+    _onItemTap = null;
     SceneManager.hideSummary();
   },
 
@@ -486,6 +494,7 @@ export var OrderSummary = {
     if (_checkIdEl && params.checkId !== undefined) _checkIdEl.textContent = params.checkId;
     if (_nameEl && params.customerName !== undefined) _nameEl.textContent = params.customerName || '';
     if (params.onNameTap !== undefined) _onNameTap = params.onNameTap;
+    if (params.onItemTap !== undefined) _onItemTap = params.onItemTap;
     if (params.items && !params.skipItems) _renderItems(params.items);
     _renderSummary(params);
     _renderPrices(params);
