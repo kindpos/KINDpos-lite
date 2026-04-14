@@ -95,12 +95,12 @@ function buildCardHeader(label) {
 
 function statRow(label, value, color) {
   var row = document.createElement('div');
-  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:2px 8px;min-width:0;';
+  row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:4px 12px;min-width:0;';
   var l = document.createElement('span');
-  l.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
+  l.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;';
   l.textContent = label;
   var v = document.createElement('span');
-  v.style.cssText = 'font-family:' + T.fb + ';font-size:22px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
+  v.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + color + ';font-weight:bold;white-space:nowrap;flex-shrink:0;';
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
@@ -866,7 +866,7 @@ function buildTableStatsCard(state) {
 
   // Stat row above chart
   var statsRow = document.createElement('div');
-  statsRow.style.cssText = 'display:flex;justify-content:space-around;padding:4px 6px;flex-shrink:0;';
+  statsRow.style.cssText = 'display:flex;justify-content:space-around;padding:6px 8px;flex-shrink:0;';
   var statItems = [
     { label: 'GUESTS', value: String(ts.guestCount || 0), color: '#ffffff' },
     { label: 'TABLES', value: String(ts.tableCount || 0), color: '#ffffff' },
@@ -878,10 +878,10 @@ function buildTableStatsCard(state) {
     var sc = document.createElement('div');
     sc.style.cssText = 'text-align:center;';
     var sv = document.createElement('div');
-    sv.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + si.color + ';font-weight:bold;';
+    sv.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + si.color + ';font-weight:bold;';
     sv.textContent = si.value;
     var sl = document.createElement('div');
-    sl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.mutedText + ';letter-spacing:1px;';
+    sl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.mutedText + ';letter-spacing:1px;';
     sl.textContent = si.label;
     sc.appendChild(sv);
     sc.appendChild(sl);
@@ -1309,6 +1309,10 @@ function buildTipsCard(state) {
   var emp = state.params ? (state.params.emp || state.params) : {};
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
@@ -1319,7 +1323,7 @@ function buildTipsCard(state) {
   card.appendChild(buildCardHeader('TIPS'));
 
   var tipsBody = document.createElement('div');
-  tipsBody.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;padding:4px 0;';
+  tipsBody.style.cssText = 'display:flex;flex-direction:column;justify-content:center;flex:1;min-height:0;padding:4px 0;';
 
   tipsBody.appendChild(statRow('Total Tips:', fmt(d.total_tips || 0), T.gold));
 
@@ -1360,19 +1364,19 @@ function buildTipsCard(state) {
 
   if (unadjChecks.length === 0) {
     var noChecks = document.createElement('div');
-    noChecks.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';text-align:center;padding:10px;';
+    noChecks.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';text-align:center;padding:10px;';
     noChecks.textContent = 'All tips adjusted';
     checkList.appendChild(noChecks);
   } else {
     for (var i = 0; i < unadjChecks.length; i++) {
       (function(check) {
         var row = document.createElement('div');
-        row.style.cssText = 'display:flex;justify-content:space-between;padding:3px 0;cursor:pointer;';
+        row.style.cssText = 'display:flex;justify-content:space-between;padding:5px 4px;cursor:pointer;';
         var chkLabel = document.createElement('span');
-        chkLabel.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';';
+        chkLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';';
         chkLabel.textContent = check.checkLabel || 'CHK';
         var amtLabel = document.createElement('span');
-        amtLabel.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.gold + ';font-weight:bold;';
+        amtLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.gold + ';font-weight:bold;';
         amtLabel.textContent = fmt(check.amount || 0);
         row.appendChild(chkLabel);
         row.appendChild(amtLabel);
@@ -1415,25 +1419,29 @@ function buildCheckoutCard(state) {
   var emp = state.params ? (state.params.emp || state.params) : {};
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
-  card.style.flexShrink = '0';
+  card.style.flex = '1';
 
   card.appendChild(buildCardHeader('CHECKOUT'));
 
   var coBody = document.createElement('div');
-  coBody.style.cssText = 'padding:8px;display:flex;flex-direction:column;gap:6px;';
+  coBody.style.cssText = 'flex:1;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px;';
 
   // Open checks status
   var openCount = cs.openChecks || 0;
   var openRow = document.createElement('div');
-  openRow.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid ' + (openCount > 0 ? T.vermillion : T.bgDark) + ';';
+  openRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid ' + (openCount > 0 ? T.vermillion : T.bgDark) + ';';
   var openIcon = document.createElement('span');
-  openIcon.style.cssText = 'font-size:14px;color:' + (openCount > 0 ? T.vermillion : T.goGreen) + ';';
+  openIcon.style.cssText = 'font-size:18px;color:' + (openCount > 0 ? T.vermillion : T.goGreen) + ';';
   openIcon.textContent = openCount > 0 ? '\u2716' : '\u2714';
   var openLabel = document.createElement('span');
-  openLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (openCount > 0 ? T.vermillion : T.textPrimary) + ';';
+  openLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + (openCount > 0 ? T.vermillion : T.textPrimary) + ';';
   openLabel.textContent = openCount + ' OPEN CHECK' + (openCount !== 1 ? 'S' : '');
   openRow.appendChild(openIcon);
   openRow.appendChild(openLabel);
@@ -1443,12 +1451,12 @@ function buildCheckoutCard(state) {
   var unadjCount = cs.unadjustedTips || 0;
   var unadjColor = unadjCount > 0 ? '#ffdd44' : T.textPrimary;
   var unadjRow = document.createElement('div');
-  unadjRow.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid ' + (unadjCount > 0 ? '#ffdd44' : T.bgDark) + ';';
+  unadjRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid ' + (unadjCount > 0 ? '#ffdd44' : T.bgDark) + ';';
   var unadjIcon = document.createElement('span');
-  unadjIcon.style.cssText = 'font-size:14px;color:' + (unadjCount > 0 ? '#ffdd44' : T.goGreen) + ';';
+  unadjIcon.style.cssText = 'font-size:18px;color:' + (unadjCount > 0 ? '#ffdd44' : T.goGreen) + ';';
   unadjIcon.textContent = unadjCount > 0 ? '\u26a0' : '\u2714';
   var unadjLabel = document.createElement('span');
-  unadjLabel.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + unadjColor + ';';
+  unadjLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + unadjColor + ';';
   unadjLabel.textContent = unadjCount + ' UNADJUSTED TIP' + (unadjCount !== 1 ? 'S' : '');
   unadjRow.appendChild(unadjIcon);
   unadjRow.appendChild(unadjLabel);
