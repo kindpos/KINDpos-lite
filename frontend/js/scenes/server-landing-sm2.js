@@ -163,10 +163,10 @@ function refreshData(state) {
 // ═══════════════════════════════════════════════════
 
 function drawParetoChart(container, data, opts) {
-  var W = opts.width || T.chartW;
-  var H = opts.height || T.chartH;
-  var padL = T.chartPadR;           // minimal left margin (8)
-  var padR = 55;                    // right label area for revenue values
+  var W = 300;
+  var H = 180;
+  var padL = 6;                     // minimal left margin
+  var padR = 42;                    // right label area for revenue values
   var padT = T.chartPadT;           // top margin (10)
   var padB = T.chartPadT;           // bottom margin (10)
   var chartW = W - padL - padR;
@@ -282,12 +282,12 @@ function drawTableHistogram(container, ts) {
   }
 
   var data = ts.byPartySize;
-  var W = T.chartW;
-  var H = T.chartHSm;
-  var padL = 40;                    // y-axis labels (party size)
-  var padR = 55;                    // right label area for avg check values
-  var padT = T.chartPadT;           // top margin (10)
-  var padB = 24;                    // bottom axis labels
+  var W = 300;
+  var H = 150;
+  var padL = 30;                    // y-axis labels (party size)
+  var padR = 42;                    // right label area for avg check values
+  var padT = 8;                     // top margin
+  var padB = 20;                    // bottom axis labels
   var chartW = W - padL - padR;
   var chartH = H - padT - padB;
   var n = data.length;
