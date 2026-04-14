@@ -1738,12 +1738,18 @@ function buildTipsDrillContent(state, content, emp) {
       zeroBtn.textContent = 'ADJUST REMAINING TO $0.00';
       zeroBtn.addEventListener('pointerup', function(e) {
         e.stopPropagation();
-        var empId = emp.id || emp.employeeId;
-        var zeroUrl = '/api/v1/payments/zero-unadjusted';
-        if (empId) zeroUrl += '?server_id=' + encodeURIComponent(empId);
-        fetch(zeroUrl, { method: 'POST' })
-          .then(function() { showToast('Remaining tips set to $0.00', { bg: T.gold, duration: 2000 }); refreshData(state); })
-          .catch(function() { showToast('Zero-all failed', { bg: T.red }); });
+        SceneManager.interrupt('sl-manager-gate', {
+          onConfirm: function() {
+            var empId = emp.id || emp.employeeId;
+            var zeroUrl = '/api/v1/payments/zero-unadjusted';
+            if (empId) zeroUrl += '?server_id=' + encodeURIComponent(empId);
+            fetch(zeroUrl, { method: 'POST' })
+              .then(function() { showToast('Remaining tips set to $0.00', { bg: T.gold, duration: 2000 }); refreshData(state); })
+              .catch(function() { showToast('Zero-all failed', { bg: T.red }); });
+          },
+          onCancel: function() {},
+          params: { message: 'Zero all remaining tips? This cannot be undone.' },
+        });
       });
       tipsContentPanel.appendChild(zeroBtn);
     }
