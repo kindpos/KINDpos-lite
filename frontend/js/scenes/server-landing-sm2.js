@@ -1045,7 +1045,22 @@ function buildCheckTile(state, order) {
 
   if (isOpen) {
     if (state.selected[order.order_id]) applyTileSelected(tile, true);
+    // Short tap = toggle selection, long hold = open check directly
+    var _holdTimer = null;
+    var _didHold = false;
+    tile.addEventListener('pointerdown', function() {
+      _didHold = false;
+      _holdTimer = setTimeout(function() {
+        _didHold = true;
+        SceneManager.mountWorking('check-overview', {
+          checkId: order.order_id, tableId: order.table_id,
+          pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'server-landing',
+        });
+      }, 400);
+    });
     tile.addEventListener('pointerup', function() {
+      clearTimeout(_holdTimer);
+      if (_didHold) return;
       if (state.selected[order.order_id]) {
         delete state.selected[order.order_id];
         applyTileSelected(tile, false);
@@ -1054,6 +1069,9 @@ function buildCheckTile(state, order) {
         applyTileSelected(tile, true);
       }
       renderOpsPanel(state);
+    });
+    tile.addEventListener('pointerleave', function() {
+      clearTimeout(_holdTimer);
     });
   } else if (isClosed) {
     tile.addEventListener('pointerup', function() {
