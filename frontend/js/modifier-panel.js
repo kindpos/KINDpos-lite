@@ -295,24 +295,25 @@ export function ModifierPanel(container, opts) {
 
     card.appendChild(sectionsArea);
 
-    // ── Prefix bar (horizontal, above placement bar) ──
-    if (optionalGroups.length > 0) {
-      prefixBarEl = document.createElement('div');
-      prefixBarEl.style.cssText = [
-        'flex-shrink:0;display:flex;gap:4px;',
-        'padding:2px 4px;',
-        'background:' + T.bgDark + ';',
-      ].join('');
-      card.appendChild(prefixBarEl);
-    }
-
-    // ── Placement bar (compact, above action buttons) ──
-    placementBarEl = document.createElement('div');
-    placementBarEl.style.cssText = [
-      'flex-shrink:0;padding:1px 4px;',
+    // ── Bottom bar: prefix buttons + placement in one row ──
+    var bottomBarRow = document.createElement('div');
+    bottomBarRow.style.cssText = [
+      'flex-shrink:0;display:flex;gap:4px;align-items:stretch;',
+      'padding:2px 4px;',
       'background:' + T.bgDark + ';',
     ].join('');
-    card.appendChild(placementBarEl);
+
+    if (optionalGroups.length > 0) {
+      prefixBarEl = document.createElement('div');
+      prefixBarEl.style.cssText = 'display:flex;gap:3px;flex-shrink:0;';
+      bottomBarRow.appendChild(prefixBarEl);
+    }
+
+    placementBarEl = document.createElement('div');
+    placementBarEl.style.cssText = 'flex:1;min-width:0;';
+    bottomBarRow.appendChild(placementBarEl);
+
+    card.appendChild(bottomBarRow);
 
     // ── Bottom action bar: <<< | NOTE | ALRG | CONFIRM (compact) ──
     var actionBar = document.createElement('div');
@@ -459,7 +460,8 @@ export function ModifierPanel(container, opts) {
 
     var placeWrap = buildStyledButton({ variant: 'dark' });
     placeWrap.wrap.style.width = '100%';
-    placeWrap.inner.style.height = '18px';
+    placeWrap.wrap.style.height = '100%';
+    placeWrap.inner.style.height = '100%';
     placeWrap.inner.style.display = 'flex';
     placeWrap.inner.style.alignItems = 'stretch';
     placeWrap.inner.style.justifyContent = 'stretch';
@@ -508,7 +510,7 @@ export function ModifierPanel(container, opts) {
     });
   }
 
-  // ═══ PREFIX BAR (horizontal row above placement bar) ═══
+  // ═══ PREFIX BAR (inline beside placement bar) ═══
   function renderPrefixBar() {
     if (!prefixBarEl) return;
     prefixBarEl.innerHTML = '';
@@ -517,11 +519,9 @@ export function ModifierPanel(container, opts) {
       var isActive = activeOptPrefix === pfx.id;
       var v = isActive ? pfx.variant : 'dark';
       var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
-      pair.wrap.style.flex = '1';
-      pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '11px';
-      pair.inner.style.letterSpacing = '1px';
-      pair.inner.style.padding = '2px 4px';
+      pair.inner.style.fontSize = '10px';
+      pair.inner.style.padding = '2px 6px';
+      pair.inner.style.whiteSpace = 'nowrap';
 
       pair.wrap.addEventListener('pointerup', function(e) {
         e.stopPropagation();
