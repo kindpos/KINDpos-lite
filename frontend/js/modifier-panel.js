@@ -899,6 +899,7 @@ export function ModifierPanel(container, opts) {
     // Optional modifiers (removable)
     activeItem.optionalModifiers.forEach(function(m, idx) {
       var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
+      console.log('[ModPanel] buildOutput mod=' + m.label + ' placement=' + m.placement + ' halfSide=' + halfSide);
       var parentMod = {
         name: m.prefix + ' ' + m.label,
         price: m.prefix === 'NO' ? 0 : m.price,
