@@ -549,7 +549,7 @@ export function ModifierPanel(container, opts) {
 
       // Group label (always visible at top of tile)
       var label = document.createElement('div');
-      label.style.cssText = 'font-family:' + T.fh + ';font-size:13px;color:' + T.mutedText + ';text-transform:uppercase;letter-spacing:0.5px;';
+      label.style.cssText = 'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.textPrimary + ';text-transform:uppercase;letter-spacing:0.5px;';
       label.textContent = group.label;
       tile.appendChild(label);
 
