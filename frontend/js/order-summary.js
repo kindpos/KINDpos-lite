@@ -84,17 +84,18 @@ function _build() {
   // ── Column headers ──
   _colHead = document.createElement('div');
   _colHead.style.cssText = [
-    'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
-    'padding:4px 10px;',
-    'font-family:' + T.fh + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';letter-spacing:0.06em;',
+    'display:flex;justify-content:space-between;',
+    'padding:2px 10px;',
+    'font-family:' + T.fh + ';font-size:14px;color:' + T.textPrimary + ';letter-spacing:0.06em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
-  ['ITEM', 'QTY', 'PRICE'].forEach(function(t, i) {
-    var c = document.createElement('div');
-    c.textContent = t;
-    if (i > 0) c.style.textAlign = 'right';
-    _colHead.appendChild(c);
-  });
+  var hdrItem = document.createElement('span');
+  hdrItem.textContent = 'ITEM';
+  var hdrRight = document.createElement('span');
+  hdrRight.textContent = 'QTY    PRICE';
+  hdrRight.style.whiteSpace = 'pre';
+  _colHead.appendChild(hdrItem);
+  _colHead.appendChild(hdrRight);
   el.appendChild(_colHead);
 
   // ── Scrollable items ──
@@ -142,7 +143,7 @@ function _modRow(mod) {
   modRow.style.cssText = [
     'display:grid;grid-template-columns:1fr 68px;gap:0 6px;',
     'padding:0 0 1px 10px;',
-    'font-family:' + T.fb + ';font-size:13px;',
+    'font-family:' + T.fb + ';font-size:16px;',
     'color:' + (mod.charged ? T.mint : T.mutedText) + ';',
   ].join('');
   var modName = document.createElement('div');
@@ -224,7 +225,7 @@ function _renderItems(items) {
 
       // Headers
       var hdrRow = document.createElement('div');
-      hdrRow.style.cssText = 'display:flex;border-bottom:1px solid ' + T.mutedText + ';margin-bottom:1px;font-family:' + T.fb + ';font-size:13px;font-weight:bold;color:' + T.mint + ';';
+      hdrRow.style.cssText = 'display:flex;border-bottom:1px solid ' + T.mutedText + ';margin-bottom:1px;font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + T.mint + ';';
       var hdrL = document.createElement('div');
       hdrL.style.cssText = 'flex:1;text-align:center;';
       hdrL.textContent = '1ST';
@@ -242,17 +243,23 @@ function _renderItems(items) {
       var maxRows = Math.max(leftMods.length, rightMods.length);
       for (var r = 0; r < maxRows; r++) {
         var tr = document.createElement('div');
-        tr.style.cssText = 'display:flex;font-family:' + T.fb + ';font-size:12px;color:' + T.mint + ';';
+        tr.style.cssText = 'display:flex;font-family:' + T.fb + ';font-size:14px;';
         var lMod = leftMods[r];
         var rMod = rightMods[r];
         var tdL = document.createElement('div');
-        tdL.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-        tdL.textContent = lMod ? lMod.name + (lMod.price > 0 ? ' +$' + lMod.price.toFixed(2) : '') : '';
+        tdL.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + T.mint + ';';
+        if (lMod) {
+          tdL.textContent = lMod.name;
+          if (lMod.price > 0) { var lp = document.createElement('span'); lp.style.color = T.gold; lp.textContent = ' +$' + lMod.price.toFixed(2); tdL.appendChild(lp); }
+        }
         var tdSep = document.createElement('div');
         tdSep.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;';
         var tdR = document.createElement('div');
-        tdR.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-        tdR.textContent = rMod ? rMod.name + (rMod.price > 0 ? ' +$' + rMod.price.toFixed(2) : '') : '';
+        tdR.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + T.mint + ';';
+        if (rMod) {
+          tdR.textContent = rMod.name;
+          if (rMod.price > 0) { var rp = document.createElement('span'); rp.style.color = T.gold; rp.textContent = ' +$' + rMod.price.toFixed(2); tdR.appendChild(rp); }
+        }
         tr.appendChild(tdL);
         tr.appendChild(tdSep);
         tr.appendChild(tdR);
