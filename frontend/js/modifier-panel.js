@@ -759,7 +759,15 @@ export function ModifierPanel(container, opts) {
           if (em.prefix === 'EXTRA') hasExtra = true;
         }
       }
-      if (hasAdd && !hasExtra) {
+      // If item is included (not removed), treat as already added → jump to EXTRA
+      var isIncluded = includedItems.some(function(inc) {
+        return inc.label.toLowerCase() === opt.label.toLowerCase() &&
+          activeItem.includedRemovals.indexOf(inc.id) === -1;
+      });
+      if (isIncluded && !hasExtra) {
+        activeOptPrefix = 'EXTRA';
+        _restorePrefix = true;
+      } else if (hasAdd && !hasExtra) {
         activeOptPrefix = 'EXTRA';
         _restorePrefix = true;
       }
