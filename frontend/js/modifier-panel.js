@@ -874,8 +874,10 @@ export function ModifierPanel(container, opts) {
     var mandPrice = 0;
     Object.keys(mands).forEach(function(k) { mandPrice += mands[k].price || 0; });
 
-    // Mandatory selections as modifier lines
+    // Modifier lines: MANDATORY → INCLUDED → OPTIONAL
     var mods = [];
+
+    // Mandatory selections
     mandatoryGroups.forEach(function(g) {
       if (mands[g.key]) {
         mods.push({
@@ -886,6 +888,14 @@ export function ModifierPanel(container, opts) {
         });
       }
     });
+
+    // Included removals
+    activeItem.includedRemovals.forEach(function(rid) {
+      var incl = includedItems.find(function(i) { return i.id === rid; });
+      if (incl) mods.push({ name: 'NO ' + incl.label, price: 0, charged: false, prefix: null });
+    });
+
+    // Optional modifiers
     activeItem.optionalModifiers.forEach(function(m) {
       var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
       var parentMod = {
@@ -895,18 +905,12 @@ export function ModifierPanel(container, opts) {
         prefix: halfSide,
         children: [],
       };
-      // Special exclusions become child mods
       if (m.special && m.exclusions && m.exclusions.length > 0) {
         m.exclusions.forEach(function(ex) {
           parentMod.children.push({ name: 'NO ' + ex, price: 0, charged: false });
         });
       }
       mods.push(parentMod);
-    });
-
-    activeItem.includedRemovals.forEach(function(rid) {
-      var incl = includedItems.find(function(i) { return i.id === rid; });
-      if (incl) mods.push({ name: 'NO ' + incl.label, price: 0, charged: false, prefix: null });
     });
 
     activeItem.allergens.forEach(function(aId) {
