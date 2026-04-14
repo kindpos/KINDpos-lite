@@ -62,7 +62,7 @@ defineScene({
     var clockCenter = document.createElement('div');
     clockCenter.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;';
 
-    var clockPair = buildStyledButton({ label: 'TIMECLOCK', variant: 'gold', size: 'md', onClick: function() {
+    var clockPair = buildStyledButton({ label: 'TIMECLOCK', variant: 'cyan', size: 'md', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
         if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
