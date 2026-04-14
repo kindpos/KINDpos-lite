@@ -922,7 +922,7 @@ async def close_order(
     """Close an order."""
     order = await get_order_or_404(ledger, order_id)
 
-    if order.status in ("closed", "paid"):
+    if order.status == "closed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Order is already closed"
