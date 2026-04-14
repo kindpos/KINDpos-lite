@@ -1471,23 +1471,43 @@ function buildHeatmapCard(state) {
       })(srv.id, srv.name);
       grid.appendChild(nameCell);
 
-      // Hour cells
+      // Hour cells (tappable — same filter as name)
       for (var c = 0; c < visibleIndices.length; c++) {
         var cellIdx = visibleIndices[c];
         var count = srv.cells[cellIdx] || 0;
         var tier = heatmapTier(count);
         var cell = document.createElement('div');
-        cell.style.cssText = 'min-height:22px;display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:14px;font-weight:bold;color:' + tier.color + ';background:' + tier.fill + ';';
+        cell.style.cssText = 'min-height:22px;display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:14px;font-weight:bold;color:' + tier.color + ';background:' + tier.fill + ';cursor:pointer;';
         if (tier.border !== 'none') cell.style.border = tier.border;
         if (cellIdx === curHour) cell.style.borderLeft = '2px solid ' + T.lime;
         if (count > 0) cell.textContent = String(count);
+        (function(serverId, serverName) {
+          cell.addEventListener('pointerup', function(e) {
+            e.stopPropagation();
+            state.filteredServerId = state.filteredServerId === serverId ? null : serverId;
+            state.filteredServerName = state.filteredServerId ? serverName : null;
+            state.selected = {};
+            renderCheckGrid(state);
+            renderOpsPanel(state);
+          });
+        })(srv.id, srv.name);
         grid.appendChild(cell);
       }
 
-      // Live count
+      // Live count (tappable — same filter as name)
       var liveCell = document.createElement('div');
-      liveCell.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + sColor + ';text-align:right;padding:3px 4px;';
+      liveCell.style.cssText = 'font-family:' + T.fb + ';font-size:16px;font-weight:bold;color:' + sColor + ';text-align:right;padding:3px 4px;cursor:pointer;';
       liveCell.textContent = String(srv.live_tables);
+      (function(serverId, serverName) {
+        liveCell.addEventListener('pointerup', function(e) {
+          e.stopPropagation();
+          state.filteredServerId = state.filteredServerId === serverId ? null : serverId;
+          state.filteredServerName = state.filteredServerId ? serverName : null;
+          state.selected = {};
+          renderCheckGrid(state);
+          renderOpsPanel(state);
+        });
+      })(srv.id, srv.name);
       grid.appendChild(liveCell);
     }
 
