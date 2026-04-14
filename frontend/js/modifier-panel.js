@@ -192,25 +192,37 @@ export function ModifierPanel(container, opts) {
       if (!s.wrap || !s.card) continue;
       var isExpanded = expandedSection === s.key;
       s.card._hdrArrow.textContent = isExpanded ? '\u25B2' : '\u25BC';
-      s.card._content.style.display = isExpanded ? '' : 'none';
-      if (s.key === 'optional' && prefixBarEl) {
-        prefixBarEl.style.display = isExpanded ? '' : 'none';
-      }
-      // Optional section needs overflow:visible for floating prefix bar
-      var needsVisible = s.key === 'optional' && prefixBarEl;
+      // Always show content — collapsed sections show preview, expanded scroll
+      s.card._content.style.display = '';
       if (isExpanded) {
-        s.wrap.style.flex = '1 1 auto';
+        // Expanded: takes remaining space, scrolls
+        s.wrap.style.flex = '1 1 0';
         s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = needsVisible ? 'visible' : 'auto';
+        s.wrap.style.overflow = 'hidden';
+        s.card._content.style.overflowY = 'auto';
       } else if (hasExpanded) {
+        // Collapsed while another is expanded: header + compact preview
         s.wrap.style.flex = '0 0 auto';
         s.wrap.style.minHeight = '';
-        s.wrap.style.overflow = needsVisible ? 'visible' : '';
+        s.wrap.style.overflow = 'hidden';
+        s.card._content.style.overflowY = 'hidden';
+        s.card._content.style.maxHeight = '40px';
       } else {
-        s.wrap.style.flex = '1 1 auto';
+        // All collapsed: equal height, show content
+        s.wrap.style.flex = '1';
         s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = needsVisible ? 'visible' : 'auto';
+        s.wrap.style.overflow = 'hidden';
+        s.card._content.style.overflowY = 'auto';
+        s.card._content.style.maxHeight = '';
       }
+      // Reset maxHeight for expanded
+      if (isExpanded) {
+        s.card._content.style.maxHeight = '';
+      }
+    }
+    // Prefix bar always visible when optional groups exist
+    if (prefixBarEl) {
+      prefixBarEl.style.display = '';
     }
   }
 
@@ -278,26 +290,26 @@ export function ModifierPanel(container, opts) {
       var optPair = _buildSection('Optional:', 'optional');
       optionalSectionEl = optPair.wrap;
       optionalContentEl = optPair.card._content;
-
-      // Floating prefix bar — half on / half off the left edge
-      optPair.wrap.style.position = 'relative';
-      optPair.wrap.style.overflow = 'visible';
-      prefixBarEl = document.createElement('div');
-      prefixBarEl.style.cssText = [
-        'position:absolute;left:-4px;top:30px;',
-        'display:flex;flex-direction:column;gap:4px;z-index:2;',
-        'transform:translateX(-50%);',
-      ].join('');
-      optPair.wrap.appendChild(prefixBarEl);
       sectionsArea.appendChild(optPair.wrap);
     }
 
     card.appendChild(sectionsArea);
 
-    // ── Placement bar (above action buttons) ──
+    // ── Prefix bar (horizontal, above placement bar) ──
+    if (optionalGroups.length > 0) {
+      prefixBarEl = document.createElement('div');
+      prefixBarEl.style.cssText = [
+        'flex-shrink:0;display:flex;gap:4px;',
+        'padding:2px 4px;',
+        'background:' + T.bgDark + ';',
+      ].join('');
+      card.appendChild(prefixBarEl);
+    }
+
+    // ── Placement bar (compact, above action buttons) ──
     placementBarEl = document.createElement('div');
     placementBarEl.style.cssText = [
-      'flex-shrink:0;padding:2px 4px;',
+      'flex-shrink:0;padding:1px 4px;',
       'background:' + T.bgDark + ';',
     ].join('');
     card.appendChild(placementBarEl);
@@ -447,7 +459,7 @@ export function ModifierPanel(container, opts) {
 
     var placeWrap = buildStyledButton({ variant: 'dark' });
     placeWrap.wrap.style.width = '100%';
-    placeWrap.inner.style.height = '24px';
+    placeWrap.inner.style.height = '18px';
     placeWrap.inner.style.display = 'flex';
     placeWrap.inner.style.alignItems = 'stretch';
     placeWrap.inner.style.justifyContent = 'stretch';
@@ -496,7 +508,7 @@ export function ModifierPanel(container, opts) {
     });
   }
 
-  // ═══ PREFIX BAR (floating vertically on left card edge) ═══
+  // ═══ PREFIX BAR (horizontal row above placement bar) ═══
   function renderPrefixBar() {
     if (!prefixBarEl) return;
     prefixBarEl.innerHTML = '';
@@ -505,12 +517,11 @@ export function ModifierPanel(container, opts) {
       var isActive = activeOptPrefix === pfx.id;
       var v = isActive ? pfx.variant : 'dark';
       var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
-      pair.inner.style.fontSize = '10px';
+      pair.wrap.style.flex = '1';
+      pair.wrap.style.minWidth = '0';
+      pair.inner.style.fontSize = '11px';
       pair.inner.style.letterSpacing = '1px';
-      pair.inner.style.padding = '3px 6px';
-      pair.inner.style.textAlign = 'center';
-      pair.wrap.style.outline = '2px solid ' + T.numpadChassis;
-      pair.wrap.style.outlineOffset = '-1px';
+      pair.inner.style.padding = '2px 4px';
 
       pair.wrap.addEventListener('pointerup', function(e) {
         e.stopPropagation();
