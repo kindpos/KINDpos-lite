@@ -393,7 +393,7 @@ function wireHeatmap(state, staffResult, orders) {
     var openCount = sOrders.filter(function(o) { return o.status === 'open'; }).length;
     var cells = [];
     for (var h = 0; h < hours.length; h++) cells.push(0);
-    if (curIdx >= 0 && curIdx < cells.length) cells[curIdx] = sOrders.length;
+    if (curIdx >= 0 && curIdx < cells.length) cells[curIdx] = openCount;
     return { id: s.employee_id, name: s.employee_name || s.name || '', live_tables: openCount, cells: cells };
   });
 
