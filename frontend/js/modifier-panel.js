@@ -889,14 +889,14 @@ export function ModifierPanel(container, opts) {
       }
     });
 
-    // Included removals
-    activeItem.includedRemovals.forEach(function(rid) {
+    // Included removals (removable)
+    activeItem.includedRemovals.forEach(function(rid, idx) {
       var incl = includedItems.find(function(i) { return i.id === rid; });
-      if (incl) mods.push({ name: 'NO ' + incl.label, price: 0, charged: false, prefix: null });
+      if (incl) mods.push({ name: 'NO ' + incl.label, price: 0, charged: false, prefix: null, _source: 'included', _idx: idx });
     });
 
-    // Optional modifiers
-    activeItem.optionalModifiers.forEach(function(m) {
+    // Optional modifiers (removable)
+    activeItem.optionalModifiers.forEach(function(m, idx) {
       var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
       var parentMod = {
         name: m.prefix + ' ' + m.label,
@@ -904,6 +904,8 @@ export function ModifierPanel(container, opts) {
         charged: m.prefix !== 'NO' && m.price > 0,
         prefix: halfSide,
         children: [],
+        _source: 'optional',
+        _idx: idx,
       };
       if (m.special && m.exclusions && m.exclusions.length > 0) {
         m.exclusions.forEach(function(ex) {
@@ -913,15 +915,15 @@ export function ModifierPanel(container, opts) {
       mods.push(parentMod);
     });
 
-    activeItem.allergens.forEach(function(aId) {
+    activeItem.allergens.forEach(function(aId, idx) {
       var a = ALLERGENS.find(function(x) { return x.id === aId; });
-      if (a) mods.push({ name: '\u26A0 ALLERGEN: ' + a.label, price: 0, charged: false, prefix: null });
+      if (a) mods.push({ name: '\u26A0 ALLERGEN: ' + a.label, price: 0, charged: false, prefix: null, _source: 'allergen', _idx: idx });
     });
     if (activeItem.allergenNote) {
-      mods.push({ name: '\u26A0 ALLERGEN: ' + activeItem.allergenNote, price: 0, charged: false, prefix: null });
+      mods.push({ name: '\u26A0 ALLERGEN: ' + activeItem.allergenNote, price: 0, charged: false, prefix: null, _source: 'allergenNote' });
     }
     if (activeItem.note) {
-      mods.push({ name: '\uD83D\uDCDD ' + activeItem.note, price: 0, charged: false, prefix: null });
+      mods.push({ name: '\uD83D\uDCDD ' + activeItem.note, price: 0, charged: false, prefix: null, _source: 'note' });
     }
 
     return {
@@ -933,6 +935,24 @@ export function ModifierPanel(container, opts) {
   }
 
   // ═══ PUBLIC API ═══
+  self.removeMod = function(source, idx) {
+    if (source === 'included') {
+      activeItem.includedRemovals.splice(idx, 1);
+    } else if (source === 'optional') {
+      activeItem.optionalModifiers.splice(idx, 1);
+    } else if (source === 'allergen') {
+      activeItem.allergens.splice(idx, 1);
+    } else if (source === 'allergenNote') {
+      activeItem.allergenNote = '';
+    } else if (source === 'note') {
+      activeItem.note = '';
+    }
+    fireUpdate();
+    renderAll();
+    _refreshNoteBtn();
+    _refreshAlrgBtn();
+  };
+
   self.destroy = function() {
     if (rootEl && rootEl.parentNode) rootEl.parentNode.removeChild(rootEl);
     rootEl = null;

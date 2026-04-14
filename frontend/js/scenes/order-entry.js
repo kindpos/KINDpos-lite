@@ -1900,11 +1900,13 @@ function _renderTicketGroup(list, displayTicket) {
     if (pWhole.length > 0) {
       previewCard.appendChild(buildSeparator());
       pWhole.forEach(function(m) {
-        previewCard.appendChild(buildModRowSized(m.name, m.price, '18px'));
-        // Child mods (special exclusions) — indented
+        var removeFn = (m._source && _modPanel) ? (function(src, idx) {
+          return function() { _modPanel.removeMod(src, idx); };
+        })(m._source, m._idx) : null;
+        previewCard.appendChild(buildModRowSized(m.name, m.price, '20px', removeFn));
         if (m.children && m.children.length > 0) {
           m.children.forEach(function(child) {
-            var childRow = buildModRowSized(child.name, child.price, '15px');
+            var childRow = buildModRowSized(child.name, child.price, '16px');
             childRow.style.paddingLeft = '32px';
             childRow.style.color = T.red;
             childRow.style.fontStyle = 'italic';
@@ -1915,7 +1917,7 @@ function _renderTicketGroup(list, displayTicket) {
     }
 
     if (pLeft.length > 0 || pRight.length > 0) {
-      previewCard.appendChild(buildHalfTable(pLeft, pRight, '18px'));
+      previewCard.appendChild(buildHalfTable(pLeft, pRight, '20px'));
     }
 
     list.appendChild(previewCard);
