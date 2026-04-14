@@ -96,9 +96,10 @@ function _build() {
   ].join('');
   var hdrItem = document.createElement('span');
   hdrItem.textContent = 'ITEM';
+  hdrItem.style.cssText = 'min-width:0;overflow:hidden;';
   var hdrRight = document.createElement('span');
   hdrRight.textContent = 'QTY    PRICE';
-  hdrRight.style.whiteSpace = 'pre';
+  hdrRight.style.cssText = 'white-space:nowrap;flex-shrink:0;text-align:right;';
   _colHead.appendChild(hdrItem);
   _colHead.appendChild(hdrRight);
   el.appendChild(_colHead);

@@ -540,11 +540,11 @@ export function ModifierPanel(container, opts) {
       var tile = document.createElement('div');
       tile.style.cssText = [
         'background:' + T.bgDark + ';',
-        'border:3px solid ' + catColor + ';',
         'padding:10px 8px;',
         'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
         'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
       ].join('');
+      applyCardBevel(tile, catColor, 5);
       tile.style.clipPath = chamfer(8);
 
       // Group label (always visible at top of tile)
