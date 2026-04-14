@@ -1526,48 +1526,52 @@ function renderTicket() {
       var seatTicket = seatItems[sn];
       _renderTicketGroup(list, seatTicket);
     }
+    _appendModPreview(list);
     _updateTicketTotals();
     return;
   }
 
   _renderTicketGroup(list, displayTicket);
+  _appendModPreview(list);
+  _updateTicketTotals();
+}
 
-  // Show live preview of item being edited in modifier panel
-  if (_modPanelItem) {
-    var previewMods = (_modPanelItem.mods || []);
-    var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
-    var previewPrice = _modPanelItem.basePrice + previewModTotal;
+function _appendModPreview(list) {
+  if (!_modPanelItem) return;
+  var previewMods = (_modPanelItem.mods || []);
+  var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
+  var previewPrice = _modPanelItem.basePrice + previewModTotal;
 
-    var pc = document.createElement('div');
-    pc.style.cssText = 'flex-shrink:0;margin-bottom:2px;background:' + T.bg3 + ';border-left:3px solid ' + T.gold + ';';
-    _applyCardBevel(pc);
+  var pc = document.createElement('div');
+  pc.style.cssText = 'flex-shrink:0;margin-bottom:2px;background:' + T.bg3 + ';border-left:3px solid ' + T.gold + ';';
+  _applyCardBevel(pc);
 
-    var pRow = document.createElement('div');
-    pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
-    var pName = document.createElement('span');
-    pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
-    pName.textContent = '\u270E ' + _modPanelItem.itemLabel;
-    var pPrice = document.createElement('span');
-    pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
-    pPrice.textContent = '$' + previewPrice.toFixed(2);
-    pRow.appendChild(pName);
-    pRow.appendChild(pPrice);
-    pc.appendChild(pRow);
+  var pRow = document.createElement('div');
+  pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
+  var pName = document.createElement('span');
+  pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+  pName.textContent = '\u270E ' + _modPanelItem.itemLabel;
+  var pPrice = document.createElement('span');
+  pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
+  pPrice.textContent = '$' + previewPrice.toFixed(2);
+  pRow.appendChild(pName);
+  pRow.appendChild(pPrice);
+  pc.appendChild(pRow);
 
-    // Show mods with remove buttons
-    previewMods.forEach(function(m) {
-      var removeHandler = function() {
+  previewMods.forEach(function(m) {
+    var removeHandler = function() {
+      if (_modPanel && m._source != null) {
+        _modPanel.removeMod(m._source, m._idx);
+      } else {
         var mi = _modPanelItem.mods.indexOf(m);
         if (mi !== -1) _modPanelItem.mods.splice(mi, 1);
-        renderTicket();
-      };
-      pc.appendChild(buildModRowSized(m.name, m.price, T.fsMod || '24px', removeHandler));
-    });
+      }
+      renderTicket();
+    };
+    pc.appendChild(buildModRowSized(m.name, m.price, T.fsMod || '24px', removeHandler));
+  });
 
-    list.appendChild(pc);
-  }
-
-  _updateTicketTotals();
+  list.appendChild(pc);
 }
 
 function _updateTicketTotals() {
