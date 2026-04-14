@@ -591,6 +591,66 @@ function rebuildBottomBar() {
 
   var hasUnsent = ticket.some(function(i) { return !i.sent; });
 
+  // ── Active modifier session: CANCEL / UNDO / DONE ──
+  if (modifierSession.active) {
+    var cancelBtn = buildButton('CANCEL', { fill: T.darkBtn, color: T.red, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() { cancelSession(); },
+    });
+    var undoBtn = buildButton('UNDO', { fill: T.darkBtn, color: T.gold, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() {
+        if (modifierSession.appliedMods.length === 0) return;
+        var last = modifierSession.appliedMods.pop();
+        last.modRefs.forEach(function(ref) {
+          var idx = ref.inst.mods.indexOf(ref.mod);
+          if (idx !== -1) ref.inst.mods.splice(idx, 1);
+        });
+        renderTicket();
+        refreshModifierPanel();
+      },
+    });
+    var doneBtn = buildButton('DONE', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() { finalizeSession(); },
+    });
+    cancelBtn.style.gridColumn = '1 / 2'; cancelBtn.style.gridRow = '1'; cancelBtn.style.height = '100%';
+    undoBtn.style.gridColumn = '2 / 4'; undoBtn.style.gridRow = '1'; undoBtn.style.height = '100%';
+    doneBtn.style.gridColumn = '4 / 6'; doneBtn.style.gridRow = '1'; doneBtn.style.height = '100%';
+    _bottomBar.appendChild(cancelBtn);
+    _bottomBar.appendChild(undoBtn);
+    _bottomBar.appendChild(doneBtn);
+    return;
+  }
+
+  // ── Items selected (not in session): DESELECT / MODIFY / SEND ──
+  var hasSelected = modifierSession.selectedItems.length > 0;
+  if (hasSelected) {
+    var deselectBtn = buildButton('DESELECT', { fill: T.darkBtn, color: T.dimText, fontSize: '22px', fontFamily: T.fh,
+      onTap: function() { clearModifierSelection(); },
+    });
+    var modifyBtn = buildButton('MODIFY', { fill: T.darkBtn, color: T.gold, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() { openModifierSession(); },
+    });
+    modifyBtn.style.outline = '3px solid ' + T.gold;
+    modifyBtn.style.outlineOffset = '-1px';
+    var sendBtn2 = buildButton('SEND', { fill: T.darkBtn, color: T.mint, fontSize: '26px', fontFamily: T.fh,
+      onTap: function() {
+        clearModifierSelection();
+        if (!hasUnsent) { handleClose(); return; }
+        assignSeatsIfNeeded(async function() {
+          try { await handleSend(); } catch (e) { return; }
+          handleClose();
+        });
+      },
+    });
+    deselectBtn.style.gridColumn = '1 / 2'; deselectBtn.style.gridRow = '1'; deselectBtn.style.height = '100%';
+    modifyBtn.style.gridColumn = '2 / 4'; modifyBtn.style.gridRow = '1'; modifyBtn.style.height = '100%';
+    sendBtn2.style.gridColumn = '4 / 6'; sendBtn2.style.gridRow = '1'; sendBtn2.style.height = '100%';
+    _bottomBar.appendChild(deselectBtn);
+    _bottomBar.appendChild(modifyBtn);
+    _bottomBar.appendChild(sendBtn2);
+    return;
+  }
+
+  // ── Default: FINALIZE / SEND ──
   var finalizeBtn = buildButton('FINALIZE', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
     onTap: function() {
       if (!hasUnsent) { handleClose(); return; }
@@ -853,6 +913,11 @@ function applyModifier(mod) {
   var modName = prefix.label + ' ' + mod.label;
   var modRefs = [];
 
+  // Determine price based on prefix: ADD/EXTRA use modifier price, others are free
+  var chargesPrice = prefix.id === 'add' || prefix.id === 'extra';
+  var modPrice = chargesPrice ? (mod.price || 0) : 0;
+  var charged = chargesPrice && modPrice > 0;
+
   modifierSession.selectedItems.forEach(function(id) {
     var inst = ticket.find(function(i) { return i.id === id; });
     if (!inst) return;
@@ -861,12 +926,12 @@ function applyModifier(mod) {
     if (isPizza && placement === 'left') halfSide = 'Left';
     else if (isPizza && placement === 'right') halfSide = 'Right';
 
-    var modObj = { name: modName, price: 0, charged: false, prefix: halfSide };
+    var modObj = { name: modName, price: modPrice, charged: charged, prefix: halfSide };
     inst.mods.push(modObj);
     modRefs.push({ inst: inst, mod: modObj });
   });
 
-  var logLabel = modName;
+  var logLabel = modName + (charged ? ' +$' + modPrice.toFixed(2) : '');
   modifierSession.appliedMods.push({
     prefixId: prefix.id,
     prefixLabel: prefix.label,
@@ -1205,7 +1270,7 @@ function commitModifierPanelItem(originalItem, activeItem) {
     id:        ++ticketSeq,
     idemKey:   _idemKey(),
     name:      activeItem.itemLabel,
-    unitPrice: activeItem.basePrice + mandPrice,
+    unitPrice: activeItem.basePrice,
     mods:      mods,
     selected:  false,
     sent:      false,
@@ -1657,15 +1722,21 @@ function _renderTicketGroup(list, displayTicket) {
         clearTimeout(_qtyHoldTimer);
       });
 
-      list.appendChild(_wrapSwipeDelete(gc, function() {
-        // Remove all instances of this item group
-        instances.forEach(function(inst) {
-          var idx = ticket.indexOf(inst);
-          if (idx !== -1) ticket.splice(idx, 1);
-        });
-        renderTicket();
-        rebuildBottomBar();
-      }));
+      var anyUnsent = instances.some(function(i) { return !i.sent; });
+      if (anyUnsent) {
+        list.appendChild(_wrapSwipeDelete(gc, function() {
+          // Remove unsent instances of this item group
+          instances.forEach(function(inst) {
+            if (inst.sent) return; // don't remove sent items
+            var idx = ticket.indexOf(inst);
+            if (idx !== -1) ticket.splice(idx, 1);
+          });
+          renderTicket();
+          rebuildBottomBar();
+        }));
+      } else {
+        list.appendChild(gc);
+      }
 
     } else {
       // ── Individual instance cards ─────────────────
@@ -1722,13 +1793,21 @@ function _renderTicketGroup(list, displayTicket) {
           if (wholeMods.length > 0) {
             ic.appendChild(buildSeparator());
             wholeMods.forEach(function(m) {
-              ic.appendChild(buildModRowSized(m.name, m.price, fsMod));
+              var removeHandler = (!inst.sent) ? (function(theInst, theMod) {
+                return function() {
+                  var mi = theInst.mods.indexOf(theMod);
+                  if (mi !== -1) theInst.mods.splice(mi, 1);
+                  renderTicket();
+                  rebuildBottomBar();
+                };
+              })(inst, m) : null;
+              ic.appendChild(buildModRowSized(m.name, m.price, fsMod, removeHandler));
             });
           }
 
           // Render L/R as a two-column table
           if (hasHalf) {
-            ic.appendChild(buildHalfTable(leftMods, rightMods, fsMod));
+            ic.appendChild(buildHalfTable(leftMods, rightMods, fsMod, inst.sent ? null : inst));
           }
         }
 
@@ -1747,14 +1826,18 @@ function _renderTicketGroup(list, displayTicket) {
           rebuildBottomBar();
         });
 
-        list.appendChild(_wrapSwipeDelete(ic, (function(instance) {
-          return function() {
-            var idx = ticket.indexOf(instance);
-            if (idx !== -1) ticket.splice(idx, 1);
-            renderTicket();
-            rebuildBottomBar();
-          };
-        })(inst)));
+        if (!inst.sent) {
+          list.appendChild(_wrapSwipeDelete(ic, (function(instance) {
+            return function() {
+              var idx = ticket.indexOf(instance);
+              if (idx !== -1) ticket.splice(idx, 1);
+              renderTicket();
+              rebuildBottomBar();
+            };
+          })(inst)));
+        } else {
+          list.appendChild(ic);
+        }
       });
     }
   });
@@ -1845,24 +1928,42 @@ function buildModRow(name, price, dark, showPrice) {
   return row;
 }
 
-function buildModRowSized(name, price, fontSize) {
+function buildModRowSized(name, price, fontSize, onRemove) {
   var row = document.createElement('div');
   row.style.cssText = [
-    'display:flex;justify-content:space-between;',
+    'display:flex;align-items:center;',
     'padding:1px 8px 1px 16px;',
     'font-family:' + T.fb + ';font-size:' + fontSize + ';font-weight:bold;',
     'color:' + T.gold + ';',
   ].join('');
+  // Remove button (shown for unsent items)
+  if (onRemove) {
+    var x = document.createElement('span');
+    x.style.cssText = [
+      'flex-shrink:0;width:22px;height:22px;margin-right:4px;',
+      'display:flex;align-items:center;justify-content:center;',
+      'font-size:14px;color:' + T.red + ';cursor:pointer;',
+      'border:1px solid ' + T.red + ';border-radius:3px;',
+    ].join('');
+    x.textContent = '\u2715';
+    x.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      onRemove();
+    });
+    row.appendChild(x);
+  }
   var n = document.createElement('span');
+  n.style.cssText = 'flex:1;';
   n.textContent = name;
   var p = document.createElement('span');
+  p.style.cssText = 'flex-shrink:0;';
   p.textContent = price > 0 ? '+$' + price.toFixed(2) : '';
   row.appendChild(n);
   if (price > 0) row.appendChild(p);
   return row;
 }
 
-function buildHalfTable(leftMods, rightMods, fontSize) {
+function buildHalfTable(leftMods, rightMods, fontSize, removableInst) {
   var table = document.createElement('div');
   table.style.cssText = 'padding:2px 8px;';
 
@@ -1882,23 +1983,47 @@ function buildHalfTable(leftMods, rightMods, fontSize) {
   divTop.appendChild(hdrR);
   table.appendChild(divTop);
 
+  function _makeRemoveBtn(mod) {
+    var x = document.createElement('span');
+    x.style.cssText = [
+      'flex-shrink:0;width:18px;height:18px;margin:0 2px;',
+      'display:inline-flex;align-items:center;justify-content:center;',
+      'font-size:11px;color:' + T.red + ';cursor:pointer;',
+      'border:1px solid ' + T.red + ';border-radius:3px;',
+    ].join('');
+    x.textContent = '\u2715';
+    x.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      var mi = removableInst.mods.indexOf(mod);
+      if (mi !== -1) removableInst.mods.splice(mi, 1);
+      renderTicket();
+      rebuildBottomBar();
+    });
+    return x;
+  }
+
   // Rows — zip left and right
   var maxRows = Math.max(leftMods.length, rightMods.length);
   for (var i = 0; i < maxRows; i++) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;';
+    row.style.cssText = 'display:flex;align-items:center;';
 
     var cellL = document.createElement('div');
-    cellL.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + T.mint + ';padding:0 4px;';
-    // Strip (L)/(R) and prefix from display name for cleaner table
-    cellL.textContent = leftMods[i] ? stripPlacementPrefix(leftMods[i].name) : '';
+    cellL.style.cssText = 'flex:1;display:flex;align-items:center;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + T.mint + ';padding:0 4px;';
+    if (removableInst && leftMods[i]) cellL.appendChild(_makeRemoveBtn(leftMods[i]));
+    var lText = document.createElement('span');
+    lText.textContent = leftMods[i] ? stripPlacementPrefix(leftMods[i].name) : '';
+    cellL.appendChild(lText);
 
     var sep = document.createElement('div');
     sep.style.cssText = 'width:1px;background:' + T.mintEdgeD + ';margin:0 4px;';
 
     var cellR = document.createElement('div');
-    cellR.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + T.mint + ';padding:0 4px;text-align:right;';
-    cellR.textContent = rightMods[i] ? stripPlacementPrefix(rightMods[i].name) : '';
+    cellR.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:flex-end;font-family:' + T.fb + ';font-size:' + fontSize + ';color:' + T.mint + ';padding:0 4px;';
+    var rText = document.createElement('span');
+    rText.textContent = rightMods[i] ? stripPlacementPrefix(rightMods[i].name) : '';
+    cellR.appendChild(rText);
+    if (removableInst && rightMods[i]) cellR.appendChild(_makeRemoveBtn(rightMods[i]));
 
     row.appendChild(cellL);
     row.appendChild(sep);

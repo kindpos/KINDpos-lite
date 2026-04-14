@@ -964,7 +964,7 @@ export function ModifierPanel(container, opts) {
 
     return {
       itemLabel: activeItem.itemLabel,
-      basePrice: activeItem.basePrice + mandPrice,
+      basePrice: activeItem.basePrice,
       mods: mods,
       activeItem: activeItem,
     };
