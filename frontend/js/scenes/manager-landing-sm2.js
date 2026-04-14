@@ -393,7 +393,7 @@ function wireHeatmap(state, staffResult, orders) {
     var openCount = sOrders.filter(function(o) { return o.status === 'open'; }).length;
     var cells = [];
     for (var h = 0; h < hours.length; h++) cells.push(0);
-    if (curIdx >= 0 && curIdx < cells.length) cells[curIdx] = sOrders.length;
+    if (curIdx >= 0 && curIdx < cells.length) cells[curIdx] = openCount;
     return { id: s.employee_id, name: s.employee_name || s.name || '', live_tables: openCount, cells: cells };
   });
 
@@ -1455,10 +1455,20 @@ function buildHeatmapCard(state) {
       var srv = active[s];
       var sColor = srvColor(state.serverColorMap, srv.id);
 
-      // Name cell
+      // Name cell (tappable — filters check grid to this server)
       var nameCell = document.createElement('div');
-      nameCell.style.cssText = 'font-family:' + T.fh + ';font-size:14px;font-weight:bold;color:' + sColor + ';padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;';
+      nameCell.style.cssText = 'font-family:' + T.fh + ';font-size:14px;font-weight:bold;color:' + sColor + ';padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;cursor:pointer;';
       nameCell.textContent = srv.name;
+      (function(serverId, serverName) {
+        nameCell.addEventListener('pointerup', function(e) {
+          e.stopPropagation();
+          state.filteredServerId = state.filteredServerId === serverId ? null : serverId;
+          state.filteredServerName = state.filteredServerId ? serverName : null;
+          state.selected = {};
+          renderCheckGrid(state);
+          renderOpsPanel(state);
+        });
+      })(srv.id, srv.name);
       grid.appendChild(nameCell);
 
       // Hour cells
@@ -1653,7 +1663,9 @@ function buildCheckGridCard(state) {
 
 function ordersByTab(state) {
   var tab = state.activeTab;
+  var sid = state.filteredServerId;
   return (state.allOrders || []).filter(function(o) {
+    if (sid && o.server_id !== sid) return false;
     if (tab === 'open') return o.status === 'open';
     if (tab === 'closed') return o.status === 'closed' || o.status === 'paid';
     if (tab === 'void') return o.status === 'voided';
@@ -1669,6 +1681,31 @@ function renderCheckGrid(state) {
   }
   state._holdTimers = [];
   state.centerGrid.innerHTML = '';
+
+  // Filter banner when viewing a single server's checks
+  if (state.filteredServerId && state.filteredServerName) {
+    var filterColor = srvColor(state.serverColorMap, state.filteredServerId);
+    var banner = document.createElement('div');
+    banner.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:' + T.bg + ';border:1px solid ' + filterColor + ';margin-bottom:4px;';
+    var label = document.createElement('span');
+    label.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + filterColor + ';font-weight:bold;';
+    label.textContent = state.filteredServerName;
+    var clearBtn = document.createElement('span');
+    clearBtn.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mutedText + ';cursor:pointer;padding:0 4px;';
+    clearBtn.textContent = '\u2715 CLEAR';
+    clearBtn.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      state.filteredServerId = null;
+      state.filteredServerName = null;
+      state.selected = {};
+      renderCheckGrid(state);
+      renderOpsPanel(state);
+    });
+    banner.appendChild(label);
+    banner.appendChild(clearBtn);
+    state.centerGrid.appendChild(banner);
+  }
+
   var orders = ordersByTab(state);
   var isOpen = state.activeTab === 'open';
   var isClosed = state.activeTab === 'closed';
