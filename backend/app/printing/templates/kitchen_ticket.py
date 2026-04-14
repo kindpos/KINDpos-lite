@@ -1,20 +1,42 @@
 """
-KINDpos Kitchen Ticket Template — Five-Zone Model v1.1
+KINDpos Kitchen Ticket Template — Five-Zone Model v2.0
 
-Implements the complete kitchen ticket spec:
-  Zone 1: Header Block  — Check #, Order Type, Table/Name, Time  (double-height/width)
-  Zone 2: Context Line   — Server, Seats, Order Source             (normal bold)
-  Zone 3: Item Block     — Items, quantities, modifiers, alerts    (normal weight)
-  Zone 4: Alert Block    — Allergy summary strip, RUSH, VIP flags  (inverted / red)
-  Zone 5: Footer         — Terminal ID, Ticket X of Y, type label  (small font)
+Hardware: Epson TM-U220 — 9-pin dot matrix, 76mm paper, 33 chars/line
+Uses ESC ! only (GS ! silently ignored on this printer).
+
+Zones:
+  Zone 1: Header   — Check #, Order Type Code, Time         (LARGE_BOLD / WIDE)
+  Zone 2: Context  — Server, Seats                           (BOLD)
+  Zone 3: Items    — Per-seat items, modifiers, half/half    (WIDE_BOLD / NORMAL)
+  Zone 4: Alerts   — Allergy, RUSH, VIP                     (existing, correct)
+  Zone 5: Footer   — Terminal, ticket x of y, type           (FONT_B)
 
 Ticket types: ORIGINAL, REPRINT, VOID, REFIRE
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 from collections import Counter
 from .base_template import BaseTemplate
 from .half_placement_utils import has_half_modifiers, get_half_modifiers
+
+# ── Sizing constants (TM-U220 @ 33 cpl) ──────────────────────────────
+KITCHEN_CPL = 33
+WIDE_MAX    = KITCHEN_CPL // 2         # 16 — max chars at 2x wide
+BOX_COL_W   = (KITCHEN_CPL - 3) // 2   # 15 — pizza box column width
+
+# ── Order type display mapping ────────────────────────────────────────
+ORDER_TYPE_DISPLAY = {
+    'c': 'C', 'dine_in': 'C',
+    'qs': 'QS', 'quick_service': 'QS',
+    'tg': 'TG', 'to_go': 'TG', 'togo': 'TG', 'takeout': 'TG',
+    'dl': 'DL', 'delivery': 'DL',
+}
+
+
+def flush_sequence() -> bytes:
+    """Prepend before INIT to clear stale bytes from previous job."""
+    from backend.app.printing.escpos_formatter import CUT_FULL
+    return b'\x0a' * 4 + CUT_FULL
 
 
 class KitchenTicketTemplate(BaseTemplate):
@@ -24,6 +46,12 @@ class KitchenTicketTemplate(BaseTemplate):
     REPRINT = "REPRINT"
     VOID = "VOID"
     REFIRE = "REFIRE"
+
+    def __init__(self, paper_width: int = 80, chars_per_line: int = None):
+        super().__init__(
+            paper_width=paper_width,
+            chars_per_line=chars_per_line if chars_per_line is not None else KITCHEN_CPL,
+        )
 
     def render(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         commands = super().render(context)
@@ -61,14 +89,13 @@ class KitchenTicketTemplate(BaseTemplate):
         return commands
 
     # ------------------------------------------------------------------
-    # Zone 1 — Header Block (readable from 3-4 feet)
+    # Zone 1 — Header Block
     # ------------------------------------------------------------------
 
     def _render_zone1(self, ctx: Dict, ticket_type: str, supports_red: bool) -> List[Dict]:
         cmds: List[Dict] = []
-        divider = {'type': 'divider', 'char': '='}
 
-        # Line 1 — Check number (largest element)
+        # Line 1 — Check number (LARGE_BOLD = 2x2 + bold)
         check = ctx.get('check_number') or ctx.get('ticket_number', 'N/A')
         cmds.append({
             'type': 'text', 'content': str(check),
@@ -93,90 +120,32 @@ class KitchenTicketTemplate(BaseTemplate):
                 'bold': True, 'align': 'center', 'red': supports_red,
             })
 
-        # Line 2 — Table/Destination (big) + Order Type (normal, separate line)
+        # Line 2 — Order Type Code (LARGE_BOLD = 2x2 + bold)
         order_type = (ctx.get('order_type') or 'dine_in').lower().replace('-', '_')
-        customer_name = ctx.get('customer_name', '')
-        table = ctx.get('table')
+        order_type_code = ORDER_TYPE_DISPLAY.get(order_type, order_type.upper())
+        cmds.append({
+            'type': 'text', 'content': order_type_code,
+            'bold': True, 'double_width': True, 'double_height': True, 'align': 'center',
+        })
 
-        if order_type == 'dine_in':
-            if table:
-                cmds.append({
-                    'type': 'text', 'content': f"TABLE {table}",
-                    'bold': True, 'double_width': True, 'align': 'center',
-                })
-            cmds.append({
-                'type': 'text', 'content': 'DINE IN',
-                'bold': True, 'align': 'center',
-            })
-        elif order_type in ('to_go', 'togo', 'takeout'):
-            cmds.append({
-                'type': 'text', 'content': 'TOGO',
-                'bold': True, 'double_width': True, 'align': 'center',
-            })
-            if customer_name:
-                cmds.append({
-                    'type': 'text', 'content': customer_name,
-                    'bold': True, 'align': 'center',
-                })
-        elif order_type == 'delivery':
-            cmds.append({
-                'type': 'text', 'content': 'DELIVERY',
-                'bold': True, 'double_width': True, 'align': 'center',
-            })
-            if customer_name:
-                cmds.append({
-                    'type': 'text', 'content': customer_name,
-                    'bold': True, 'align': 'center',
-                })
-        elif order_type == 'bar_tab':
-            cmds.append({
-                'type': 'text', 'content': 'BAR TAB',
-                'bold': True, 'double_width': True, 'align': 'center',
-            })
-            if customer_name:
-                cmds.append({
-                    'type': 'text', 'content': customer_name,
-                    'bold': True, 'align': 'center',
-                })
-        else:
-            display = ctx.get('order_type_display', order_type).upper()
-            cmds.append({
-                'type': 'text', 'content': display,
-                'bold': True, 'double_width': True, 'align': 'center',
-            })
-            if customer_name:
-                cmds.append({
-                    'type': 'text', 'content': customer_name,
-                    'bold': True, 'align': 'center',
-                })
-
-        # Line 3 (conditional) — Pickup time for togo/delivery
-        pickup_time = ctx.get('pickup_time')
-        if pickup_time and order_type in ('to_go', 'togo', 'takeout', 'delivery'):
-            cmds.append({
-                'type': 'text', 'content': f"Pickup: {self._format_time(pickup_time)}",
-                'align': 'center',
-            })
-
-        # Line 4 — Time Ordered (event ledger time, NOT print time)
+        # Line 3 — Time (WIDE = 2x1 wide only)
         fired_at = ctx.get('fired_at') or ctx.get('ordered_at')
         if fired_at:
             cmds.append({
                 'type': 'text', 'content': self._format_time(fired_at),
-                'align': 'center',
+                'double_width': True, 'align': 'center',
             })
 
-        # Explicit reset before divider — prevents double_width/double_height
-        # state from leaking into the divider line and causing overflow wraps
+        # Reset before divider to prevent size leakage
         cmds.append({
             'type': 'text', 'content': '',
             'bold': False, 'double_width': False, 'double_height': False,
         })
-        cmds.append(divider)
+        cmds.append({'type': 'divider'})
         return cmds
 
     # ------------------------------------------------------------------
-    # Zone 2 — Context Line (pipe-separated)
+    # Zone 2 — Context Line
     # ------------------------------------------------------------------
 
     def _render_zone2(self, ctx: Dict) -> List[Dict]:
@@ -190,15 +159,11 @@ class KitchenTicketTemplate(BaseTemplate):
         if seats:
             if isinstance(seats, list):
                 if len(seats) == 1:
-                    parts.append(f"Seat: {seats[0]}")
+                    parts.append(f"Seats: {seats[0]}")
                 else:
                     parts.append(f"Seats: {','.join(str(s) for s in seats)}")
             else:
-                parts.append(f"Seat: {seats}")
-
-        source = ctx.get('order_source') or ctx.get('source')
-        if source:
-            parts.append(source)
+                parts.append(f"Seats: {seats}")
 
         if not parts:
             return []
@@ -209,7 +174,7 @@ class KitchenTicketTemplate(BaseTemplate):
         ]
 
     # ------------------------------------------------------------------
-    # Zone 3 — Item Block (the work list)
+    # Zone 3 — Item Block (per seat)
     # ------------------------------------------------------------------
 
     def _render_zone3(
@@ -224,141 +189,181 @@ class KitchenTicketTemplate(BaseTemplate):
         if ticket_type == self.ORIGINAL:
             items = self._consolidate_items(items)
 
-        for i, item in enumerate(items):
-            qty = item.get('qty', item.get('quantity', 1))
-            name = item.get('kitchen_text') or item.get('name', '')
-            modifiers = item.get('modifiers', [])
-            special = item.get('special_instructions', '')
-            allergy = item.get('allergy') or item.get('allergy_type', '')
-            reason = item.get('reason', '')
+        # Group items by seat
+        seat_groups = self._group_by_seat(items)
+        seat_keys = list(seat_groups.keys())
 
-            # Item line: quantity-first
-            prefix = ""
-            if ticket_type == self.VOID:
-                prefix = "[VOID] "
-            item_line = f"{prefix}{qty}x {name}"
+        for seat_idx, seat_key in enumerate(seat_keys):
+            seat_items = seat_groups[seat_key]
 
-            # Use double-width + double-height for items with half-placement
-            # so the item clearly stands out above its LEFT/RIGHT table.
-            has_halves = has_half_modifiers(modifiers)
-            cmds.append({'type': 'text', 'content': item_line, 'bold': True,
-                         'double_width': has_halves})
-
-            # Modifiers — half-placement split or flat
-            if has_halves:
-                cmds.extend(self._render_half_placement_block(modifiers, supports_red))
-            else:
-                for mod in modifiers:
-                    mod_cmds = self._render_modifier(mod, supports_red)
-                    cmds.extend(mod_cmds)
-
-            # Special instructions (italic/quoted, below modifiers)
-            if special and not self._is_allergy_instruction(special):
-                cmds.append({'type': 'text', 'content': f'      "{special}"'})
-
-            # Refire reason
-            if ticket_type == self.REFIRE and reason:
-                cmds.append({'type': 'text', 'content': f'      Reason: {reason}'})
-
-            # Inline allergy flag (Zone 3 placement)
-            if allergy:
-                allergy_upper = allergy.upper()
-                allergies.append(allergy_upper)
+            # Seat header (BOLD)
+            if len(seat_keys) > 1 or seat_key != '_default':
                 cmds.append({
-                    'type': 'text',
-                    'content': f"  {allergy_upper} ALLERGY  ",
-                    'bold': True, 'reverse': True, 'red': supports_red, 'align': 'center',
+                    'type': 'text', 'content': f"SEAT {seat_key}",
+                    'bold': True,
                 })
-            elif self._is_allergy_instruction(special):
-                # Extract allergy type from special instructions like "!! ALLERGY: NO PEANUTS !!"
-                allergy_type = self._extract_allergy_type(special)
-                if allergy_type:
-                    allergies.append(allergy_type)
+
+            for item in seat_items:
+                qty = item.get('qty', item.get('quantity', 1))
+                name = item.get('kitchen_text') or item.get('name', '')
+                modifiers = item.get('modifiers', [])
+                special = item.get('special_instructions', '')
+                allergy = item.get('allergy') or item.get('allergy_type', '')
+                reason = item.get('reason', '')
+
+                # Item line: WIDE_BOLD (2x wide + bold), truncate to fit
+                prefix = ""
+                if ticket_type == self.VOID:
+                    prefix = "[VOID] "
+
+                # Truncate name so qty prefix + name fits in WIDE_MAX chars
+                qty_prefix = f"{prefix}{qty}x "
+                max_name_len = WIDE_MAX - len(qty_prefix)
+                truncated_name = name[:max_name_len] if len(name) > max_name_len else name
+                item_line = f"{qty_prefix}{truncated_name}"
+
+                cmds.append({
+                    'type': 'text', 'content': item_line,
+                    'bold': True, 'double_width': True,
+                })
+
+                # Modifiers — half-placement split or flat
+                has_halves = has_half_modifiers(modifiers)
+                if has_halves:
+                    cmds.extend(self._render_half_placement_block(modifiers, supports_red))
+                else:
+                    for mod in modifiers:
+                        mod_cmds = self._render_modifier(mod, supports_red)
+                        cmds.extend(mod_cmds)
+
+                # Special instructions (below modifiers)
+                if special and not self._is_allergy_instruction(special):
+                    cmds.append({'type': 'text', 'content': f'      "{special}"'})
+
+                # Refire reason
+                if ticket_type == self.REFIRE and reason:
+                    cmds.append({'type': 'text', 'content': f'      Reason: {reason}'})
+
+                # Inline allergy flag (Zone 3 placement)
+                if allergy:
+                    allergy_upper = allergy.upper()
+                    allergies.append(allergy_upper)
                     cmds.append({
                         'type': 'text',
-                        'content': f"  {allergy_type} ALLERGY  ",
+                        'content': f"  {allergy_upper} ALLERGY  ",
                         'bold': True, 'reverse': True, 'red': supports_red, 'align': 'center',
                     })
+                elif self._is_allergy_instruction(special):
+                    allergy_type = self._extract_allergy_type(special)
+                    if allergy_type:
+                        allergies.append(allergy_type)
+                        cmds.append({
+                            'type': 'text',
+                            'content': f"  {allergy_type} ALLERGY  ",
+                            'bold': True, 'reverse': True, 'red': supports_red, 'align': 'center',
+                        })
 
-            # Item separator
-            if i < len(items) - 1:
-                cmds.append({'type': 'divider'})
+            # RED seat divider between seats (not after last seat)
+            if seat_idx < len(seat_keys) - 1:
+                cmds.append({
+                    'type': 'divider', 'char': '-',
+                    'red': supports_red,
+                })
 
         return cmds, allergies
 
+    def _group_by_seat(self, items: List[Dict]) -> Dict[str, List[Dict]]:
+        """Group items by seat number. Items without a seat go to '_default'."""
+        groups: Dict[str, List[Dict]] = {}
+        for item in items:
+            seat = str(item.get('seat', '_default'))
+            groups.setdefault(seat, []).append(item)
+        return groups
+
     def _render_modifier(self, mod: Any, supports_red: bool) -> List[Dict]:
-        """Render a single modifier line with prefix formatting."""
-        # Modifier can be a string or a dict with type/prefix/text
+        """Render a single modifier line — 6-space indent, NORMAL weight, BLACK."""
         if isinstance(mod, dict):
             prefix = mod.get('prefix', '')
             text = mod.get('text') or mod.get('kitchen_text') or mod.get('name', '')
             mod_type = mod.get('type') or mod.get('action', '')
             if not prefix and mod_type:
                 prefix = self._default_prefix(mod_type)
+            # Sub-modifiers (modified modifiers) — 9-space indent
+            sub_mods = mod.get('sub_modifiers', mod.get('modifiers', []))
         else:
-            # Plain string modifier — try to detect prefix from known patterns
             prefix, text = self._parse_modifier_string(str(mod))
+            sub_mods = []
 
         cmds: List[Dict] = []
         if prefix:
-            # [{prefix} in red/bold] + [{text} in normal]
-            # Since we render line-by-line, combine on one line with formatting hint
             cmds.append({
                 'type': 'text',
                 'content': f"      [{prefix}] {text}",
-                'bold': True if not supports_red else False,
-                'red': supports_red,
             })
         else:
             cmds.append({'type': 'text', 'content': f"      {text}"})
+
+        # Sub-modifiers at 9-space indent
+        for sub in sub_mods:
+            sub_text = sub if isinstance(sub, str) else (
+                sub.get('text') or sub.get('kitchen_text') or sub.get('name', '')
+            )
+            cmds.append({'type': 'text', 'content': f"         > {sub_text}"})
 
         return cmds
 
     def _render_half_placement_block(
         self, modifiers: List[Any], supports_red: bool,
     ) -> List[Dict]:
-        """Render split-column layout for half-placement modifiers (no prices)."""
+        """Render pizza half/half table with red borders and black content."""
         cmds: List[Dict] = []
         whole_mods, left_mods, right_mods = get_half_modifiers(modifiers)
 
         # Whole modifiers above the table (flat)
         for wm in whole_mods:
-            cmds.extend(self._render_modifier(
-                {'name': wm['name'], 'prefix': ''}, supports_red,
-            ))
+            cmds.append({'type': 'text', 'content': f"      {wm['name']}"})
 
-        # Split-column table
-        col_w = (self.chars_per_line - 1) // 2
-        right_w = self.chars_per_line - col_w - 1
-        divider_line = '-' * col_w + '+' + '-' * right_w
+        # +---+---+ box table
+        border_line = '+' + '-' * BOX_COL_W + '+' + '-' * BOX_COL_W + '+'
 
-        cmds.append({'type': 'text', 'content': divider_line, 'bold': True})
-        left_hdr = 'LEFT'.center(col_w)
-        right_hdr = 'RIGHT'.center(right_w)
-        cmds.append({'type': 'text', 'content':
-            f"{left_hdr}|{right_hdr}", 'bold': True})
-        cmds.append({'type': 'text', 'content': divider_line, 'bold': True})
+        # Top border (red)
+        cmds.append({'type': 'text', 'content': border_line, 'red': supports_red})
 
-        # Pair up left and right rows
-        max_rows = max(len(left_mods), len(right_mods))
+        # Header row: |  1ST  |  2ND  | — bold content, red pipes
+        hdr_left = '1ST'.center(BOX_COL_W)
+        hdr_right = '2ND'.center(BOX_COL_W)
+        cmds.append({
+            'type': 'text',
+            'content': f"|{hdr_left}|{hdr_right}|",
+            'bold': True,
+        })
+
+        # Middle border (red)
+        cmds.append({'type': 'text', 'content': border_line, 'red': supports_red})
+
+        # Content rows — black text, red pipes
+        max_rows = max(len(left_mods), len(right_mods), 1) if (left_mods or right_mods) else 0
         for row in range(max_rows):
             left_text = ''
             right_text = ''
             if row < len(left_mods):
                 name = left_mods[row]['display_name']
-                if len(name) > col_w - 1:
-                    name = name[:col_w - 2] + '\u2026'
-                left_text = ' ' + name
+                left_text = name[:BOX_COL_W].ljust(BOX_COL_W)
+            else:
+                left_text = ' ' * BOX_COL_W
             if row < len(right_mods):
                 name = right_mods[row]['display_name']
-                if len(name) > right_w - 1:
-                    name = name[:right_w - 2] + '\u2026'
-                right_text = ' ' + name
+                right_text = name[:BOX_COL_W].ljust(BOX_COL_W)
+            else:
+                right_text = ' ' * BOX_COL_W
 
-            line = f"{left_text:<{col_w}}|{right_text:<{right_w}}"
-            cmds.append({'type': 'text', 'content': line, 'bold': True})
+            cmds.append({
+                'type': 'text',
+                'content': f"|{left_text}|{right_text}|",
+            })
 
-        cmds.append({'type': 'text', 'content': divider_line, 'bold': True})
+        # Bottom border (red)
+        cmds.append({'type': 'text', 'content': border_line, 'red': supports_red})
         return cmds
 
     def _parse_modifier_string(self, mod: str) -> Tuple[str, str]:
@@ -376,7 +381,7 @@ class KitchenTicketTemplate(BaseTemplate):
         return '', mod
 
     def _default_prefix(self, mod_type: str) -> str:
-        """Map modifier type to default prefix per spec section 12.2."""
+        """Map modifier type to default prefix."""
         return {
             'remove': 'NO', 'add': 'ADD', 'substitute': 'SUB',
             'extra': 'EXTRA', 'light': 'LIGHT', 'side': 'SIDE',
@@ -385,7 +390,6 @@ class KitchenTicketTemplate(BaseTemplate):
 
     def _consolidate_items(self, items: List[Dict]) -> List[Dict]:
         """
-        Consolidation rule (spec section 10):
         Identical items with identical modifiers collapse into a single {qty}x line.
         Modifier match is order-independent.
         """
@@ -394,16 +398,13 @@ class KitchenTicketTemplate(BaseTemplate):
         for item in items:
             name = item.get('kitchen_text') or item.get('name', '')
             mods = item.get('modifiers', [])
-            # Normalize modifiers to frozenset for order-independent matching
             mod_key = frozenset(str(m) for m in mods)
             allergy = item.get('allergy') or item.get('allergy_type', '')
             special = item.get('special_instructions', '')
 
-            # Find existing group
             matched = False
             for i, (g_name, g_mods, g_item) in enumerate(groups):
                 if g_name == name and g_mods == mod_key:
-                    # Same allergy and special instructions required for consolidation
                     g_allergy = g_item.get('allergy') or g_item.get('allergy_type', '')
                     g_special = g_item.get('special_instructions', '')
                     if g_allergy == allergy and g_special == special:
@@ -421,22 +422,20 @@ class KitchenTicketTemplate(BaseTemplate):
     def _is_allergy_instruction(self, text: str) -> bool:
         if not text:
             return False
-        upper = text.upper()
-        return 'ALLERGY' in upper
+        return 'ALLERGY' in text.upper()
 
     def _extract_allergy_type(self, text: str) -> str:
         """Extract allergy type from strings like '!! ALLERGY: NO PEANUTS !!'."""
         upper = text.upper().strip('! ').strip()
         if ':' in upper:
             after_colon = upper.split(':', 1)[1].strip()
-            # Remove leading "NO " if present
             if after_colon.startswith('NO '):
                 after_colon = after_colon[3:]
             return after_colon
         return upper.replace('ALLERGY', '').strip()
 
     # ------------------------------------------------------------------
-    # Zone 4 — Alert Block (safety-critical)
+    # Zone 4 — Alert Block (safety-critical) — existing impl is correct
     # ------------------------------------------------------------------
 
     def _render_zone4(
@@ -444,7 +443,6 @@ class KitchenTicketTemplate(BaseTemplate):
     ) -> List[Dict]:
         cmds: List[Dict] = []
 
-        # Allergy summary strip (only if at least one allergy on the ticket)
         if allergies:
             cmds.append({'type': 'divider'})
             unique_allergies = sorted(set(allergies))
@@ -456,21 +454,18 @@ class KitchenTicketTemplate(BaseTemplate):
             })
             cmds.append({'type': 'divider'})
 
-        # RUSH flag — bold, red if available, NOT inverted
         if ctx.get('rush'):
             cmds.append({
                 'type': 'text', 'content': '** RUSH **',
                 'bold': True, 'red': supports_red, 'align': 'center',
             })
 
-        # VIP flag — bold, red if available, NOT inverted
         if ctx.get('vip'):
             cmds.append({
                 'type': 'text', 'content': '** VIP TABLE **',
                 'bold': True, 'red': supports_red, 'align': 'center',
             })
 
-        # 86 warnings — bold, red if available, NOT inverted
         for warning in ctx.get('warnings_86', []):
             cmds.append({
                 'type': 'text', 'content': f"** 86 {warning} AFTER THIS **",
@@ -480,14 +475,13 @@ class KitchenTicketTemplate(BaseTemplate):
         return cmds
 
     # ------------------------------------------------------------------
-    # Zone 5 — Footer (small font, metadata)
+    # Zone 5 — Footer (FONT_B, centered)
     # ------------------------------------------------------------------
 
     def _render_zone5(self, ctx: Dict, ticket_type: str) -> List[Dict]:
         cmds: List[Dict] = []
         cmds.append({'type': 'divider'})
 
-        # Terminal ID and Ticket X of Y
         terminal_id = ctx.get('terminal_id', '')
         ticket_index = ctx.get('ticket_index', 1)
         ticket_total = ctx.get('ticket_total', 1)
@@ -502,7 +496,6 @@ class KitchenTicketTemplate(BaseTemplate):
             'font': 'b', 'align': 'center',
         })
 
-        # Ticket type label
         if ticket_type == self.ORIGINAL:
             label = 'ORIGINAL'
         elif ticket_type == self.REPRINT:
