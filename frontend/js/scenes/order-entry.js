@@ -1540,6 +1540,7 @@ function _appendModPreview(list) {
   // Remove any stale preview before adding fresh one
   var old = list.querySelector('[data-mod-preview]');
   if (old) old.parentNode.removeChild(old);
+  console.log('[PREVIEW] appending preview, list children before:', list.children.length, 'caller:', new Error().stack.split('\n')[2]);
 
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
