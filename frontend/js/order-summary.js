@@ -209,6 +209,27 @@ function _renderItems(items) {
   _itemScroll.innerHTML = '';
   var isCollapsible = _collapsible;
   (items || []).forEach(function(item, itemIndex) {
+    // ── Seat header divider ──
+    if (item.seatHeader) {
+      var hdr = document.createElement('div');
+      hdr.style.cssText = [
+        'display:flex;justify-content:space-between;align-items:center;',
+        'padding:4px 2px 2px;margin-top:4px;',
+        'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';',
+        'color:' + T.mint + ';letter-spacing:2px;',
+        'border-bottom:2px solid ' + T.mint + ';',
+      ].join('');
+      var hdrLabel = document.createElement('span');
+      hdrLabel.textContent = item.seatId;
+      var hdrTotal = document.createElement('span');
+      hdrTotal.style.color = T.gold;
+      hdrTotal.textContent = '$' + (item.seatTotal || 0).toFixed(2);
+      hdr.appendChild(hdrLabel);
+      hdr.appendChild(hdrTotal);
+      _itemScroll.appendChild(hdr);
+      return;
+    }
+
     var mods = item.mods || [];
     var hasMods = mods.length > 0;
 

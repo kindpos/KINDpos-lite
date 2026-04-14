@@ -41,8 +41,14 @@ function collectSummary(seats, selected) {
   var items = [];
   var subtotal = 0;
   var anySelected = Object.keys(selected).length > 0;
+  var showHeaders = seats.length > 1;
   for (var i = 0; i < seats.length; i++) {
     if (anySelected && !selected[seats[i].id]) continue;
+    var seatSub = 0;
+    if (showHeaders) {
+      for (var k = 0; k < seats[i].items.length; k++) seatSub += seats[i].items[k].qty * (seats[i].items[k].effectivePrice || seats[i].items[k].price);
+      items.push({ seatHeader: true, seatId: seats[i].id, seatTotal: seatSub });
+    }
     for (var j = 0; j < seats[i].items.length; j++) {
       var it = seats[i].items[j];
       var ep = it.effectivePrice || it.price;
@@ -534,11 +540,13 @@ defineScene({
     function updateSummary() {
       var totals = collectSummary(state.seats, state.selected);
 
-      // Build index map: flat item index → 'seatIdx:itemIdx'
+      // Build index map: flat item index → 'seatIdx:itemIdx' (null for seat headers)
       _summaryItemMap = [];
       var anySelected = Object.keys(state.selected).length > 0;
+      var showHeaders = state.seats.length > 1;
       for (var si = 0; si < state.seats.length; si++) {
         if (anySelected && !state.selected[state.seats[si].id]) continue;
+        if (showHeaders) _summaryItemMap.push(null); // seat header placeholder
         for (var ii = 0; ii < state.seats[si].items.length; ii++) {
           _summaryItemMap.push(si + ':' + ii);
         }
@@ -546,6 +554,7 @@ defineScene({
 
       // Mark selected items so OrderSummary can highlight them
       for (var mi = 0; mi < totals.items.length; mi++) {
+        if (totals.items[mi].seatHeader) continue;
         var mapKey = _summaryItemMap[mi];
         totals.items[mi].selected = mapKey ? !!state.selectedItems[mapKey] : false;
       }
