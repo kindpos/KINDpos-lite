@@ -102,6 +102,7 @@ export function ModifierPanel(container, opts) {
   var activeOptPrefix = 'ADD';
   var activePlacement = 'whole';
   var expandedSection = null; // 'mandatory' | 'included' | 'optional' | null
+  var expandedMandGroup = null; // key of expanded mandatory group card
 
   // ── DOM refs ──
   var rootEl = null;
@@ -195,21 +196,20 @@ export function ModifierPanel(container, opts) {
       if (s.key === 'optional' && prefixBarEl) {
         prefixBarEl.style.display = isExpanded ? '' : 'none';
       }
+      // Optional section needs overflow:visible for floating prefix bar
+      var needsVisible = s.key === 'optional' && prefixBarEl;
       if (isExpanded) {
-        // Expanded takes all remaining space
         s.wrap.style.flex = '1';
         s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = 'hidden';
+        s.wrap.style.overflow = needsVisible ? 'visible' : 'hidden';
       } else if (hasExpanded) {
-        // Collapsed while another is expanded — header only
         s.wrap.style.flex = '0 0 auto';
         s.wrap.style.minHeight = '';
-        s.wrap.style.overflow = '';
+        s.wrap.style.overflow = needsVisible ? 'visible' : '';
       } else {
-        // All collapsed — share space equally
         s.wrap.style.flex = '1';
         s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = 'hidden';
+        s.wrap.style.overflow = needsVisible ? 'visible' : 'hidden';
       }
     }
   }
@@ -279,12 +279,14 @@ export function ModifierPanel(container, opts) {
       optionalSectionEl = optPair.wrap;
       optionalContentEl = optPair.card._content;
 
-      // Floating prefix bar — overhangs the bottom edge of the optional card
+      // Floating prefix bar — half on / half off the left edge
       optPair.wrap.style.position = 'relative';
+      optPair.wrap.style.overflow = 'visible';
       prefixBarEl = document.createElement('div');
       prefixBarEl.style.cssText = [
-        'position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);',
-        'display:flex;gap:6px;z-index:2;',
+        'position:absolute;left:-4px;top:30px;',
+        'display:flex;flex-direction:column;gap:4px;z-index:2;',
+        'transform:translateX(-50%);',
       ].join('');
       optPair.wrap.appendChild(prefixBarEl);
       sectionsArea.appendChild(optPair.wrap);
@@ -411,7 +413,10 @@ export function ModifierPanel(container, opts) {
 
     container.appendChild(rootEl);
 
-    // Start all sections collapsed
+    // Start with mandatory expanded (if it exists), others collapsed
+    if (mandatoryGroups.length > 0) {
+      expandedSection = 'mandatory';
+    }
     _applySectionStates();
     renderAll();
   }
@@ -495,7 +500,7 @@ export function ModifierPanel(container, opts) {
     });
   }
 
-  // ═══ PREFIX BAR (floating buttons on optional card edge) ═══
+  // ═══ PREFIX BAR (floating vertically on left card edge) ═══
   function renderPrefixBar() {
     if (!prefixBarEl) return;
     prefixBarEl.innerHTML = '';
@@ -504,11 +509,10 @@ export function ModifierPanel(container, opts) {
       var isActive = activeOptPrefix === pfx.id;
       var v = isActive ? pfx.variant : 'dark';
       var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
-      pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '11px';
+      pair.inner.style.fontSize = '10px';
       pair.inner.style.letterSpacing = '1px';
-      pair.inner.style.padding = '3px 8px';
-      // Outline to make floating buttons stand out
+      pair.inner.style.padding = '3px 6px';
+      pair.inner.style.textAlign = 'center';
       pair.wrap.style.outline = '2px solid ' + T.numpadChassis;
       pair.wrap.style.outlineOffset = '-1px';
 
@@ -527,73 +531,87 @@ export function ModifierPanel(container, opts) {
     if (!mandatoryContentEl) return;
     mandatoryContentEl.innerHTML = '';
 
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    // Grid of group cards
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + Math.min(mandatoryGroups.length, 3) + ',1fr);gap:6px;';
 
     mandatoryGroups.forEach(function(group) {
       var currentSel = activeItem.mandatorySelections[group.key];
       var hasSelection = !!currentSel;
+      var isExpanded = expandedMandGroup === group.key;
 
-      // Row: group label + inline horizontal button strip
-      var row = document.createElement('div');
-      row.style.cssText = [
-        'display:flex;align-items:center;gap:6px;',
-        'padding:6px 8px;',
-        'border:3px solid ' + (hasSelection ? T.numpadChassis : T.vermillion) + ';',
+      // Each group is its own card
+      var groupCard = document.createElement('div');
+      var borderColor = hasSelection ? T.numpadChassis : T.vermillion;
+      groupCard.style.cssText = [
+        'display:flex;flex-direction:column;',
+        'border:2px solid ' + borderColor + ';',
+        'background:' + T.bgDark + ';',
+        'cursor:pointer;user-select:none;',
+        'overflow:hidden;',
       ].join('');
+      groupCard.style.clipPath = chamfer(5);
 
-      var lbl = document.createElement('span');
-      lbl.style.cssText = [
-        'flex-shrink:0;',
-        'font-family:' + T.fb + ';font-size:16px;color:' + T.textPrimary + ';',
-        'white-space:nowrap;',
+      // Card header — shows group name or selection name
+      var hdr = document.createElement('div');
+      hdr.style.cssText = [
+        'padding:4px 8px;',
+        'font-family:' + T.fh + ';font-size:14px;font-weight:bold;',
+        'color:' + (hasSelection ? T.bgDark : T.textPrimary) + ';',
+        'background:' + (hasSelection ? T.numpadChassis : 'transparent') + ';',
+        'text-align:center;',
       ].join('');
-      lbl.textContent = group.label + ':';
-      row.appendChild(lbl);
+      hdr.textContent = hasSelection ? currentSel.label : group.label;
+      groupCard.appendChild(hdr);
 
-      // Horizontal scrollable button strip
-      var strip = document.createElement('div');
-      strip.style.cssText = [
-        'display:flex;gap:4px;flex:1;',
-        'overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      ].join('');
-
-      (group.options || []).forEach(function(opt) {
-        var isSelected = currentSel && currentSel.key === opt.key;
-        var pair = buildStyledButton({
-          label: opt.label,
-          variant: isSelected ? 'mint' : 'dark',
-          size: 'sm',
-        });
-        pair.wrap.style.flexShrink = '0';
-        pair.inner.style.fontSize = '14px';
-        pair.inner.style.padding = '4px 8px';
-        pair.inner.style.lineHeight = '1.1';
-
-        if (isSelected) {
-          pair.wrap.style.background = T.numpadChassis;
-          pair.inner.style.color = T.bgDark;
-        }
-
-        if (typeof opt.price === 'number' && opt.price !== 0) {
-          var priceEl = document.createElement('div');
-          priceEl.style.cssText = 'font-size:8px;color:' + T.gold + ';margin-top:1px;';
-          priceEl.textContent = (opt.price > 0 ? '+' : '') + '$' + Math.abs(opt.price).toFixed(2);
-          pair.inner.appendChild(priceEl);
-        }
-
-        pair.wrap.addEventListener('pointerup', function() {
-          onMandatoryChange(group.key, opt);
-        });
-
-        strip.appendChild(pair.wrap);
+      // Tap header to toggle expansion
+      hdr.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        expandedMandGroup = isExpanded ? null : group.key;
+        renderMandatory();
       });
 
-      row.appendChild(strip);
-      wrap.appendChild(row);
+      // Expanded: show option buttons
+      if (isExpanded) {
+        var optionsWrap = document.createElement('div');
+        optionsWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:4px;';
+
+        (group.options || []).forEach(function(opt) {
+          var isSelected = currentSel && currentSel.key === opt.key;
+          var pair = buildStyledButton({
+            label: opt.label,
+            variant: isSelected ? 'mint' : 'dark',
+            size: 'sm',
+          });
+          pair.wrap.style.width = '100%';
+          pair.inner.style.fontSize = '13px';
+          pair.inner.style.padding = '4px 6px';
+          if (isSelected) {
+            pair.wrap.style.background = T.numpadChassis;
+            pair.inner.style.color = T.bgDark;
+          }
+
+          pair.wrap.addEventListener('pointerup', function(e) {
+            e.stopPropagation();
+            expandedMandGroup = null; // collapse after selection
+            onMandatoryChange(group.key, opt);
+          });
+
+          optionsWrap.appendChild(pair.wrap);
+        });
+
+        groupCard.appendChild(optionsWrap);
+      }
+
+      // If expanded, span full row
+      if (isExpanded) {
+        groupCard.style.gridColumn = '1 / -1';
+      }
+
+      grid.appendChild(groupCard);
     });
 
-    mandatoryContentEl.appendChild(wrap);
+    mandatoryContentEl.appendChild(grid);
   }
 
   function onMandatoryChange(groupKey, newSelection) {
