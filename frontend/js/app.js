@@ -10,16 +10,16 @@ import { showToast } from './components.js';
 import { OrderSummary } from './order-summary.js';
 
 // Import scenes (self-registering)
-import './scenes/login.js?v=10';  // SM2 format
-import './scenes/settings.js?v=10';
-import './scenes/order-entry.js?v=10';
-import './scenes/payment-console.js?v=10';
-import './scenes/manager-landing-sm2.js?v=10';  // SM2 format
-import './scenes/checkout-core.js?v=10';  // SM2 shared sub-scenes
-import './scenes/server-checkout.js?v=10';  // SM2 format
-import './scenes/close-day.js?v=10';  // SM2 format
-import './scenes/server-landing-sm2.js?v=10';  // SM2 format
-import './scenes/clock-in.js?v=10';  // SM2 format
+import './scenes/login.js';
+import './scenes/settings.js';
+import './scenes/order-entry.js';
+import './scenes/payment-console.js';
+import './scenes/manager-landing-sm2.js';
+import './scenes/checkout-core.js';
+import './scenes/server-checkout.js';
+import './scenes/close-day.js';
+import './scenes/server-landing-sm2.js';
+import './scenes/clock-in.js';
 
 // ── Header state ──────────────────────────────────
 let _sceneName = null;
