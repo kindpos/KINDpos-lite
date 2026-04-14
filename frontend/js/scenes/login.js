@@ -144,10 +144,20 @@ defineScene({
     } });
     rightCol.appendChild(quickOrderPair.wrap);
 
-    // Config — small vermillion button, extra padding above
+    // Config — vermillion button, extra padding above
+    // Transactional layer (z:20) is below gate (z:100), so temporarily
+    // promote it while settings is open from the login screen.
     var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'md', onClick: function() {
       if (state.numpadRef) state.numpadRef.clear();
+      var tLayer = document.getElementById('layer-transactional');
+      if (tLayer) tLayer.style.zIndex = T.zGate + 1;
       SceneManager.openTransactional('settings');
+      var restore = function(evt) {
+        if (evt.sceneName !== 'settings') return;
+        if (tLayer) tLayer.style.zIndex = T.zTransactional;
+        SceneManager.off('transactional:closed', restore);
+      };
+      SceneManager.on('transactional:closed', restore);
     } });
     configPair.wrap.style.marginTop = '52px';
     rightCol.appendChild(configPair.wrap);
