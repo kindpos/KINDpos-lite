@@ -144,7 +144,7 @@ function _modRow(mod) {
     'display:grid;grid-template-columns:1fr 68px;gap:0 6px;',
     'padding:0 0 1px 10px;',
     'font-family:' + T.fb + ';font-size:16px;',
-    'color:' + (mod.charged ? T.mint : T.mutedText) + ';',
+    'color:' + T.mint + ';',
   ].join('');
   var modName = document.createElement('div');
   modName.textContent = mod.name;
@@ -185,7 +185,7 @@ function _renderItems(items) {
     row.style.cssText = [
       'display:grid;grid-template-columns:1fr 40px 68px;gap:0 6px;',
       'padding:3px 0 1px;',
-      'font-family:' + T.fb + ';font-size:' + T.fsCon + ';color:' + T.textPrimary + ';',
+      'font-family:' + T.fb + ';font-size:24px;color:' + T.textPrimary + ';',
       'border-bottom:1px solid ' + T.bg3 + ';',
     ].join('');
     var name = document.createElement('div');
@@ -243,22 +243,26 @@ function _renderItems(items) {
       var maxRows = Math.max(leftMods.length, rightMods.length);
       for (var r = 0; r < maxRows; r++) {
         var tr = document.createElement('div');
-        tr.style.cssText = 'display:flex;font-family:' + T.fb + ';font-size:14px;';
+        tr.style.cssText = 'display:flex;font-family:' + T.fb + ';font-size:12px;line-height:1.2;';
         var lMod = leftMods[r];
         var rMod = rightMods[r];
         var tdL = document.createElement('div');
-        tdL.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + T.mint + ';';
+        tdL.style.cssText = 'flex:1;padding:0 2px;color:' + T.mint + ';';
         if (lMod) {
-          tdL.textContent = lMod.name;
-          if (lMod.price > 0) { var lp = document.createElement('span'); lp.style.color = T.gold; lp.textContent = ' +$' + lMod.price.toFixed(2); tdL.appendChild(lp); }
+          var lName = document.createElement('div');
+          lName.textContent = lMod.name;
+          tdL.appendChild(lName);
+          if (lMod.price > 0) { var lp = document.createElement('div'); lp.style.cssText = 'font-size:10px;color:' + T.gold + ';'; lp.textContent = '+$' + lMod.price.toFixed(2); tdL.appendChild(lp); }
         }
         var tdSep = document.createElement('div');
         tdSep.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;';
         var tdR = document.createElement('div');
-        tdR.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + T.mint + ';';
+        tdR.style.cssText = 'flex:1;padding:0 2px;color:' + T.mint + ';';
         if (rMod) {
-          tdR.textContent = rMod.name;
-          if (rMod.price > 0) { var rp = document.createElement('span'); rp.style.color = T.gold; rp.textContent = ' +$' + rMod.price.toFixed(2); tdR.appendChild(rp); }
+          var rName = document.createElement('div');
+          rName.textContent = rMod.name;
+          tdR.appendChild(rName);
+          if (rMod.price > 0) { var rp = document.createElement('div'); rp.style.cssText = 'font-size:10px;color:' + T.gold + ';'; rp.textContent = '+$' + rMod.price.toFixed(2); tdR.appendChild(rp); }
         }
         tr.appendChild(tdL);
         tr.appendChild(tdSep);
