@@ -107,11 +107,9 @@ export function ModifierPanel(container, opts) {
   // ── DOM refs ──
   var rootEl = null;
   var placementBarEl = null;
-  var mandatorySectionEl = null;
+  var _tabBar = null;
   var mandatoryContentEl = null;
-  var includedSectionEl = null;
   var includedContentEl = null;
-  var optionalSectionEl = null;
   var optionalContentEl = null;
   var prefixBarEl = null;
   var _notePairRef = null;
@@ -137,95 +135,36 @@ export function ModifierPanel(container, opts) {
       .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
   }
 
-  // ── Build a collapsible section card ──
-  function _buildSection(label, sectionKey) {
-    var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 6, borderWidth: 4, glow: false });
-    var section = pair.card;
-    section.style.display = 'flex';
-    section.style.flexDirection = 'column';
-    section.style.overflow = 'hidden';
-    section.style.flex = '1';
-    section.style.minHeight = '0';
-    section.style.height = '100%';
-    pair.wrap.style.overflow = 'hidden';
-    pair.wrap.style.display = 'flex';
-    pair.wrap.style.flexDirection = 'column';
-
-    var hdr = document.createElement('div');
-    hdr.style.cssText = [
-      'flex-shrink:0;padding:8px 12px;cursor:pointer;user-select:none;',
-      'font-family:' + T.fh + ';font-size:18px;font-weight:bold;color:' + T.textPrimary + ';',
-      'display:flex;justify-content:space-between;align-items:center;',
-    ].join('');
-    var hdrLabel = document.createElement('span');
-    hdrLabel.textContent = label;
-    var hdrArrow = document.createElement('span');
-    hdrArrow.style.fontSize = '10px';
-    hdr.appendChild(hdrLabel);
-    hdr.appendChild(hdrArrow);
-    hdr.addEventListener('pointerup', function() {
-      expandedSection = expandedSection === sectionKey ? null : sectionKey;
-      _applySectionStates();
-    });
-    section.appendChild(hdr);
-    section._hdrArrow = hdrArrow;
-
+  // ── Build section content container ──
+  function _buildSectionContent() {
     var content = document.createElement('div');
     content.style.cssText = [
       'flex:1;min-height:0;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      'padding:4px 6px;',
+      'padding:6px 8px;',
     ].join('');
-    section.appendChild(content);
-    section._content = content;
-    section._sectionKey = sectionKey;
-
-    pair.wrap._section = section;
-    return pair;
+    return content;
   }
 
-  // ── Expand/collapse section states ──
-  function _applySectionStates() {
-    var sections = [
-      { key: 'mandatory', wrap: mandatorySectionEl, card: mandatorySectionEl ? mandatorySectionEl._section : null },
-      { key: 'included', wrap: includedSectionEl, card: includedSectionEl ? includedSectionEl._section : null },
-      { key: 'optional', wrap: optionalSectionEl, card: optionalSectionEl ? optionalSectionEl._section : null },
-    ];
-    var hasExpanded = expandedSection !== null;
-    for (var i = 0; i < sections.length; i++) {
-      var s = sections[i];
-      if (!s.wrap || !s.card) continue;
-      var isExpanded = expandedSection === s.key;
-      s.card._hdrArrow.textContent = isExpanded ? '\u25B2' : '\u25BC';
-      if (isExpanded) {
-        // Expanded: takes remaining space, content scrolls
-        s.card._content.style.display = '';
-        s.card._content.style.overflowY = 'auto';
-        s.card._content.style.maxHeight = '';
-        s.wrap.style.flex = '1 1 0';
-        s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = 'hidden';
-      } else if (hasExpanded) {
-        // Collapsed while another is expanded: header only
-        s.card._content.style.display = 'none';
-        s.card._content.style.maxHeight = '';
-        s.wrap.style.flex = '0 0 auto';
-        s.wrap.style.minHeight = '';
-        s.wrap.style.overflow = 'hidden';
-      } else {
-        // All collapsed: equal height, show content, scroll
-        s.card._content.style.display = '';
-        s.card._content.style.overflowY = 'auto';
-        s.card._content.style.maxHeight = '';
-        s.wrap.style.flex = '1';
-        s.wrap.style.minHeight = '0';
-        s.wrap.style.overflow = 'hidden';
-      }
+  // ── Tab references ──
+  var _tabEls = {};
+  var _sectionKeys = [];
+
+  function _renderTabs() {
+    if (!_tabBar) return;
+    for (var i = 0; i < _sectionKeys.length; i++) {
+      var key = _sectionKeys[i];
+      var tab = _tabEls[key];
+      if (!tab) continue;
+      var isActive = expandedSection === key;
+      tab.style.background = isActive ? T.numpadChassis : T.bgDark;
+      tab.style.color = isActive ? T.bgDark : T.textPrimary;
+      tab.style.borderBottom = isActive ? '3px solid ' + T.numpadChassis : '3px solid transparent';
     }
-    // Prefix bar always visible when optional groups exist
-    if (prefixBarEl) {
-      prefixBarEl.style.display = 'flex';
-    }
+    // Show/hide content panels
+    if (mandatoryContentEl) mandatoryContentEl.style.display = expandedSection === 'mandatory' ? '' : 'none';
+    if (includedContentEl) includedContentEl.style.display = expandedSection === 'included' ? '' : 'none';
+    if (optionalContentEl) optionalContentEl.style.display = expandedSection === 'optional' ? '' : 'none';
   }
 
   // ── Build the panel ──
@@ -265,36 +204,61 @@ export function ModifierPanel(container, opts) {
     headerEl.appendChild(modSpan);
     card.appendChild(headerEl);
 
-    // ── Sections area: Mandatory / Included / Optional ──
-    var sectionsArea = document.createElement('div');
-    sectionsArea.style.cssText = [
+    // ── Tab bar ──
+    _tabBar = document.createElement('div');
+    _tabBar.style.cssText = [
+      'flex-shrink:0;display:flex;gap:0;',
+      'background:' + T.bgDark + ';',
+      'border-bottom:2px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+    ].join('');
+    _sectionKeys = [];
+
+    function _addTab(label, key) {
+      _sectionKeys.push(key);
+      var tab = document.createElement('div');
+      tab.style.cssText = [
+        'flex:1;text-align:center;padding:6px 4px;cursor:pointer;user-select:none;',
+        'font-family:' + T.fh + ';font-size:16px;font-weight:bold;letter-spacing:1px;',
+        'transition:background 80ms,color 80ms;',
+      ].join('');
+      tab.textContent = label;
+      tab.addEventListener('pointerup', function() {
+        expandedSection = key;
+        _renderTabs();
+      });
+      _tabEls[key] = tab;
+      _tabBar.appendChild(tab);
+    }
+
+    if (mandatoryGroups.length > 0) _addTab('MAND', 'mandatory');
+    if (includedItems.length > 0) _addTab('INCL', 'included');
+    if (optionalGroups.length > 0) _addTab('OPT', 'optional');
+
+    card.appendChild(_tabBar);
+
+    // ── Content area (single panel, tabs switch content) ──
+    var contentArea = document.createElement('div');
+    contentArea.style.cssText = [
       'flex:1;display:flex;flex-direction:column;',
-      'gap:4px;padding:4px;',
-      'overflow:hidden;min-height:0;',
+      'overflow:hidden;min-height:0;padding:4px;',
     ].join('');
 
     if (mandatoryGroups.length > 0) {
-      var mandPair = _buildSection('Mandatory:', 'mandatory');
-      mandatorySectionEl = mandPair.wrap;
-      mandatoryContentEl = mandPair.card._content;
-      sectionsArea.appendChild(mandPair.wrap);
+      mandatoryContentEl = _buildSectionContent();
+      contentArea.appendChild(mandatoryContentEl);
     }
 
     if (includedItems.length > 0) {
-      var inclPair = _buildSection('Included:', 'included');
-      includedSectionEl = inclPair.wrap;
-      includedContentEl = inclPair.card._content;
-      sectionsArea.appendChild(inclPair.wrap);
+      includedContentEl = _buildSectionContent();
+      contentArea.appendChild(includedContentEl);
     }
 
     if (optionalGroups.length > 0) {
-      var optPair = _buildSection('Optional:', 'optional');
-      optionalSectionEl = optPair.wrap;
-      optionalContentEl = optPair.card._content;
-      sectionsArea.appendChild(optPair.wrap);
+      optionalContentEl = _buildSectionContent();
+      contentArea.appendChild(optionalContentEl);
     }
 
-    card.appendChild(sectionsArea);
+    card.appendChild(contentArea);
     rootEl.appendChild(card);
 
     // ── Bottom controls card (separate from main) ──
@@ -426,7 +390,7 @@ export function ModifierPanel(container, opts) {
     rootEl.appendChild(bottomCard);
     container.appendChild(rootEl);
 
-    _applySectionStates();
+    _renderTabs();
     renderAll();
   }
 
