@@ -1540,35 +1540,51 @@ function _appendModPreview(list) {
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
   var previewPrice = _modPanelItem.basePrice + previewModTotal;
+  var fs = T.fsCon;
+  var fsMod = T.fsConSm;
 
   var pc = document.createElement('div');
   pc.style.cssText = 'flex-shrink:0;margin-bottom:2px;background:' + T.bg3 + ';border-left:3px solid ' + T.gold + ';';
   _applyCardBevel(pc);
 
   var pRow = document.createElement('div');
-  pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
+  pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;';
   var pName = document.createElement('span');
-  pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+  pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + fs + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
   pName.textContent = '\u270E ' + _modPanelItem.itemLabel;
   var pPrice = document.createElement('span');
-  pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
+  pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + fs + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
   pPrice.textContent = '$' + previewPrice.toFixed(2);
   pRow.appendChild(pName);
   pRow.appendChild(pPrice);
   pc.appendChild(pRow);
 
-  previewMods.forEach(function(m) {
+  // Partition into whole / left / right
+  var wholeMods = [];
+  var leftMods = [];
+  var rightMods = [];
+  for (var pi = 0; pi < previewMods.length; pi++) {
+    var pm = previewMods[pi];
+    if (pm.prefix === 'Left') leftMods.push(pm);
+    else if (pm.prefix === 'Right') rightMods.push(pm);
+    else wholeMods.push(pm);
+  }
+
+  // Whole mods with X buttons
+  wholeMods.forEach(function(m) {
     var removeHandler = function() {
-      if (_modPanel && m._source != null) {
-        _modPanel.removeMod(m._source, m._idx);
-      } else {
-        var mi = _modPanelItem.mods.indexOf(m);
-        if (mi !== -1) _modPanelItem.mods.splice(mi, 1);
-      }
+      if (_modPanel && m._source != null) _modPanel.removeMod(m._source, m._idx);
+      else { var mi = _modPanelItem.mods.indexOf(m); if (mi !== -1) _modPanelItem.mods.splice(mi, 1); }
       renderTicket();
     };
-    pc.appendChild(buildModRowSized(m.name, m.price, T.fsMod || '24px', removeHandler));
+    pc.appendChild(buildModRowSized(m.name, m.price, fsMod, removeHandler));
   });
+
+  // Half-table for left/right mods
+  if (leftMods.length > 0 || rightMods.length > 0) {
+    var inst = { sent: false, mods: _modPanelItem.mods };
+    pc.appendChild(buildHalfTable(leftMods, rightMods, fsMod, inst));
+  }
 
   list.appendChild(pc);
 }
