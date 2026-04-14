@@ -545,7 +545,7 @@ export function ModifierPanel(container, opts) {
         'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
         'min-height:48px;cursor:pointer;user-select:none;box-sizing:border-box;',
       ].join('');
-      tile.style.clipPath = chamfer(6);
+      tile.style.clipPath = chamfer(8);
 
       // Group label (always visible at top of tile)
       var label = document.createElement('div');
