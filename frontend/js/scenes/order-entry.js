@@ -364,7 +364,7 @@ defineScene({
     ].join('');
 
     // Show persistent order summary panel (left column)
-    OrderSummary.show({ checkId: params.recallOrderId || '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: _handleNameTap });
+    OrderSummary.show({ checkId: params.recallCheckNumber || '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: _handleNameTap });
 
     var mainArea = buildMain(container, params);
     container.appendChild(mainArea);
@@ -372,6 +372,8 @@ defineScene({
     if (!_menuFetched) fetchMenuFromAPI();
 
     if (params.recallOrderId) {
+      currentOrderId = params.recallOrderId;
+      currentCheckNumber = params.recallCheckNumber || null;
       recallFromBackend(params.recallOrderId);
     }
   },
