@@ -10,6 +10,7 @@ import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './
 import { showKeyboard } from './keyboard.js';
 import { SceneManager } from './scene-manager.js';
 import { defineScene } from './scene-manager-2.js';
+import { buildCard, applyCardBevel } from './theme-manager.js';
 
 // ── Standard allergen list (FDA/industry standard colors) ──
 var ALLERGENS = [
@@ -100,12 +101,16 @@ export function ModifierPanel(container, opts) {
 
   var activeOptPrefix = 'ADD';
   var activePlacement = 'whole';
+  var expandedSection = null; // 'mandatory' | 'included' | 'optional' | null
 
   // ── DOM refs ──
   var rootEl = null;
   var placementBarEl = null;
+  var mandatorySectionEl = null;
   var mandatoryContentEl = null;
+  var includedSectionEl = null;
   var includedContentEl = null;
+  var optionalSectionEl = null;
   var optionalContentEl = null;
   var prefixBarEl = null;
   var _notePairRef = null;
@@ -131,23 +136,33 @@ export function ModifierPanel(container, opts) {
       .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
   }
 
-  // ── Build a bordered section container ──
-  function _buildSection(label) {
-    var section = document.createElement('div');
-    section.style.cssText = [
-      'flex:1;min-height:0;',
-      'display:flex;flex-direction:column;',
-      'border:3px solid ' + T.numpadChassis + ';',
-      'overflow:hidden;',
-    ].join('');
+  // ── Build a collapsible section card ──
+  function _buildSection(label, sectionKey) {
+    var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 6, borderWidth: 4, glow: false });
+    var section = pair.card;
+    section.style.display = 'flex';
+    section.style.flexDirection = 'column';
+    section.style.overflow = 'hidden';
+    pair.wrap.style.overflow = 'hidden';
 
     var hdr = document.createElement('div');
     hdr.style.cssText = [
-      'flex-shrink:0;padding:6px 10px;',
-      'font-family:' + T.fh + ';font-size:22px;font-weight:bold;color:' + T.textPrimary + ';',
+      'flex-shrink:0;padding:4px 10px;cursor:pointer;user-select:none;',
+      'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + T.textPrimary + ';',
+      'display:flex;justify-content:space-between;align-items:center;',
     ].join('');
-    hdr.textContent = label;
+    var hdrLabel = document.createElement('span');
+    hdrLabel.textContent = label;
+    var hdrArrow = document.createElement('span');
+    hdrArrow.style.fontSize = '10px';
+    hdr.appendChild(hdrLabel);
+    hdr.appendChild(hdrArrow);
+    hdr.addEventListener('pointerup', function() {
+      expandedSection = expandedSection === sectionKey ? null : sectionKey;
+      _applySectionStates();
+    });
     section.appendChild(hdr);
+    section._hdrArrow = hdrArrow;
 
     var content = document.createElement('div');
     content.style.cssText = [
@@ -157,8 +172,32 @@ export function ModifierPanel(container, opts) {
     ].join('');
     section.appendChild(content);
     section._content = content;
+    section._sectionKey = sectionKey;
 
-    return section;
+    pair.wrap._section = section;
+    return pair;
+  }
+
+  // ── Expand/collapse section states ──
+  function _applySectionStates() {
+    var sections = [
+      { key: 'mandatory', wrap: mandatorySectionEl, card: mandatorySectionEl ? mandatorySectionEl._section : null },
+      { key: 'included', wrap: includedSectionEl, card: includedSectionEl ? includedSectionEl._section : null },
+      { key: 'optional', wrap: optionalSectionEl, card: optionalSectionEl ? optionalSectionEl._section : null },
+    ];
+    for (var i = 0; i < sections.length; i++) {
+      var s = sections[i];
+      if (!s.wrap || !s.card) continue;
+      var isExpanded = expandedSection === s.key;
+      s.card._hdrArrow.textContent = isExpanded ? '\u25B2' : '\u25BC';
+      s.card._content.style.display = isExpanded ? '' : 'none';
+      if (s.key === 'optional' && prefixBarEl) {
+        prefixBarEl.style.display = isExpanded ? '' : 'none';
+      }
+      // Expanded section gets flex:1, collapsed gets flex:0 auto
+      s.wrap.style.flex = isExpanded ? '1' : '0 0 auto';
+      s.wrap.style.minHeight = isExpanded ? '0' : '';
+    }
   }
 
   // ── Build the panel ──
@@ -171,22 +210,22 @@ export function ModifierPanel(container, opts) {
     card.style.cssText = [
       'width:100%;height:100%;',
       'background:' + T.bg + ';',
-      'border-top:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
-      'border-left:7px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
-      'border-bottom:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-      'border-right:7px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'border-top:5px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-left:5px solid ' + _lightenHex(T.numpadChassis, 0.2) + ';',
+      'border-bottom:5px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'border-right:5px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'display:flex;flex-direction:column;',
       'box-sizing:border-box;overflow:hidden;',
     ].join('');
-    card.style.clipPath = chamfer(10);
+    card.style.clipPath = chamfer(8);
     rootEl.appendChild(card);
 
-    // ── Header: "Item Name: Modifiers" ──
+    // ── Header: "Item Name: Modifiers" (compact) ──
     var headerEl = document.createElement('div');
     headerEl.style.cssText = [
-      'flex-shrink:0;padding:10px 14px;',
-      'font-family:' + T.fh + ';font-size:28px;',
-      'border-bottom:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'flex-shrink:0;padding:4px 10px;',
+      'font-family:' + T.fh + ';font-size:18px;',
+      'border-bottom:2px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'background:' + T.bgDark + ';',
     ].join('');
     var nameSpan = document.createElement('span');
@@ -199,63 +238,65 @@ export function ModifierPanel(container, opts) {
     headerEl.appendChild(modSpan);
     card.appendChild(headerEl);
 
-    // ── Placement bar ──
-    placementBarEl = document.createElement('div');
-    placementBarEl.style.cssText = [
-      'flex-shrink:0;padding:4px 8px;',
-      'background:' + T.bgDark + ';',
-      'border-bottom:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
-    ].join('');
-    card.appendChild(placementBarEl);
-
     // ── Sections area: Mandatory / Included / Optional ──
     var sectionsArea = document.createElement('div');
     sectionsArea.style.cssText = [
       'flex:1;display:flex;flex-direction:column;',
-      'gap:8px;padding:8px;',
+      'gap:4px;padding:4px;',
       'overflow:hidden;min-height:0;',
     ].join('');
 
     if (mandatoryGroups.length > 0) {
-      var mandSection = _buildSection('Mandatory:');
-      mandatoryContentEl = mandSection._content;
-      sectionsArea.appendChild(mandSection);
+      var mandPair = _buildSection('Mandatory:', 'mandatory');
+      mandatorySectionEl = mandPair.wrap;
+      mandatoryContentEl = mandPair.card._content;
+      sectionsArea.appendChild(mandPair.wrap);
     }
 
     if (includedItems.length > 0) {
-      var inclSection = _buildSection('Included:');
-      includedContentEl = inclSection._content;
-      sectionsArea.appendChild(inclSection);
+      var inclPair = _buildSection('Included:', 'included');
+      includedSectionEl = inclPair.wrap;
+      includedContentEl = inclPair.card._content;
+      sectionsArea.appendChild(inclPair.wrap);
     }
 
     if (optionalGroups.length > 0) {
-      var optSection = _buildSection('Optional:');
-      optionalContentEl = optSection._content;
+      var optPair = _buildSection('Optional:', 'optional');
+      optionalSectionEl = optPair.wrap;
+      optionalContentEl = optPair.card._content;
 
       // Prefix bar pinned at bottom of optional section
       prefixBarEl = document.createElement('div');
       prefixBarEl.style.cssText = [
         'flex-shrink:0;display:flex;gap:4px;',
-        'padding:4px 6px;',
-        'border-top:2px solid ' + _darkenHex(T.numpadChassis, 0.2) + ';',
+        'padding:3px 4px;',
+        'border-top:1px solid ' + _darkenHex(T.numpadChassis, 0.2) + ';',
       ].join('');
-      optSection.appendChild(prefixBarEl);
-      sectionsArea.appendChild(optSection);
+      optPair.card.appendChild(prefixBarEl);
+      sectionsArea.appendChild(optPair.wrap);
     }
 
     card.appendChild(sectionsArea);
 
-    // ── Bottom action bar: <<< | NOTE | ALRG | CONFIRM ──
+    // ── Placement bar (above action buttons) ──
+    placementBarEl = document.createElement('div');
+    placementBarEl.style.cssText = [
+      'flex-shrink:0;padding:2px 4px;',
+      'background:' + T.bgDark + ';',
+    ].join('');
+    card.appendChild(placementBarEl);
+
+    // ── Bottom action bar: <<< | NOTE | ALRG | CONFIRM (compact) ──
     var actionBar = document.createElement('div');
     actionBar.style.cssText = [
-      'display:flex;gap:8px;flex-shrink:0;',
-      'padding:6px 8px 8px 8px;',
-      'border-top:3px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
+      'display:flex;gap:4px;flex-shrink:0;',
+      'padding:3px 4px 4px 4px;',
+      'border-top:2px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'background:' + T.bgDark + ';',
     ].join('');
 
     // Cancel/Undo button
-    var undoPair = buildStyledButton({ label: '<<<', variant: 'vermillion', size: 'md' });
+    var undoPair = buildStyledButton({ label: '<<<', variant: 'vermillion', size: 'sm' });
     undoPair.inner.style.color = '#ffffff';
     undoPair.wrap.style.flex = '1';
 
@@ -309,7 +350,7 @@ export function ModifierPanel(container, opts) {
     });
 
     // NOTE button
-    _notePairRef = buildStyledButton({ label: 'NOTE', variant: 'gold', size: 'md', onClick: function() {
+    _notePairRef = buildStyledButton({ label: 'NOTE', variant: 'gold', size: 'sm', onClick: function() {
       showKeyboard({
         placeholder: 'Special instructions...',
         initialValue: activeItem.note,
@@ -327,7 +368,7 @@ export function ModifierPanel(container, opts) {
     _refreshNoteBtn();
 
     // ALRG button
-    _alrgPairRef = buildStyledButton({ label: 'ALRG', variant: 'vermillion', size: 'md', onClick: function() {
+    _alrgPairRef = buildStyledButton({ label: 'ALRG', variant: 'vermillion', size: 'sm', onClick: function() {
       SceneManager.interrupt('allergen-select', {
         onConfirm: function() {
           fireUpdate();
@@ -345,7 +386,7 @@ export function ModifierPanel(container, opts) {
     _refreshAlrgBtn();
 
     // CONFIRM button
-    var confirmPair = buildStyledButton({ label: 'CONFIRM', variant: 'mint', size: 'md', onClick: function() { handleSend(); } });
+    var confirmPair = buildStyledButton({ label: 'CONFIRM', variant: 'mint', size: 'sm', onClick: function() { handleSend(); } });
     confirmPair.wrap.style.flex = '2';
 
     actionBar.appendChild(undoPair.wrap);
@@ -355,6 +396,9 @@ export function ModifierPanel(container, opts) {
     card.appendChild(actionBar);
 
     container.appendChild(rootEl);
+
+    // Start all sections collapsed
+    _applySectionStates();
     renderAll();
   }
 
@@ -377,7 +421,7 @@ export function ModifierPanel(container, opts) {
     renderPrefixBar();
   }
 
-  // ═══ PLACEMENT BAR ═══
+  // ═══ PLACEMENT BAR (compact, above action buttons) ═══
   function renderPlacement() {
     placementBarEl.innerHTML = '';
     if (optionalGroups.length === 0 && mandatoryGroups.length === 0) {
@@ -388,7 +432,7 @@ export function ModifierPanel(container, opts) {
 
     var placeWrap = buildStyledButton({ variant: 'dark' });
     placeWrap.wrap.style.width = '100%';
-    placeWrap.inner.style.height = '36px';
+    placeWrap.inner.style.height = '24px';
     placeWrap.inner.style.display = 'flex';
     placeWrap.inner.style.alignItems = 'stretch';
     placeWrap.inner.style.justifyContent = 'stretch';
@@ -398,7 +442,7 @@ export function ModifierPanel(container, opts) {
     PLACEMENTS.forEach(function(pl, i) {
       if (i > 0) {
         var div = document.createElement('div');
-        div.style.cssText = 'width:2px;background:' + T.bgEdge + ';flex-shrink:0;align-self:stretch;';
+        div.style.cssText = 'width:1px;background:' + T.bgEdge + ';flex-shrink:0;align-self:stretch;';
         placeWrap.inner.appendChild(div);
       }
 
@@ -407,7 +451,7 @@ export function ModifierPanel(container, opts) {
       seg.style.cssText = [
         'flex:' + (pl.id === 'whole' ? '2' : '1') + ';',
         'display:flex;align-items:center;justify-content:center;',
-        'font-family:' + T.fb + ';font-size:16px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;',
+        'font-family:' + T.fb + ';font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;',
         'background:' + (isActive ? T.numpadChassis : 'transparent') + ';',
         'color:' + (isActive ? T.bgDark : T.mutedText) + ';',
         'cursor:pointer;transition:background 80ms,color 80ms;',
@@ -601,7 +645,7 @@ export function ModifierPanel(container, opts) {
     optionalContentEl.innerHTML = '';
 
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
 
     var mandKey = _currentMandatoryKey();
 
@@ -619,12 +663,12 @@ export function ModifierPanel(container, opts) {
     allOpts.forEach(function(entry) {
       var opt = entry.opt;
       var price = _resolvePrice(opt, mandKey);
-      var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'md' });
+      var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '20px';
+      pair.inner.style.fontSize = '14px';
       pair.inner.style.fontFamily = T.fb;
-      pair.inner.style.padding = '4px 3px';
+      pair.inner.style.padding = '4px 6px';
       pair.inner.style.lineHeight = '1.1';
 
       // Specials get yellow border to stand out
