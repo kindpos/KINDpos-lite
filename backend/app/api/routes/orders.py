@@ -456,6 +456,25 @@ async def get_day_summary(
             closed_count += 1
             closed_order_ids.append(order.order_id)
 
+        # Only include closed/paid orders in financial totals so that
+        # net_sales stays consistent with cash_total + card_total.
+        # Open orders have no confirmed payments yet.
+        if order.status == "open":
+            guest_count += order.guest_count
+            check_label = order.check_number if order.check_number else order.order_id
+            checks_list.append({
+                "checkId": order.order_id,
+                "checkLabel": check_label,
+                "paymentId": None,
+                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                "amount": money_round(order.subtotal),
+                "tip": 0,
+                "adjusted": False,
+                "method": None,
+                "status": "open",
+            })
+            continue
+
         gross_sales += Decimal(str(order.subtotal))
         order_disc = Decimal(str(order.discount_total))
         order_refund = Decimal(str(order.refund_total))
@@ -541,23 +560,10 @@ async def get_day_summary(
                     "method": "cash",
                     "status": "closed",
                 })
-        elif order.status == "open":
-            check_label = order.check_number if order.check_number else order.order_id
-            checks_list.append({
-                "checkId": order.order_id,
-                "checkLabel": check_label,
-                "paymentId": None,
-                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
-                "amount": money_round(order.subtotal),
-                "tip": 0,
-                "adjusted": False,
-                "method": None,
-                "status": "open",
-            })
 
     net_sales = float(gross_sales - void_total - discount_total - refund_total)
     total_checks = closed_count + open_count
-    avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
+    avg_check = money_round(net_sales / closed_count) if closed_count > 0 else 0.0
     unadjusted = sum(1 for c in checks_list if not c["adjusted"])
 
     # Build daypart breakdown from hourly buckets

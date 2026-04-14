@@ -103,6 +103,11 @@ def _aggregate_orders(orders, tip_map):
         if order.status == "voided":
             void_total += Decimal(str(order.subtotal))
             continue
+        # Skip open orders from financial totals — they have no
+        # confirmed payments yet and would inflate net_sales.
+        if order.status == "open":
+            guest_count += order.guest_count
+            continue
 
         total_checks += 1
         gross_sales += Decimal(str(order.subtotal))
