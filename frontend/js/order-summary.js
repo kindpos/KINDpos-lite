@@ -89,19 +89,22 @@ function _build() {
   // ── Column headers ──
   _colHead = document.createElement('div');
   _colHead.style.cssText = [
-    'display:flex;justify-content:space-between;',
+    'display:grid;grid-template-columns:1fr auto auto;gap:0 6px;',
     'padding:2px 10px;',
     'font-family:' + T.fh + ';font-size:14px;color:' + T.textPrimary + ';letter-spacing:0.06em;',
-    'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
+    'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;white-space:nowrap;',
   ].join('');
   var hdrItem = document.createElement('span');
   hdrItem.textContent = 'ITEM';
-  hdrItem.style.cssText = 'min-width:0;overflow:hidden;';
-  var hdrRight = document.createElement('span');
-  hdrRight.textContent = 'QTY    PRICE';
-  hdrRight.style.cssText = 'white-space:nowrap;flex-shrink:0;text-align:right;';
+  var hdrQty = document.createElement('span');
+  hdrQty.textContent = 'QTY';
+  hdrQty.style.textAlign = 'right';
+  var hdrPrice = document.createElement('span');
+  hdrPrice.textContent = 'PRICE';
+  hdrPrice.style.textAlign = 'right';
   _colHead.appendChild(hdrItem);
-  _colHead.appendChild(hdrRight);
+  _colHead.appendChild(hdrQty);
+  _colHead.appendChild(hdrPrice);
   el.appendChild(_colHead);
 
   // ── Scrollable items ──
