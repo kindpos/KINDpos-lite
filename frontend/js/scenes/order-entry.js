@@ -1556,7 +1556,7 @@ function _updateTicketTotals() {
   }
   OrderSummary.update({
     checkId: currentCheckNumber || '',
-    items: items,
+    skipItems: true,
     subtotal: totals.subtotal,
     tax: totals.tax,
     cardTotal: totals.cardTotal,
