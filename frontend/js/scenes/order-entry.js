@@ -1177,14 +1177,17 @@ function openModifierPanel(item, modConfig, catColor) {
   // Hide bottom bar — panel covers entire right column
   if (_bottomBar) _bottomBar.style.display = 'none';
 
-  // Mount on mainArea (not tabCanvas) so it covers the bottom bar too
+  // Suppress renderTicket during construction — ModifierPanel fires
+  // fireUpdate() multiple times inside build(). We capture the output
+  // but defer the single render until after the constructor finishes.
+  var _building = true;
   _mainArea.style.position = 'relative';
   _modPanel = new ModifierPanel(_mainArea, {
     item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
     catColor: catColor || T.mint,
     onUpdate: function(outputItem) {
       _modPanelItem = outputItem;
-      renderTicket();
+      if (!_building) renderTicket();
     },
     onSend: function(activeItem) {
       commitModifierPanelItem(item, activeItem);
@@ -1193,6 +1196,8 @@ function openModifierPanel(item, modConfig, catColor) {
       closeModifierPanel();
     },
   });
+  _building = false;
+  renderTicket();
 }
 
 function closeModifierPanel() {
