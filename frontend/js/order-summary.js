@@ -233,9 +233,18 @@ function _renderItems(items) {
       else wholeMods.push(mods[m]);
     }
 
-    // Render whole mods flat
+    // Render whole mods flat + children (special exclusions)
     for (var w = 0; w < wholeMods.length; w++) {
       _itemScroll.appendChild(_modRow(wholeMods[w]));
+      if (wholeMods[w].children && wholeMods[w].children.length > 0) {
+        for (var c = 0; c < wholeMods[w].children.length; c++) {
+          var childRow = _modRow(wholeMods[w].children[c]);
+          childRow.style.paddingLeft = '20px';
+          childRow.style.color = T.vermillion;
+          childRow.style.fontStyle = 'italic';
+          _itemScroll.appendChild(childRow);
+        }
+      }
     }
 
     // Render 1st/2nd as a table
