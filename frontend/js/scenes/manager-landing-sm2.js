@@ -168,7 +168,12 @@ function fetchAllData(state) {
 }
 
 function refreshData(state) {
-  fetchAllData(state).then(function() { if (state.el) renderLayout(state); });
+  if (state._refreshing || !state.el) return;
+  state._refreshing = true;
+  fetchAllData(state).then(function() {
+    state._refreshing = false;
+    if (state.el) renderLayout(state);
+  }).catch(function() { state._refreshing = false; });
 }
 
 // ── Operating Hours ──────────────────────────────
@@ -420,17 +425,19 @@ function wireTipAdjData(state, daySummary) {
 
 function wireCloseDayData(state) {
   var pendingCount = 0;
-  var srvList = state.staffData.servers;
+  var srvList = (state.staffData || {}).servers || [];
   for (var i = 0; i < srvList.length; i++) {
-    if (srvList[i].status !== 'checked_out') pendingCount++;
+    if (!srvList[i].checked_out) pendingCount++;
   }
-  var unadj = state.tipAdjData.unadjusted_count;
+  var unadj = ((state.tipAdjData || {}).unadjusted_count) || 0;
+  var allOut = srvList.length > 0 && pendingCount === 0;
+  var allAdj = unadj === 0;
   state.closeDayData = {
-    all_checked_out: pendingCount === 0,
+    all_checked_out: allOut,
     pending_count: pendingCount,
-    all_tips_adjusted: unadj === 0,
+    all_tips_adjusted: allAdj,
     unadjusted_count: unadj,
-    batch_ready: false,
+    batch_ready: allOut && allAdj,
     day_closed: false,
   };
 }
@@ -1656,6 +1663,11 @@ function ordersByTab(state) {
 
 function renderCheckGrid(state) {
   if (!state.centerGrid) return;
+  // Clear pending hold timers from previous render
+  if (state._holdTimers) {
+    for (var ht = 0; ht < state._holdTimers.length; ht++) clearTimeout(state._holdTimers[ht]);
+  }
+  state._holdTimers = [];
   state.centerGrid.innerHTML = '';
   var orders = ordersByTab(state);
   var isOpen = state.activeTab === 'open';
@@ -1763,6 +1775,7 @@ function buildCheckTile(state, order) {
           pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'manager-landing',
         });
       }, 400);
+      if (state._holdTimers) state._holdTimers.push(_holdTimer);
     });
     tile.addEventListener('pointerup', function() {
       clearTimeout(_holdTimer);
@@ -1875,6 +1888,7 @@ function renderOpsPanel(state) {
   grid.appendChild(buildButton('DISC', Object.assign({}, btnStyle, { onTap: function() {
     SceneManager.interrupt('disc-pin', {
       onConfirm: function(pin) {
+        if (!pin) { showToast('PIN required', { bg: T.gold }); return; }
         SceneManager.interrupt('disc-select', {
           onConfirm: function(opt) {
             var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
@@ -1926,12 +1940,16 @@ function renderOpsPanel(state) {
             return fetch('/api/v1/orders/' + id + '/void', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: emp.id || 'manager' }),
-            });
-          })).then(function() {
-            showToast(ids.length + ' checks voided', { bg: T.goGreen });
+            }).then(function(r) { return { id: id, ok: r.ok }; })
+              .catch(function() { return { id: id, ok: false }; });
+          })).then(function(results) {
+            var ok = results.filter(function(r) { return r.ok; }).length;
+            var fail = results.length - ok;
+            if (fail === 0) { showToast(ok + ' checks voided', { bg: T.goGreen }); }
+            else { showToast(ok + ' voided, ' + fail + ' failed', { bg: fail === results.length ? T.red : T.gold }); }
             state.selected = {};
             refreshData(state);
-          }).catch(function() { showToast('Void failed', { bg: T.red }); });
+          });
         }
       },
       onCancel: function() {},

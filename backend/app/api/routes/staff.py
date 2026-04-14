@@ -139,6 +139,8 @@ async def declare_cash_tips(
     ledger: EventLedger = Depends(get_ledger),
 ):
     """Record a server's self-reported cash tips at checkout (optional)."""
+    if request.amount < 0:
+        raise HTTPException(status_code=400, detail="Tip amount cannot be negative")
     event = cash_tips_declared(
         terminal_id=settings.terminal_id,
         server_id=request.server_id,

@@ -150,7 +150,12 @@ function fetchAllData(state) {
 }
 
 function refreshData(state) {
-  fetchAllData(state).then(function() { if (state.el) renderLayout(state); });
+  if (state._refreshing || !state.el) return;
+  state._refreshing = true;
+  fetchAllData(state).then(function() {
+    state._refreshing = false;
+    if (state.el) renderLayout(state);
+  }).catch(function() { state._refreshing = false; });
 }
 
 // ═══════════════════════════════════════════════════
@@ -970,6 +975,10 @@ function applyTabStyle(el, active) {
 
 function renderCheckGrid(state) {
   if (!state.centerGrid) return;
+  if (state._holdTimers) {
+    for (var ht = 0; ht < state._holdTimers.length; ht++) clearTimeout(state._holdTimers[ht]);
+  }
+  state._holdTimers = [];
   state.centerGrid.innerHTML = '';
   var orders = ordersByTab(state);
   var emp = state.params ? (state.params.emp || state.params) : {};
@@ -1057,6 +1066,7 @@ function buildCheckTile(state, order) {
           pin: emp.pin, employeeId: emp.id, employeeName: emp.name, returnLanding: 'server-landing',
         });
       }, 400);
+      if (state._holdTimers) state._holdTimers.push(_holdTimer);
     });
     tile.addEventListener('pointerup', function() {
       clearTimeout(_holdTimer);
@@ -1728,12 +1738,18 @@ function buildTipsDrillContent(state, content, emp) {
       zeroBtn.textContent = 'ADJUST REMAINING TO $0.00';
       zeroBtn.addEventListener('pointerup', function(e) {
         e.stopPropagation();
-        var empId = emp.id || emp.employeeId;
-        var zeroUrl = '/api/v1/payments/zero-unadjusted';
-        if (empId) zeroUrl += '?server_id=' + encodeURIComponent(empId);
-        fetch(zeroUrl, { method: 'POST' })
-          .then(function() { showToast('Remaining tips set to $0.00', { bg: T.gold, duration: 2000 }); refreshData(state); })
-          .catch(function() { showToast('Zero-all failed', { bg: T.red }); });
+        SceneManager.interrupt('sl-manager-gate', {
+          onConfirm: function() {
+            var empId = emp.id || emp.employeeId;
+            var zeroUrl = '/api/v1/payments/zero-unadjusted';
+            if (empId) zeroUrl += '?server_id=' + encodeURIComponent(empId);
+            fetch(zeroUrl, { method: 'POST' })
+              .then(function() { showToast('Remaining tips set to $0.00', { bg: T.gold, duration: 2000 }); refreshData(state); })
+              .catch(function() { showToast('Zero-all failed', { bg: T.red }); });
+          },
+          onCancel: function() {},
+          params: { message: 'Zero all remaining tips? This cannot be undone.' },
+        });
       });
       tipsContentPanel.appendChild(zeroBtn);
     }
