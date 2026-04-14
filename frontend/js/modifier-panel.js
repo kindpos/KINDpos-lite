@@ -106,6 +106,7 @@ export function ModifierPanel(container, opts) {
 
   // ── DOM refs ──
   var rootEl = null;
+  var _mainCard = null;
   var placementBarEl = null;
   var _tabBar = null;
   var mandatoryContentEl = null;
@@ -163,6 +164,14 @@ export function ModifierPanel(container, opts) {
       tab.style.color = isActive ? T.bgDark : color;
       tab.style.borderBottom = isActive ? '3px solid ' + color : '3px solid transparent';
     }
+    // Update card border to match active tab color
+    var activeColor = _tabColors[expandedSection] || T.numpadChassis;
+    if (_mainCard) {
+      _mainCard.style.borderTop = '5px solid ' + _lightenHex(activeColor, 0.2);
+      _mainCard.style.borderLeft = '5px solid ' + _lightenHex(activeColor, 0.2);
+      _mainCard.style.borderBottom = '5px solid ' + _darkenHex(activeColor, 0.3);
+      _mainCard.style.borderRight = '5px solid ' + _darkenHex(activeColor, 0.3);
+    }
     // Show/hide content panels
     if (mandatoryContentEl) mandatoryContentEl.style.display = expandedSection === 'mandatory' ? '' : 'none';
     if (includedContentEl) includedContentEl.style.display = expandedSection === 'included' ? '' : 'none';
@@ -175,7 +184,8 @@ export function ModifierPanel(container, opts) {
     rootEl.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;display:flex;flex-direction:column;gap:8px;';
 
     // Main card: beveled border
-    var card = document.createElement('div');
+    _mainCard = document.createElement('div');
+    var card = _mainCard;
     card.style.cssText = [
       'width:100%;flex:1;min-height:0;',
       'background:' + T.bg + ';',
