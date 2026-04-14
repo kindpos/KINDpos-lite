@@ -137,6 +137,25 @@ function _build() {
 //  HELPERS
 // ═══════════════════════════════════════════════════
 
+function _modRow(mod) {
+  var modRow = document.createElement('div');
+  modRow.style.cssText = [
+    'display:grid;grid-template-columns:1fr 108px;gap:0 6px;',
+    'padding:0 0 1px 10px;',
+    'font-family:' + T.fb + ';font-size:11px;',
+    'color:' + (mod.charged ? T.gold : T.mutedText) + ';',
+  ].join('');
+  var modName = document.createElement('div');
+  modName.textContent = mod.name;
+  modName.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  var modPrice = document.createElement('div');
+  modPrice.style.cssText = 'text-align:right;';
+  modPrice.textContent = mod.price > 0 ? '+$' + mod.price.toFixed(2) : '';
+  modRow.appendChild(modName);
+  modRow.appendChild(modPrice);
+  return modRow;
+}
+
 function _summaryRow(label, value, color, bold) {
   var row = document.createElement('div');
   row.style.cssText = [
@@ -182,26 +201,63 @@ function _renderItems(items) {
     row.appendChild(price);
     _itemScroll.appendChild(row);
 
-    // ── Modifier sub-rows ──
+    // ── Modifier sub-rows: partition into whole / 1st / 2nd ──
     var mods = item.mods || [];
+    var wholeMods = [];
+    var leftMods = [];
+    var rightMods = [];
     for (var m = 0; m < mods.length; m++) {
-      var mod = mods[m];
-      var modRow = document.createElement('div');
-      modRow.style.cssText = [
-        'display:grid;grid-template-columns:1fr 108px;gap:0 6px;',
-        'padding:0 0 1px 10px;',
-        'font-family:' + T.fb + ';font-size:11px;',
-        'color:' + (mod.charged ? T.gold : T.mutedText) + ';',
-      ].join('');
-      var modName = document.createElement('div');
-      modName.textContent = mod.name;
-      modName.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-      var modPrice = document.createElement('div');
-      modPrice.style.cssText = 'text-align:right;';
-      modPrice.textContent = mod.price > 0 ? '+$' + mod.price.toFixed(2) : '';
-      modRow.appendChild(modName);
-      modRow.appendChild(modPrice);
-      _itemScroll.appendChild(modRow);
+      if (mods[m].prefix === 'Left') leftMods.push(mods[m]);
+      else if (mods[m].prefix === 'Right') rightMods.push(mods[m]);
+      else wholeMods.push(mods[m]);
+    }
+
+    // Render whole mods flat
+    for (var w = 0; w < wholeMods.length; w++) {
+      _itemScroll.appendChild(_modRow(wholeMods[w]));
+    }
+
+    // Render 1st/2nd as a table
+    if (leftMods.length > 0 || rightMods.length > 0) {
+      var halfTable = document.createElement('div');
+      halfTable.style.cssText = 'padding:2px 0 2px 10px;';
+
+      // Headers
+      var hdrRow = document.createElement('div');
+      hdrRow.style.cssText = 'display:flex;border-bottom:1px solid ' + T.mutedText + ';margin-bottom:1px;font-family:' + T.fb + ';font-size:11px;font-weight:bold;color:' + T.gold + ';';
+      var hdrL = document.createElement('div');
+      hdrL.style.cssText = 'flex:1;text-align:center;';
+      hdrL.textContent = '1ST';
+      var hdrSep = document.createElement('div');
+      hdrSep.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;';
+      var hdrR = document.createElement('div');
+      hdrR.style.cssText = 'flex:1;text-align:center;';
+      hdrR.textContent = '2ND';
+      hdrRow.appendChild(hdrL);
+      hdrRow.appendChild(hdrSep);
+      hdrRow.appendChild(hdrR);
+      halfTable.appendChild(hdrRow);
+
+      // Content rows
+      var maxRows = Math.max(leftMods.length, rightMods.length);
+      for (var r = 0; r < maxRows; r++) {
+        var tr = document.createElement('div');
+        tr.style.cssText = 'display:flex;font-family:' + T.fb + ';font-size:10px;color:' + T.gold + ';';
+        var tdL = document.createElement('div');
+        tdL.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        tdL.textContent = leftMods[r] ? leftMods[r].name : '';
+        var tdSep = document.createElement('div');
+        tdSep.style.cssText = 'width:1px;background:' + T.mutedText + ';margin:0 3px;';
+        var tdR = document.createElement('div');
+        tdR.style.cssText = 'flex:1;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        tdR.textContent = rightMods[r] ? rightMods[r].name : '';
+        tr.appendChild(tdL);
+        tr.appendChild(tdSep);
+        tr.appendChild(tdR);
+        halfTable.appendChild(tr);
+      }
+
+      _itemScroll.appendChild(halfTable);
     }
   });
 }
