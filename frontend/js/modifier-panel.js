@@ -185,6 +185,7 @@ export function ModifierPanel(container, opts) {
       { key: 'included', wrap: includedSectionEl, card: includedSectionEl ? includedSectionEl._section : null },
       { key: 'optional', wrap: optionalSectionEl, card: optionalSectionEl ? optionalSectionEl._section : null },
     ];
+    var hasExpanded = expandedSection !== null;
     for (var i = 0; i < sections.length; i++) {
       var s = sections[i];
       if (!s.wrap || !s.card) continue;
@@ -194,9 +195,22 @@ export function ModifierPanel(container, opts) {
       if (s.key === 'optional' && prefixBarEl) {
         prefixBarEl.style.display = isExpanded ? '' : 'none';
       }
-      // Expanded section gets flex:1, collapsed gets flex:0 auto
-      s.wrap.style.flex = isExpanded ? '1' : '0 0 auto';
-      s.wrap.style.minHeight = isExpanded ? '0' : '';
+      if (isExpanded) {
+        // Expanded takes all remaining space
+        s.wrap.style.flex = '1';
+        s.wrap.style.minHeight = '0';
+        s.wrap.style.overflow = 'hidden';
+      } else if (hasExpanded) {
+        // Collapsed while another is expanded — header only
+        s.wrap.style.flex = '0 0 auto';
+        s.wrap.style.minHeight = '';
+        s.wrap.style.overflow = '';
+      } else {
+        // All collapsed — share space equally
+        s.wrap.style.flex = '1';
+        s.wrap.style.minHeight = '0';
+        s.wrap.style.overflow = 'hidden';
+      }
     }
   }
 
@@ -666,22 +680,15 @@ export function ModifierPanel(container, opts) {
       var pair = buildStyledButton({ label: opt.label, variant: 'dark', size: 'sm' });
       pair.wrap.style.width = '100%';
       pair.wrap.style.minWidth = '0';
-      pair.inner.style.fontSize = '14px';
+      pair.inner.style.fontSize = '16px';
       pair.inner.style.fontFamily = T.fb;
-      pair.inner.style.padding = '4px 6px';
+      pair.inner.style.padding = '3px 4px';
       pair.inner.style.lineHeight = '1.1';
 
       // Specials get yellow border to stand out
       if (opt.special) {
         pair.wrap.style.outline = '2px solid ' + T.gold;
         pair.wrap.style.outlineOffset = '-2px';
-      }
-
-      if (price > 0) {
-        var priceEl = document.createElement('div');
-        priceEl.style.cssText = 'font-size:8px;color:' + T.gold + ';margin-top:1px;';
-        priceEl.textContent = '+$' + price.toFixed(2);
-        pair.inner.appendChild(priceEl);
       }
 
       // Special: short tap = add, long press = customize popout

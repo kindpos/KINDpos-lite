@@ -1487,7 +1487,7 @@ function renderTicket() {
   var displayTicket = ticket;
   if (sceneParams.returnScene === 'check-overview') {
     displayTicket = ticket.filter(function(inst) { return !inst.sent; });
-    if (displayTicket.length === 0) {
+    if (displayTicket.length === 0 && !_modPanelItem) {
       var hint = document.createElement('div');
       hint.style.cssText = 'padding:20px 8px;font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.mutedText + ';text-align:center;';
       hint.textContent = 'Tap items to add';
