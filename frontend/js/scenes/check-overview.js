@@ -63,7 +63,7 @@ function collectSummary(seats, selected) {
 }
 
 // Group order items by seat_number into seats array
-function orderToSeats(order) {
+function orderToSeats(order, minSeats) {
   var seatMap = {};
   var items = order.items || [];
   for (var i = 0; i < items.length; i++) {
@@ -95,6 +95,7 @@ function orderToSeats(order) {
   }
   // Also check guest_count as a seat count hint
   if (order.guest_count && order.guest_count > maxSeat) maxSeat = order.guest_count;
+  if (minSeats && minSeats > maxSeat) maxSeat = minSeats;
   for (var si = 1; si <= maxSeat; si++) {
     var sKey = 'S-' + String(si).padStart(3, '0');
     if (!seatMap[sKey]) seatMap[sKey] = { id: sKey, items: [] };
@@ -728,7 +729,7 @@ defineScene({
           state.order = order;
           state.checkNumber = order.check_number || '';
           state.customerName = order.customer_name || '';
-          state.seats = orderToSeats(order);
+          state.seats = orderToSeats(order, state.seats.length);
           syncPaidSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
@@ -908,7 +909,7 @@ defineScene({
           state.order = order;
           state.checkNumber = order.check_number || '';
           state.customerName = order.customer_name || '';
-          state.seats = orderToSeats(order);
+          state.seats = orderToSeats(order, state.seats.length);
           syncPaidSeats(order);
           setSceneName(state.checkNumber || 'CHECK');
           rebuildSeatGrid();
