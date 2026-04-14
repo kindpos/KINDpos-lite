@@ -60,11 +60,11 @@ defineScene({
     var logo = document.createElement('img');
     logo.src = '/assets/images/palm.jpg';
     logo.alt = 'Store logo';
-    logo.style.cssText = 'max-width:220px;max-height:260px;object-fit:contain;';
+    logo.style.cssText = 'max-width:280px;max-height:320px;object-fit:contain;';
     brandCenter.appendChild(logo);
 
     var storeName = document.createElement('div');
-    storeName.style.cssText = 'font-family:' + T.fhr + ';font-size:22px;color:' + T.textPrimary + ';text-align:center;text-transform:uppercase;letter-spacing:2px;line-height:1.2;max-width:180px;word-wrap:break-word;';
+    storeName.style.cssText = 'font-family:' + T.fhr + ';font-size:32px;color:' + T.textPrimary + ';text-align:center;text-transform:uppercase;letter-spacing:2px;line-height:1.2;max-width:180px;word-wrap:break-word;';
     storeName.textContent = 'KINDpos';
     brandCenter.appendChild(storeName);
 
