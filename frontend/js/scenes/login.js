@@ -62,7 +62,7 @@ defineScene({
     var clockCenter = document.createElement('div');
     clockCenter.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;';
 
-    var clockPair = buildStyledButton({ label: 'CLOCK\nIN/OUT', variant: 'gold', size: 'lg', onClick: function() {
+    var clockPair = buildStyledButton({ label: 'TIMECLOCK', variant: 'gold', size: 'md', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
         if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
@@ -79,9 +79,6 @@ defineScene({
       SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
       SceneManager.openTransactional('clock-in', { emp: empData });
     } });
-    clockPair.wrap.style.width = SIDE_BTN_W;
-    clockPair.wrap.style.height = SIDE_BTN_H;
-    clockPair.inner.style.fontSize = SIDE_BTN_FS;
     clockCenter.appendChild(clockPair.wrap);
     leftCol.appendChild(clockCenter);
 
