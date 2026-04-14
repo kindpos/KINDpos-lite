@@ -15,3 +15,6 @@ test-results/
 print_live_test.py
 test_new_templates.py
 printer_size_diagnostic.py
+node_modules/
+package.json
+package-lock.json
