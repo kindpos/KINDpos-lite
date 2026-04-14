@@ -60,7 +60,7 @@ defineScene({
     var logo = document.createElement('img');
     logo.src = '/assets/images/palm.jpg';
     logo.alt = 'Store logo';
-    logo.style.cssText = 'max-width:140px;max-height:140px;object-fit:contain;';
+    logo.style.cssText = 'max-width:220px;max-height:260px;object-fit:contain;';
     brandCenter.appendChild(logo);
 
     var storeName = document.createElement('div');
