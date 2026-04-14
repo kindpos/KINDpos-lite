@@ -508,26 +508,32 @@ export function ModifierPanel(container, opts) {
     });
   }
 
-  // ═══ PREFIX BAR (inline beside placement bar) ═══
+  // ═══ PREFIX BAR (horizontal row) ═══
   function renderPrefixBar() {
     if (!prefixBarEl) return;
     prefixBarEl.innerHTML = '';
 
     OPT_PREFIXES.forEach(function(pfx) {
       var isActive = activeOptPrefix === pfx.id;
-      var v = isActive ? pfx.variant : 'dark';
-      var pair = buildStyledButton({ label: pfx.label, variant: v, size: 'sm' });
-      pair.inner.style.fontSize = '10px';
-      pair.inner.style.padding = '2px 6px';
-      pair.inner.style.whiteSpace = 'nowrap';
+      var btn = document.createElement('div');
+      btn.style.cssText = [
+        'flex:1;text-align:center;cursor:pointer;user-select:none;',
+        'font-family:' + T.fh + ';font-size:11px;font-weight:bold;letter-spacing:1px;',
+        'padding:3px 4px;',
+        'border:2px solid ' + T.numpadChassis + ';',
+        'background:' + (isActive ? T.numpadChassis : T.bgDark) + ';',
+        'color:' + (isActive ? T.bgDark : T.textPrimary) + ';',
+      ].join('');
+      btn.style.clipPath = chamfer(4);
+      btn.textContent = pfx.label;
 
-      pair.wrap.addEventListener('pointerup', function(e) {
+      btn.addEventListener('pointerup', function(e) {
         e.stopPropagation();
         activeOptPrefix = pfx.id;
         renderPrefixBar();
       });
 
-      prefixBarEl.appendChild(pair.wrap);
+      prefixBarEl.appendChild(btn);
     });
   }
 
