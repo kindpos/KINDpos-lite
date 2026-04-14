@@ -461,7 +461,7 @@ export function ModifierPanel(container, opts) {
 
     var placeRow = document.createElement('div');
     placeRow.style.cssText = [
-      'display:flex;height:18px;',
+      'display:flex;height:20px;',
       'border:1px solid ' + catColor + ';',
       'background:' + T.bgDark + ';',
     ].join('');
@@ -480,7 +480,7 @@ export function ModifierPanel(container, opts) {
         'flex:' + (pl.id === 'whole' ? '2' : '1') + ';',
         'display:flex;align-items:center;justify-content:center;',
         'font-family:' + T.fb + ';font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;',
-        'background:' + (isActive ? T.numpadChassis : 'transparent') + ';',
+        'background:' + (isActive ? catColor : 'transparent') + ';',
         'color:' + (isActive ? T.bgDark : T.mutedText) + ';',
         'cursor:pointer;transition:background 80ms,color 80ms;',
       ].join('');
@@ -504,7 +504,7 @@ export function ModifierPanel(container, opts) {
       var seg = segs[pl.id];
       if (!seg) return;
       var isActive = activePlacement === pl.id;
-      seg.style.background = isActive ? T.numpadChassis : 'transparent';
+      seg.style.background = isActive ? catColor : 'transparent';
       seg.style.color = isActive ? T.bgDark : T.mutedText;
     });
   }
