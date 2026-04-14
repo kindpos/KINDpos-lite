@@ -454,6 +454,7 @@ defineScene({
     // DOM refs
     centerGrid: null,
     opsPanel: null,
+    checkPreview: null,
   },
 
   render: function(el, params, state) {
@@ -831,17 +832,125 @@ function renderLayout(state) {
 }
 
 // ═══════════════════════════════════════════════════
-//  LEFT COLUMN — Sales Overview + Table Statistics
+//  LEFT COLUMN — Check Preview + Table Statistics
 // ═══════════════════════════════════════════════════
 
 function buildLeftColumn(state) {
   var col = document.createElement('div');
   col.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:8px;overflow:hidden;';
 
-  col.appendChild(buildSalesOverviewCard(state));
+  var previewWrap = document.createElement('div');
+  previewWrap.style.cssText = 'flex:1;display:flex;overflow:hidden;min-height:0;';
+  state.checkPreview = previewWrap;
+  col.appendChild(previewWrap);
+  renderCheckPreview(state);
+
   col.appendChild(buildTableStatsCard(state));
 
   return col;
+}
+
+// ── Check Preview (populates on selection) ─────
+function renderCheckPreview(state) {
+  if (!state.checkPreview) return;
+  state.checkPreview.innerHTML = '';
+
+  var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
+  var card = pair.card;
+  card.style.display = 'flex';
+  card.style.flexDirection = 'column';
+  card.style.overflow = 'hidden';
+  card.style.flex = '1';
+
+  card.appendChild(buildCardHeader('CHECK PREVIEW'));
+
+  var ids = Object.keys(state.selected);
+  if (ids.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;padding:20px;';
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';text-align:center;';
+    msg.textContent = 'Select a check to preview';
+    empty.appendChild(msg);
+    card.appendChild(empty);
+  } else if (ids.length > 1) {
+    var multi = document.createElement('div');
+    multi.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;padding:20px;';
+    var mMsg = document.createElement('div');
+    mMsg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';text-align:center;';
+    mMsg.textContent = ids.length + ' checks selected';
+    multi.appendChild(mMsg);
+    card.appendChild(multi);
+  } else {
+    var order = state.selected[ids[0]];
+    var totals = orderTotals(order);
+
+    // Check header row
+    var hdrRow = document.createElement('div');
+    hdrRow.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px 4px;flex-shrink:0;';
+    var chkName = document.createElement('span');
+    chkName.style.cssText = 'font-family:' + T.fh + ';font-size:20px;color:' + T.mint + ';font-weight:bold;';
+    chkName.textContent = checkNum(order);
+    var chkTotal = document.createElement('span');
+    chkTotal.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.gold + ';font-weight:bold;';
+    chkTotal.textContent = fmt(totals.cardTotal);
+    hdrRow.appendChild(chkName);
+    hdrRow.appendChild(chkTotal);
+    card.appendChild(hdrRow);
+
+    if (order.customer_name) {
+      var custRow = document.createElement('div');
+      custRow.style.cssText = 'padding:0 10px 4px;font-family:' + T.fh + ';font-size:16px;color:' + T.mint + ';flex-shrink:0;';
+      custRow.textContent = order.customer_name;
+      card.appendChild(custRow);
+    }
+
+    var rule = document.createElement('div');
+    rule.style.cssText = 'height:1px;background:' + T.border + ';margin:0 8px;flex-shrink:0;';
+    card.appendChild(rule);
+
+    // Scrollable item list
+    var itemList = document.createElement('div');
+    itemList.style.cssText = 'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;padding:6px 10px;';
+
+    for (var i = 0; i < totals.items.length; i++) {
+      var it = totals.items[i];
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;';
+      var nameSpan = document.createElement('span');
+      nameSpan.style.cssText = 'font-family:' + T.fb + ';font-size:17px;color:' + T.textPrimary + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;';
+      nameSpan.textContent = (it.qty > 1 ? it.qty + 'x ' : '') + it.name;
+      var priceSpan = document.createElement('span');
+      priceSpan.style.cssText = 'font-family:' + T.fb + ';font-size:17px;color:' + T.gold + ';margin-left:8px;flex-shrink:0;';
+      priceSpan.textContent = fmt(it.qty * it.unitPrice);
+      row.appendChild(nameSpan);
+      row.appendChild(priceSpan);
+      itemList.appendChild(row);
+    }
+    card.appendChild(itemList);
+
+    // Footer: subtotal + tax
+    var footRule = document.createElement('div');
+    footRule.style.cssText = 'height:1px;background:' + T.border + ';margin:0 8px;flex-shrink:0;';
+    card.appendChild(footRule);
+    var footer = document.createElement('div');
+    footer.style.cssText = 'padding:6px 10px 8px;flex-shrink:0;';
+    var subRow = document.createElement('div');
+    subRow.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:16px;color:' + T.textPrimary + ';';
+    subRow.innerHTML = '<span>Subtotal</span><span>' + fmt(totals.subtotal) + '</span>';
+    var taxRow = document.createElement('div');
+    taxRow.style.cssText = 'display:flex;justify-content:space-between;font-family:' + T.fb + ';font-size:16px;color:' + T.mutedText + ';';
+    taxRow.innerHTML = '<span>Tax</span><span>' + fmt(totals.tax) + '</span>';
+    footer.appendChild(subRow);
+    footer.appendChild(taxRow);
+    card.appendChild(footer);
+  }
+
+  state.checkPreview.appendChild(pair.wrap);
 }
 
 function buildSalesOverviewCard(state) {
@@ -988,6 +1097,7 @@ function buildCenterColumn(state) {
         for (var i = 0; i < tabEls.length; i++) applyTabStyle(tabEls[i], tabKeys[i] === state.activeTab);
         renderCheckGrid(state);
         renderOpsPanel(state);
+        renderCheckPreview(state);
       });
       tabEls.push(tab);
       tabBar.appendChild(tab);
@@ -1007,6 +1117,7 @@ function buildCenterColumn(state) {
 
   renderCheckGrid(state);
   renderOpsPanel(state);
+  renderCheckPreview(state);
   return pair.wrap;
 }
 
@@ -1123,6 +1234,7 @@ function buildCheckTile(state, order) {
         applyTileSelected(tile, true);
       }
       renderOpsPanel(state);
+      renderCheckPreview(state);
     });
     tile.addEventListener('pointerleave', function() {
       clearTimeout(_holdTimer);
@@ -1333,7 +1445,7 @@ function renderOpsPanel(state) {
 }
 
 // ═══════════════════════════════════════════════════
-//  RIGHT COLUMN — Tips Panel (top) + Checkout Panel (bottom)
+//  RIGHT COLUMN — Sales Overview + Tips + Checkout
 // ═══════════════════════════════════════════════════
 
 function getUnadjustedChecks(state) {
@@ -1352,8 +1464,9 @@ function buildRightColumn(state) {
   var col = document.createElement('div');
   col.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:8px;overflow:hidden;';
 
+  col.appendChild(buildSalesOverviewCard(state));
   col.appendChild(buildTipsCard(state));
-  col.appendChild(buildCheckoutCard(state));
+  col.appendChild(buildCheckoutStrip(state));
 
   return col;
 }
@@ -1468,55 +1581,16 @@ function buildTipsCard(state) {
   return pair.wrap;
 }
 
-function buildCheckoutCard(state) {
+function buildCheckoutStrip(state) {
   var cs = state.checkoutStatus || {};
   var emp = state.params ? (state.params.emp || state.params) : {};
 
-  var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
-  pair.wrap.style.flex = '1';
-  pair.wrap.style.display = 'flex';
-  pair.wrap.style.overflow = 'hidden';
-  pair.wrap.style.minHeight = '0';
-  var card = pair.card;
-  card.style.display = 'flex';
-  card.style.flexDirection = 'column';
-  card.style.flex = '1';
-
-  card.appendChild(buildCardHeader('CHECKOUT'));
-
-  var coBody = document.createElement('div');
-  coBody.style.cssText = 'flex:1;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px;';
-
-  // Open checks status
-  var openCount = cs.openChecks || 0;
-  var openRow = document.createElement('div');
-  openRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid ' + (openCount > 0 ? T.vermillion : T.bgDark) + ';';
-  var openIcon = document.createElement('span');
-  openIcon.style.cssText = 'font-size:18px;color:' + (openCount > 0 ? T.vermillion : T.goGreen) + ';';
-  openIcon.textContent = openCount > 0 ? '\u2716' : '\u2714';
-  var openLabel = document.createElement('span');
-  openLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + (openCount > 0 ? T.vermillion : T.textPrimary) + ';';
-  openLabel.textContent = openCount + ' OPEN CHECK' + (openCount !== 1 ? 'S' : '');
-  openRow.appendChild(openIcon);
-  openRow.appendChild(openLabel);
-  coBody.appendChild(openRow);
-
-  // Unadjusted tips status
-  var unadjCount = cs.unadjustedTips || 0;
-  var unadjColor = unadjCount > 0 ? '#ffdd44' : T.textPrimary;
-  var unadjRow = document.createElement('div');
-  unadjRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid ' + (unadjCount > 0 ? '#ffdd44' : T.bgDark) + ';';
-  var unadjIcon = document.createElement('span');
-  unadjIcon.style.cssText = 'font-size:18px;color:' + (unadjCount > 0 ? '#ffdd44' : T.goGreen) + ';';
-  unadjIcon.textContent = unadjCount > 0 ? '\u26a0' : '\u2714';
-  var unadjLabel = document.createElement('span');
-  unadjLabel.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + unadjColor + ';';
-  unadjLabel.textContent = unadjCount + ' UNADJUSTED TIP' + (unadjCount !== 1 ? 'S' : '');
-  unadjRow.appendChild(unadjIcon);
-  unadjRow.appendChild(unadjLabel);
-  coBody.appendChild(unadjRow);
+  var strip = document.createElement('div');
+  strip.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;gap:4px;';
 
   // CHECKOUT button
+  var openCount = cs.openChecks || 0;
+  var unadjCount = cs.unadjustedTips || 0;
   var hasBlockers = openCount > 0;
   var hasWarnings = unadjCount > 0;
   var coBtnVariant = hasBlockers ? 'vermillion' : (hasWarnings ? 'gold' : 'mint');
@@ -1536,10 +1610,25 @@ function buildCheckoutCard(state) {
     }
   }});
   coPair.wrap.style.width = '100%';
-  coBody.appendChild(coPair.wrap);
+  strip.appendChild(coPair.wrap);
 
-  card.appendChild(coBody);
-  return pair.wrap;
+  // Status row beneath the button
+  var statusRow = document.createElement('div');
+  statusRow.style.cssText = 'display:flex;justify-content:space-between;padding:2px 4px;';
+
+  var openStatus = document.createElement('span');
+  openStatus.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + (openCount > 0 ? T.vermillion : T.goGreen) + ';';
+  openStatus.textContent = (openCount > 0 ? '\u2716 ' : '\u2714 ') + openCount + ' open';
+
+  var unadjStatus = document.createElement('span');
+  unadjStatus.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + (unadjCount > 0 ? '#ffdd44' : T.goGreen) + ';';
+  unadjStatus.textContent = (unadjCount > 0 ? '\u26a0 ' : '\u2714 ') + unadjCount + ' unadjusted';
+
+  statusRow.appendChild(openStatus);
+  statusRow.appendChild(unadjStatus);
+  strip.appendChild(statusRow);
+
+  return strip;
 }
 
 // ═══════════════════════════════════════════════════
