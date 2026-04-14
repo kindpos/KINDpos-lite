@@ -101,7 +101,7 @@ export function ModifierPanel(container, opts) {
 
   var activeOptPrefix = 'ADD';
   var activePlacement = 'whole';
-  var expandedSection = null; // 'mandatory' | 'included' | 'optional' | null
+  var expandedSection = mandatoryGroups.length > 0 ? 'mandatory' : null;
   var expandedMandGroup = null; // key of expanded mandatory group card
 
   // ── DOM refs ──
@@ -413,10 +413,6 @@ export function ModifierPanel(container, opts) {
 
     container.appendChild(rootEl);
 
-    // Start with mandatory expanded (if it exists), others collapsed
-    if (mandatoryGroups.length > 0) {
-      expandedSection = 'mandatory';
-    }
     _applySectionStates();
     renderAll();
   }
