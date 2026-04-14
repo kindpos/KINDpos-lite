@@ -49,13 +49,13 @@ defineScene({
 
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;background:' + T.bg + ';padding:0 20px;';
 
-    // ── LEFT COLUMN — Logo + store name, Config at bottom ─────
+    // ── LEFT COLUMN — Logo + store name ─────
     var leftCol = document.createElement('div');
-    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;';
+    leftCol.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;';
 
     // Logo + store name — vertically centered
     var brandCenter = document.createElement('div');
-    brandCenter.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;';
+    brandCenter.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;';
 
     var logo = document.createElement('img');
     logo.src = '/assets/images/palm.jpg';
@@ -75,14 +75,6 @@ defineScene({
     }).catch(function() {});
 
     leftCol.appendChild(brandCenter);
-
-    // Config — small vermillion button, packed at bottom center
-    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'sm', onClick: function() {
-      if (state.numpadRef) state.numpadRef.clear();
-      SceneManager.openTransactional('settings');
-    } });
-    configPair.wrap.style.marginBottom = '8px';
-    leftCol.appendChild(configPair.wrap);
 
     container.appendChild(leftCol);
 
@@ -151,6 +143,14 @@ defineScene({
       SceneManager.mountWorking('order-entry', { emp: empData });
     } });
     rightCol.appendChild(quickOrderPair.wrap);
+
+    // Config — small vermillion button, extra padding above
+    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'sm', onClick: function() {
+      if (state.numpadRef) state.numpadRef.clear();
+      SceneManager.openTransactional('settings');
+    } });
+    configPair.wrap.style.marginTop = '32px';
+    rightCol.appendChild(configPair.wrap);
 
     container.appendChild(rightCol);
 
