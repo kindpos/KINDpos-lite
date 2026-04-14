@@ -1576,9 +1576,12 @@ function buildCheckGridCard(state) {
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
   card.style.flex = '1';
+  card.style.minHeight = '0';
   card.style.overflow = 'hidden';
   pair.wrap.style.flex = '1';
   pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
 
   // ── Tab bar ──
   var tabKeys = ['open', 'closed', 'void'];
@@ -1613,7 +1616,7 @@ function buildCheckGridCard(state) {
 
   // ── Check grid ──
   state.centerGrid = document.createElement('div');
-  state.centerGrid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:end;';
+  state.centerGrid.style.cssText = 'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;';
   card.appendChild(state.centerGrid);
 
   // ── Operations panel ──

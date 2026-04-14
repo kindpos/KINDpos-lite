@@ -911,14 +911,16 @@ function buildTableStatsCard(state) {
 
 function buildCenterColumn(state) {
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
   card.style.overflow = 'hidden';
 
-  // Check grid
+  // Check grid (scrollable)
   state.centerGrid = document.createElement('div');
-  state.centerGrid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
+  state.centerGrid.style.cssText = 'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
   card.appendChild(state.centerGrid);
 
   // Tab bar (below grid)
