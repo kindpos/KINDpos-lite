@@ -956,18 +956,13 @@ function buildCenterColumn(state) {
   card.style.flexDirection = 'column';
   card.style.overflow = 'hidden';
 
-  // Check grid (scrollable)
-  state.centerGrid = document.createElement('div');
-  state.centerGrid.style.cssText = 'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
-  card.appendChild(state.centerGrid);
-
-  // Tab bar (below grid)
+  // Tab bar (above grid — matches manager layout)
   var tabKeys = ['open', 'closed', 'void'];
   var tabLabels = ['OPEN', 'CLOSED', 'VOID'];
   var tabEls = [];
 
   var tabBar = document.createElement('div');
-  tabBar.style.cssText = 'display:flex;flex-shrink:0;border-top:1px solid ' + T.border + ';';
+  tabBar.style.cssText = 'display:flex;flex-shrink:0;border-bottom:1px solid ' + T.border + ';';
 
   for (var t = 0; t < tabKeys.length; t++) {
     (function(key, label) {
@@ -988,6 +983,11 @@ function buildCenterColumn(state) {
     })(tabKeys[t], tabLabels[t]);
   }
   card.appendChild(tabBar);
+
+  // Check grid (scrollable)
+  state.centerGrid = document.createElement('div');
+  state.centerGrid.style.cssText = 'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;box-sizing:border-box;';
+  card.appendChild(state.centerGrid);
 
   // Operations panel
   state.opsPanel = document.createElement('div');
