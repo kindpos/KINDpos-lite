@@ -15,7 +15,7 @@ class BaseTemplate:
         if chars_per_line is not None:
             self.chars_per_line = chars_per_line
         else:
-            self.chars_per_line = 33 if paper_width == 80 else 32
+            self.chars_per_line = 42 if paper_width == 80 else 33
 
     def render(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """

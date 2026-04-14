@@ -66,7 +66,7 @@ class ESCPOSFormatter:
         if chars_per_line is not None:
             self.chars_per_line = chars_per_line
         else:
-            self.chars_per_line = 33 if paper_width == 80 else 32
+            self.chars_per_line = 42 if paper_width == 80 else 33
 
     def _safe_encode(self, text: str) -> bytes:
         """Encode text to bytes, replacing Unicode characters the printer can't handle."""
@@ -166,6 +166,15 @@ class ESCPOSFormatter:
                 out += ALIGN_LEFT
                 out += self._safe_encode(char * self.chars_per_line)
                 out += LF
+
+            elif cmd_type == 'logo':
+                # Pre-baked GS v 0 bitmap bytes from logo_utils.logo_to_escpos_bytes()
+                data = cmd.get('data', b'')
+                if data:
+                    out += ALIGN_CENTER
+                    out += data
+                    out += LF
+                    out += ALIGN_LEFT
 
             elif cmd_type == 'cut':
                 partial = cmd.get('partial', False)
