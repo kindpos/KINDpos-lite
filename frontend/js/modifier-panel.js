@@ -295,25 +295,24 @@ export function ModifierPanel(container, opts) {
 
     card.appendChild(sectionsArea);
 
-    // ── Bottom bar: prefix buttons + placement in one row ──
-    var bottomBarRow = document.createElement('div');
-    bottomBarRow.style.cssText = [
-      'flex-shrink:0;display:flex;gap:4px;align-items:stretch;',
-      'padding:2px 4px;',
-      'background:' + T.bgDark + ';',
-    ].join('');
-
+    // ── Prefix bar (single horizontal row) ──
     if (optionalGroups.length > 0) {
       prefixBarEl = document.createElement('div');
-      prefixBarEl.style.cssText = 'display:flex;gap:3px;flex-shrink:0;';
-      bottomBarRow.appendChild(prefixBarEl);
+      prefixBarEl.style.cssText = [
+        'flex-shrink:0;display:flex;gap:3px;',
+        'padding:2px 4px;',
+        'background:' + T.bgDark + ';',
+      ].join('');
+      card.appendChild(prefixBarEl);
     }
 
+    // ── Placement bar (own row below prefixes) ──
     placementBarEl = document.createElement('div');
-    placementBarEl.style.cssText = 'flex:1;min-width:0;';
-    bottomBarRow.appendChild(placementBarEl);
-
-    card.appendChild(bottomBarRow);
+    placementBarEl.style.cssText = [
+      'flex-shrink:0;padding:1px 4px;',
+      'background:' + T.bgDark + ';',
+    ].join('');
+    card.appendChild(placementBarEl);
 
     // ── Bottom action bar: <<< | NOTE | ALRG | CONFIRM (compact) ──
     var actionBar = document.createElement('div');
@@ -460,8 +459,7 @@ export function ModifierPanel(container, opts) {
 
     var placeWrap = buildStyledButton({ variant: 'dark' });
     placeWrap.wrap.style.width = '100%';
-    placeWrap.wrap.style.height = '100%';
-    placeWrap.inner.style.height = '100%';
+    placeWrap.inner.style.height = '18px';
     placeWrap.inner.style.display = 'flex';
     placeWrap.inner.style.alignItems = 'stretch';
     placeWrap.inner.style.justifyContent = 'stretch';
