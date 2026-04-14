@@ -12,6 +12,7 @@ import { OrderSummary } from '../order-summary.js';
 import { buildNumpad } from '../numpad.js';
 import { showToast } from '../components.js';
 import { setSceneName, setHeaderBack } from '../app.js';
+import { showKeyboard, hideKeyboard } from '../keyboard.js';
 import './column-editor.js';
 
 // TODO: No font-size token exists for 26px card header labels — using inline '9px'.
@@ -1132,42 +1133,20 @@ defineScene({
   interrupts: {
     'co-name-input': {
       render: function(container, params) {
-        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
-
-        var panel = document.createElement('div');
-        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';border-radius:5px;padding:32px 40px;min-width:480px;max-width:540px;text-align:center;';
-
-        var msg = document.createElement('div');
-        msg.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsBtnSm + ';color:' + T.mint + ';margin-bottom:20px;letter-spacing:2px;';
-        msg.textContent = 'NAME FOR ' + (params.checkLabel || 'CHECK').toUpperCase();
-        panel.appendChild(msg);
-
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.maxLength = 40;
-        input.placeholder = 'Enter name';
-        input.value = params.currentName || '';
-        input.style.cssText = 'width:100%;box-sizing:border-box;padding:14px 16px;font-family:' + T.fb + ';font-size:' + T.fsBtnSm + ';color:' + T.textPrimary + ';background:' + T.bg + ';border:2px solid ' + T.mint + ';border-radius:4px;outline:none;margin-bottom:20px;text-align:center;';
-        panel.appendChild(input);
-        setTimeout(function() { input.focus(); }, 80);
-
-        var btns = document.createElement('div');
-        btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
-        btns.appendChild(buildButton('SAVE', { fill: T.darkBtn, color: T.mint, fontSize: T.fsBtnSm, width: 160, height: 52, onTap: function() { params.onConfirm(input.value.trim()); } }));
-        btns.appendChild(buildButton('CLEAR', { fill: T.darkBtn, color: T.gold, fontSize: T.fsBtnSm, width: 160, height: 52, onTap: function() { params.onConfirm(''); } }));
-        btns.appendChild(buildButton('CANCEL', { fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtnSm, width: 160, height: 52, onTap: function() { params.onCancel(); } }));
-        panel.appendChild(btns);
-        container.appendChild(panel);
-
-        input.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') params.onConfirm(input.value.trim());
-          if (e.key === 'Escape') params.onCancel();
-        });
-
-        container.addEventListener('pointerup', function(e) {
-          if (e.target === container) params.onCancel();
+        showKeyboard({
+          placeholder: 'Enter name',
+          initialValue: params.currentName || '',
+          maxLength: 40,
+          onDone: function(val) {
+            params.onConfirm(val.trim());
+          },
+          onDismiss: function() {
+            params.onCancel();
+          },
+          dismissOnDone: true,
         });
       },
+      unmount: function() { hideKeyboard(); },
     },
 
     'server-picker': {

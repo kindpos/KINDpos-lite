@@ -11,6 +11,7 @@ import { defineScene } from '../scene-manager-2.js';
 import { buildCard, applyCardBevel, hexToRgba } from '../theme-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import './check-overview.js';
+import { showKeyboard, hideKeyboard } from '../keyboard.js';
 import { createSVG, drawTrendLine, drawStackedAreaMulti } from '../chart-helpers.js';
 
 // ── Constants (immutable) ────────────────────────
@@ -529,38 +530,20 @@ defineScene({
 
     'ml-name-input': {
       render: function(container, params) {
-        var pair = buildCard({ bg: T.bgDark, padding: '32px 40px', chamferSize: 10, borderWidth: 7, glow: true });
-        pair.card.style.minWidth = '480px';
-        pair.card.style.maxWidth = '540px';
-        pair.card.style.textAlign = 'center';
-
-        var msg = document.createElement('div');
-        msg.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsBtnSm + ';color:' + T.mint + ';margin-bottom:20px;letter-spacing:2px;';
-        msg.textContent = 'NAME FOR ' + (params.checkLabel || 'CHECK');
-        pair.card.appendChild(msg);
-
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.maxLength = 40;
-        input.placeholder = 'Enter name';
-        input.value = params.currentName || '';
-        input.style.cssText = 'width:100%;box-sizing:border-box;padding:14px 16px;font-family:' + T.fb + ';font-size:' + T.fsBtnSm + ';color:' + T.textPrimary + ';background:' + T.bg + ';border:2px solid ' + T.mint + ';border-radius:4px;outline:none;margin-bottom:20px;text-align:center;';
-        pair.card.appendChild(input);
-        setTimeout(function() { input.focus(); }, 80);
-
-        var btns = document.createElement('div');
-        btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
-        btns.appendChild(buildButton('SAVE', { fill: T.darkBtn, color: T.mint, fontSize: T.fsBtnSm, width: 160, height: 52, onTap: function() { params.onConfirm(input.value.trim()); } }));
-        btns.appendChild(buildButton('CLEAR', { fill: T.darkBtn, color: T.gold, fontSize: T.fsBtnSm, width: 160, height: 52, onTap: function() { params.onConfirm(''); } }));
-        btns.appendChild(buildButton('CANCEL', { fill: T.darkBtn, color: T.mutedText, fontSize: T.fsBtnSm, width: 160, height: 52, onTap: function() { params.onCancel(); } }));
-        pair.card.appendChild(btns);
-        container.appendChild(pair.wrap);
-
-        input.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') params.onConfirm(input.value.trim());
-          if (e.key === 'Escape') params.onCancel();
+        showKeyboard({
+          placeholder: 'Enter name',
+          initialValue: params.currentName || '',
+          maxLength: 40,
+          onDone: function(val) {
+            params.onConfirm(val.trim());
+          },
+          onDismiss: function() {
+            params.onCancel();
+          },
+          dismissOnDone: true,
         });
       },
+      unmount: function() { hideKeyboard(); },
     },
   },
 });
