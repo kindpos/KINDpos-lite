@@ -118,7 +118,7 @@ defineScene({
     var rightCol = document.createElement('div');
     rightCol.style.cssText = 'display:flex;flex-direction:column;align-items:center;align-self:stretch;justify-content:center;';
 
-    var quickOrderPair = buildStyledButton({ label: 'NEW\nORDER', variant: 'mint', size: 'lg', onClick: function() {
+    var quickOrderPair = buildStyledButton({ label: 'NEW\nORDER', variant: 'mint', size: 'md', onClick: function() {
       var currentPin = state.numpadRef ? state.numpadRef.getPin() : '';
       if (currentPin.length === 0) {
         if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
@@ -134,9 +134,6 @@ defineScene({
       SceneManager.closeGate('login');
       SceneManager.mountWorking('order-entry', { emp: empData });
     } });
-    quickOrderPair.wrap.style.width = SIDE_BTN_W;
-    quickOrderPair.wrap.style.height = SIDE_BTN_H;
-    quickOrderPair.inner.style.fontSize = SIDE_BTN_FS;
     rightCol.appendChild(quickOrderPair.wrap);
 
     container.appendChild(rightCol);
