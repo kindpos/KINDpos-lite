@@ -35,6 +35,7 @@ from app.core.events import (
     order_created,
     order_transferred,
     check_named,
+    guest_count_updated,
     item_added,
     item_removed,
     item_modified,
@@ -643,6 +644,7 @@ class PatchOrderRequest(BaseModel):
     """Request to update order-level fields (e.g. server transfer, check name)."""
     server_id: Optional[str] = None
     server_name: Optional[str] = None
+    guest_count: Optional[int] = None
     customer_name: Optional[str] = None
 
 
@@ -669,6 +671,14 @@ async def patch_order(
             terminal_id=settings.terminal_id,
             order_id=order_id,
             customer_name=request.customer_name,
+        )
+        await ledger.append(event)
+
+    if request.guest_count is not None:
+        event = guest_count_updated(
+            terminal_id=settings.terminal_id,
+            order_id=order_id,
+            guest_count=request.guest_count,
         )
         await ledger.append(event)
 

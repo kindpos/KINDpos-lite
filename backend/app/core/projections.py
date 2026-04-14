@@ -220,6 +220,10 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
             if order:
                 order.customer_name = payload.get("customer_name")
 
+        elif event.event_type == EventType.GUEST_COUNT_UPDATED:
+            if order:
+                order.guest_count = payload.get("guest_count", order.guest_count)
+
         # --- ITEMS ---
 
         elif event.event_type == EventType.ITEM_ADDED:
