@@ -262,6 +262,7 @@ export function ModifierPanel(container, opts) {
 
     if (mandatoryGroups.length > 0) {
       mandatoryContentEl = _buildSectionContent();
+      mandatoryContentEl.style.position = 'relative';
       contentArea.appendChild(mandatoryContentEl);
     }
 
@@ -520,91 +521,139 @@ export function ModifierPanel(container, opts) {
   }
 
   // ═══ MANDATORY SECTION ═══
+  var _mandOverlay = null; // active selection overlay element
+
   function renderMandatory() {
     if (!mandatoryContentEl) return;
     mandatoryContentEl.innerHTML = '';
+    _mandOverlay = null;
 
-    // Grid of group cards
+    // Tile grid — each mandatory group is a card tile (check-tile style)
+    var cols = Math.min(mandatoryGroups.length, 3);
     var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + Math.min(mandatoryGroups.length, 3) + ',1fr);gap:6px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:8px;align-content:start;';
 
     mandatoryGroups.forEach(function(group) {
       var currentSel = activeItem.mandatorySelections[group.key];
       var hasSelection = !!currentSel;
-      var isExpanded = expandedMandGroup === group.key;
 
-      // Each group is its own card
-      var groupCard = document.createElement('div');
-      var borderColor = hasSelection ? T.numpadChassis : T.vermillion;
-      groupCard.style.cssText = [
-        'display:flex;flex-direction:column;',
-        'border:2px solid ' + borderColor + ';',
+      var tile = document.createElement('div');
+      var borderColor = hasSelection ? T.mint : T.vermillion;
+      tile.style.cssText = [
         'background:' + T.bgDark + ';',
-        'cursor:pointer;user-select:none;',
-        'overflow:hidden;',
+        'border:2px solid ' + borderColor + ';',
+        'padding:10px 8px;',
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
+        'min-height:60px;cursor:pointer;user-select:none;box-sizing:border-box;',
       ].join('');
-      groupCard.style.clipPath = chamfer(5);
+      tile.style.clipPath = chamfer(6);
 
-      // Card header — shows group name or selection name
-      var hdr = document.createElement('div');
-      hdr.style.cssText = [
-        'padding:4px 8px;',
-        'font-family:' + T.fh + ';font-size:14px;font-weight:bold;',
-        'color:' + (hasSelection ? T.bgDark : T.textPrimary) + ';',
-        'background:' + (hasSelection ? T.numpadChassis : 'transparent') + ';',
-        'text-align:center;',
-      ].join('');
-      hdr.textContent = hasSelection ? currentSel.label : group.label;
-      groupCard.appendChild(hdr);
+      // Group label (always visible at top of tile)
+      var label = document.createElement('div');
+      label.style.cssText = 'font-family:' + T.fh + ';font-size:13px;color:' + T.mutedText + ';text-transform:uppercase;letter-spacing:0.5px;';
+      label.textContent = group.label;
+      tile.appendChild(label);
 
-      // Tap header to toggle expansion
-      hdr.addEventListener('pointerup', function(e) {
+      // Selection value (shown below label when selected)
+      if (hasSelection) {
+        var val = document.createElement('div');
+        val.style.cssText = 'font-family:' + T.fh + ';font-size:20px;font-weight:bold;color:' + T.mint + ';';
+        val.textContent = currentSel.label;
+        tile.appendChild(val);
+      } else {
+        var prompt = document.createElement('div');
+        prompt.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.vermillion + ';';
+        prompt.textContent = 'tap to select';
+        tile.appendChild(prompt);
+      }
+
+      // Tap tile → show selection overlay
+      tile.addEventListener('pointerup', function(e) {
         e.stopPropagation();
-        expandedMandGroup = isExpanded ? null : group.key;
-        renderMandatory();
+        _showMandatoryOverlay(group);
       });
 
-      // Expanded: show option buttons
-      if (isExpanded) {
-        var optionsWrap = document.createElement('div');
-        optionsWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:4px;';
-
-        (group.options || []).forEach(function(opt) {
-          var isSelected = currentSel && currentSel.key === opt.key;
-          var pair = buildStyledButton({
-            label: opt.label,
-            variant: isSelected ? 'mint' : 'dark',
-            size: 'sm',
-          });
-          pair.wrap.style.width = '100%';
-          pair.inner.style.fontSize = '13px';
-          pair.inner.style.padding = '4px 6px';
-          if (isSelected) {
-            pair.wrap.style.background = T.numpadChassis;
-            pair.inner.style.color = T.bgDark;
-          }
-
-          pair.wrap.addEventListener('pointerup', function(e) {
-            e.stopPropagation();
-            expandedMandGroup = null; // collapse after selection
-            onMandatoryChange(group.key, opt);
-          });
-
-          optionsWrap.appendChild(pair.wrap);
-        });
-
-        groupCard.appendChild(optionsWrap);
-      }
-
-      // If expanded, span full row
-      if (isExpanded) {
-        groupCard.style.gridColumn = '1 / -1';
-      }
-
-      grid.appendChild(groupCard);
+      grid.appendChild(tile);
     });
 
     mandatoryContentEl.appendChild(grid);
+  }
+
+  function _showMandatoryOverlay(group) {
+    // Remove any existing overlay
+    if (_mandOverlay && _mandOverlay.parentNode) _mandOverlay.parentNode.removeChild(_mandOverlay);
+
+    var currentSel = activeItem.mandatorySelections[group.key];
+
+    _mandOverlay = document.createElement('div');
+    _mandOverlay.style.cssText = [
+      'position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;',
+      'background:' + T.bg + ';',
+      'display:flex;flex-direction:column;padding:8px;box-sizing:border-box;',
+    ].join('');
+
+    // Overlay header
+    var hdr = document.createElement('div');
+    hdr.style.cssText = [
+      'flex-shrink:0;padding:6px 10px;margin-bottom:8px;text-align:center;',
+      'font-family:' + T.fh + ';font-size:16px;font-weight:bold;color:' + catColor + ';',
+      'border-bottom:2px solid ' + catColor + ';',
+    ].join('');
+    hdr.textContent = 'Select ' + group.label;
+    _mandOverlay.appendChild(hdr);
+
+    // Option cards grid
+    var optCount = (group.options || []).length;
+    var optCols = optCount <= 4 ? 2 : 3;
+    var optGrid = document.createElement('div');
+    optGrid.style.cssText = [
+      'flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
+      'display:grid;grid-template-columns:repeat(' + optCols + ',1fr);gap:8px;align-content:start;padding:4px;',
+    ].join('');
+
+    (group.options || []).forEach(function(opt) {
+      var isSelected = currentSel && currentSel.key === opt.key;
+
+      var card = document.createElement('div');
+      card.style.cssText = [
+        'background:' + (isSelected ? T.mint : T.bgDark) + ';',
+        'border:2px solid ' + (isSelected ? T.mint : T.numpadChassis) + ';',
+        'padding:12px 8px;',
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;',
+        'min-height:54px;cursor:pointer;user-select:none;box-sizing:border-box;',
+      ].join('');
+      card.style.clipPath = chamfer(6);
+
+      var optLabel = document.createElement('div');
+      optLabel.style.cssText = [
+        'font-family:' + T.fh + ';font-size:16px;font-weight:bold;text-align:center;',
+        'color:' + (isSelected ? T.bgDark : T.textPrimary) + ';',
+      ].join('');
+      optLabel.textContent = opt.label;
+      card.appendChild(optLabel);
+
+      // Show price if non-zero
+      if ((opt.price || 0) > 0) {
+        var priceLabel = document.createElement('div');
+        priceLabel.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + (isSelected ? T.bgDark : T.gold) + ';';
+        priceLabel.textContent = '+$' + (opt.price || 0).toFixed(2);
+        card.appendChild(priceLabel);
+      }
+
+      card.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        // Dismiss overlay and apply selection
+        if (_mandOverlay && _mandOverlay.parentNode) _mandOverlay.parentNode.removeChild(_mandOverlay);
+        _mandOverlay = null;
+        expandedMandGroup = null;
+        onMandatoryChange(group.key, opt);
+      });
+
+      optGrid.appendChild(card);
+    });
+
+    _mandOverlay.appendChild(optGrid);
+    mandatoryContentEl.appendChild(_mandOverlay);
   }
 
   function onMandatoryChange(groupKey, newSelection) {
