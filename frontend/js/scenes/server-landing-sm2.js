@@ -834,13 +834,18 @@ function buildLeftColumn(state) {
 }
 
 function buildSalesOverviewCard(state) {
+  var d = state.salesData || {};
+
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
   card.style.overflow = 'hidden';
   card.style.flex = '1';
-  card.style.minHeight = '0';
 
   card.appendChild(buildCardHeader('SALES OVERVIEW'));
 
@@ -848,6 +853,31 @@ function buildSalesOverviewCard(state) {
   chartWrap.style.cssText = 'flex:1;min-height:0;overflow:hidden;background:' + T.bgDark + ';padding:4px;';
   drawParetoChart(chartWrap, state.salesByCategory, { width: T.chartW, height: T.chartH });
   card.appendChild(chartWrap);
+
+  // ── KPI row ──
+  var kpiRow = document.createElement('div');
+  kpiRow.style.cssText = 'display:flex;justify-content:space-between;padding:6px 10px 8px;flex-shrink:0;';
+  var netLabel = document.createElement('span');
+  netLabel.style.cssText = 'font-family:' + T.fh + ';font-size:26px;color:' + T.textPrimary + ';font-weight:bold;';
+  netLabel.textContent = 'Net ';
+  var netVal = document.createElement('span');
+  netVal.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';font-weight:bold;';
+  netVal.textContent = fmt(d.net_sales);
+  var avgLabel = document.createElement('span');
+  avgLabel.style.cssText = 'font-family:' + T.fh + ';font-size:26px;color:' + T.textPrimary + ';font-weight:bold;';
+  avgLabel.textContent = 'Avg ';
+  var avgVal = document.createElement('span');
+  avgVal.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + T.gold + ';font-weight:bold;';
+  avgVal.textContent = fmt(d.avg_check);
+  var netWrap = document.createElement('span');
+  netWrap.appendChild(netLabel);
+  netWrap.appendChild(netVal);
+  var avgWrap = document.createElement('span');
+  avgWrap.appendChild(avgLabel);
+  avgWrap.appendChild(avgVal);
+  kpiRow.appendChild(netWrap);
+  kpiRow.appendChild(avgWrap);
+  card.appendChild(kpiRow);
 
   // Tap to expand
   card.style.cursor = 'pointer';
@@ -860,12 +890,15 @@ function buildTableStatsCard(state) {
   var ts = state.tableStats || {};
 
   var pair = buildCard({ bg: T.bgDark, padding: '0', chamferSize: 8, borderWidth: 5, glow: false });
+  pair.wrap.style.flex = '1';
+  pair.wrap.style.display = 'flex';
+  pair.wrap.style.overflow = 'hidden';
+  pair.wrap.style.minHeight = '0';
   var card = pair.card;
   card.style.display = 'flex';
   card.style.flexDirection = 'column';
   card.style.overflow = 'hidden';
   card.style.flex = '1';
-  card.style.minHeight = '0';
 
   card.appendChild(buildCardHeader('TABLE STATISTICS'));
 
