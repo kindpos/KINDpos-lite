@@ -1992,12 +1992,12 @@ function buildHalfTable(leftMods, rightMods, fontSize, removableInst) {
   divTop.style.cssText = 'display:flex;border-bottom:1px solid ' + T.mintEdgeD + ';margin-bottom:1px;';
   var hdrL = document.createElement('div');
   hdrL.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';font-weight:bold;color:' + T.gold + ';text-align:center;';
-  hdrL.textContent = 'LEFT';
+  hdrL.textContent = '1ST';
   var hdrSep = document.createElement('div');
   hdrSep.style.cssText = 'width:1px;background:' + T.mintEdgeD + ';margin:0 4px;';
   var hdrR = document.createElement('div');
   hdrR.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + fontSize + ';font-weight:bold;color:' + T.gold + ';text-align:center;';
-  hdrR.textContent = 'RIGHT';
+  hdrR.textContent = '2ND';
   divTop.appendChild(hdrL);
   divTop.appendChild(hdrSep);
   divTop.appendChild(hdrR);

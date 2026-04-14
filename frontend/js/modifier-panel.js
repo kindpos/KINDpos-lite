@@ -898,10 +898,8 @@ export function ModifierPanel(container, opts) {
     // Optional modifiers
     activeItem.optionalModifiers.forEach(function(m) {
       var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
-      var modName = m.prefix + ' ' + m.label;
-      if (halfSide) modName += ' (' + halfSide + ')';
       var parentMod = {
-        name: modName,
+        name: m.prefix + ' ' + m.label,
         price: m.prefix === 'NO' ? 0 : m.price,
         charged: m.prefix !== 'NO' && m.price > 0,
         prefix: halfSide,
