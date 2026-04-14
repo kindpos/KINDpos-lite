@@ -169,7 +169,7 @@ export function ModifierPanel(container, opts) {
     content.style.cssText = [
       'flex:1;min-height:0;',
       'overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;',
-      'padding:8px 10px;',
+      'padding:4px 6px;',
     ].join('');
     section.appendChild(content);
     section._content = content;
@@ -192,32 +192,29 @@ export function ModifierPanel(container, opts) {
       if (!s.wrap || !s.card) continue;
       var isExpanded = expandedSection === s.key;
       s.card._hdrArrow.textContent = isExpanded ? '\u25B2' : '\u25BC';
-      // Always show content — collapsed sections show preview, expanded scroll
-      s.card._content.style.display = '';
       if (isExpanded) {
-        // Expanded: takes remaining space, scrolls
+        // Expanded: takes remaining space, content scrolls
+        s.card._content.style.display = '';
+        s.card._content.style.overflowY = 'auto';
+        s.card._content.style.maxHeight = '';
         s.wrap.style.flex = '1 1 0';
         s.wrap.style.minHeight = '0';
         s.wrap.style.overflow = 'hidden';
-        s.card._content.style.overflowY = 'auto';
       } else if (hasExpanded) {
-        // Collapsed while another is expanded: header + compact preview
+        // Collapsed while another is expanded: header only
+        s.card._content.style.display = 'none';
+        s.card._content.style.maxHeight = '';
         s.wrap.style.flex = '0 0 auto';
         s.wrap.style.minHeight = '';
         s.wrap.style.overflow = 'hidden';
-        s.card._content.style.overflowY = 'hidden';
-        s.card._content.style.maxHeight = '40px';
       } else {
-        // All collapsed: equal height, show content
+        // All collapsed: equal height, show content, scroll
+        s.card._content.style.display = '';
+        s.card._content.style.overflowY = 'auto';
+        s.card._content.style.maxHeight = '';
         s.wrap.style.flex = '1';
         s.wrap.style.minHeight = '0';
         s.wrap.style.overflow = 'hidden';
-        s.card._content.style.overflowY = 'auto';
-        s.card._content.style.maxHeight = '';
-      }
-      // Reset maxHeight for expanded
-      if (isExpanded) {
-        s.card._content.style.maxHeight = '';
       }
     }
     // Prefix bar always visible when optional groups exist
@@ -457,20 +454,19 @@ export function ModifierPanel(container, opts) {
     }
     placementBarEl.style.display = '';
 
-    var placeWrap = buildStyledButton({ variant: 'dark' });
-    placeWrap.wrap.style.width = '100%';
-    placeWrap.inner.style.height = '18px';
-    placeWrap.inner.style.display = 'flex';
-    placeWrap.inner.style.alignItems = 'stretch';
-    placeWrap.inner.style.justifyContent = 'stretch';
-    placeWrap.inner.style.padding = '0';
+    var placeRow = document.createElement('div');
+    placeRow.style.cssText = [
+      'display:flex;height:16px;',
+      'border:1px solid ' + T.bgEdge + ';',
+      'background:' + T.bgDark + ';',
+    ].join('');
 
     var placeSegs = {};
     PLACEMENTS.forEach(function(pl, i) {
       if (i > 0) {
         var div = document.createElement('div');
-        div.style.cssText = 'width:1px;background:' + T.bgEdge + ';flex-shrink:0;align-self:stretch;';
-        placeWrap.inner.appendChild(div);
+        div.style.cssText = 'width:1px;background:' + T.bgEdge + ';flex-shrink:0;';
+        placeRow.appendChild(div);
       }
 
       var isActive = activePlacement === pl.id;
@@ -478,7 +474,7 @@ export function ModifierPanel(container, opts) {
       seg.style.cssText = [
         'flex:' + (pl.id === 'whole' ? '2' : '1') + ';',
         'display:flex;align-items:center;justify-content:center;',
-        'font-family:' + T.fb + ';font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;',
+        'font-family:' + T.fb + ';font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;',
         'background:' + (isActive ? T.numpadChassis : 'transparent') + ';',
         'color:' + (isActive ? T.bgDark : T.mutedText) + ';',
         'cursor:pointer;transition:background 80ms,color 80ms;',
@@ -491,11 +487,11 @@ export function ModifierPanel(container, opts) {
         _refreshPlacement(placeSegs);
       });
 
-      placeWrap.inner.appendChild(seg);
+      placeRow.appendChild(seg);
       placeSegs[pl.id] = seg;
     });
 
-    placementBarEl.appendChild(placeWrap.wrap);
+    placementBarEl.appendChild(placeRow);
   }
 
   function _refreshPlacement(segs) {
