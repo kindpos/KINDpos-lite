@@ -1545,6 +1545,7 @@ function _appendModPreview(list) {
   // Remove any stale preview before adding fresh one
   var old = list.querySelector('[data-mod-preview]');
   if (old) old.parentNode.removeChild(old);
+  console.log('[PREVIEW] appending, list children:', list.children.length, '_itemRenderLocked:', typeof OrderSummary.lockItemRender);
 
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
