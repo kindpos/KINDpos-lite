@@ -1531,6 +1531,42 @@ function renderTicket() {
   }
 
   _renderTicketGroup(list, displayTicket);
+
+  // Show live preview of item being edited in modifier panel
+  if (_modPanelItem) {
+    var previewMods = (_modPanelItem.mods || []);
+    var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
+    var previewPrice = _modPanelItem.basePrice + previewModTotal;
+
+    var pc = document.createElement('div');
+    pc.style.cssText = 'flex-shrink:0;margin-bottom:2px;background:' + T.bg3 + ';border-left:3px solid ' + T.gold + ';';
+    _applyCardBevel(pc);
+
+    var pRow = document.createElement('div');
+    pRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 8px;';
+    var pName = document.createElement('span');
+    pName.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+    pName.textContent = '\u270E ' + _modPanelItem.itemLabel;
+    var pPrice = document.createElement('span');
+    pPrice.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsItem + ';font-weight:bold;color:' + T.gold + ';white-space:nowrap;flex-shrink:0;margin-left:6px;';
+    pPrice.textContent = '$' + previewPrice.toFixed(2);
+    pRow.appendChild(pName);
+    pRow.appendChild(pPrice);
+    pc.appendChild(pRow);
+
+    // Show mods with remove buttons
+    previewMods.forEach(function(m) {
+      var removeHandler = function() {
+        var mi = _modPanelItem.mods.indexOf(m);
+        if (mi !== -1) _modPanelItem.mods.splice(mi, 1);
+        renderTicket();
+      };
+      pc.appendChild(buildModRowSized(m.name, m.price, T.fsMod || '24px', removeHandler));
+    });
+
+    list.appendChild(pc);
+  }
+
   _updateTicketTotals();
 }
 
@@ -1554,21 +1590,14 @@ function _updateTicketTotals() {
       mods: previewMods,
     });
   }
-  var updateParams = {
+  OrderSummary.update({
     checkId: currentCheckNumber || '',
+    skipItems: true,
     subtotal: totals.subtotal,
     tax: totals.tax,
     cardTotal: totals.cardTotal,
     cashPrice: totals.cashPrice,
-  };
-  // When modifier panel is open, render items (shows preview).
-  // Otherwise skip items so renderTicket's interactive X buttons survive.
-  if (_modPanelItem) {
-    updateParams.items = items;
-  } else {
-    updateParams.skipItems = true;
-  }
-  OrderSummary.update(updateParams);
+  });
 }
 
 // ── Swipe-to-delete wrapper ──────────────────────
