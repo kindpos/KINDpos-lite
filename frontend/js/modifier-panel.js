@@ -222,7 +222,7 @@ export function ModifierPanel(container, opts) {
     }
     // Prefix bar always visible when optional groups exist
     if (prefixBarEl) {
-      prefixBarEl.style.display = '';
+      prefixBarEl.style.display = 'flex';
     }
   }
 
