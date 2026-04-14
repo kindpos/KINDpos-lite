@@ -166,7 +166,7 @@ function drawParetoChart(container, data, opts) {
   var W = opts.width || T.chartW;
   var H = opts.height || T.chartH;
   var padL = T.chartPadR;           // minimal left margin (8)
-  var padR = T.chartLblW;           // right label area for revenue values (70)
+  var padR = 55;                    // right label area for revenue values
   var padT = T.chartPadT;           // top margin (10)
   var padB = T.chartPadT;           // bottom margin (10)
   var chartW = W - padL - padR;
@@ -226,18 +226,18 @@ function drawParetoChart(container, data, opts) {
     // Category label
     var labelText = d.category || '';
     if (barW > 60) {
-      svg.appendChild(svgEl('rect', { x: padL + 2, y: y + barH / 2 - 8, width: labelText.length * 7 + 6, height: 16, fill: CHART.calloutBg, opacity: '0.82' }));
-      var lbl = svgEl('text', { x: padL + 4, y: y + barH / 2 + 5, fill: CHART.axisFill, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
+      svg.appendChild(svgEl('rect', { x: padL + 2, y: y + barH / 2 - 10, width: labelText.length * 9 + 8, height: 20, fill: CHART.calloutBg, opacity: '0.82' }));
+      var lbl = svgEl('text', { x: padL + 4, y: y + barH / 2 + 6, fill: CHART.axisFill, 'font-size': '16', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
       lbl.textContent = labelText;
       svg.appendChild(lbl);
     } else {
-      var lbl = svgEl('text', { x: padL + barW + 3, y: y + barH / 2 + 5, fill: catColor, 'font-size': '11', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
+      var lbl = svgEl('text', { x: padL + barW + 3, y: y + barH / 2 + 6, fill: catColor, 'font-size': '15', 'font-family': CHART.dataFont, 'font-weight': 'bold' });
       lbl.textContent = labelText;
       svg.appendChild(lbl);
     }
 
     // Revenue value — right-aligned
-    var revLabel = svgEl('text', { x: W - 4, y: y + barH / 2 + 5, fill: CHART.money, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' });
+    var revLabel = svgEl('text', { x: W - 4, y: y + barH / 2 + 6, fill: CHART.money, 'font-size': '16', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' });
     revLabel.textContent = fmt(tot);
     svg.appendChild(revLabel);
 
@@ -256,9 +256,9 @@ function drawParetoChart(container, data, opts) {
     svg.appendChild(svgEl('path', { d: pathD, fill: 'none', stroke: DATA.coral, 'stroke-width': '1.5' }));
     for (var i = 0; i < linePoints.length; i++) {
       var pt = linePoints[i];
-      svg.appendChild(svgEl('rect', { x: pt.x - 3, y: pt.y - 3, width: 6, height: 6, fill: DATA.coral }));
+      svg.appendChild(svgEl('rect', { x: pt.x - 4, y: pt.y - 4, width: 8, height: 8, fill: DATA.coral }));
       if (i === linePoints.length - 1 || Math.abs(pt.pct - (linePoints[i - 1] || { pct: 0 }).pct) > 8) {
-        var pctLbl = svgEl('text', { x: pt.x + 6, y: pt.y + 4, fill: DATA.coral, 'font-size': '10', 'font-family': CHART.dataFont });
+        var pctLbl = svgEl('text', { x: pt.x + 6, y: pt.y + 5, fill: DATA.coral, 'font-size': '14', 'font-family': CHART.dataFont });
         pctLbl.textContent = Math.round(pt.pct) + '%';
         svg.appendChild(pctLbl);
       }
@@ -285,9 +285,9 @@ function drawTableHistogram(container, ts) {
   var W = T.chartW;
   var H = T.chartHSm;
   var padL = 40;                    // y-axis labels (party size)
-  var padR = T.chartLblW;           // right label area for avg check values (70)
+  var padR = 55;                    // right label area for avg check values
   var padT = T.chartPadT;           // top margin (10)
-  var padB = T.chartPadB;           // bottom axis labels (32)
+  var padB = 24;                    // bottom axis labels
   var chartW = W - padL - padR;
   var chartH = H - padT - padB;
   var n = data.length;
@@ -310,7 +310,7 @@ function drawTableHistogram(container, ts) {
     var gx = padL + (g / gridSteps) * chartW;
     svg.appendChild(svgEl('line', { x1: gx, y1: padT, x2: gx, y2: H - padB, stroke: CHART.gridStroke, 'stroke-width': '1', 'stroke-dasharray': '3,3' }));
     if (g > 0) {
-      var gVal = svgEl('text', { x: gx, y: H - 4, fill: CHART.money, 'font-size': '10', 'font-family': CHART.dataFont, 'text-anchor': 'middle' });
+      var gVal = svgEl('text', { x: gx, y: H - 4, fill: CHART.money, 'font-size': '14', 'font-family': CHART.dataFont, 'text-anchor': 'middle' });
       gVal.textContent = '$' + Math.round(maxAvg * g / gridSteps);
       svg.appendChild(gVal);
     }
@@ -323,7 +323,7 @@ function drawTableHistogram(container, ts) {
 
     // Y-axis label — party size
     var sizeLabel = d.size >= 4 ? '4+' : String(d.size);
-    svg.appendChild(svgEl('text', { x: padL - 6, y: y + barH / 2 + 5, fill: CHART.axisFill, 'font-size': '13', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' })).textContent = sizeLabel;
+    svg.appendChild(svgEl('text', { x: padL - 6, y: y + barH / 2 + 6, fill: CHART.axisFill, 'font-size': '17', 'font-family': CHART.dataFont, 'font-weight': 'bold', 'text-anchor': 'end' })).textContent = sizeLabel;
 
     // Bar — v4 pattern fill with stroke
     svg.appendChild(svgEl('rect', { x: padL, y: y, width: Math.max(barW, 2), height: barH, fill: PAT.orange, stroke: DATA.orange, 'stroke-width': '1.5' }));
@@ -331,17 +331,17 @@ function drawTableHistogram(container, ts) {
     // Count badge inside bar
     if (barW > 30) {
       var badgeW = d.tableCount.toString().length * 8 + 16;
-      svg.appendChild(svgEl('rect', { x: padL + 3, y: y + barH / 2 - 7, width: badgeW, height: 14, fill: CHART.calloutBg, opacity: '0.85' }));
-      svg.appendChild(svgEl('text', { x: padL + 6, y: y + barH / 2 + 4, fill: CHART.axisFill, 'font-size': '11', 'font-family': CHART.dataFont })).textContent = '\u00d7' + d.tableCount;
+      svg.appendChild(svgEl('rect', { x: padL + 3, y: y + barH / 2 - 9, width: badgeW + 4, height: 18, fill: CHART.calloutBg, opacity: '0.85' }));
+      svg.appendChild(svgEl('text', { x: padL + 6, y: y + barH / 2 + 5, fill: CHART.axisFill, 'font-size': '15', 'font-family': CHART.dataFont })).textContent = '\u00d7' + d.tableCount;
     }
 
     // Avg value — right of bar
-    svg.appendChild(svgEl('text', { x: padL + Math.max(barW, 2) + 4, y: y + barH / 2 + 5, fill: CHART.money, 'font-size': '12', 'font-family': CHART.dataFont, 'font-weight': 'bold' })).textContent = fmt(d.avgCheck);
+    svg.appendChild(svgEl('text', { x: padL + Math.max(barW, 2) + 4, y: y + barH / 2 + 6, fill: CHART.money, 'font-size': '16', 'font-family': CHART.dataFont, 'font-weight': 'bold' })).textContent = fmt(d.avgCheck);
   }
 
   // Axis labels
-  svg.appendChild(svgEl('text', { x: 3, y: H / 2, fill: CHART.axisFill, 'font-size': '9', 'font-family': CHART.labelFont, transform: 'rotate(-90,' + 3 + ',' + H / 2 + ')', 'text-anchor': 'middle' })).textContent = 'PARTY SIZE';
-  svg.appendChild(svgEl('text', { x: padL + chartW / 2, y: H - 1, fill: CHART.money, 'font-size': '9', 'font-family': CHART.labelFont, 'text-anchor': 'middle' })).textContent = 'AVG CHECK';
+  svg.appendChild(svgEl('text', { x: 6, y: H / 2, fill: CHART.axisFill, 'font-size': '13', 'font-family': CHART.labelFont, transform: 'rotate(-90,' + 6 + ',' + H / 2 + ')', 'text-anchor': 'middle' })).textContent = 'PARTY SIZE';
+  svg.appendChild(svgEl('text', { x: padL + chartW / 2, y: H - 1, fill: CHART.money, 'font-size': '13', 'font-family': CHART.labelFont, 'text-anchor': 'middle' })).textContent = 'AVG CHECK';
 
   container.appendChild(svg);
 }
