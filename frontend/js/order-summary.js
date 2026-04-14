@@ -159,20 +159,26 @@ function _modRow(mod) {
 
 function _halfCell(mod) {
   var td = document.createElement('div');
-  td.style.cssText = 'flex:1;padding:1px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  td.style.cssText = 'flex:1;padding:1px 2px;color:' + T.mint + ';';
   if (!mod) return td;
+  var nameEl = document.createElement('div');
+  nameEl.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:' + (mod.price > 0 ? '11px' : '13px') + ';';
+  nameEl.textContent = mod.name;
   if (mod.price > 0) {
-    td.style.fontSize = '11px';
-    td.style.color = T.mint;
-    td.textContent = mod.name;
     var pr = document.createElement('span');
     pr.style.color = T.gold;
     pr.textContent = ' +$' + mod.price.toFixed(2);
-    td.appendChild(pr);
-  } else {
-    td.style.fontSize = '13px';
-    td.style.color = T.mint;
-    td.textContent = mod.name;
+    nameEl.appendChild(pr);
+  }
+  td.appendChild(nameEl);
+  // Special exclusion children
+  if (mod.children && mod.children.length > 0) {
+    for (var c = 0; c < mod.children.length; c++) {
+      var childEl = document.createElement('div');
+      childEl.style.cssText = 'font-size:10px;color:' + T.vermillion + ';font-style:italic;padding-left:4px;';
+      childEl.textContent = mod.children[c].name;
+      td.appendChild(childEl);
+    }
   }
   return td;
 }
