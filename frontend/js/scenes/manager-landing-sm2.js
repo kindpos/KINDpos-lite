@@ -558,8 +558,8 @@ function renderLayout(state) {
 
   el.innerHTML = '';
   el.style.cssText = 'width:100%;height:100%;background:' + T.bg
-    + ';display:grid;grid-template-columns:33fr 34fr 33fr;gap:' + T.colGap
-    + 'px;padding:' + T.scenePad + 'px;box-sizing:border-box;overflow:hidden;';
+    + ';display:grid;grid-template-columns:33fr 34fr 33fr;gap:' + T.colGapSm
+    + 'px;padding:14px ' + T.colGapSm + 'px;box-sizing:border-box;overflow:hidden;';
 
   state.leftCol = buildLeftColumn(state);
   state.centerCol = buildCenterColumn(state);
@@ -576,7 +576,7 @@ function renderLayout(state) {
 
 function buildLeftColumn(state) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+  col.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:8px;overflow:hidden;';
 
   col.appendChild(buildSalesOverviewCard(state));
   col.appendChild(buildSalesBreakdownCard(state));
@@ -1967,7 +1967,7 @@ function renderOpsPanel(state) {
 
 function buildRightColumn(state) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;min-width:0;';
+  col.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:8px;overflow-y:auto;overflow-x:hidden;min-width:0;';
 
   col.appendChild(buildServerCheckoutsCard(state));
   col.appendChild(buildCloseDayCard(state));

@@ -807,7 +807,7 @@ function renderLayout(state) {
 
   el.innerHTML = '';
   el.style.cssText = 'width:100%;height:100%;background:' + T.bg
-    + ';display:grid;grid-template-columns:30fr 40fr 30fr;gap:6px;padding:6px;box-sizing:border-box;position:relative;overflow:hidden;';
+    + ';display:grid;grid-template-columns:30fr 40fr 30fr;gap:4px;padding:10px 4px;box-sizing:border-box;position:relative;overflow:hidden;';
 
   el.appendChild(buildLeftColumn(state));
   el.appendChild(buildCenterColumn(state));
@@ -820,7 +820,7 @@ function renderLayout(state) {
 
 function buildLeftColumn(state) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+  col.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:8px;overflow:hidden;';
 
   col.appendChild(buildSalesOverviewCard(state));
   col.appendChild(buildTableStatsCard(state));
@@ -1296,7 +1296,7 @@ function getClosedChecks(state) {
 
 function buildRightColumn(state) {
   var col = document.createElement('div');
-  col.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow:hidden;';
+  col.style.cssText = 'display:flex;flex-direction:column;justify-content:center;gap:8px;overflow:hidden;';
 
   col.appendChild(buildTipsCard(state));
   col.appendChild(buildCheckoutCard(state));
