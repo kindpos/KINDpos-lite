@@ -461,8 +461,8 @@ export function ModifierPanel(container, opts) {
 
     var placeRow = document.createElement('div');
     placeRow.style.cssText = [
-      'display:flex;height:16px;',
-      'border:1px solid ' + T.bgEdge + ';',
+      'display:flex;height:18px;',
+      'border:1px solid ' + catColor + ';',
       'background:' + T.bgDark + ';',
     ].join('');
 
@@ -479,7 +479,7 @@ export function ModifierPanel(container, opts) {
       seg.style.cssText = [
         'flex:' + (pl.id === 'whole' ? '2' : '1') + ';',
         'display:flex;align-items:center;justify-content:center;',
-        'font-family:' + T.fb + ';font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;',
+        'font-family:' + T.fb + ';font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;',
         'background:' + (isActive ? T.numpadChassis : 'transparent') + ';',
         'color:' + (isActive ? T.bgDark : T.mutedText) + ';',
         'cursor:pointer;transition:background 80ms,color 80ms;',
