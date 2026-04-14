@@ -16,7 +16,6 @@ import { T } from '../tokens.js';
 // Each size gets its own entry keyed by its menu label.
 var PIZZA_CRUST = {
   key: 'crust', label: 'CRUST',
-  defaultKey: 'THIN',
   options: [
     { key: 'THIN',    label: 'Thin Crust',    price: 0 },
     { key: 'THICK',   label: 'Thick Crust',   price: 0 },
