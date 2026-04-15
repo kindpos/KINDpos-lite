@@ -289,50 +289,40 @@ function doZeroAll(state, refreshFn) {
 
 function buildActionBar(state, sceneState, refreshFn) {
   var bar = document.createElement('div');
-  bar.style.cssText = 'flex-shrink:0;height:' + ACTION_H + 'px;display:flex;align-items:stretch;gap:8px;';
+  bar.style.cssText = 'flex-shrink:0;display:flex;align-items:stretch;gap:10px;padding:6px 0;';
 
-  function arrow() {
-    var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;font-family:' + T.fb + ';font-size:40px;color:' + T.mint + ';flex-shrink:0;';
-    el.textContent = '\u2192';
-    return el;
-  }
+  var BTN_FONT = 'Chakra Petch, sans-serif';
 
   // PRINT
-  var printPair = buildStyledButton(T.darkBtn);
-  printPair.wrap.style.cssText = 'flex:1;height:100%;';
-  printPair.inner.style.fontFamily = T.fb;
-  printPair.inner.style.fontSize = '27px';
-  printPair.inner.style.color = T.cyan;
-  printPair.inner.textContent = '//PRINT//';
-  printPair.wrap.addEventListener('pointerup', function() {
+  var printPair = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'md', onClick: function() {
     fetch('/api/v1/print/server-checkout/' + encodeURIComponent(state.employeeId), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ server_name: state.employeeName || '' }),
     }).catch(function(err) { console.warn('[KINDpos] Print failed:', err); });
-  });
+  } });
+  printPair.wrap.style.flex = '1';
+  printPair.wrap.style.height = '52px';
+  printPair.inner.style.fontFamily = BTN_FONT;
+  printPair.inner.style.fontWeight = 'bold';
+  printPair.inner.style.fontSize = '24px';
   bar.appendChild(printPair.wrap);
-  bar.appendChild(arrow());
 
-  // FINALIZE
+  // FINALIZE (manager-gated)
   var blocked = isBlocked(state);
-  var finPair = buildStyledButton(T.darkBtn);
-  finPair.wrap.style.cssText = 'flex:1;height:100%;';
 
   if (blocked) {
-    finPair.inner.style.fontFamily = T.fb;
-    finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = T.dimText;
-    finPair.inner.textContent = '\uD83D\uDD12 //FINALIZE//';
-    finPair.wrap.style.pointerEvents = 'none';
+    var finPair = buildStyledButton({ label: '\uD83D\uDD12 FINALIZE', variant: 'dark', size: 'md' });
+    finPair.wrap.style.flex = '1';
+    finPair.wrap.style.height = '52px';
     finPair.wrap.style.opacity = '0.5';
+    finPair.wrap.style.pointerEvents = 'none';
+    finPair.inner.style.fontFamily = BTN_FONT;
+    finPair.inner.style.fontWeight = 'bold';
+    finPair.inner.style.fontSize = '24px';
+    bar.appendChild(finPair.wrap);
   } else if (!sceneState.pinUnlocked) {
-    finPair.inner.style.fontFamily = T.fb;
-    finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = T.mutedText;
-    finPair.inner.textContent = '\uD83D\uDD12 //FINALIZE//';
-    finPair.wrap.addEventListener('pointerup', function() {
+    var finPair = buildStyledButton({ label: '\uD83D\uDD12 FINALIZE', variant: 'dark', size: 'md', onClick: function() {
       SceneManager.interrupt('co-manager-pin', {
         onConfirm: function() {
           sceneState.pinUnlocked = true;
@@ -344,18 +334,25 @@ function buildActionBar(state, sceneState, refreshFn) {
         onCancel: function() {},
         params: {},
       });
-    });
+    } });
+    finPair.wrap.style.flex = '1';
+    finPair.wrap.style.height = '52px';
+    finPair.inner.style.fontFamily = BTN_FONT;
+    finPair.inner.style.fontWeight = 'bold';
+    finPair.inner.style.fontSize = '24px';
+    bar.appendChild(finPair.wrap);
   } else {
-    finPair.inner.style.fontFamily = T.fb;
-    finPair.inner.style.fontSize = T.fsSmall;
-    finPair.inner.style.color = T.bgDark;
-    finPair.inner.textContent = '//FINALIZE//';
-    finPair.wrap.addEventListener('pointerup', function() {
+    var finPair = buildStyledButton({ label: 'FINALIZE', variant: 'mint', size: 'md', onClick: function() {
       if (isBlocked(state)) return;
       doFinalize(state);
-    });
+    } });
+    finPair.wrap.style.flex = '1';
+    finPair.wrap.style.height = '52px';
+    finPair.inner.style.fontFamily = BTN_FONT;
+    finPair.inner.style.fontWeight = 'bold';
+    finPair.inner.style.fontSize = '24px';
+    bar.appendChild(finPair.wrap);
   }
-  bar.appendChild(finPair.wrap);
 
   return bar;
 }
