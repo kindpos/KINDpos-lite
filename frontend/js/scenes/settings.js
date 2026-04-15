@@ -615,8 +615,8 @@ var _selectedDeviceMac = null;
 
 var _deviceTypeMap = {
   'kitchen-printers': ['kitchen'],
-  'receipt-printers': ['receipt', 'printer'],
-  'card-readers':     ['card_reader'],
+  'receipt-printers': ['receipt', 'printer', 'thermal'],
+  'card-readers':     ['card_reader', 'dejavoo'],
 };
 
 function _devicesForCategory(catId) {
@@ -696,42 +696,43 @@ function buildDeviceCard(dev, parentBody, catInfo) {
   var dc = buildDepthCard(borderColor, { chamfer: 8, glow: isSelected });
 
   dc.card.style.cssText += [
-    'padding:10px 12px;',
-    'display:flex;flex-direction:column;gap:3px;',
+    'padding:16px;',
+    'display:flex;flex-direction:column;gap:6px;',
     'cursor:pointer;',
     'user-select:none;-webkit-user-select:none;',
-    'min-height:80px;',
+    'min-height:120px;',
+    'justify-content:center;',
   ].join('');
 
   if (isSelected) {
     dc.card.style.background = borderColor;
   }
 
-  var textColor = isSelected ? T.bgDark : T.mint;
+  var textColor = isSelected ? T.bgDark : T.gold;
   var subColor = isSelected ? T.bgDark : T.textPrimary;
   var mutedColor = isSelected ? T.bgDark : T.subtleText;
 
   // Device name
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + textColor + ';';
+  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:22px;font-weight:bold;color:' + textColor + ';';
   nameEl.textContent = dev.name || 'Unnamed';
   dc.card.appendChild(nameEl);
 
   // IP
   var ipEl = document.createElement('div');
-  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + subColor + ';';
+  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + subColor + ';';
   ipEl.textContent = dev.ip || '—';
   dc.card.appendChild(ipEl);
 
   // MAC
   var macEl = document.createElement('div');
-  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + mutedColor + ';';
+  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + mutedColor + ';';
   macEl.textContent = 'MAC: ' + _shortenMac(dev.mac);
   dc.card.appendChild(macEl);
 
   // Status indicator
   var statusEl = document.createElement('div');
-  statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + (isSelected ? T.bgDark : T.green) + ';margin-top:2px;';
+  statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (isSelected ? T.bgDark : T.green) + ';margin-top:4px;';
   statusEl.textContent = '\u25CF ONLINE';
   dc.card.appendChild(statusEl);
 
