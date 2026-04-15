@@ -203,11 +203,16 @@ function startNetworkScan(card, wrap) {
       var data = JSON.parse(e.data);
       if (data.type === 'device') {
         _scanResults.push(data);
-        discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
+        if (!data.saved_name) {
+          discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
+        }
       } else if (data.type === 'complete') {
         _scanning = false;
         card.style.animation = '';
-        scanLabel.textContent = _scanResults.length + ' device' + (_scanResults.length !== 1 ? 's' : '') + ' found';
+        var newCount = _scanResults.filter(function(d) { return !d.saved_name; }).length;
+        scanLabel.textContent = newCount > 0
+          ? newCount + ' new device' + (newCount !== 1 ? 's' : '') + ' found'
+          : 'All devices configured';
         if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
 
         // Add re-scan button at bottom
@@ -241,9 +246,7 @@ function startNetworkScan(card, wrap) {
 // == Discovery Card (inside SCAN NETWORK) ==============
 
 function buildDiscoveryCard(dev, scanCard, scanWrap) {
-  var isSaved = !!dev.saved_name;
-  var borderColor = isSaved ? T.green : T.gold;
-  var dc = buildDepthCard(borderColor, { chamfer: 8, glow: false });
+  var dc = buildDepthCard(T.gold, { chamfer: 8, glow: false });
 
   dc.card.style.cssText += [
     'padding:10px 12px;',
@@ -253,8 +256,8 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
 
   // Device name
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + (isSaved ? T.green : T.gold) + ';';
-  nameEl.textContent = dev.saved_name || dev.name || dev.type || 'Unknown Device';
+  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';';
+  nameEl.textContent = dev.name || dev.type || 'Unknown Device';
   dc.card.appendChild(nameEl);
 
   // IP
@@ -269,29 +272,25 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
   macEl.textContent = 'MAC: ' + (dev.mac || '—');
   dc.card.appendChild(macEl);
 
-  // Status / action
-  if (isSaved) {
-    var confLabel = document.createElement('div');
-    confLabel.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.green + ';margin-top:2px;';
-    confLabel.textContent = '\u2713 CONFIGURED';
-    dc.card.appendChild(confLabel);
-  } else {
-    var btnArea = document.createElement('div');
-    btnArea.style.cssText = 'display:flex;gap:6px;margin-top:4px;';
+  // Type selection buttons
+  var btnArea = document.createElement('div');
+  btnArea.style.cssText = 'display:flex;gap:6px;margin-top:6px;';
 
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.height = '28px';
-    saveBtn.wrap.style.minWidth = '60px';
-    saveBtn.inner.style.fontSize = '11px';
-    saveBtn.wrap.addEventListener('pointerup', function() {
+  function _saveAs(type, label) {
+    var btn = buildStyledButton({ variant: 'mint', size: 'sm', label: label });
+    btn.wrap.style.height = '28px';
+    btn.wrap.style.flex = '1';
+    btn.inner.style.fontSize = '10px';
+    btn.wrap.addEventListener('pointerup', function() {
+      dev._saveType = type;
+      dev._saveName = label + ' ' + dev.ip.split('.').pop();
       saveDiscoveredDevice(dev).then(function(ok) {
         if (ok) {
           btnArea.innerHTML = '';
           var done = document.createElement('div');
           done.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.green + ';';
-          done.textContent = '\u2713 SAVED';
+          done.textContent = '\u2713 SAVED AS ' + label.toUpperCase();
           btnArea.appendChild(done);
-          // Update border to green
           dc.card.style.borderTopColor = _lightenHex(T.green, 0.2);
           dc.card.style.borderLeftColor = _lightenHex(T.green, 0.2);
           dc.card.style.borderBottomColor = _darkenHex(T.green, 0.3);
@@ -299,10 +298,18 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
         }
       });
     });
-    btnArea.appendChild(saveBtn.wrap);
-
-    dc.card.appendChild(btnArea);
+    return btn.wrap;
   }
+
+  // Show type-appropriate buttons
+  var isPrinter = dev.type === 'printer' || dev.type === 'thermal' || /printer|thermal/i.test(dev.name || '');
+  if (isPrinter) {
+    btnArea.appendChild(_saveAs('kitchen', 'Kitchen'));
+    btnArea.appendChild(_saveAs('receipt', 'Receipt'));
+  } else {
+    btnArea.appendChild(_saveAs(dev.type || 'card_reader', dev.name || 'Card Reader'));
+  }
+  dc.card.appendChild(btnArea);
 
   return dc.wrap;
 }
@@ -313,8 +320,8 @@ function saveDiscoveredDevice(dev) {
   var device = {
     mac: dev.mac,
     ip: dev.ip,
-    type: dev.type || 'receipt',
-    name: dev.name || 'Device ' + dev.ip,
+    type: dev._saveType || dev.type || 'receipt',
+    name: dev._saveName || dev.name || 'Device ' + dev.ip,
     port: dev.port || 9100,
   };
   return fetch('/api/v1/hardware/devices', {
@@ -670,25 +677,23 @@ var _deviceTypeMap = {
   'card-readers':     ['card_reader', 'dejavoo'],
 };
 
+function _isCardReader(d) {
+  return d.type === 'card_reader' || d.type === 'dejavoo' || /dejavoo|card|reader/i.test(d.name || '');
+}
+function _isKitchenPrinter(d) {
+  return d.type === 'kitchen' || /kitchen|hot|cold|bar|expo/i.test(d.name || '');
+}
+
 function _devicesForCategory(catId) {
   if (catId === 'kitchen-printers') {
-    return _savedDevices.filter(function(d) {
-      return (d.type === 'kitchen') ||
-        (d.type === 'printer' && /kitchen|hot|cold|bar|expo/i.test(d.name || ''));
-    });
+    return _savedDevices.filter(function(d) { return _isKitchenPrinter(d); });
   }
   if (catId === 'receipt-printers') {
-    return _savedDevices.filter(function(d) {
-      if (d.type === 'receipt' || d.type === 'thermal') return true;
-      if (d.type === 'printer' && !/kitchen|hot|cold|bar|expo/i.test(d.name || '')) return true;
-      return false;
-    });
+    // All printers that aren't kitchen and aren't card readers
+    return _savedDevices.filter(function(d) { return !_isCardReader(d) && !_isKitchenPrinter(d); });
   }
   if (catId === 'card-readers') {
-    return _savedDevices.filter(function(d) {
-      return d.type === 'card_reader' || d.type === 'dejavoo' ||
-        /dejavoo|card|reader/i.test(d.name || '');
-    });
+    return _savedDevices.filter(function(d) { return _isCardReader(d); });
   }
   return _savedDevices;
 }
