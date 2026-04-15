@@ -909,11 +909,26 @@ async def confirm_payment(
     """Confirm a payment."""
     order = await get_order_or_404(ledger, order_id)
 
-    # Verify payment exists
-    if not any(p.payment_id == payment_id for p in order.payments):
+    # Verify payment exists and amount matches initiation
+    initiated = None
+    for p in order.payments:
+        if p.payment_id == payment_id:
+            initiated = p
+            break
+    if not initiated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Payment {payment_id} not found"
+        )
+    if initiated.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Payment {payment_id} is already {initiated.status}"
+        )
+    if request.amount != initiated.amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Confirmation amount {request.amount} does not match initiated amount {initiated.amount}"
         )
 
     event = payment_confirmed(
@@ -1105,6 +1120,13 @@ async def apply_discount(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot discount a {order.status} order"
+        )
+
+    # Block discount while any payment is pending (initiated but not confirmed)
+    if any(p.status == "pending" for p in order.payments):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot apply discount while a payment is pending"
         )
 
     event = create_event(

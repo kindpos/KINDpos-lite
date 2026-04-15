@@ -17,8 +17,13 @@ import './column-editor.js';
 
 // TODO: No font-size token exists for 26px card header labels — using inline '9px'.
 
+// ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
 var TAX_RATE = 0.08;
 var CASH_DISCOUNT = 0.03;
+fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
+  if (d.tax_rate != null)           TAX_RATE      = d.tax_rate;
+  if (d.cash_discount_rate != null) CASH_DISCOUNT = d.cash_discount_rate;
+}).catch(function() { /* keep defaults on network error */ });
 
 // ── Inject invisible scrollbar style ──
 (function() {
@@ -873,6 +878,8 @@ defineScene({
             if (anySent) {
               showToast('Items voided', { bg: T.goGreen, duration: 3000 });
             } else {
+              _undoWindowActive = true;
+              var _undoTimer = setTimeout(function() { _undoWindowActive = false; }, 5500);
               var undone = false;
               var undoEl = document.createElement('span');
               undoEl.style.cssText = 'text-decoration:underline;cursor:pointer;margin-left:8px;';
@@ -880,6 +887,8 @@ defineScene({
               undoEl.addEventListener('pointerup', function() {
                 if (undone) return;
                 undone = true;
+                _undoWindowActive = false;
+                clearTimeout(_undoTimer);
                 // Re-add voided items
                 var rePending = voidedSnapshot.length;
                 for (var ri = 0; ri < voidedSnapshot.length; ri++) {
@@ -941,6 +950,8 @@ defineScene({
         .catch(function() { showToast('Send failed', { bg: T.red }); });
     }
 
+    var _undoWindowActive = false;
+
     function refreshOrder() {
       if (!state.orderId) return;
       fetch('/api/v1/orders/' + state.orderId)
@@ -962,7 +973,8 @@ defineScene({
             return;
           }
           // If all items voided (empty check at $0), void the order and return
-          if ((order.items || []).length === 0 && (order.total || 0) <= 0 && order.status !== 'voided') {
+          // Skip during undo window so the user has a chance to restore items
+          if (!_undoWindowActive && (order.items || []).length === 0 && (order.total || 0) <= 0 && order.status !== 'voided') {
             fetch('/api/v1/orders/' + state.orderId + '/void', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -991,6 +1003,7 @@ defineScene({
         state.paidSeats[state._payingSeats[ps]] = true;
       }
       state._payingSeats = [];
+      state.selectedItems = {};
       refreshOrder();
     }
     SceneManager.on('payment:complete', onPaymentComplete);
@@ -1091,20 +1104,36 @@ defineScene({
             selectAll();
             // Persist changes via API
             if (state.orderId) {
+              var _cePending = 0;
+              var _ceFailed = 0;
+              function _ceTrack(promise) {
+                _cePending++;
+                promise
+                  .then(function(r) { if (!r.ok) _ceFailed++; })
+                  .catch(function() { _ceFailed++; })
+                  .finally(function() {
+                    if (--_cePending === 0) {
+                      if (_ceFailed > 0) {
+                        showToast(_ceFailed + ' seat edit(s) failed to save', { bg: T.red });
+                        refreshOrder();
+                      }
+                    }
+                  });
+              }
               for (var pi = 0; pi < columns.length; pi++) {
                 var seatNum = pi + 1;
                 var colItems = columns[pi].items;
                 for (var qi = 0; qi < colItems.length; qi++) {
                   if (colItems[qi].item_id) {
                     // Existing item — update seat_number and price
-                    fetch('/api/v1/orders/' + state.orderId + '/items/' + colItems[qi].item_id, {
+                    _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + colItems[qi].item_id, {
                       method: 'PATCH',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ seat_number: seatNum, price: colItems[qi].price }),
-                    }).catch(function() {});
+                    }));
                   } else {
                     // New item (e.g. from split) — add to order
-                    fetch('/api/v1/orders/' + state.orderId + '/items', {
+                    _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -1113,7 +1142,7 @@ defineScene({
                         quantity: colItems[qi].qty || 1,
                         seat_number: seatNum,
                       }),
-                    }).catch(function() {});
+                    }));
                   }
                 }
               }
@@ -1129,9 +1158,12 @@ defineScene({
     root.appendChild(editSeatsBtn.wrap);
 
     // +1 ROUND — duplicate selected seat items, auto-send to kitchen
+    var _roundInProgress = false;
     var roundBtn = buildStyledButton({
       label: '+1 ROUND', variant: 'gold', size: 'md',
       onClick: function() {
+        if (_roundInProgress) return;
+        _roundInProgress = true;
         // Collect items from selected seats
         var itemsToAdd = [];
         for (var ri = 0; ri < state.seats.length; ri++) {
@@ -1151,6 +1183,7 @@ defineScene({
         }
 
         if (itemsToAdd.length === 0) {
+          _roundInProgress = false;
           showToast('No items to reorder', { bg: T.gold });
           return;
         }
@@ -1174,6 +1207,7 @@ defineScene({
         }
 
         function finishRound() {
+          _roundInProgress = false;
           if (failed > 0) {
             showToast(failed + ' item(s) failed to add', { bg: T.red });
           }
@@ -1208,7 +1242,7 @@ defineScene({
               setSceneName(state.checkNumber);
               doRound();
             })
-            .catch(function() { showToast('Failed to create check', { bg: T.red }); });
+            .catch(function() { _roundInProgress = false; showToast('Failed to create check', { bg: T.red }); });
         } else {
           doRound();
         }

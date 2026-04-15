@@ -385,6 +385,7 @@ defineScene({
     OrderSummary.hide();
     if (hexNav) { hexNav.destroy(); hexNav = null; }
     if (_modPanel) { _modPanel.destroy(); _modPanel = null; }
+    _modPanelItem = null;
   },
 });
 
@@ -2234,7 +2235,7 @@ async function handleSaveOnly() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_type:  'quick_service',
-          guest_count: 1,
+          guest_count: (sceneParams.seatNumbers && sceneParams.seatNumbers.length) || 1,
           customer_name: null,
           server_id:   sceneParams.employeeId || null,
           server_name: sceneParams.employeeName || null,
@@ -2316,7 +2317,7 @@ async function handleSend() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_type:  'quick_service',
-          guest_count: 1,
+          guest_count: (sceneParams.seatNumbers && sceneParams.seatNumbers.length) || 1,
           customer_name: null,
           server_id:   sceneParams.employeeId || null,
           server_name: sceneParams.employeeName || null,
