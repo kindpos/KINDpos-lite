@@ -1,0 +1,135 @@
+/* ═══════════════════════════════════════════════════
+   KINDpos Terminal — Base Styles
+   1024×600 locked, zero border-radius, chamfer only
+   Nice. Dependable. Yours.
+   ═══════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Chakra Petch';
+  src: url('../assets/fonts/ChakraPetch-Bold.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'B612 Mono';
+  src: url('../assets/fonts/B612Mono-Bold.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  size-adjust: 66%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1a1a1a;
+  font-family: 'B612 Mono', monospace;
+}
+
+#terminal {
+  width: 1024px;
+  height: 600px;
+  background: #333333;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+#header {
+  width: 100%;
+  height: 52px;
+  background: #87f79c;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  font-family: 'B612 Mono', monospace;
+  font-size: 32px;
+  color: #333333;
+  position: relative;
+  z-index: 10;
+  border-top: 7px solid #9ff9b0;
+  border-left: 7px solid #9ff9b0;
+  border-bottom: 7px solid #5fad6d;
+  border-right: 7px solid #5fad6d;
+  clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+}
+
+#header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Layer containers ─────────────────────────────────
+   Geometry (top, left, width, height, z-index) applied
+   by SceneManager.init() from tokens — only structural
+   CSS lives here.
+   ──────────────────────────────────────────────────── */
+#order-summary {
+  position: absolute;
+  pointer-events: auto;
+  display: none;
+}
+
+#layer-working,
+#layer-transactional,
+#layer-interrupt,
+#layer-gate {
+  position: absolute;
+  pointer-events: none;
+}
+
+#layer-working {
+  z-index: 10;
+  pointer-events: auto;
+}
+
+#layer-transactional { z-index: 20; }
+#layer-interrupt     { z-index: 30; }
+#layer-gate          { z-index: 100; }
+
+/* Children inside active layers receive pointer events */
+#layer-transactional > *,
+#layer-interrupt > *,
+#layer-gate > * {
+  pointer-events: auto;
+}
+
+/* ── Transactional overlay enter ─────────────────── */
+.layer-transactional-enter {
+  transform: translateY(8px);
+  opacity: 0;
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+}
+
+/* ── Interrupt enter ─────────────────────────────── */
+.layer-interrupt-enter {
+  transform: scale(0.97);
+  opacity: 0;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
+}
+
+*:not(.embossed-btn) {
+  border-radius: 0 !important; /* legacy reset — chamfer enforced via clip-path */
+}
+
+#ticket-list::-webkit-scrollbar,
+#receipt-scroll::-webkit-scrollbar,
+#closeday-right::-webkit-scrollbar,
+#order-summary::-webkit-scrollbar {
+  display: none;
+}
