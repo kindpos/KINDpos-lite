@@ -84,6 +84,7 @@ function orderToSeats(order, minSeats) {
       menu_item_id: item.menu_item_id || '',
       category: item.category || null,
       added_at: item.added_at || null,
+      sent_at: item.sent_at || null,
       mods: mods,
     });
   }
@@ -822,6 +823,7 @@ defineScene({
       }
       // Snapshot selected items for undo (include modifiers so they restore correctly)
       var voidedSnapshot = [];
+      var anySent = false;
       var keys = Object.keys(state.selectedItems);
       for (var vsi = 0; vsi < keys.length; vsi++) {
         var parts = keys[vsi].split(':');
@@ -830,6 +832,7 @@ defineScene({
         var seat = state.seats[sIdx];
         if (seat && seat.items[iIdx]) {
           var it = seat.items[iIdx];
+          if (it.sent_at) anySent = true;
           voidedSnapshot.push({
             menu_item_id: it.menu_item_id || it.name.toLowerCase().replace(/\s+/g, '_'),
             name: it.name,
@@ -866,26 +869,30 @@ defineScene({
               refreshOrder();
               return;
             }
-            // Show undo toast
-            var undone = false;
-            var undoEl = document.createElement('span');
-            undoEl.style.cssText = 'text-decoration:underline;cursor:pointer;margin-left:8px;';
-            undoEl.textContent = 'UNDO';
-            undoEl.addEventListener('pointerup', function() {
-              if (undone) return;
-              undone = true;
-              // Re-add voided items
-              var rePending = voidedSnapshot.length;
-              for (var ri = 0; ri < voidedSnapshot.length; ri++) {
-                fetch('/api/v1/orders/' + state.orderId + '/items', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(voidedSnapshot[ri]),
-                }).then(function() { if (--rePending === 0) { showToast('Items restored', { bg: T.goGreen }); refreshOrder(); } })
-                  .catch(function() { if (--rePending === 0) refreshOrder(); });
-              }
-            });
-            showToast('Items voided', { bg: T.goGreen, duration: 5000, append: undoEl });
+            // Only offer undo for unsent items — sent items cannot be restored
+            if (anySent) {
+              showToast('Items voided', { bg: T.goGreen, duration: 3000 });
+            } else {
+              var undone = false;
+              var undoEl = document.createElement('span');
+              undoEl.style.cssText = 'text-decoration:underline;cursor:pointer;margin-left:8px;';
+              undoEl.textContent = 'UNDO';
+              undoEl.addEventListener('pointerup', function() {
+                if (undone) return;
+                undone = true;
+                // Re-add voided items
+                var rePending = voidedSnapshot.length;
+                for (var ri = 0; ri < voidedSnapshot.length; ri++) {
+                  fetch('/api/v1/orders/' + state.orderId + '/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(voidedSnapshot[ri]),
+                  }).then(function() { if (--rePending === 0) { showToast('Items restored', { bg: T.goGreen }); refreshOrder(); } })
+                    .catch(function() { if (--rePending === 0) refreshOrder(); });
+                }
+              });
+              showToast('Items voided', { bg: T.goGreen, duration: 5000, append: undoEl });
+            }
             refreshOrder();
           }
         },
