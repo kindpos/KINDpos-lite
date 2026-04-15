@@ -1467,18 +1467,20 @@ function commitModifierPanelItem(originalItem, activeItem) {
   activeItem.optionalModifiers.forEach(function(m) {
     var charged = m.prefix !== 'NO' && m.price > 0;
     var halfSide = m.placement === '1st' ? 'Left' : m.placement === '2nd' ? 'Right' : null;
-    mods.push({
+    var parentMod = {
       name: m.prefix + ' ' + m.label,
       price: m.prefix === 'NO' ? 0 : m.price,
       charged: charged,
       prefix: halfSide,
-    });
+      children: [],
+    };
     // Special exclusions as child mods (indented on ticket)
     if (m.special && m.exclusions && m.exclusions.length > 0) {
       m.exclusions.forEach(function(ex) {
-        mods.push({ name: '  NO ' + ex, price: 0, charged: false, prefix: halfSide });
+        parentMod.children.push({ name: 'NO ' + ex, price: 0, charged: false });
       });
     }
+    mods.push(parentMod);
   });
 
   // Included removals
