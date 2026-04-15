@@ -8,8 +8,7 @@
 
 import { T, buildStyledButton, applySunkenStyle, chamfer, shadowColor } from './tokens.js';
 import { showKeyboard } from './keyboard.js';
-import { SceneManager } from './scene-manager.js';
-import { defineScene } from './scene-manager-2.js';
+import { SceneManager, defineScene } from './scene-manager.js';
 import { buildCard, applyCardBevel } from './theme-manager.js';
 
 // ── Standard allergen list (FDA/industry standard colors) ──

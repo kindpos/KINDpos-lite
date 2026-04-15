@@ -10,8 +10,7 @@
 //  })
 // ═══════════════════════════════════════════════════
 
-import { defineScene } from '../scene-manager-2.js';
-import { SceneManager } from '../scene-manager.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
 import { showToast } from '../components.js';
 

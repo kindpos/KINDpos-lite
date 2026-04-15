@@ -6,8 +6,7 @@
 
 import { T, chamfer, buildStyledButton, applySunkenStyle } from '../tokens.js';
 import { buildButton, buildGap, showToast } from '../components.js';
-import { SceneManager } from '../scene-manager.js';
-import { defineScene } from '../scene-manager-2.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 import { buildCard } from '../theme-manager.js';

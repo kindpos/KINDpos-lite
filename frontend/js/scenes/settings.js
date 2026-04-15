@@ -5,10 +5,9 @@
 //  Nice. Dependable. Yours.
 // =======================================================
 
-import { defineScene } from '../scene-manager-2.js';
 import { T, chamfer, buildStyledButton, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { SceneManager } from '../scene-manager.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { showKeyboard, hideKeyboard } from '../keyboard.js';
 

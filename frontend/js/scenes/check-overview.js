@@ -4,8 +4,7 @@
 //  SceneManager.mountWorking('check-overview', { checkId, tableId })
 // ═══════════════════════════════════════════════════
 
-import { defineScene } from '../scene-manager-2.js';
-import { SceneManager } from '../scene-manager.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { OrderSummary } from '../order-summary.js';
