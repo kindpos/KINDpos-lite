@@ -1820,6 +1820,16 @@ function _appendModPreview(list) {
       renderTicket();
     };
     pc.appendChild(buildModRowSized(m.name, m.price, fsMod, removeHandler));
+    // Show exclusion children (e.g. "NO Ketchup" under "ADD Cheeseburger")
+    if (m.children && m.children.length > 0) {
+      m.children.forEach(function(child) {
+        var childRow = buildModRowSized(child.name, child.price, '14px');
+        childRow.style.paddingLeft = '32px';
+        childRow.style.color = T.vermillion;
+        childRow.style.fontStyle = 'italic';
+        pc.appendChild(childRow);
+      });
+    }
   });
 
   // Half-table for left/right mods
@@ -1999,7 +2009,7 @@ function _renderTicketGroup(list, displayTicket) {
             m.children.forEach(function(child) {
               var childRow = buildModRow(child.name, child.price, true, false);
               childRow.style.paddingLeft = '24px';
-              childRow.style.color = T.red;
+              childRow.style.color = T.vermillion;
               childRow.style.fontStyle = 'italic';
               gc.appendChild(childRow);
             });
@@ -2127,7 +2137,7 @@ function _renderTicketGroup(list, displayTicket) {
                 m.children.forEach(function(child) {
                   var childRow = buildModRowSized(child.name, child.price, '16px');
                   childRow.style.paddingLeft = '32px';
-                  childRow.style.color = T.red;
+                  childRow.style.color = T.vermillion;
                   childRow.style.fontStyle = 'italic';
                   ic.appendChild(childRow);
                 });
