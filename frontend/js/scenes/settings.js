@@ -859,15 +859,6 @@ function renderDeviceEditForm(opsEl, dev, parentBody, catInfo) {
   })));
   form.appendChild(buildSettingRow('Port', buildTextInput(editPort, 'Port', function(v) { editPort = v; })));
 
-  // Printer-specific: paper settings
-  if (editType === 'receipt') {
-    form.appendChild(buildSettingRow('Chars/Line', buildValueLabel('42')));
-    form.appendChild(buildSettingRow('Paper Width', buildPresetButtons([
-      { label: '80mm', value: '80' },
-      { label: '58mm', value: '58' },
-    ], '80', function() {})));
-  }
-
   // Save / Cancel
   var btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex;gap:8px;margin-top:4px;';
