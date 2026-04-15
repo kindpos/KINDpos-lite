@@ -404,7 +404,7 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
   // Already saved?
   if (dev.saved_name) {
     var confLabel = document.createElement('div');
-    confLabel.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.lime + ';white-space:nowrap;';
+    confLabel.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.green + ';white-space:nowrap;';
     confLabel.textContent = 'CONFIGURED';
     row.appendChild(confLabel);
   } else {
@@ -420,7 +420,7 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
         if (ok) {
           btnArea.innerHTML = '';
           var done = document.createElement('span');
-          done.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.lime + ';';
+          done.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.green + ';';
           done.textContent = 'SAVED';
           btnArea.appendChild(done);
         }
@@ -792,7 +792,7 @@ function renderNetworkSettings(body) {
     var connected = true; // placeholder — no endpoint for connection status
 
     var connEl = document.createElement('div');
-    connEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (connected ? T.lime : T.vermillion) + ';';
+    connEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (connected ? T.green : T.vermillion) + ';';
     connEl.textContent = connected ? '● CONNECTED' : '● DISCONNECTED';
 
     var grid = buildSettingsGrid([
@@ -973,7 +973,7 @@ function renderSystemSettings(body) {
   var updateChannel = 'stable';
 
   var versionEl = document.createElement('div');
-  versionEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.lime + ';';
+  versionEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.green + ';';
   versionEl.textContent = 'KINDpos/lite Vz1.2';
 
   var grid = buildSettingsGrid([
@@ -1126,7 +1126,7 @@ function buildDeviceCard(dev, parentBody, catInfo) {
 
   // Status indicator
   var statusEl = document.createElement('div');
-  statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + (isSelected ? T.bgDark : T.lime) + ';margin-top:2px;';
+  statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + (isSelected ? T.bgDark : T.green) + ';margin-top:2px;';
   statusEl.textContent = '\u25CF ONLINE';
   dc.card.appendChild(statusEl);
 
@@ -1188,7 +1188,7 @@ function renderDeviceOps(opsEl, dev, parentBody, catInfo) {
 
   // TEST button
   var testBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'TEST' });
-  testBtn.inner.style.color = T.lime;
+  testBtn.inner.style.color = T.green;
   testBtn.inner.style.fontSize = '11px';
   testBtn.wrap.style.height = '30px';
   var testResult = document.createElement('span');
@@ -1209,7 +1209,7 @@ function renderDeviceOps(opsEl, dev, parentBody, catInfo) {
       body: JSON.stringify(payload),
     }).then(function(r) { return r.json(); }).then(function(d) {
       testBtn.inner.textContent = 'TEST';
-      testResult.style.color = d.success ? T.lime : T.vermillion;
+      testResult.style.color = d.success ? T.green : T.vermillion;
       testResult.textContent = d.success ? 'OK' : (d.message || 'FAIL');
     }).catch(function() {
       testBtn.inner.textContent = 'TEST';
