@@ -476,7 +476,7 @@ function buildRightColumn() {
     digitColor:     T.digitColor,
     clearColor:     T.clrColor,
     submitColor:    T.submitColor,
-    displayColor:   T.gold,
+    displayColor:   T.pinDot,
     displayBg:      T.pinFieldBg,
     digitFont:      T.fhr,
     canSubmit:      function() { return enteredAmount > 0; },

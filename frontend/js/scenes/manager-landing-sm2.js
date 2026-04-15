@@ -1144,7 +1144,7 @@ function buildServerDetailExpanded(state, content, srv, overlay) {
 
     // Simple digit entry
     var display = document.createElement('div');
-    display.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.gold + ';font-weight:bold;text-align:right;padding:8px;background:' + T.bgDark + ';margin-bottom:8px;';
+    display.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + T.pinDot + ';font-weight:bold;text-align:right;padding:8px;background:' + T.pinFieldBg + ';margin-bottom:8px;';
     display.textContent = '$0.00';
     numpadWrap.appendChild(display);
 
@@ -1162,7 +1162,7 @@ function buildServerDetailExpanded(state, content, srv, overlay) {
         var btn = document.createElement('div');
         var isConfirm = k === '\u2713';
         var isClear = k === 'C';
-        btn.style.cssText = 'display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:24px;font-weight:bold;cursor:pointer;user-select:none;background:' + (isConfirm ? T.numpadChassis : isClear ? T.vermillion : T.bg) + ';color:' + (isConfirm ? T.bgDark : isClear ? T.textPrimary : T.gold) + ';';
+        btn.style.cssText = 'display:flex;align-items:center;justify-content:center;font-family:' + T.fb + ';font-size:24px;font-weight:bold;cursor:pointer;user-select:none;background:' + (isConfirm ? T.submitColor : isClear ? T.clrColor : T.darkBtn) + ';color:' + (isConfirm ? T.bgDark : isClear ? T.textPrimary : T.digitColor) + ';';
         btn.textContent = k;
         btn.addEventListener('pointerup', function() {
           if (isClear) {

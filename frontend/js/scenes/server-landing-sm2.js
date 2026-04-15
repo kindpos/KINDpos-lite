@@ -380,7 +380,7 @@ function buildNumpadInterrupt(container, params, titlePrefix) {
   }
 
   var display = document.createElement('div');
-  display.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.gold + ';background:' + T.bgDark + ';padding:10px;margin-bottom:12px;min-height:52px;';
+  display.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + T.pinDot + ';background:' + T.pinFieldBg + ';padding:10px;margin-bottom:12px;min-height:52px;';
   display.textContent = '$0.00';
   pair.card.appendChild(display);
 
@@ -397,7 +397,7 @@ function buildNumpadInterrupt(container, params, titlePrefix) {
     (function(key) {
       grid.appendChild(buildButton(key, {
         fill: T.darkBtn,
-        color: key === 'CLR' ? T.vermillion : (key === 'DEL' ? T.gold : T.mint),
+        color: key === 'CLR' ? T.clrColor : (key === 'DEL' ? T.submitColor : T.digitColor),
         fontSize: '22px', fontFamily: T.fb, height: 44,
         onTap: function() {
           if (key === 'CLR') { buffer = ''; }
@@ -413,7 +413,7 @@ function buildNumpadInterrupt(container, params, titlePrefix) {
   var btns = document.createElement('div');
   btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
   btns.appendChild(buildButton('CONFIRM', {
-    fill: T.darkBtn, color: T.mint, fontSize: T.fsBtn, width: 130, height: 44,
+    fill: T.darkBtn, color: T.submitColor, fontSize: T.fsBtn, width: 130, height: 44,
     onTap: function() {
       var cents = parseInt(buffer || '0', 10);
       params.onConfirm(cents / 100);
@@ -1817,7 +1817,7 @@ function buildTipsDrillContent(state, content, emp) {
         var cents = parseInt(digits || '0', 10);
         return '$' + (cents / 100).toFixed(2);
       },
-      displayColor: T.gold,
+      displayColor: T.pinDot,
       chassisColor: T.numpadChassis,
       digitColor: T.digitColor,
       displayH: 60,
