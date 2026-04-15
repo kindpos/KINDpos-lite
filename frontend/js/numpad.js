@@ -69,7 +69,7 @@ export function buildNumpad(opts) {
   if (onCancel) {
     var xBtn = document.createElement('div');
     xBtn.style.cssText = 'position:absolute;top:-14px;right:-14px;z-index:10;width:36px;height:36px;' +
-      'background:#333;border:2px solid ' + T.vermillion + ';color:' + T.vermillion + ';' +
+      'background:' + T.bg + ';border:2px solid ' + T.vermillion + ';color:' + T.vermillion + ';' +
       'font-family:' + T.fb + ';font-size:20px;font-weight:bold;' +
       'display:flex;align-items:center;justify-content:center;cursor:pointer;' +
       'clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px);';

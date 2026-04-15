@@ -87,7 +87,7 @@ defineScene({
     var opsCard = document.createElement('div');
     Object.assign(opsCard.style, {
       margin: '12px 12px 0',
-      borderRadius: '5px',
+      borderRadius: '0',
       background: T.bg,
       borderTop: T.bevel + 'px solid ' + mintEdges.light,
       borderLeft: T.bevel + 'px solid ' + mintEdges.light,
@@ -206,7 +206,7 @@ defineScene({
       var addCol = document.createElement('div');
       Object.assign(addCol.style, {
         minWidth: '180px',
-        borderRadius: '5px',
+        borderRadius: '0',
         border: '2px dashed ' + T.mint,
         display: 'flex',
         alignItems: 'center',
@@ -237,7 +237,7 @@ defineScene({
       Object.assign(colEl.style, {
         minWidth: '220px',
         maxWidth: '280px',
-        borderRadius: '5px',
+        borderRadius: '0',
         background: T.bgDark,
         borderTop: T.bevelBtn + 'px solid ' + mintEdges.light,
         borderLeft: T.bevelBtn + 'px solid ' + mintEdges.light,

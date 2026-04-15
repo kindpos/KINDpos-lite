@@ -232,7 +232,7 @@ defineScene({
       top: '12px',
       right: '12px',
       height: '252px',
-      borderRadius: '5px',
+      borderRadius: '0',
       background: T.bg,
       borderTop: T.bevel + 'px solid ' + chassisEdges.light,
       borderLeft: T.bevel + 'px solid ' + chassisEdges.light,

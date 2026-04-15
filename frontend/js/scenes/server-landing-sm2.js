@@ -561,7 +561,7 @@ defineScene({
         var reasons = params.reasons || [];
         for (var i = 0; i < reasons.length; i++) {
           var line = document.createElement('div');
-          line.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + (isWarning ? '#ffdd44' : T.vermillion) + ';margin-bottom:4px;';
+          line.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + (isWarning ? T.gold : T.vermillion) + ';margin-bottom:4px;';
           line.textContent = '\u2022 ' + reasons[i];
           pair.card.appendChild(line);
         }
@@ -1031,8 +1031,8 @@ function buildTableStatsCard(state) {
   var statsRow = document.createElement('div');
   statsRow.style.cssText = 'display:flex;justify-content:space-around;padding:6px 8px;flex-shrink:0;';
   var statItems = [
-    { label: 'GUESTS', value: String(ts.guestCount || 0), color: '#ffffff' },
-    { label: 'TABLES', value: String(ts.tableCount || 0), color: '#ffffff' },
+    { label: 'GUESTS', value: String(ts.guestCount || 0), color: T.textPrimary },
+    { label: 'TABLES', value: String(ts.tableCount || 0), color: T.textPrimary },
     { label: 'CHK AVG', value: fmt(ts.checkAvg || 0), color: T.gold },
     { label: 'AVG TURN', value: (ts.avgTurnMinutes || 0) + 'm', color: T.lime },
   ];
@@ -1626,7 +1626,7 @@ function buildCheckoutStrip(state) {
   openStatus.textContent = (openCount > 0 ? '\u2716 ' : '\u2714 ') + openCount + ' open';
 
   var unadjStatus = document.createElement('span');
-  unadjStatus.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + (unadjCount > 0 ? '#ffdd44' : T.goGreen) + ';';
+  unadjStatus.style.cssText = 'font-family:' + T.fb + ';font-size:15px;color:' + (unadjCount > 0 ? T.gold : T.goGreen) + ';';
   unadjStatus.textContent = (unadjCount > 0 ? '\u26a0 ' : '\u2714 ') + unadjCount + ' unadjusted';
 
   statusRow.appendChild(openStatus);

@@ -1423,7 +1423,7 @@ function heatmapTier(count) {
   if (count === 0)  return { fill: 'transparent', color: T.mutedText, border: '1px dashed ' + T.border };
   if (count <= 2)   return { fill: T.textPrimary, color: T.bgDark, border: 'none' };
   if (count <= 4)   return { fill: T.mint, color: T.bgDark, border: 'none' };
-  if (count <= 6)   return { fill: '#ff8800', color: T.textPrimary, border: 'none' };
+  if (count <= 6)   return { fill: T.gold, color: T.textPrimary, border: 'none' };
   return { fill: T.vermillion, color: T.textPrimary, border: 'none' };
 }
 
@@ -1623,7 +1623,7 @@ function buildHeatmapExpanded(state, content) {
     { label: 'NONE', fill: 'transparent', border: '1px dashed ' + T.border, color: T.mutedText },
     { label: 'CALM', fill: T.textPrimary, color: T.bgDark },
     { label: 'MODERATE', fill: T.mint, color: T.bgDark },
-    { label: 'HIGH', fill: '#ff8800', color: T.textPrimary },
+    { label: 'HIGH', fill: T.gold, color: T.textPrimary },
     { label: 'EXTREME', fill: T.vermillion, color: T.textPrimary },
   ];
   for (var ti = 0; ti < tiers.length; ti++) {

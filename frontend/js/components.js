@@ -45,7 +45,7 @@ export function showToast(message, opts) {
   var el = document.createElement('div');
   el.style.cssText = [
     'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);',
-    'padding:12px 28px;background:' + bg + ';color:#fff;',
+    'padding:12px 28px;background:' + bg + ';color:' + T.mint + ';',
     'font-family:' + T.fb + ';font-size:22px;',
     'clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0% calc(100% - 8px),0% 8px);z-index:9999;pointer-events:none;',
     'opacity:0;transition:opacity 0.3s;',
