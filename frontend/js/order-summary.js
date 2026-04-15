@@ -28,6 +28,7 @@ var _onItemTap = null;   // callback(itemIndex) when an item row is tapped
 var _onSeatHeaderTap = null; // callback(seatIdx) when a seat header is tapped
 var _expandedItems = {};  // { itemIndex: true } — tracks which items are expanded across re-renders
 var _itemRenderLocked = false; // when true, _renderItems is a no-op (order-entry owns the list)
+var _customTitle = null;       // optional override for header title
 
 function _container() {
   if (!_el) _el = document.getElementById('order-summary');
@@ -64,7 +65,7 @@ function _build() {
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';',
     'color:' + T.textPrimary + ';letter-spacing:0.08em;',
   ].join('');
-  _headerTitle.textContent = 'ITEM RECAP';
+  _headerTitle.textContent = 'ORDER RECAP';
   var checkWrap = document.createElement('div');
   checkWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;cursor:pointer;';
   _checkIdEl = document.createElement('div');
@@ -91,7 +92,7 @@ function _build() {
   _colHead.style.cssText = [
     'display:flex;align-items:center;',
     'padding:4px 8px;',
-    'font-family:' + T.fh + ';font-size:20px;color:' + T.textPrimary + ';letter-spacing:0.06em;',
+    'font-family:' + T.fh + ';font-size:14px;color:' + T.textPrimary + ';letter-spacing:0.06em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
   var hdrItem = document.createElement('span');
@@ -99,10 +100,10 @@ function _build() {
   hdrItem.style.cssText = 'flex:1;';
   var hdrQty = document.createElement('span');
   hdrQty.textContent = 'QTY';
-  hdrQty.style.cssText = 'width:50px;text-align:right;';
+  hdrQty.style.cssText = 'width:40px;text-align:right;';
   var hdrPrice = document.createElement('span');
   hdrPrice.textContent = 'PRICE';
-  hdrPrice.style.cssText = 'width:70px;text-align:right;';
+  hdrPrice.style.cssText = 'width:60px;text-align:right;';
   _colHead.appendChild(hdrItem);
   _colHead.appendChild(hdrQty);
   _colHead.appendChild(hdrPrice);
@@ -266,10 +267,10 @@ function _renderItems(items) {
     name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
     name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
     var qtyEl = document.createElement('span');
-    qtyEl.style.cssText = 'width:50px;text-align:right;flex-shrink:0;color:' + (isSel ? T.bgDark : T.textPrimary) + ';';
+    qtyEl.style.cssText = 'width:40px;text-align:right;flex-shrink:0;color:' + (isSel ? T.bgDark : T.textPrimary) + ';';
     qtyEl.textContent = String(item.qty || 1);
     var priceEl = document.createElement('span');
-    priceEl.style.cssText = 'width:70px;text-align:right;flex-shrink:0;color:' + (isSel ? T.bgDark : T.gold) + ';';
+    priceEl.style.cssText = 'width:60px;text-align:right;flex-shrink:0;color:' + (isSel ? T.bgDark : T.gold) + ';';
     priceEl.textContent = '$' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
     row.appendChild(name);
     row.appendChild(qtyEl);
@@ -430,7 +431,7 @@ function _configureForMode(mode) {
     if (_splitBtn) _splitBtn.style.display = 'none';
     if (_summaryRowEl) _summaryRowEl.style.padding = '4px 6px 0';
   } else {
-    if (_headerTitle) _headerTitle.textContent = 'ITEM RECAP';
+    if (_headerTitle) _headerTitle.textContent = _customTitle || 'ORDER RECAP';
     if (_colHead) {
       _colHead.style.display = '';
       _colHead.style.gridTemplateColumns = '1fr 40px 68px';
@@ -526,6 +527,7 @@ export var OrderSummary = {
     _collapsible = !!params.collapsible;
     _onItemTap = params.onItemTap || null;
     _onSeatHeaderTap = params.onSeatHeaderTap || null;
+    _customTitle = params.title || null;
     _configureForMode('order');
 
     if (_checkIdEl) _checkIdEl.textContent = params.checkId || '';

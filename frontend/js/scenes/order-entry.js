@@ -365,7 +365,7 @@ defineScene({
 
     // Show persistent order summary panel (left column)
     // Lock _renderItems so stale check-overview updates can't write into our ticket list
-    OrderSummary.show({ checkId: params.recallCheckNumber || '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: _handleNameTap });
+    OrderSummary.show({ title: 'ITEM RECAP', checkId: params.recallCheckNumber || '', customerName: '', items: [], subtotal: 0, tax: 0, cardTotal: 0, cashPrice: 0, onNameTap: _handleNameTap });
     OrderSummary.lockItemRender();
 
     var mainArea = buildMain(container, params);
