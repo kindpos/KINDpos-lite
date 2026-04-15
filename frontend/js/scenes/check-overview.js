@@ -820,7 +820,7 @@ defineScene({
         showToast('Select items to void, or tap seat header for all', { bg: T.gold });
         return;
       }
-      // Snapshot selected items for undo
+      // Snapshot selected items for undo (include modifiers so they restore correctly)
       var voidedSnapshot = [];
       var keys = Object.keys(state.selectedItems);
       for (var vsi = 0; vsi < keys.length; vsi++) {
@@ -830,7 +830,23 @@ defineScene({
         var seat = state.seats[sIdx];
         if (seat && seat.items[iIdx]) {
           var it = seat.items[iIdx];
-          voidedSnapshot.push({ name: it.name, price: it.effectivePrice || it.price, quantity: it.qty, seat_number: sIdx + 1 });
+          voidedSnapshot.push({
+            menu_item_id: it.menu_item_id || it.name.toLowerCase().replace(/\s+/g, '_'),
+            name: it.name,
+            price: it.price,
+            quantity: it.qty,
+            category: it.category || null,
+            seat_number: sIdx + 1,
+            modifiers: (it.mods || []).map(function(m) {
+              return {
+                name: m.name,
+                price: m.price || 0,
+                charged: m.charged !== false,
+                prefix: m.prefix || null,
+                half_price: m.half_price != null ? m.half_price : null,
+              };
+            }),
+          });
         }
       }
 
