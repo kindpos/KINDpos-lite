@@ -115,6 +115,8 @@ function orderToSeats(order, minSeats) {
   return seats;
 }
 
+var DISCOUNT_OPTIONS = ['10%', '15%', '20%', '25%', '50%', 'Comp (100%)'];
+
 defineScene({
   name: 'check-overview',
 
@@ -1390,149 +1392,139 @@ defineScene({
           });
       },
     },
-  },
-});
 
-// ═══════════════════════════════════════════════════
-//  Shared interrupt scenes (disc-pin, disc-select)
-// ═══════════════════════════════════════════════════
+    'disc-pin': {
+      render: function(container, params) {
+        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+        var panel = document.createElement('div');
+        panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:20px;';
+        var lbl = document.createElement('div');
+        lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+        lbl.textContent = '// MANAGER PIN //';
+        panel.appendChild(lbl);
 
-var DISCOUNT_OPTIONS = ['10%', '15%', '20%', '25%', '50%', 'Comp (100%)'];
+        var numpad = buildNumpad({
+          onSubmit: function(pin) {
+            fetch('/api/v1/auth/verify-pin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pin: pin }),
+            }).then(function(r) { return r.json(); }).then(function(data) {
+              if (data.valid && (data.roles || []).indexOf('manager') !== -1) {
+                params.onConfirm(data.employee_id || pin);
+              } else if (data.valid) {
+                numpad.setError('NOT A MANAGER');
+              } else {
+                numpad.setError('INVALID PIN');
+              }
+            }).catch(function() { numpad.setError('NETWORK ERROR'); });
+          },
+          onCancel: function() { params.onCancel(); },
+        });
+        panel.appendChild(numpad);
+        container.appendChild(panel);
 
-SceneManager.register({
-  name: 'disc-pin',
-  mount: function(container, params) {
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
-    var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:20px;';
-    var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
-    lbl.textContent = '// MANAGER PIN //';
-    panel.appendChild(lbl);
-
-    var numpad = buildNumpad({
-      onSubmit: function(pin) {
-        fetch('/api/v1/servers').then(function(r) { return r.json(); }).then(function(data) {
-          var servers = data.servers || [];
-          var mgr = servers.find(function(s) { return s.pin === pin && (s.roles || []).indexOf('manager') !== -1; });
-          if (mgr) {
-            SceneManager.resolveInterrupt('disc-pin');
-            params.onConfirm(mgr.id || pin);
-          } else {
-            numpad.setError('NOT AUTHORIZED');
-          }
-        }).catch(function() { numpad.setError('NETWORK ERROR'); });
+        container.addEventListener('pointerup', function(e) {
+          if (e.target === container) { params.onCancel(); }
+        });
       },
-      onCancel: function() { SceneManager.resolveInterrupt('disc-pin'); params.onCancel(); },
-    });
-    panel.appendChild(numpad);
-    container.appendChild(panel);
+      unmount: function() {},
+    },
 
-    container.addEventListener('pointerup', function(e) {
-      if (e.target === container) { SceneManager.resolveInterrupt('disc-pin'); params.onCancel(); }
-    });
-  },
-  unmount: function() {},
-});
+    'disc-select': {
+      render: function(container, params) {
+        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+        var panel = document.createElement('div');
+        panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:20px;min-width:280px;';
+        var lbl = document.createElement('div');
+        lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+        lbl.textContent = '// DISCOUNT //';
+        panel.appendChild(lbl);
 
-SceneManager.register({
-  name: 'disc-select',
-  mount: function(container, params) {
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
-    var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:20px;min-width:280px;';
-    var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
-    lbl.textContent = '// DISCOUNT //';
-    panel.appendChild(lbl);
-
-    DISCOUNT_OPTIONS.forEach(function(opt) {
-      var btn = buildButton(opt, {
-        fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
-        onTap: function() { SceneManager.resolveInterrupt('disc-select'); params.onConfirm(opt); },
-      });
-      btn.style.width = '240px';
-      panel.appendChild(btn);
-    });
-
-    var cancelBtn = buildButton('CANCEL', {
-      fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
-      onTap: function() { SceneManager.resolveInterrupt('disc-select'); params.onCancel(); },
-    });
-    cancelBtn.style.width = '240px';
-    panel.appendChild(cancelBtn);
-    container.appendChild(panel);
-  },
-  unmount: function() {},
-});
-
-// ═══════════════════════════════════════════════════
-//  Seat Payment Interrupt — shown on long-press of paid seat
-// ═══════════════════════════════════════════════════
-
-SceneManager.register({
-  name: 'seat-payment',
-  mount: function(container, params) {
-    var seatId = params.seatId || '??';
-    var payments = params.payments || [];
-
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
-
-    var panel = document.createElement('div');
-    panel.style.cssText = [
-      'display:flex;flex-direction:column;align-items:center;gap:10px;',
-      'background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);',
-      'padding:20px 24px;min-width:320px;max-width:440px;',
-    ].join('');
-
-    var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
-    title.textContent = '// ' + seatId + ' PAYMENT //';
-    panel.appendChild(title);
-
-    if (payments.length === 0) {
-      var empty = document.createElement('div');
-      empty.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.dimText + ';padding:8px 0;';
-      empty.textContent = 'No payments found for this seat';
-      panel.appendChild(empty);
-    } else {
-      for (var pi = 0; pi < payments.length; pi++) {
-        (function(p) {
-          var row = document.createElement('div');
-          row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:4px 0;';
-
-          var info = document.createElement('div');
-          info.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.textPrimary + ';';
-          info.textContent = p.method.toUpperCase() + '  ' + fmt(p.amount);
-          row.appendChild(info);
-
-          var delBtn = buildButton('DELETE', {
-            fill: T.darkBtn, color: T.vermillion, fontSize: T.fsConSm, height: 38,
-            onTap: function() {
-              SceneManager.resolveInterrupt('seat-payment');
-              params.onConfirm(p.payment_id);
-            },
+        DISCOUNT_OPTIONS.forEach(function(opt) {
+          var btn = buildButton(opt, {
+            fill: T.darkBtn, color: T.mint, fontSize: '26px', height: 44,
+            onTap: function() { params.onConfirm(opt); },
           });
-          delBtn.style.minWidth = '90px';
-          row.appendChild(delBtn);
+          btn.style.width = '240px';
+          panel.appendChild(btn);
+        });
 
-          panel.appendChild(row);
-        })(payments[pi]);
-      }
-    }
+        var cancelBtn = buildButton('CANCEL', {
+          fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
+          onTap: function() { params.onCancel(); },
+        });
+        cancelBtn.style.width = '240px';
+        panel.appendChild(cancelBtn);
+        container.appendChild(panel);
+      },
+      unmount: function() {},
+    },
 
-    var cancelBtn = buildButton('CANCEL', {
-      fill: T.darkBtn, color: T.textPrimary, fontSize: T.fsCon, height: 44,
-      onTap: function() { SceneManager.resolveInterrupt('seat-payment'); params.onCancel(); },
-    });
-    cancelBtn.style.width = '100%';
-    cancelBtn.style.marginTop = '4px';
-    panel.appendChild(cancelBtn);
-    container.appendChild(panel);
+    'seat-payment': {
+      render: function(container, params) {
+        var inner = params.params || {};
+        var seatId = inner.seatId || '??';
+        var payments = inner.payments || [];
 
-    container.addEventListener('pointerup', function(e) {
-      if (e.target === container) { SceneManager.resolveInterrupt('seat-payment'); params.onCancel(); }
-    });
+        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+        var panel = document.createElement('div');
+        panel.style.cssText = [
+          'display:flex;flex-direction:column;align-items:center;gap:10px;',
+          'background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);',
+          'padding:20px 24px;min-width:320px;max-width:440px;',
+        ].join('');
+
+        var title = document.createElement('div');
+        title.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+        title.textContent = '// ' + seatId + ' PAYMENT //';
+        panel.appendChild(title);
+
+        if (payments.length === 0) {
+          var empty = document.createElement('div');
+          empty.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.dimText + ';padding:8px 0;';
+          empty.textContent = 'No payments found for this seat';
+          panel.appendChild(empty);
+        } else {
+          for (var pi = 0; pi < payments.length; pi++) {
+            (function(p) {
+              var row = document.createElement('div');
+              row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:4px 0;';
+
+              var info = document.createElement('div');
+              info.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.textPrimary + ';';
+              info.textContent = p.method.toUpperCase() + '  ' + fmt(p.amount);
+              row.appendChild(info);
+
+              var delBtn = buildButton('DELETE', {
+                fill: T.darkBtn, color: T.vermillion, fontSize: T.fsConSm, height: 38,
+                onTap: function() {
+                  params.onConfirm(p.payment_id);
+                },
+              });
+              delBtn.style.minWidth = '90px';
+              row.appendChild(delBtn);
+
+              panel.appendChild(row);
+            })(payments[pi]);
+          }
+        }
+
+        var cancelBtn = buildButton('CANCEL', {
+          fill: T.darkBtn, color: T.textPrimary, fontSize: T.fsCon, height: 44,
+          onTap: function() { params.onCancel(); },
+        });
+        cancelBtn.style.width = '100%';
+        cancelBtn.style.marginTop = '4px';
+        panel.appendChild(cancelBtn);
+        container.appendChild(panel);
+
+        container.addEventListener('pointerup', function(e) {
+          if (e.target === container) { params.onCancel(); }
+        });
+      },
+      unmount: function() {},
+    },
   },
-  unmount: function() {},
 });

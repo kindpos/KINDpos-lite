@@ -399,6 +399,207 @@ defineScene({
     _mainArea = null;
     _activeSeat = 1;
   },
+
+  interrupts: {
+    'seat-assign': {
+      render: function(container, params) {
+        var items = params.items || [];       // [ { id, name, mods } ]
+        var seatNumbers = params.seatNumbers || [1]; // available seats [1, 2, 3, ...]
+        var assignments = {};                 // { itemId: [seatNumber, ...] }
+
+        container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+        var panel = document.createElement('div');
+        panel.style.cssText = [
+          'display:flex;flex-direction:column;gap:10px;',
+          'background:' + T.bgDark + ';',
+          'border:4px solid ' + T.mint + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);',
+          'padding:20px 24px;min-width:500px;max-width:620px;',
+          'max-height:520px;overflow:hidden;',
+        ].join('');
+
+        // Title
+        var title = document.createElement('div');
+        title.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';color:' + T.mint + ';letter-spacing:2px;text-align:center;margin-bottom:4px;text-transform:uppercase;';
+        title.textContent = '// ASSIGN SEATS //';
+        panel.appendChild(title);
+
+        // Scrollable item list
+        var list = document.createElement('div');
+        list.className = 'co-scroll';
+        list.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;max-height:380px;';
+
+        var seatBtnRefs = {}; // { itemId: [ { wrap, inner, seatNum } ] }
+
+        for (var i = 0; i < items.length; i++) {
+          (function(item) {
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:10px;';
+
+            // Item label
+            var label = document.createElement('div');
+            label.style.cssText = [
+              'flex:1;min-width:0;',
+              'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.textPrimary + ';',
+              'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+            ].join('');
+            var displayName = item.name;
+            if (item.mods && item.mods.length > 0) {
+              displayName += ' (' + item.mods.map(function(m) { return m.name; }).join(', ') + ')';
+            }
+            label.textContent = displayName;
+            row.appendChild(label);
+
+            // Seat tile buttons — styled to match check-overview
+            var btnGroup = document.createElement('div');
+            btnGroup.style.cssText = 'display:flex;gap:6px;';
+            assignments[item.id] = [];
+            seatBtnRefs[item.id] = [];
+
+            for (var si = 0; si < seatNumbers.length; si++) {
+              (function(sn) {
+                var btn = buildStyledButton({ variant: 'dark' });
+                var wrap = btn.wrap;
+                var inner = btn.inner;
+
+                wrap.style.clipPath = chamfer(6);
+                wrap.style.width = '64px';
+                wrap.style.height = '52px';
+                wrap.style.minWidth = '0';
+
+                inner.innerHTML = '';
+                inner.style.flexDirection = 'column';
+                inner.style.gap = '0';
+                inner.style.padding = '4px 6px';
+                inner.style.fontFamily = T.fh;
+                inner.style.lineHeight = '1.2';
+
+                var idEl = document.createElement('div');
+                idEl.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';letter-spacing:2px;text-transform:uppercase;';
+                idEl.textContent = 'S' + sn;
+                inner.appendChild(idEl);
+
+                seatBtnRefs[item.id].push({ wrap: wrap, inner: inner, seatNum: sn });
+
+                wrap.addEventListener('pointerup', function(e) {
+                  e.stopPropagation();
+                  var arr = assignments[item.id];
+                  var idx = arr.indexOf(sn);
+                  if (idx >= 0) {
+                    arr.splice(idx, 1);
+                  } else {
+                    arr.push(sn);
+                  }
+                  // Update visuals for this item's seat buttons
+                  var refs = seatBtnRefs[item.id];
+                  var sel = assignments[item.id];
+                  for (var ri = 0; ri < refs.length; ri++) {
+                    var isOn = sel.indexOf(refs[ri].seatNum) >= 0;
+                    refs[ri].wrap.style.background = isOn ? T.numpadChassis : refs[ri].wrap._embV.bg;
+                    refs[ri].wrap.style.boxShadow = isOn ? refs[ri].wrap._embV.shadowActive : refs[ri].wrap._embV.shadow;
+                    refs[ri].inner.style.color = isOn ? T.bgDark : refs[ri].wrap._embV.label;
+                  }
+                  updateConfirmState();
+                });
+                btnGroup.appendChild(wrap);
+              })(seatNumbers[si]);
+            }
+            row.appendChild(btnGroup);
+            list.appendChild(row);
+          })(items[i]);
+        }
+        panel.appendChild(list);
+
+        // Helper: refresh visual state for all seat buttons
+        function refreshAllBtnVisuals() {
+          for (var ii = 0; ii < items.length; ii++) {
+            var refs = seatBtnRefs[items[ii].id];
+            var sel = assignments[items[ii].id];
+            for (var ri = 0; ri < refs.length; ri++) {
+              var isOn = sel.indexOf(refs[ri].seatNum) >= 0;
+              refs[ri].wrap.style.background = isOn ? T.numpadChassis : refs[ri].wrap._embV.bg;
+              refs[ri].wrap.style.boxShadow = isOn ? refs[ri].wrap._embV.shadowActive : refs[ri].wrap._embV.shadow;
+              refs[ri].inner.style.color = isOn ? T.bgDark : refs[ri].wrap._embV.label;
+            }
+          }
+        }
+
+        // Bottom bar: select-all + confirm + cancel
+        var bottomBar = document.createElement('div');
+        bottomBar.style.cssText = 'display:flex;gap:10px;margin-top:8px;';
+
+        var cancelBtn = buildButton('CANCEL', {
+          fill: T.darkBtn, color: T.textPrimary, fontSize: T.fsCon, height: 48,
+          onTap: function() { params.onCancel(); },
+        });
+        cancelBtn.style.flex = '1';
+        bottomBar.appendChild(cancelBtn);
+
+        var selectAllBtn = buildButton('SELECT ALL', {
+          fill: T.darkBtn, color: T.gold, fontSize: T.fsCon, height: 48,
+          onTap: function() {
+            for (var ai = 0; ai < items.length; ai++) {
+              assignments[items[ai].id] = seatNumbers.slice();
+            }
+            refreshAllBtnVisuals();
+            updateConfirmState();
+          },
+        });
+        selectAllBtn.style.flex = '1';
+        bottomBar.appendChild(selectAllBtn);
+
+        var confirmBtn = buildButton('CONFIRM', {
+          fill: T.darkBtn, color: T.dimText, fontSize: T.fsCon, height: 48,
+          onTap: function() {
+            // Only proceed if all items have at least one seat
+            var ready = true;
+            for (var k = 0; k < items.length; k++) {
+              if (!assignments[items[k].id] || assignments[items[k].id].length === 0) { ready = false; break; }
+            }
+            if (!ready) return;
+            params.onConfirm(assignments);
+          },
+        });
+        confirmBtn.style.flex = '1';
+        bottomBar.appendChild(confirmBtn);
+        panel.appendChild(bottomBar);
+        container.appendChild(panel);
+
+        function updateConfirmState() {
+          var allAssigned = true;
+          for (var k = 0; k < items.length; k++) {
+            if (!assignments[items[k].id] || assignments[items[k].id].length === 0) { allAssigned = false; break; }
+          }
+          confirmBtn.style.color = allAssigned ? T.mint : T.dimText;
+          confirmBtn.style.borderColor = allAssigned ? T.mint : T.darkBtn;
+        }
+        updateConfirmState();
+
+        // Tap scrim to cancel
+        container.addEventListener('pointerup', function(e) {
+          if (e.target === container) { params.onCancel(); }
+        });
+      },
+      unmount: function() {},
+    },
+    'oe-name-input': {
+      render: function(container, params) {
+        showKeyboard({
+          placeholder: 'Enter name',
+          initialValue: params.currentName || '',
+          maxLength: 40,
+          onDone: function(val) {
+            params.onConfirm(val.trim());
+          },
+          onDismiss: function() {
+            params.onCancel();
+          },
+          dismissOnDone: true,
+        });
+      },
+      unmount: function() { hideKeyboard(); },
+    },
+  },
 });
 
 // ── TOTALS HELPER ─────────────────────────────────
@@ -2475,215 +2676,4 @@ function recallFromBackend(orderId) {
     });
 }
 
-// ═══════════════════════════════════════════════════
-//  Seat Assignment Interrupt — shown at commit time
-//  when check has 2+ seats
-// ═══════════════════════════════════════════════════
-
-SceneManager.register({
-  name: 'seat-assign',
-  mount: function(container, params) {
-    var items = params.items || [];       // [ { id, name, mods } ]
-    var seatNumbers = params.seatNumbers || [1]; // available seats [1, 2, 3, ...]
-    var assignments = {};                 // { itemId: [seatNumber, ...] }
-
-    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
-
-    var panel = document.createElement('div');
-    panel.style.cssText = [
-      'display:flex;flex-direction:column;gap:10px;',
-      'background:' + T.bgDark + ';',
-      'border:4px solid ' + T.mint + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);',
-      'padding:20px 24px;min-width:500px;max-width:620px;',
-      'max-height:520px;overflow:hidden;',
-    ].join('');
-
-    // Title
-    var title = document.createElement('div');
-    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';color:' + T.mint + ';letter-spacing:2px;text-align:center;margin-bottom:4px;text-transform:uppercase;';
-    title.textContent = '// ASSIGN SEATS //';
-    panel.appendChild(title);
-
-    // Scrollable item list
-    var list = document.createElement('div');
-    list.className = 'co-scroll';
-    list.style.cssText = 'flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;max-height:380px;';
-
-    var seatBtnRefs = {}; // { itemId: [ { wrap, inner, seatNum } ] }
-
-    for (var i = 0; i < items.length; i++) {
-      (function(item) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:10px;';
-
-        // Item label
-        var label = document.createElement('div');
-        label.style.cssText = [
-          'flex:1;min-width:0;',
-          'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.textPrimary + ';',
-          'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
-        ].join('');
-        var displayName = item.name;
-        if (item.mods && item.mods.length > 0) {
-          displayName += ' (' + item.mods.map(function(m) { return m.name; }).join(', ') + ')';
-        }
-        label.textContent = displayName;
-        row.appendChild(label);
-
-        // Seat tile buttons — styled to match check-overview
-        var btnGroup = document.createElement('div');
-        btnGroup.style.cssText = 'display:flex;gap:6px;';
-        assignments[item.id] = [];
-        seatBtnRefs[item.id] = [];
-
-        for (var si = 0; si < seatNumbers.length; si++) {
-          (function(sn) {
-            var btn = buildStyledButton({ variant: 'dark' });
-            var wrap = btn.wrap;
-            var inner = btn.inner;
-
-            wrap.style.borderRadius = '0';
-            wrap.style.clipPath = chamfer(6);
-            wrap.style.width = '64px';
-            wrap.style.height = '52px';
-            wrap.style.minWidth = '0';
-
-            inner.innerHTML = '';
-            inner.style.flexDirection = 'column';
-            inner.style.gap = '0';
-            inner.style.padding = '4px 6px';
-            inner.style.fontFamily = T.fh;
-            inner.style.lineHeight = '1.2';
-
-            var idEl = document.createElement('div');
-            idEl.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';letter-spacing:2px;text-transform:uppercase;';
-            idEl.textContent = 'S' + sn;
-            inner.appendChild(idEl);
-
-            seatBtnRefs[item.id].push({ wrap: wrap, inner: inner, seatNum: sn });
-
-            wrap.addEventListener('pointerup', function(e) {
-              e.stopPropagation();
-              var arr = assignments[item.id];
-              var idx = arr.indexOf(sn);
-              if (idx >= 0) {
-                arr.splice(idx, 1);
-              } else {
-                arr.push(sn);
-              }
-              // Update visuals for this item's seat buttons
-              var refs = seatBtnRefs[item.id];
-              var sel = assignments[item.id];
-              for (var ri = 0; ri < refs.length; ri++) {
-                var isOn = sel.indexOf(refs[ri].seatNum) >= 0;
-                refs[ri].wrap.style.background = isOn ? T.numpadChassis : refs[ri].wrap._embV.bg;
-                refs[ri].wrap.style.boxShadow = isOn ? refs[ri].wrap._embV.shadowActive : refs[ri].wrap._embV.shadow;
-                refs[ri].inner.style.color = isOn ? T.bgDark : refs[ri].wrap._embV.label;
-              }
-              updateConfirmState();
-            });
-            btnGroup.appendChild(wrap);
-          })(seatNumbers[si]);
-        }
-        row.appendChild(btnGroup);
-        list.appendChild(row);
-      })(items[i]);
-    }
-    panel.appendChild(list);
-
-    // Helper: refresh visual state for all seat buttons
-    function refreshAllBtnVisuals() {
-      for (var ii = 0; ii < items.length; ii++) {
-        var refs = seatBtnRefs[items[ii].id];
-        var sel = assignments[items[ii].id];
-        for (var ri = 0; ri < refs.length; ri++) {
-          var isOn = sel.indexOf(refs[ri].seatNum) >= 0;
-          refs[ri].wrap.style.background = isOn ? T.numpadChassis : refs[ri].wrap._embV.bg;
-          refs[ri].wrap.style.boxShadow = isOn ? refs[ri].wrap._embV.shadowActive : refs[ri].wrap._embV.shadow;
-          refs[ri].inner.style.color = isOn ? T.bgDark : refs[ri].wrap._embV.label;
-        }
-      }
-    }
-
-    // Bottom bar: select-all + confirm + cancel
-    var bottomBar = document.createElement('div');
-    bottomBar.style.cssText = 'display:flex;gap:10px;margin-top:8px;';
-
-    var cancelBtn = buildButton('CANCEL', {
-      fill: T.darkBtn, color: T.textPrimary, fontSize: T.fsCon, height: 48,
-      onTap: function() { params.onCancel(); },
-    });
-    cancelBtn.style.flex = '1';
-    bottomBar.appendChild(cancelBtn);
-
-    var selectAllBtn = buildButton('SELECT ALL', {
-      fill: T.darkBtn, color: T.gold, fontSize: T.fsCon, height: 48,
-      onTap: function() {
-        for (var ai = 0; ai < items.length; ai++) {
-          assignments[items[ai].id] = seatNumbers.slice();
-        }
-        refreshAllBtnVisuals();
-        updateConfirmState();
-      },
-    });
-    selectAllBtn.style.flex = '1';
-    bottomBar.appendChild(selectAllBtn);
-
-    var confirmBtn = buildButton('CONFIRM', {
-      fill: T.darkBtn, color: T.dimText, fontSize: T.fsCon, height: 48,
-      onTap: function() {
-        // Only proceed if all items have at least one seat
-        var ready = true;
-        for (var k = 0; k < items.length; k++) {
-          if (!assignments[items[k].id] || assignments[items[k].id].length === 0) { ready = false; break; }
-        }
-        if (!ready) return;
-        params.onConfirm(assignments);
-      },
-    });
-    confirmBtn.style.flex = '1';
-    bottomBar.appendChild(confirmBtn);
-    panel.appendChild(bottomBar);
-    container.appendChild(panel);
-
-    function updateConfirmState() {
-      var allAssigned = true;
-      for (var k = 0; k < items.length; k++) {
-        if (!assignments[items[k].id] || assignments[items[k].id].length === 0) { allAssigned = false; break; }
-      }
-      confirmBtn.style.color = allAssigned ? T.mint : T.dimText;
-      confirmBtn.style.borderColor = allAssigned ? T.mint : T.darkBtn;
-    }
-    updateConfirmState();
-
-    // Tap scrim to cancel
-    container.addEventListener('pointerup', function(e) {
-      if (e.target === container) { params.onCancel(); }
-    });
-  },
-  unmount: function() {},
-});
-
-// ═══════════════════════════════════════════════════
-//  CHECK NAME INPUT — interrupt for naming a check
-// ═══════════════════════════════════════════════════
-
-SceneManager.register({
-  name: 'oe-name-input',
-  mount: function(container, params) {
-    showKeyboard({
-      placeholder: 'Enter name',
-      initialValue: params.currentName || '',
-      maxLength: 40,
-      onDone: function(val) {
-        params.onConfirm(val.trim());
-      },
-      onDismiss: function() {
-        params.onCancel();
-      },
-      dismissOnDone: true,
-    });
-  },
-  unmount: function() { hideKeyboard(); },
-});
 
