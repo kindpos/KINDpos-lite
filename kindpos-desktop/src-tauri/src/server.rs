@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::time::{Duration, Instant};
 use std::{env, thread};
@@ -9,21 +9,41 @@ pub struct ServerManager {
     port: u16,
 }
 
+/// Locate a usable Python interpreter.
+/// Prefers the embedded portable copy; falls back to system Python.
+fn find_python(app_dir: &Path) -> Result<PathBuf, String> {
+    let embedded = if cfg!(windows) {
+        app_dir.join("python").join("python.exe")
+    } else {
+        app_dir.join("python").join("bin").join("python3")
+    };
+
+    if embedded.exists() {
+        return Ok(embedded);
+    }
+
+    // Fallback: look for python on the system PATH.
+    for name in &["python", "python3"] {
+        if let Ok(output) = Command::new(name).arg("--version").output() {
+            if output.status.success() {
+                return Ok(PathBuf::from(name));
+            }
+        }
+    }
+
+    Err(format!(
+        "No Python found. Checked embedded ({}) and system PATH.",
+        embedded.display()
+    ))
+}
+
 impl ServerManager {
-    /// Spawn uvicorn with the embedded Python interpreter.
+    /// Spawn uvicorn with the best available Python interpreter.
     ///
     /// `app_dir` is the root extraction directory (e.g. `%APPDATA%/KINDpos`).
     /// Environment variables expected by the backend are set before spawning.
     pub fn start(app_dir: &Path, port: u16) -> Result<Self, String> {
-        let python = if cfg!(windows) {
-            app_dir.join("python").join("python.exe")
-        } else {
-            app_dir.join("python").join("bin").join("python3")
-        };
-
-        if !python.exists() {
-            return Err(format!("Embedded Python not found at {}", python.display()));
-        }
+        let python = find_python(app_dir)?;
 
         let backend_dir = app_dir.join("backend");
         let db_path = app_dir.join("data").join("event_ledger.db");

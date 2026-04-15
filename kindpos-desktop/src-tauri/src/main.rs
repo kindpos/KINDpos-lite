@@ -89,11 +89,32 @@ fn main() {
             ensure_resources_extracted(&app_dir, &resource_dir);
 
             // Start the backend server.
-            let srv = ServerManager::start(&app_dir, port)
-                .expect("Failed to start backend server");
+            let srv = match ServerManager::start(&app_dir, port) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("KINDpos startup error: {e}");
+                    // Show error visibly in the webview instead of crashing.
+                    let window = app.get_window("main").expect("No main window");
+                    window.eval(&format!(
+                        "document.body.innerHTML = '<div style=\"padding:2rem;font-family:sans-serif;color:#ff6b6b\"><h1>Startup Error</h1><p>{}</p></div>'",
+                        e.replace('\'', "\\'")
+                    )).ok();
+                    return Ok(());
+                }
+            };
 
-            srv.wait_for_health(Duration::from_secs(30))
-                .expect("Backend server failed to become healthy");
+            match srv.wait_for_health(Duration::from_secs(30)) {
+                Ok(()) => {}
+                Err(e) => {
+                    eprintln!("KINDpos health-check error: {e}");
+                    let window = app.get_window("main").expect("No main window");
+                    window.eval(&format!(
+                        "document.body.innerHTML = '<div style=\"padding:2rem;font-family:sans-serif;color:#ff6b6b\"><h1>Startup Error</h1><p>{}</p></div>'",
+                        e.replace('\'', "\\'")
+                    )).ok();
+                    return Ok(());
+                }
+            }
 
             // Store the server handle so we can shut it down on exit.
             let state = app.state::<Mutex<Option<ServerManager>>>();
