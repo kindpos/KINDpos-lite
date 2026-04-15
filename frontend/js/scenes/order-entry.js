@@ -13,9 +13,9 @@ import { HexNav } from '../hex-nav.js';
 import { showKeyboard, hideKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
-import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../data/universal-modifiers.js';
+import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../menu-data/universal-modifiers.js';
 import { ModifierPanel } from '../modifier-panel.js';
-import { getModifierConfig } from '../data/modifier-configs.js';
+import { getModifierConfig } from '../menu-data/modifier-configs.js';
 
 // ── Beveled depth card helpers (match clock-in card pattern) ──
 function _lightenHex(hex, pct) {

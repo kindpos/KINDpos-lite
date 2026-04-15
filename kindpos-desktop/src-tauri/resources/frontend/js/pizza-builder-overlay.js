@@ -8,7 +8,7 @@
 import { T, buildStyledButton, applySunkenStyle } from './tokens.js';
 import { SceneManager } from './scene-manager.js';
 import { HexNav } from './hex-nav.js';
-import { PREFIXES as UNI_PREFIXES } from './data/universal-modifiers.js';
+import { PREFIXES as UNI_PREFIXES } from './menu-data/universal-modifiers.js';
 
 // ── Pizza builder HexNav categories ──────────────
 var PIZZA_BUILDER_DATA = [
