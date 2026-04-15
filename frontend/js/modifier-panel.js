@@ -631,14 +631,6 @@ export function ModifierPanel(container, opts) {
       optLabel.textContent = opt.label;
       card.appendChild(optLabel);
 
-      // Show price if non-zero
-      if ((opt.price || 0) > 0) {
-        var priceLabel = document.createElement('div');
-        priceLabel.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + (isSelected ? T.bgDark : T.gold) + ';';
-        priceLabel.textContent = '+$' + (opt.price || 0).toFixed(2);
-        card.appendChild(priceLabel);
-      }
-
       card.addEventListener('pointerup', function(e) {
         e.stopPropagation();
         // Dismiss overlay and apply selection
