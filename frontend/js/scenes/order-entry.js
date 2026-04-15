@@ -1995,6 +1995,15 @@ function _renderTicketGroup(list, displayTicket) {
         gc.appendChild(sep);
         chargedMods.forEach(function(m) {
           gc.appendChild(buildModRow(m.name, m.price, true, false));
+          if (m.children && m.children.length > 0) {
+            m.children.forEach(function(child) {
+              var childRow = buildModRow(child.name, child.price, true, false);
+              childRow.style.paddingLeft = '24px';
+              childRow.style.color = T.red;
+              childRow.style.fontStyle = 'italic';
+              gc.appendChild(childRow);
+            });
+          }
         });
       }
 
@@ -2113,6 +2122,16 @@ function _renderTicketGroup(list, displayTicket) {
                 };
               })(inst, m) : null;
               ic.appendChild(buildModRowSized(m.name, m.price, fsMod, removeHandler));
+              // Render child/secondary modifiers indented
+              if (m.children && m.children.length > 0) {
+                m.children.forEach(function(child) {
+                  var childRow = buildModRowSized(child.name, child.price, '16px');
+                  childRow.style.paddingLeft = '32px';
+                  childRow.style.color = T.red;
+                  childRow.style.fontStyle = 'italic';
+                  ic.appendChild(childRow);
+                });
+              }
             });
           }
 
