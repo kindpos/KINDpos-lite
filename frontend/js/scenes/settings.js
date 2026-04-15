@@ -380,7 +380,7 @@ function buildCategoryCard(cat, borderColor) {
   var lbl = document.createElement('div');
   lbl.style.cssText = [
     'font-family:' + T.fh + ';',
-    'font-size:36px;font-weight:bold;font-style:italic;',
+    'font-size:44px;font-weight:bold;font-style:italic;',
     'color:' + borderColor + ';',
     'text-align:center;flex-shrink:0;',
   ].join('');
@@ -408,7 +408,7 @@ function buildCategoryCard(cat, borderColor) {
       ].join('');
 
       var nameEl = document.createElement('div');
-      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:44px;font-weight:bold;color:' + T.gold + ';';
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:36px;font-weight:bold;color:' + T.gold + ';';
       nameEl.textContent = dev.name || 'Unnamed';
       devDc.card.appendChild(nameEl);
 
