@@ -117,6 +117,19 @@ function renderContent() {
   });
 }
 
+function _refreshCategoryCards() {
+  if (!_contentEl) return;
+  var cards = _contentEl.querySelectorAll('[data-cat-id]');
+  cards.forEach(function(oldWrap) {
+    var catId = oldWrap.dataset.catId;
+    var cat = DEVICE_CATEGORIES.find(function(c) { return c.id === catId; });
+    if (cat) {
+      var newCard = buildCategoryCard(cat, T.gold);
+      oldWrap.parentNode.replaceChild(newCard, oldWrap);
+    }
+  });
+}
+
 // == SCAN NETWORK Card (3 states) ======================
 
 function buildScanNetworkCard() {
@@ -307,7 +320,7 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
     btnArea.appendChild(_saveAs('kitchen', 'Kitchen'));
     btnArea.appendChild(_saveAs('receipt', 'Receipt'));
   } else {
-    btnArea.appendChild(_saveAs(dev.type || 'card_reader', dev.name || 'Card Reader'));
+    btnArea.appendChild(_saveAs('card_reader', 'Card Reader'));
   }
   dc.card.appendChild(btnArea);
 
@@ -332,8 +345,10 @@ function saveDiscoveredDevice(dev) {
     if (r.ok) {
       return r.json().then(function(saved) {
         _savedDevices.push(saved);
-        // Hot-reload
+        // Hot-reload payment device
         fetch('/api/v1/payments/reload-devices', { method: 'POST' }).catch(function() {});
+        // Refresh category cards to show new device
+        _refreshCategoryCards();
         return true;
       });
     }
