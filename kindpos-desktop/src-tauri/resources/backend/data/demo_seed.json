@@ -1,0 +1,204 @@
+{
+  "employees": [
+    {
+      "employee_id": "rose",
+      "name": "Rose N.",
+      "role": "manager",
+      "pin": "1234"
+    },
+    {
+      "employee_id": "blanche",
+      "name": "Blanche D.",
+      "role": "server",
+      "pin": "5678"
+    },
+    {
+      "employee_id": "dorothy",
+      "name": "Dorothy Z.",
+      "role": "server",
+      "pin": "1111"
+    },
+    {
+      "employee_id": "sophia",
+      "name": "Sophia P.",
+      "role": "cook",
+      "pin": "2222"
+    },
+    {
+      "employee_id": "miles",
+      "name": "Miles W.",
+      "role": "cook",
+      "pin": "3456"
+    }
+  ],
+  "restaurant": {
+    "name": "KIND Pizza",
+    "tax_rate": 0.07,
+    "timezone": "America/New_York"
+  },
+  "categories": [
+    {
+      "category_id": "pizza",
+      "name": "Pizza",
+      "label": "PIZZA",
+      "color": "#ff4757",
+      "display_order": 1,
+      "pizza_builder": true
+    },
+    {
+      "category_id": "apps",
+      "name": "Apps",
+      "label": "APPS",
+      "color": "#fcbe40",
+      "display_order": 2
+    },
+    {
+      "category_id": "sides",
+      "name": "Sides",
+      "label": "SIDES",
+      "color": "#3742fa",
+      "display_order": 3
+    },
+    {
+      "category_id": "subs",
+      "name": "Subs",
+      "label": "SUBS",
+      "color": "#C6FFBB",
+      "display_order": 4
+    },
+    {
+      "category_id": "drinks",
+      "name": "Drinks",
+      "label": "DRINKS",
+      "color": "#ff9f43",
+      "display_order": 5
+    }
+  ],
+  "items": [
+    { "item_id": "pizza",       "name": "Pizza",       "price": 0,     "category": "Pizza",  "display_order": 1 },
+
+    { "item_id": "garlic_knots",     "name": "Garlic Knots",     "price": 5.00,  "category": "Apps",   "display_order": 1 },
+    { "item_id": "mozzarella_sticks","name": "Mozz Sticks",      "price": 7.50,  "category": "Apps",   "display_order": 2 },
+    { "item_id": "chicken_fingers",  "name": "Chicken Fingers",  "price": 8.50,  "category": "Apps",   "display_order": 3 },
+    { "item_id": "fried_calamari",   "name": "Fried Calamari",   "price": 9.00,  "category": "Apps",   "display_order": 4 },
+    { "item_id": "bruschetta",       "name": "Bruschetta",       "price": 7.00,  "category": "Apps",   "display_order": 5 },
+
+    { "item_id": "fries",       "name": "Fries",        "price": 4.50, "category": "Sides",  "display_order": 1 },
+    { "item_id": "onion_rings", "name": "Onion Rings",  "price": 5.50, "category": "Sides",  "display_order": 2 },
+    { "item_id": "side_salad",  "name": "Side Salad",   "price": 5.00, "category": "Sides",  "display_order": 3 },
+    { "item_id": "coleslaw",    "name": "Coleslaw",     "price": 3.50, "category": "Sides",  "display_order": 4 },
+
+    { "item_id": "italian_sub",      "name": "Italian Sub",       "price": 10.00, "category": "Subs", "display_order": 1 },
+    { "item_id": "meatball_sub",     "name": "Meatball Sub",      "price": 9.50,  "category": "Subs", "display_order": 2 },
+    { "item_id": "chicken_parm_sub", "name": "Chicken Parm Sub",  "price": 10.50, "category": "Subs", "display_order": 3 },
+    { "item_id": "eggplant_sub",     "name": "Eggplant Sub",      "price": 9.00,  "category": "Subs", "display_order": 4 },
+
+    { "item_id": "fountain_soda",  "name": "Fountain Soda",  "price": 2.50, "category": "Drinks", "display_order": 1 },
+    { "item_id": "bottled_water",  "name": "Bottled Water",  "price": 2.00, "category": "Drinks", "display_order": 2 },
+    { "item_id": "iced_tea",       "name": "Iced Tea",       "price": 2.75, "category": "Drinks", "display_order": 3 },
+    { "item_id": "lemonade",       "name": "Lemonade",       "price": 3.00, "category": "Drinks", "display_order": 4 },
+    { "item_id": "espresso",       "name": "Espresso",       "price": 3.50, "category": "Drinks", "display_order": 5 },
+    { "item_id": "test_charge",    "name": "Test Charge",    "price": 0.01, "category": "Drinks", "display_order": 99 }
+  ],
+  "modifier_groups": [
+    {
+      "group_id": "pizza-specials",
+      "name": "Specials",
+      "category_id": "pizza",
+      "builder": true,
+      "color": "#fcbe40",
+      "text_color": "#1a1000",
+      "display_order": 1,
+      "modifiers": [
+        { "modifier_id": "bianco",          "name": "Bianco",          "price": 0 },
+        { "modifier_id": "breakfast-bacon", "name": "Breakfast Bacon", "price": 0 },
+        { "modifier_id": "cheeseburger",    "name": "Cheeseburger",    "price": 0 },
+        { "modifier_id": "chicken-alfredo", "name": "Chicken Alfredo", "price": 0 },
+        { "modifier_id": "crew",            "name": "Crew",            "price": 0 },
+        { "modifier_id": "hawaiian",        "name": "Hawaiian",        "price": 0 },
+        { "modifier_id": "house",           "name": "House",           "price": 0 },
+        { "modifier_id": "kosher",          "name": "Kosher",          "price": 0 },
+        { "modifier_id": "mac-n-cheese",    "name": "Mac N Cheese",    "price": 0 },
+        { "modifier_id": "moccho",          "name": "Moccho",          "price": 0 },
+        { "modifier_id": "nick-special",    "name": "Nick Special",    "price": 0 },
+        { "modifier_id": "primo",           "name": "Primo",           "price": 0 },
+        { "modifier_id": "sammys-special",  "name": "Sammy's Special", "price": 0 },
+        { "modifier_id": "taco",            "name": "Taco",            "price": 0 },
+        { "modifier_id": "veggie",          "name": "Veggie",          "price": 0 }
+      ]
+    },
+    {
+      "group_id": "pizza-prep",
+      "name": "Prep",
+      "category_id": "pizza",
+      "builder": true,
+      "color": "#b48efa",
+      "text_color": "#1a0030",
+      "display_order": 2,
+      "modifiers": [],
+      "subcats": [
+        { "id": "prep-crust", "name": "Crust", "modifiers": [
+          { "modifier_id": "gf-crust",      "name": "Sub GF Crust",  "price": 0 },
+          { "modifier_id": "thin-crust",    "name": "Thin Crust",    "price": 0 },
+          { "modifier_id": "thick-crust",   "name": "Thick Crust",   "price": 0 },
+          { "modifier_id": "stuffed-crust", "name": "Stuffed Crust", "price": 0 }
+        ]},
+        { "id": "prep-temp", "name": "Temp", "modifiers": [
+          { "modifier_id": "well-done",  "name": "Well Done",  "price": 0 },
+          { "modifier_id": "light-bake", "name": "Light Bake", "price": 0 }
+        ]},
+        { "id": "prep-sauce", "name": "Sauce", "modifiers": [
+          { "modifier_id": "light-sauce", "name": "Light Sauce", "price": 0 },
+          { "modifier_id": "extra-sauce", "name": "Extra Sauce", "price": 0 },
+          { "modifier_id": "no-sauce",    "name": "No Sauce",    "price": 0 },
+          { "modifier_id": "white-sauce", "name": "White Sauce", "price": 0 },
+          { "modifier_id": "bbq-sauce",   "name": "BBQ Sauce",   "price": 0 }
+        ]},
+        { "id": "prep-cut", "name": "Cut", "modifiers": [
+          { "modifier_id": "cut-square", "name": "Cut Square", "price": 0 },
+          { "modifier_id": "no-cut",     "name": "No Cut",     "price": 0 }
+        ]}
+      ]
+    },
+    {
+      "group_id": "pizza-toppings",
+      "name": "Toppings",
+      "category_id": "pizza",
+      "builder": true,
+      "color": "#ff4757",
+      "text_color": "#1a0a0a",
+      "display_order": 3,
+      "modifiers": [
+        { "modifier_id": "banana-peppers",  "name": "Banana Peppers",  "price": 1.00 },
+        { "modifier_id": "beef",            "name": "Beef",            "price": 1.50 },
+        { "modifier_id": "black-olives",    "name": "Black Olives",    "price": 1.00 },
+        { "modifier_id": "canadian-bacon",  "name": "Canadian Bacon",  "price": 1.50 },
+        { "modifier_id": "cheddar",         "name": "Cheddar",         "price": 1.50 },
+        { "modifier_id": "chicken",         "name": "Chicken",         "price": 2.00 },
+        { "modifier_id": "garlic",          "name": "Garlic",          "price": 0.50 },
+        { "modifier_id": "green-olives",    "name": "Green Olives",    "price": 1.00 },
+        { "modifier_id": "green-peppers",   "name": "Green Peppers",   "price": 1.00 },
+        { "modifier_id": "ground-beef",     "name": "Ground Beef",     "price": 1.50 },
+        { "modifier_id": "jalapenos",       "name": "Jalapenos",       "price": 1.00 },
+        { "modifier_id": "mozzarella",      "name": "Mozzarella",      "price": 1.50 },
+        { "modifier_id": "mushroom",        "name": "Mushroom",        "price": 1.00 },
+        { "modifier_id": "onion",           "name": "Onion",           "price": 1.00 },
+        { "modifier_id": "pepperoni",       "name": "Pepperoni",       "price": 1.50 },
+        { "modifier_id": "pineapple",       "name": "Pineapple",       "price": 1.00 },
+        { "modifier_id": "sausage",         "name": "Sausage",         "price": 1.50 },
+        { "modifier_id": "spinach",         "name": "Spinach",         "price": 1.00 },
+        { "modifier_id": "tomatoe",         "name": "Tomatoe",         "price": 1.00 }
+      ]
+    },
+    {
+      "group_id": "dressing",
+      "name": "Dressing",
+      "modifiers": [
+        { "modifier_id": "ranch",       "name": "Ranch",       "price": 0 },
+        { "modifier_id": "blue_cheese", "name": "Blue Cheese", "price": 0 },
+        { "modifier_id": "italian",     "name": "Italian",     "price": 0 },
+        { "modifier_id": "caesar",      "name": "Caesar",      "price": 0 }
+      ]
+    }
+  ]
+}
