@@ -13,6 +13,16 @@ from pydantic import BaseModel, Field
 import uuid
 import hashlib
 import json
+from decimal import Decimal
+
+
+class _DecimalEncoder(json.JSONEncoder):
+    """JSON encoder that converts Decimal to float for serialization."""
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return float(o)
+        return super().default(o)
+import json
 
 from .money import money_round
 
@@ -246,7 +256,7 @@ class Event(BaseModel):
             "payload": self.payload,
             "previous_checksum": previous_checksum,
         }
-        serialized = json.dumps(data, sort_keys=True)
+        serialized = json.dumps(data, sort_keys=True, cls=_DecimalEncoder)
         return hashlib.sha256(serialized.encode()).hexdigest()
 
 
