@@ -103,7 +103,7 @@ function renderContent() {
   }
 
   var grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;height:100%;align-content:start;box-sizing:border-box;';
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;height:100%;box-sizing:border-box;';
 
   DEVICE_CATEGORIES.forEach(function(cat) {
     grid.appendChild(buildCategoryCard(cat, T.gold));
@@ -184,9 +184,9 @@ function startNetworkScan(card, wrap) {
   // Discovery area (devices appear here as found)
   var discoveryArea = document.createElement('div');
   discoveryArea.style.cssText = [
-    'display:flex;flex-direction:column;gap:6px;',
+    'display:grid;grid-template-columns:1fr 1fr;gap:8px;',
     'width:100%;overflow-y:auto;scrollbar-width:none;',
-    'max-height:calc(100% - 60px);',
+    'max-height:calc(100% - 60px);align-content:start;',
   ].join('');
   card.appendChild(discoveryArea);
 
@@ -237,71 +237,70 @@ function startNetworkScan(card, wrap) {
 // == Discovery Card (inside SCAN NETWORK) ==============
 
 function buildDiscoveryCard(dev, scanCard, scanWrap) {
-  var row = document.createElement('div');
-  row.style.cssText = [
-    'background:' + T.bg + ';',
-    'padding:6px 10px;',
-    'clip-path:' + chamfer(4) + ';',
-    'display:flex;align-items:center;justify-content:space-between;gap:8px;',
+  var isSaved = !!dev.saved_name;
+  var borderColor = isSaved ? T.green : T.gold;
+  var dc = buildDepthCard(borderColor, { chamfer: 8, glow: false });
+
+  dc.card.style.cssText += [
+    'padding:10px 12px;',
+    'display:flex;flex-direction:column;gap:3px;',
+    'min-height:70px;',
   ].join('');
 
-  var info = document.createElement('div');
-  info.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;';
+  // Device name
+  var nameEl = document.createElement('div');
+  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + (isSaved ? T.green : T.gold) + ';';
+  nameEl.textContent = dev.saved_name || dev.name || dev.type || 'Unknown Device';
+  dc.card.appendChild(nameEl);
 
-  var typeName = dev.name || dev.type || 'Unknown Device';
-  var typeEl = document.createElement('div');
-  typeEl.style.cssText = 'font-family:' + T.fh + ';font-size:12px;color:' + T.gold + ';';
-  typeEl.textContent = typeName;
-  info.appendChild(typeEl);
+  // IP
+  var ipEl = document.createElement('div');
+  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.textPrimary + ';';
+  ipEl.textContent = dev.ip;
+  dc.card.appendChild(ipEl);
 
-  var addrEl = document.createElement('div');
-  addrEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.mint + ';';
-  addrEl.textContent = 'IP: ' + dev.ip + '   MAC: ' + (dev.mac || '—');
-  info.appendChild(addrEl);
+  // MAC
+  var macEl = document.createElement('div');
+  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.subtleText + ';';
+  macEl.textContent = 'MAC: ' + (dev.mac || '—');
+  dc.card.appendChild(macEl);
 
-  row.appendChild(info);
-
-  // Already saved?
-  if (dev.saved_name) {
+  // Status / action
+  if (isSaved) {
     var confLabel = document.createElement('div');
-    confLabel.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.green + ';white-space:nowrap;';
-    confLabel.textContent = 'CONFIGURED';
-    row.appendChild(confLabel);
+    confLabel.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.green + ';margin-top:2px;';
+    confLabel.textContent = '\u2713 CONFIGURED';
+    dc.card.appendChild(confLabel);
   } else {
     var btnArea = document.createElement('div');
-    btnArea.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
+    btnArea.style.cssText = 'display:flex;gap:6px;margin-top:4px;';
 
     var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.height = '24px';
-    saveBtn.wrap.style.minWidth = '50px';
-    saveBtn.inner.style.fontSize = '10px';
+    saveBtn.wrap.style.height = '28px';
+    saveBtn.wrap.style.minWidth = '60px';
+    saveBtn.inner.style.fontSize = '11px';
     saveBtn.wrap.addEventListener('pointerup', function() {
       saveDiscoveredDevice(dev).then(function(ok) {
         if (ok) {
           btnArea.innerHTML = '';
-          var done = document.createElement('span');
-          done.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.green + ';';
-          done.textContent = 'SAVED';
+          var done = document.createElement('div');
+          done.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.green + ';';
+          done.textContent = '\u2713 SAVED';
           btnArea.appendChild(done);
+          // Update border to green
+          dc.card.style.borderTopColor = _lightenHex(T.green, 0.2);
+          dc.card.style.borderLeftColor = _lightenHex(T.green, 0.2);
+          dc.card.style.borderBottomColor = _darkenHex(T.green, 0.3);
+          dc.card.style.borderRightColor = _darkenHex(T.green, 0.3);
         }
       });
     });
     btnArea.appendChild(saveBtn.wrap);
 
-    var editBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'EDIT' });
-    editBtn.wrap.style.height = '24px';
-    editBtn.wrap.style.minWidth = '50px';
-    editBtn.inner.style.fontSize = '10px';
-    editBtn.inner.style.color = T.textPrimary;
-    editBtn.wrap.addEventListener('pointerup', function() {
-      // TODO: Chunk 5 — open device edit form
-    });
-    btnArea.appendChild(editBtn.wrap);
-
-    row.appendChild(btnArea);
+    dc.card.appendChild(btnArea);
   }
 
-  return row;
+  return dc.wrap;
 }
 
 // == Hardware API ======================================

@@ -397,14 +397,17 @@ async def scan_network_stream(
                     'subnet': f"{prefix}.0/24",
                 })
 
-                # Step 3: TCP probe all live hosts in parallel
-                results = await asyncio.gather(
-                    *[_probe_host(h['ip'], h['mac'], ports, PROBE_TIMEOUT)
-                      for h in arp_hosts]
-                )
-                for r in results:
-                    if r is not None:
-                        yield _sse({**_annotate(r), 'type': 'device'})
+                # Step 3: TCP probe hosts in batches of 5, stream as found
+                batch_size = 5
+                for i in range(0, len(arp_hosts), batch_size):
+                    batch = arp_hosts[i:i + batch_size]
+                    results = await asyncio.gather(
+                        *[_probe_host(h['ip'], h['mac'], ports, PROBE_TIMEOUT)
+                          for h in batch]
+                    )
+                    for r in results:
+                        if r is not None:
+                            yield _sse({**_annotate(r), 'type': 'device'})
 
             yield _sse({'type': 'complete'})
 
