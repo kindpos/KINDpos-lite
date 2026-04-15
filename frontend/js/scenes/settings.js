@@ -866,18 +866,13 @@ function renderDeviceEditForm(opsEl, dev, parentBody, catInfo) {
     form.appendChild(buildSettingRow('Auth Key', buildTextInput(editAuthKey, 'Auth key', function(v) { editAuthKey = v; })));
   }
 
-  // Printer-specific: receipt settings
-  if (editType === 'kitchen' || editType === 'receipt') {
-    if (editType === 'kitchen') {
-      form.appendChild(buildSettingRow('Categories', buildTextInput(editCategories, 'e.g. pizza,apps,subs', function(v) { editCategories = v; })));
-    }
-    if (editType === 'receipt') {
-      form.appendChild(buildSettingRow('Chars/Line', buildValueLabel('42')));
-      form.appendChild(buildSettingRow('Paper Width', buildPresetButtons([
-        { label: '80mm', value: '80' },
-        { label: '58mm', value: '58' },
-      ], '80', function() {})));
-    }
+  // Printer-specific: paper settings
+  if (editType === 'receipt') {
+    form.appendChild(buildSettingRow('Chars/Line', buildValueLabel('42')));
+    form.appendChild(buildSettingRow('Paper Width', buildPresetButtons([
+      { label: '80mm', value: '80' },
+      { label: '58mm', value: '58' },
+    ], '80', function() {})));
   }
 
   // Save / Cancel
