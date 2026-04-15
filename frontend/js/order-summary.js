@@ -90,18 +90,22 @@ function _build() {
   // ── Column headers ──
   _colHead = document.createElement('div');
   _colHead.style.cssText = [
-    'display:flex;justify-content:space-between;align-items:center;',
+    'display:grid;grid-template-columns:1fr 36px 64px;align-items:center;',
     'padding:4px 8px;',
     'font-family:' + T.fh + ';font-size:14px;color:' + T.textPrimary + ';letter-spacing:0.06em;',
-    'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;white-space:nowrap;',
+    'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
   var hdrItem = document.createElement('span');
   hdrItem.textContent = 'ITEM';
-  var hdrRight = document.createElement('span');
-  hdrRight.textContent = 'QTY     PRICE';
-  hdrRight.style.cssText = 'flex-shrink:0;text-align:right;';
+  var hdrQty = document.createElement('span');
+  hdrQty.textContent = 'QTY';
+  hdrQty.style.cssText = 'text-align:right;';
+  var hdrPrice = document.createElement('span');
+  hdrPrice.textContent = 'PRICE';
+  hdrPrice.style.cssText = 'text-align:right;';
   _colHead.appendChild(hdrItem);
-  _colHead.appendChild(hdrRight);
+  _colHead.appendChild(hdrQty);
+  _colHead.appendChild(hdrPrice);
   el.appendChild(_colHead);
 
   // ── Scrollable items ──
@@ -250,9 +254,9 @@ function _renderItems(items) {
     var isSel = !!item.selected;
     var row = document.createElement('div');
     row.style.cssText = [
-      'display:flex;justify-content:space-between;align-items:center;',
-      'padding:3px 0 1px;',
-      'font-family:' + T.fb + ';font-size:24px;',
+      'display:grid;grid-template-columns:1fr 36px 64px;align-items:center;',
+      'padding:3px 8px 1px;',
+      'font-family:' + T.fb + ';font-size:18px;',
       'color:' + (isSel ? T.bgDark : T.textPrimary) + ';',
       isSel ? 'background:' + T.gold + ';' : '',
       'border-bottom:1px solid ' + T.bg3 + ';',
@@ -260,12 +264,16 @@ function _renderItems(items) {
     ].join('');
     var name = document.createElement('span');
     name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
-    name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
-    var rightInfo = document.createElement('span');
-    rightInfo.style.cssText = 'white-space:nowrap;flex-shrink:0;margin-left:6px;color:' + (isSel ? T.bgDark : T.gold) + ';';
-    rightInfo.textContent = (item.qty || 1) + '   $' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
+    name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
+    var qtyEl = document.createElement('span');
+    qtyEl.style.cssText = 'text-align:right;color:' + (isSel ? T.bgDark : T.textPrimary) + ';';
+    qtyEl.textContent = String(item.qty || 1);
+    var priceEl = document.createElement('span');
+    priceEl.style.cssText = 'text-align:right;color:' + (isSel ? T.bgDark : T.gold) + ';';
+    priceEl.textContent = '$' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
     row.appendChild(name);
-    row.appendChild(rightInfo);
+    row.appendChild(qtyEl);
+    row.appendChild(priceEl);
 
     // Collapse arrow only in collapsible mode
     var arrow = null;
