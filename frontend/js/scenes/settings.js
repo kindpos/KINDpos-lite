@@ -83,6 +83,7 @@ var _scrollPositions = {};
 var _scanEventSource = null;
 var _scanGen = 0;
 var _selectedDeviceMac = null;
+var _autoEditMac = null;
 
 // == Device Categories =================================
 
@@ -429,6 +430,7 @@ function buildCategoryCard(cat, borderColor) {
       devDc.wrap.addEventListener('pointerup', function(e) {
         e.stopPropagation();
         _selectedDeviceMac = dev.mac;
+        _autoEditMac = dev.mac;
         _expandOrigin = {
           top: dc.wrap.getBoundingClientRect().top,
           left: dc.wrap.getBoundingClientRect().left,
@@ -787,7 +789,14 @@ function _renderDeviceGridInner(body, catInfo) {
 
   if (_selectedDeviceMac) {
     var selectedDev = devices.filter(function(d) { return d.mac === _selectedDeviceMac; })[0];
-    if (selectedDev) renderDeviceOps(opsEl, selectedDev, body, catInfo);
+    if (selectedDev) {
+      if (_autoEditMac === selectedDev.mac) {
+        _autoEditMac = null;
+        renderDeviceEditForm(opsEl, selectedDev, body, catInfo);
+      } else {
+        renderDeviceOps(opsEl, selectedDev, body, catInfo);
+      }
+    }
   }
 }
 
