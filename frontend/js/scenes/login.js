@@ -144,10 +144,9 @@ defineScene({
     } });
     rightCol.appendChild(quickOrderPair.wrap);
 
-    // Config — vermillion button, extra padding above
-    // Transactional layer (z:20) is below gate (z:100), so temporarily
-    // promote it while settings is open from the login screen.
-    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'vermillion', size: 'md', onClick: function() {
+    // Config — gold button, extra padding above
+    // TODO: SceneManager should support promoteAboveGate option to avoid direct DOM access
+    var configPair = buildStyledButton({ label: 'TERMINAL\nCONFIGURATION', variant: 'gold', size: 'md', onClick: function() {
       if (state.numpadRef) state.numpadRef.clear();
       var tLayer = document.getElementById('layer-transactional');
       if (tLayer) tLayer.style.zIndex = T.zGate + 1;
@@ -166,8 +165,8 @@ defineScene({
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:4px;right:12px;';
-    version.textContent = 'KINDpos/lite_Vz1.2';
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:9px;color:' + T.gold + ';opacity:0.35;position:absolute;bottom:4px;right:12px;';
+    version.textContent = 'KINDpos/lite // Vz1.2';
     container.appendChild(version);
 
     // ── PIN submit handler (closes over state) ──

@@ -4,7 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { T, chamfer } from '../tokens.js';
+import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { defineScene } from '../scene-manager-2.js';
@@ -1310,11 +1310,9 @@ function buildServerDetailExpanded(state, content, srv, overlay) {
   renderChecks();
 
   // ── CHECKOUT button ──
-  var checkoutBtn = document.createElement('div');
-  checkoutBtn.style.cssText = 'margin-top:12px;text-align:center;padding:10px;cursor:pointer;font-family:' + T.fh + ';font-size:20px;color:' + T.bgDark + ';font-weight:bold;letter-spacing:2px;background:' + T.numpadChassis + ';';
-  checkoutBtn.style.clipPath = chamfer(4);
-  checkoutBtn.textContent = 'CHECKOUT ' + srv.name.toUpperCase() + ' \u25B6';
-  checkoutBtn.addEventListener('pointerup', function(e) {
+  var checkoutBtn = buildStyledButton({ label: 'CHECKOUT ' + srv.name.toUpperCase() + ' \u25B6', variant: 'mint', size: 'md' });
+  checkoutBtn.wrap.style.marginTop = '12px';
+  checkoutBtn.wrap.addEventListener('pointerup', function(e) {
     e.stopPropagation();
     hideDrillDown(state);
     var emp = state.params.emp || state.params;
@@ -1322,7 +1320,7 @@ function buildServerDetailExpanded(state, content, srv, overlay) {
       pin: emp.pin, employeeId: srv.id, employeeName: srv.name,
     });
   });
-  content.appendChild(checkoutBtn);
+  content.appendChild(checkoutBtn.wrap);
 }
 
 function buildSalesBreakdownCard(state) {

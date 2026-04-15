@@ -1098,13 +1098,12 @@ function renderAppliedModsLog(panel) {
 
   // RESET button to clear all applied modifiers
   if (modifierSession.appliedMods.length > 0) {
-    var resetBtn = document.createElement('div');
-    resetBtn.style.cssText = 'margin-top:6px;padding:4px 0;text-align:center;font-family:' + T.fh + ';font-size:26px;color:' + T.red + ';cursor:pointer;border:2px solid ' + T.red + ';background:' + T.darkBtn + ';';
-    resetBtn.textContent = 'RESET ALL';
-    resetBtn.addEventListener('pointerup', function() {
+    var resetPair = buildStyledButton({ label: 'RESET ALL', variant: 'vermillion', size: 'sm', onClick: function() {
       cancelSession();
-    });
-    log.appendChild(resetBtn);
+    } });
+    resetPair.wrap.style.marginTop = '6px';
+    resetPair.wrap.style.width = '100%';
+    log.appendChild(resetPair.wrap);
   }
 
   log.scrollTop = log.scrollHeight;

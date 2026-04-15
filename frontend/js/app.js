@@ -10,16 +10,16 @@ import { showToast } from './components.js';
 import { OrderSummary } from './order-summary.js';
 
 // Import scenes (self-registering)
-import './scenes/login.js';
-import './scenes/settings.js';
-import './scenes/order-entry.js';
-import './scenes/payment-console.js';
-import './scenes/manager-landing-sm2.js';
-import './scenes/checkout-core.js';
-import './scenes/server-checkout.js';
-import './scenes/close-day.js';
-import './scenes/server-landing-sm2.js';
-import './scenes/clock-in.js';
+import './scenes/login.js?v=1';
+import './scenes/settings.js?v=1';
+import './scenes/order-entry.js?v=1';
+import './scenes/payment-console.js?v=1';
+import './scenes/manager-landing-sm2.js?v=1';
+import './scenes/checkout-core.js?v=1';
+import './scenes/server-checkout.js?v=1';
+import './scenes/close-day.js?v=1';
+import './scenes/server-landing-sm2.js?v=1';
+import './scenes/clock-in.js?v=1';
 
 // ── Header state ──────────────────────────────────
 let _sceneName = null;
@@ -82,6 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Hide order summary on boot (login gate is up)
   OrderSummary.hide();
+
+  // Console testing utility — allows manual scene navigation from devtools
+  window._push = function(sceneName, params) { SceneManager.mountWorking(sceneName, params); };
 
   updateClock();
   setInterval(updateClock, 30000);

@@ -6,7 +6,7 @@ from ..core.event_ledger import EventLedger
 from ..core.projections import project_order, project_orders
 from ..core.events import EventType
 from decimal import Decimal
-from ..core.money import money_round
+from ..core.money import money_round, money_float
 
 _ZERO = Decimal('0')
 from ..config import settings
@@ -96,14 +96,14 @@ class PrintContextBuilder:
             items.append({
                 "qty":       item.quantity,
                 "name":      item.name,
-                "price":     float(item.price),
-                "subtotal":  float(item.subtotal),
+                "price":     money_float(item.price),
+                "subtotal":  money_float(item.subtotal),
                 "modifiers": mods,
                 "notes":     getattr(item, "notes", None),
             })
 
         # ── Tax lines — template iterates a list ──────────────────────────────
-        tax_lines = [{"label": "Tax", "amount": float(order.tax or 0)}]
+        tax_lines = [{"label": "Tax", "amount": money_float(order.tax or 0)}]
 
         return {
             "order_id":                   order_id,
@@ -117,10 +117,10 @@ class PrintContextBuilder:
             "server_name":                getattr(order, "server_name", None),
             "customer_name":              getattr(order, "customer_name", None),
             "items":                      items,
-            "subtotal":                   float(order.subtotal or 0),
-            "discount_total":             float(order.discount_total or 0),
+            "subtotal":                   money_float(order.subtotal or 0),
+            "discount_total":             money_float(order.discount_total or 0),
             "tax_lines":                  tax_lines,
-            "total":                      float(order.total or 0),
+            "total":                      money_float(order.total or 0),
             "tip_amount":                 tip_amount,
             "payment_method":             payment_method,
             "card_last_four":             card_last_four,

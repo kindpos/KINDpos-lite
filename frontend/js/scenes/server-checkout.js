@@ -105,7 +105,7 @@ function fetchServerState(params) {
 }
 
 // ─────────────────────────────────────────────────
-//  CARD DEFINITIONS — 4 cards in 2×2 grid
+//  CARD DEFINITIONS — 6 cards in 2×3 grid
 // ─────────────────────────────────────────────────
 
 function getCardDefs(state, opts) {
@@ -127,6 +127,23 @@ function getCardDefs(state, opts) {
         if (state.openChecks > 0) {
           el.appendChild(detailRow('Open Checks', String(state.openChecks), RED));
         }
+      },
+    },
+    {
+      title: 'Check Stats',
+      hero: String(state.totalChecks),
+      heroColor: T.mint,
+      subtitle: fmt(state.avgCheck) + ' avg check',
+      border: T.border,
+      statusColor: state.openChecks > 0 ? T.yellow : null,
+      buildExpanded: function(el) {
+        el.appendChild(detailRow('Total Checks', String(state.totalChecks)));
+        el.appendChild(detailRow('Avg Check',    fmt(state.avgCheck)));
+        if (state.openChecks > 0) {
+          el.appendChild(detailRow('Open Checks', String(state.openChecks), RED));
+        }
+        el.appendChild(detailDivider());
+        el.appendChild(detailRow('Closed',       String(state.closedOrders.length)));
       },
     },
     {
@@ -193,8 +210,20 @@ function getCardDefs(state, opts) {
         el.appendChild(detailRow('Tip-Out',      '\u2212 ' + fmt(state.tipOutTotal), RED));
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Take-Home',    fmt(state.takeHome), T.gold));
+      },
+    },
+    {
+      title: 'Cash Expected',
+      hero: fmt(state.cashExpected),
+      heroColor: T.gold,
+      subtitle: 'cash sales \u2212 card tips',
+      border: T.gold,
+      statusColor: null,
+      buildExpanded: function(el) {
+        el.appendChild(detailRow('Cash Sales',   fmt(state.cashSales)));
+        el.appendChild(detailRow('Card Tips',    '\u2212 ' + fmt(state.cardTips), RED));
         el.appendChild(detailDivider());
-        el.appendChild(detailRow('Cash Expected', fmt(state.cashExpected)));
+        el.appendChild(detailRow('Cash Expected', fmt(state.cashExpected), T.gold));
       },
     },
   ];
