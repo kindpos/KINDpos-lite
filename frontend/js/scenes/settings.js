@@ -859,13 +859,6 @@ function renderDeviceEditForm(opsEl, dev, parentBody, catInfo) {
   })));
   form.appendChild(buildSettingRow('Port', buildTextInput(editPort, 'Port', function(v) { editPort = v; })));
 
-  // Card reader fields
-  if (editType === 'card_reader') {
-    form.appendChild(buildSettingRow('Register ID', buildTextInput(editRegisterId, 'SPIn Register ID', function(v) { editRegisterId = v; })));
-    form.appendChild(buildSettingRow('TPN', buildTextInput(editTpn, 'Terminal Processing #', function(v) { editTpn = v; })));
-    form.appendChild(buildSettingRow('Auth Key', buildTextInput(editAuthKey, 'Auth key', function(v) { editAuthKey = v; })));
-  }
-
   // Printer-specific: paper settings
   if (editType === 'receipt') {
     form.appendChild(buildSettingRow('Chars/Line', buildValueLabel('42')));
