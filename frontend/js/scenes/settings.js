@@ -417,7 +417,7 @@ function buildCategoryCard(cat, borderColor) {
       devDc.card.appendChild(ipEl);
 
       var macEl = document.createElement('div');
-      macEl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.subtleText + ';';
+      macEl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.numpadChassis + ';';
       macEl.textContent = 'MAC: ' + (dev.mac || '—');
       devDc.card.appendChild(macEl);
 
