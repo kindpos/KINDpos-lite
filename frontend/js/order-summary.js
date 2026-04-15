@@ -64,7 +64,7 @@ function _build() {
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';',
     'color:' + T.textPrimary + ';letter-spacing:0.08em;',
   ].join('');
-  _headerTitle.textContent = 'ORDER RECAP';
+  _headerTitle.textContent = 'ITEM RECAP';
   var checkWrap = document.createElement('div');
   checkWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;cursor:pointer;';
   _checkIdEl = document.createElement('div');
@@ -265,11 +265,15 @@ function _renderItems(items) {
     var name = document.createElement('span');
     name.textContent = (item.sent ? '\u2713 ' : '') + item.name;
     name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
-    var rightInfo = document.createElement('span');
-    rightInfo.style.cssText = 'white-space:nowrap;flex-shrink:0;margin-left:6px;color:' + (isSel ? T.bgDark : T.gold) + ';';
-    rightInfo.textContent = item.qty + '\u00D7  $' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
+    var qtyEl = document.createElement('span');
+    qtyEl.style.cssText = 'width:50px;text-align:right;flex-shrink:0;color:' + (isSel ? T.bgDark : T.textPrimary) + ';';
+    qtyEl.textContent = String(item.qty || 1);
+    var priceEl = document.createElement('span');
+    priceEl.style.cssText = 'width:70px;text-align:right;flex-shrink:0;color:' + (isSel ? T.bgDark : T.gold) + ';';
+    priceEl.textContent = '$' + ((item.unitPrice || 0) * (item.qty || 1)).toFixed(2);
     row.appendChild(name);
-    row.appendChild(rightInfo);
+    row.appendChild(qtyEl);
+    row.appendChild(priceEl);
 
     // Collapse arrow only in collapsible mode
     var arrow = null;
@@ -426,7 +430,7 @@ function _configureForMode(mode) {
     if (_splitBtn) _splitBtn.style.display = 'none';
     if (_summaryRowEl) _summaryRowEl.style.padding = '4px 6px 0';
   } else {
-    if (_headerTitle) _headerTitle.textContent = 'ORDER RECAP';
+    if (_headerTitle) _headerTitle.textContent = 'ITEM RECAP';
     if (_colHead) {
       _colHead.style.display = '';
       _colHead.style.gridTemplateColumns = '1fr 40px 68px';
