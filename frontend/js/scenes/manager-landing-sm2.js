@@ -509,6 +509,30 @@ defineScene({
     fetchAllData(state).then(function() { renderLayout(state); });
   },
 
+  unmount: function(state) {
+    if (state.el) state.el.innerHTML = '';
+    state.leftCol = null;
+    state.centerCol = null;
+    state.rightCol = null;
+    state.heatmapEl = null;
+    state.centerGrid = null;
+    state.opsPanel = null;
+    state.checkHeader = null;
+    state.drillEl = null;
+    state.salesData = null;
+    state.breakdownData = null;
+    state.hourlyCompare = null;
+    state.heatmapData = null;
+    state.staffData = null;
+    state.tipPoolData = null;
+    state.tipAdjData = null;
+    state.closeDayData = null;
+    state.allOrders = [];
+    state.serverColorMap = {};
+    state.selected = {};
+    _state = null;
+  },
+
   events: {
     'transactional:closed': function(e) {
       if (e && (e.sceneName === 'sc-tip-adjust' || e.sceneName === 'cd-tip-adjust') && _state) {
