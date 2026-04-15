@@ -211,15 +211,15 @@ def _generate_order_events(day_date, order_num, servers, weighted_items):
         return events
 
     # PAYMENT
-    subtotal_f = float(subtotal)
-    tax = money_round(subtotal_f * TAX_RATE)
-    card_total = money_round(subtotal_f + tax)
+    subtotal_d = Decimal(str(subtotal))
+    tax = money_round(subtotal_d * Decimal(str(TAX_RATE)))
+    card_total = money_round(subtotal_d + tax)
     payment_id = f"pay-{order_id}"
     payment_ts = order_ts + timedelta(minutes=random.randint(15, 45))
     method = random.choices(["card", "cash"], weights=[70, 30], k=1)[0]
 
     if method == "cash":
-        cash_discount = money_round(card_total * CASH_DISCOUNT_RATE)
+        cash_discount = money_round(card_total * Decimal(str(CASH_DISCOUNT_RATE)))
         sale_amount = money_round(card_total - cash_discount)
         events.append(_make_event(
             EventType.DISCOUNT_APPROVED,
@@ -254,7 +254,7 @@ def _generate_order_events(day_date, order_num, servers, weighted_items):
     # TIP (card orders, ~90%)
     if method == "card" and random.random() < 0.90:
         tip_pct = random.choices([0.15, 0.18, 0.20, 0.22, 0.25], weights=[20, 30, 30, 15, 5], k=1)[0]
-        tip_amount = money_round(card_total * tip_pct)
+        tip_amount = money_round(card_total * Decimal(str(tip_pct)))
         tip_ts = confirm_ts + timedelta(seconds=random.randint(5, 60))
         events.append(_make_event(
             EventType.TIP_ADJUSTED,
@@ -289,10 +289,10 @@ def _generate_day(day_date, staff, weighted_items, is_today=False):
     all_events.extend(_generate_shift_events(day_date, servers_on + cooks_on))
 
     num_orders = _order_volume(day_date)
-    day_total_sales = 0.0
-    day_total_tips = 0.0
-    day_cash = 0.0
-    day_card = 0.0
+    day_total_sales = Decimal("0")
+    day_total_tips = Decimal("0")
+    day_cash = Decimal("0")
+    day_card = Decimal("0")
     order_ids = []
     payment_count = 0
 
