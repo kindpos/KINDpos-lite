@@ -89,17 +89,22 @@ function _build() {
   // ── Column headers ──
   _colHead = document.createElement('div');
   _colHead.style.cssText = [
-    'display:flex;justify-content:space-between;align-items:center;',
-    'padding:2px 8px;',
-    'font-family:' + T.fh + ';font-size:14px;color:' + T.textPrimary + ';letter-spacing:0.06em;',
+    'display:flex;align-items:center;',
+    'padding:4px 8px;',
+    'font-family:' + T.fh + ';font-size:20px;color:' + T.textPrimary + ';letter-spacing:0.06em;',
     'border-bottom:1px solid ' + T.bg3 + ';flex-shrink:0;',
   ].join('');
   var hdrItem = document.createElement('span');
   hdrItem.textContent = 'ITEM';
+  hdrItem.style.cssText = 'flex:1;';
+  var hdrQty = document.createElement('span');
+  hdrQty.textContent = 'QTY';
+  hdrQty.style.cssText = 'width:50px;text-align:right;';
   var hdrPrice = document.createElement('span');
   hdrPrice.textContent = 'PRICE';
-  hdrPrice.style.cssText = 'flex-shrink:0;text-align:right;';
+  hdrPrice.style.cssText = 'width:70px;text-align:right;';
   _colHead.appendChild(hdrItem);
+  _colHead.appendChild(hdrQty);
   _colHead.appendChild(hdrPrice);
   el.appendChild(_colHead);
 
