@@ -199,14 +199,11 @@ function startNetworkScan(card, wrap) {
       var data = JSON.parse(e.data);
       if (data.type === 'device') {
         _scanResults.push(data);
-        if (!data.saved_name) {
-          discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
-        }
+        discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
       } else if (data.type === 'complete') {
         _scanning = false;
         card.style.animation = '';
-        var newDevices = _scanResults.filter(function(d) { return !d.saved_name; });
-        scanLabel.textContent = newDevices.length + ' new device' + (newDevices.length !== 1 ? 's' : '') + ' found';
+        scanLabel.textContent = _scanResults.length + ' device' + (_scanResults.length !== 1 ? 's' : '') + ' found';
         if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
 
         // Add re-scan button at bottom
