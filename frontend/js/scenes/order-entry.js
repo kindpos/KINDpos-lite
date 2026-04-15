@@ -2376,6 +2376,27 @@ function buildHalfTable(leftMods, rightMods, fontSize, removableInst) {
     row.appendChild(sep);
     row.appendChild(cellR);
     table.appendChild(row);
+
+    // Render children (exclusions) for specials in half-table
+    var lChildren = (leftMods[i] && leftMods[i].children) ? leftMods[i].children : [];
+    var rChildren = (rightMods[i] && rightMods[i].children) ? rightMods[i].children : [];
+    var maxChildren = Math.max(lChildren.length, rChildren.length);
+    for (var ci = 0; ci < maxChildren; ci++) {
+      var cRow = document.createElement('div');
+      cRow.style.cssText = 'display:flex;align-items:center;';
+      var cL = document.createElement('div');
+      cL.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + (parseInt(fontSize) - 4) + 'px;color:' + T.vermillion + ';font-style:italic;padding:0 4px 0 20px;';
+      cL.textContent = lChildren[ci] ? lChildren[ci].name : '';
+      var cSep = document.createElement('div');
+      cSep.style.cssText = 'width:1px;align-self:stretch;background:' + T.mintEdgeD + ';margin:0 4px;flex-shrink:0;';
+      var cR = document.createElement('div');
+      cR.style.cssText = 'flex:1;font-family:' + T.fb + ';font-size:' + (parseInt(fontSize) - 4) + 'px;color:' + T.vermillion + ';font-style:italic;padding:0 4px 0 20px;text-align:right;';
+      cR.textContent = rChildren[ci] ? rChildren[ci].name : '';
+      cRow.appendChild(cL);
+      cRow.appendChild(cSep);
+      cRow.appendChild(cR);
+      table.appendChild(cRow);
+    }
   }
 
   // Bottom divider
