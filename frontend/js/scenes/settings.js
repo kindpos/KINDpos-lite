@@ -1,15 +1,15 @@
 // =======================================================
-//  KINDpos Terminal — Configuration Scene (v2 Rebuild)
-//  Two-tab dashboard: TERMINAL | HARDWARE
+//  KINDpos Terminal — Hardware Configuration Scene
+//  Single-page device manager: Kitchen Printers, Receipt Printers,
+//  Card Readers, Scan Network
 //  Nice. Dependable. Yours.
 // =======================================================
 
+import { defineScene } from '../scene-manager-2.js';
 import { T, chamfer, buildStyledButton, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
 import { SceneManager } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-// Theme picker disabled — venue themes deferred to Overseer settings
-// import { THEMES } from '../themes/index.js';
 
 // == Helpers ============================================
 
@@ -72,82 +72,24 @@ function buildDepthCard(borderColor, opts) {
 
 // == State =============================================
 
-var _activeTab = 'terminal';  // 'terminal' | 'hardware'
-var _contentEl = null;        // container for tab content
-var _tabBtns = {};            // { terminal: {wrap,card,label}, hardware: {wrap,card,label} }
+var _contentEl = null;
 var _rootEl = null;
-var _clockIv = null;
-
-// Theme state — deferred to Overseer settings
-
-// Data state (carried over for later chunks)
 var _savedDevices = [];
 var _scanResults = [];
 var _scanning = false;
-var _expandedCard = null;     // for drill-down
-var _scrollPositions = {};    // scroll position per tab
-var _terminalConfig = {
-  terminalName: 'KIND BBQ',
-  ipAddress: '—',
-  wifiSSID: '—',
-  taxRate: '7.0',
-  cashDiscount: '4.0',
-};
+var _expandedCard = null;
+var _scrollPositions = {};
+var _scanEventSource = null;
+var _scanGen = 0;
+var _selectedDeviceMac = null;
 
-// == Tab Card Builder ==================================
+// == Device Categories =================================
 
-function buildTabCard(label, borderColor, isActive) {
-  var dc = buildDepthCard(borderColor, { chamfer: 10, glow: true });
-
-  dc.card.style.display = 'flex';
-  dc.card.style.alignItems = 'center';
-  dc.card.style.justifyContent = 'center';
-  dc.card.style.cursor = 'pointer';
-  dc.card.style.transition = 'background 80ms';
-  dc.card.style.userSelect = 'none';
-  dc.card.style.webkitUserSelect = 'none';
-
-  var lbl = document.createElement('div');
-  lbl.style.cssText = [
-    'font-family:' + T.fh + ';',
-    'font-size:50px;font-weight:bold;font-style:italic;',
-    'text-align:center;',
-    'pointer-events:none;',
-  ].join('');
-  lbl.textContent = label;
-  dc.card.appendChild(lbl);
-
-  function applyState(active) {
-    if (active) {
-      dc.card.style.background = borderColor;
-      lbl.style.color = T.bgDark;
-    } else {
-      dc.card.style.background = T.bgDark;
-      lbl.style.color = borderColor;
-    }
-  }
-
-  applyState(isActive);
-
-  dc.wrap.style.flex = '1';
-  dc.wrap.style.height = '100%';
-
-  return { wrap: dc.wrap, card: dc.card, label: lbl, applyState: applyState };
-}
-
-// == Tab Switching =====================================
-
-function switchTab(tabName) {
-  if (_activeTab === tabName) return;
-  _activeTab = tabName;
-
-  // Update tab visual states
-  if (_tabBtns.terminal) _tabBtns.terminal.applyState(tabName === 'terminal');
-  if (_tabBtns.hardware) _tabBtns.hardware.applyState(tabName === 'hardware');
-
-  // Re-render content area
-  renderContent();
-}
+var DEVICE_CATEGORIES = [
+  { id: 'kitchen-printers', label: 'KITCHEN\nPRINTERS' },
+  { id: 'receipt-printers', label: 'RECEIPT\nPRINTERS' },
+  { id: 'card-readers',     label: 'CARD\nREADERS' },
+];
 
 // == Content Rendering =================================
 
@@ -155,102 +97,20 @@ function renderContent() {
   if (!_contentEl) return;
   _contentEl.innerHTML = '';
 
-  // If a card is expanded (drill-down), render that instead
   if (_expandedCard) {
     renderDrillDown(_contentEl, _expandedCard);
     return;
   }
 
-  if (_activeTab === 'terminal') {
-    renderTerminalContent(_contentEl);
-  } else {
-    renderHardwareContent(_contentEl);
-  }
-}
-
-// == TERMINAL Tab: 2-column category grid ==============
-
-var TERMINAL_CATEGORIES = [
-  { id: 'display',      label: 'DISPLAY' },
-  { id: 'network',      label: 'NETWORK' },
-  { id: 'store-info',   label: 'STORE INFO' },
-  { id: 'tax-pricing',  label: 'TAX & PRICING' },
-  { id: 'security',     label: 'SECURITY' },
-  { id: 'system',       label: 'SYSTEM' },
-];
-
-function renderTerminalContent(el) {
   var grid = document.createElement('div');
-  grid.style.cssText = [
-    'display:grid;',
-    'grid-template-columns:1fr 1fr;',
-    'gap:12px;',
-    'height:100%;',
-    'overflow-y:auto;',
-    'scrollbar-width:none;',
-    '-webkit-overflow-scrolling:touch;',
-    'align-content:start;',
-    'padding-bottom:8px;',
-  ].join('');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;height:100%;align-content:start;box-sizing:border-box;';
 
-  // Hide scrollbar for WebKit
-  if (!document.getElementById('cfg-grid-style')) {
-    var style = document.createElement('style');
-    style.id = 'cfg-grid-style';
-    style.textContent = '.cfg-grid::-webkit-scrollbar{display:none}';
-    document.head.appendChild(style);
-  }
-  grid.classList.add('cfg-grid');
-
-  _scrollPositions = _scrollPositions || {};
-
-  // Restore scroll position
-  var savedScroll = _scrollPositions[_activeTab] || 0;
-  requestAnimationFrame(function() { grid.scrollTop = savedScroll; });
-
-  // Save scroll on scroll
-  grid.addEventListener('scroll', function() {
-    _scrollPositions[_activeTab] = grid.scrollTop;
-  });
-
-  TERMINAL_CATEGORIES.forEach(function(cat) {
-    grid.appendChild(buildCategoryCard(cat, T.numpadChassis));
-  });
-
-  el.appendChild(grid);
-}
-
-// == HARDWARE Tab: 2x2 category grid ==================
-
-var HARDWARE_CATEGORIES = [
-  { id: 'printers',    label: 'PRINTERS' },
-  { id: 'readers',     label: 'CARD READERS' },
-  { id: 'peripherals', label: 'PERIPHERAL DEVICES' },
-];
-
-var _scanEventSource = null;
-var _scanGen = 0;
-
-function renderHardwareContent(el) {
-  var grid = document.createElement('div');
-  grid.style.cssText = [
-    'display:grid;',
-    'grid-template-columns:1fr 1fr;',
-    'gap:12px;',
-    'height:100%;',
-    'align-content:start;',
-    'box-sizing:border-box;',
-  ].join('');
-
-  // Device category cards (PRINTERS, CARD READERS, PERIPHERAL DEVICES)
-  HARDWARE_CATEGORIES.forEach(function(cat) {
+  DEVICE_CATEGORIES.forEach(function(cat) {
     grid.appendChild(buildCategoryCard(cat, T.gold));
   });
-
-  // SCAN NETWORK card
   grid.appendChild(buildScanNetworkCard());
 
-  el.appendChild(grid);
+  _contentEl.appendChild(grid);
 }
 
 // == SCAN NETWORK Card (3 states) ======================
@@ -645,15 +505,9 @@ function collapseDrillDown(expandedEl, containerEl) {
 // == Drill-Down Content Dispatcher =====================
 
 var _drillDownRenderers = {
-  'display':     renderDisplaySettings,
-  'network':     renderNetworkSettings,
-  'store-info':  renderStoreInfoSettings,
-  'tax-pricing': renderTaxPricingSettings,
-  'security':    renderSecuritySettings,
-  'system':      renderSystemSettings,
-  'printers':    renderDeviceGrid,
-  'readers':     renderDeviceGrid,
-  'peripherals': renderDeviceGrid,
+  'kitchen-printers': renderDeviceGrid,
+  'receipt-printers': renderDeviceGrid,
+  'card-readers':     renderDeviceGrid,
 };
 
 function renderDrillDownContent(body, catInfo) {
@@ -755,263 +609,15 @@ function buildSettingsGrid(rows) {
   return grid;
 }
 
-// == TERMINAL: DISPLAY =================================
-
-function renderDisplaySettings(body) {
-  var brightness = 100;
-  var resolution = '1024x600';
-  var orientation = 'landscape';
-
-  var grid = buildSettingsGrid([
-    buildSettingRow('Brightness', buildValueLabel(brightness + '%')),
-    buildSettingRow('Resolution', buildPresetButtons([
-      { label: '1024×600', value: '1024x600' },
-      { label: '800×480', value: '800x480' },
-    ], resolution, function(v) {
-      resolution = v;
-      renderDisplaySettings(body);
-    })),
-    buildSettingRow('Orientation', buildPresetButtons([
-      { label: 'Landscape', value: 'landscape' },
-      { label: 'Portrait', value: 'portrait' },
-    ], orientation, function(v) {
-      orientation = v;
-      renderDisplaySettings(body);
-    })),
-  ]);
-
-  body.innerHTML = '';
-  body.appendChild(grid);
-}
-
-// == TERMINAL: NETWORK =================================
-
-function renderNetworkSettings(body) {
-  // Load current values
-  fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).catch(function() { return {}; }).then(function() {
-    var connected = true; // placeholder — no endpoint for connection status
-
-    var connEl = document.createElement('div');
-    connEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (connected ? T.green : T.vermillion) + ';';
-    connEl.textContent = connected ? '● CONNECTED' : '● DISCONNECTED';
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('WiFi SSID', buildTextInput(_terminalConfig.wifiSSID, 'SSID', function(v) {
-        _terminalConfig.wifiSSID = v;
-      })),
-      buildSettingRow('Static IP', buildValueLabel(_terminalConfig.ipAddress)),
-      buildSettingRow('Hostname', buildTextInput('kindpos-terminal', 'hostname')),
-      buildSettingRow('Status', connEl),
-    ]);
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-  });
-}
-
-// == TERMINAL: STORE INFO ==============================
-
-var _storeInfo = {
-  business_name: '',
-  address: '',
-  phone: '',
-  receipt_header: '',
-  receipt_footer: '',
-};
-
-function renderStoreInfoSettings(body) {
-  // Load store config
-  fetch('/api/v1/config/store').then(function(r) {
-    return r.ok ? r.json() : {};
-  }).catch(function() { return {}; }).then(function(data) {
-    if (data.store) {
-      _storeInfo.business_name = data.store.business_name || '';
-      _storeInfo.address = data.store.address || '';
-      _storeInfo.phone = data.store.phone || '';
-      _storeInfo.receipt_header = data.store.receipt_header || '';
-      _storeInfo.receipt_footer = data.store.receipt_footer || '';
-    }
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('Business Name', buildTextInput(_storeInfo.business_name, 'Business name', function(v) { _storeInfo.business_name = v; })),
-      buildSettingRow('Address', buildTextInput(_storeInfo.address, 'Address', function(v) { _storeInfo.address = v; })),
-      buildSettingRow('Phone', buildTextInput(_storeInfo.phone, 'Phone', function(v) { _storeInfo.phone = v; })),
-      buildSettingRow('Receipt Header', buildTextInput(_storeInfo.receipt_header, 'Header text', function(v) { _storeInfo.receipt_header = v; })),
-      buildSettingRow('Receipt Footer', buildTextInput(_storeInfo.receipt_footer, 'Footer text', function(v) { _storeInfo.receipt_footer = v; })),
-    ]);
-
-    // Save button
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.marginTop = '12px';
-    saveBtn.wrap.style.alignSelf = 'flex-start';
-    saveBtn.wrap.addEventListener('pointerup', function() {
-      fetch('/api/v1/config/store/info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(_storeInfo),
-      }).then(function(r) {
-        if (r.ok) saveBtn.inner.textContent = 'SAVED';
-        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-      }).catch(function() {
-        console.warn('[KINDpos] Store info save failed');
-      });
-    });
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-    body.appendChild(saveBtn.wrap);
-  });
-}
-
-// == TERMINAL: TAX & PRICING ===========================
-
-function renderTaxPricingSettings(body) {
-  fetch('/api/v1/config/pricing').then(function(r) {
-    return r.ok ? r.json() : {};
-  }).catch(function() { return {}; }).then(function(data) {
-    var taxRate = data.tax_rate != null ? String(data.tax_rate) : _terminalConfig.taxRate;
-    var cashDiscount = data.cash_discount_rate != null ? String(data.cash_discount_rate) : _terminalConfig.cashDiscount;
-    var dualPricing = parseFloat(cashDiscount) > 0;
-    var rounding = 'standard';
-    var currency = 'USD';
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('Tax Rate %', buildValueLabel(taxRate + '%')),
-      buildSettingRow('Dual Pricing', buildToggleBtn(dualPricing, function(v) {
-        dualPricing = v;
-        renderTaxPricingSettings(body);
-      })),
-      buildSettingRow('Cash Discount %', buildValueLabel(cashDiscount + '%')),
-      buildSettingRow('Rounding', buildPresetButtons([
-        { label: 'Standard', value: 'standard' },
-        { label: 'Up', value: 'up' },
-        { label: 'Down', value: 'down' },
-      ], rounding, function(v) { rounding = v; })),
-      buildSettingRow('Currency', buildPresetButtons([
-        { label: 'USD', value: 'USD' },
-        { label: 'CAD', value: 'CAD' },
-        { label: 'EUR', value: 'EUR' },
-      ], currency, function(v) { currency = v; })),
-    ]);
-
-    // Save button
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.marginTop = '12px';
-    saveBtn.wrap.addEventListener('pointerup', function() {
-      fetch('/api/v1/config/store/cc-rate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cc_processing_rate: parseFloat(taxRate) || 0 }),
-      }).then(function(r) {
-        if (r.ok) saveBtn.inner.textContent = 'SAVED';
-        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-      }).catch(function() {
-        console.warn('[KINDpos] Pricing save failed');
-      });
-    });
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-    body.appendChild(saveBtn.wrap);
-  });
-}
-
-// == TERMINAL: SECURITY ================================
-
-function renderSecuritySettings(body) {
-  fetch('/api/v1/config/roles').then(function(r) {
-    return r.ok ? r.json() : [];
-  }).catch(function() { return []; }).then(function(roles) {
-    var sessionTimeout = 30;
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('Manager PIN', buildValueLabel('••••')),
-      buildSettingRow('Session Timeout', buildValueLabel(sessionTimeout + ' min')),
-    ]);
-
-    // Role permissions grid
-    if (roles.length > 0) {
-      var roleHeader = document.createElement('div');
-      roleHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.mint + ';margin-top:12px;margin-bottom:6px;';
-      roleHeader.textContent = 'ROLE PERMISSIONS';
-      grid.appendChild(roleHeader);
-
-      roles.forEach(function(role) {
-        var roleName = role.name || role.role_id || 'Unknown';
-        var perms = role.permissions || [];
-        var permStr = perms.length > 0 ? perms.join(', ') : 'none';
-        grid.appendChild(buildSettingRow(roleName, buildValueLabel(permStr, T.textPrimary)));
-      });
-    }
-
-    // Save button
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.marginTop = '12px';
-    saveBtn.wrap.addEventListener('pointerup', function() {
-      fetch('/api/v1/config/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([]),
-      }).then(function(r) {
-        if (r.ok) saveBtn.inner.textContent = 'SAVED';
-        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-      }).catch(function() {
-        console.warn('[KINDpos] Security save failed');
-      });
-    });
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-    body.appendChild(saveBtn.wrap);
-  });
-}
-
-// == TERMINAL: SYSTEM ==================================
-
-function renderSystemSettings(body) {
-  var language = 'en';
-  var updateChannel = 'stable';
-
-  var versionEl = document.createElement('div');
-  versionEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.green + ';';
-  versionEl.textContent = 'KINDpos/lite Vz1.2';
-
-  var grid = buildSettingsGrid([
-    buildSettingRow('Version', versionEl),
-    buildSettingRow('Language', buildPresetButtons([
-      { label: 'English', value: 'en' },
-      { label: 'Español', value: 'es' },
-    ], language, function(v) { language = v; })),
-    buildSettingRow('Update Channel', buildPresetButtons([
-      { label: 'Stable', value: 'stable' },
-      { label: 'Beta', value: 'beta' },
-    ], updateChannel, function(v) { updateChannel = v; })),
-    buildSettingRow('Date', buildValueLabel(new Date().toLocaleDateString())),
-    buildSettingRow('Time', buildValueLabel(new Date().toLocaleTimeString())),
-  ]);
-
-  // Save button
-  var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-  saveBtn.wrap.style.marginTop = '12px';
-  saveBtn.wrap.addEventListener('pointerup', function() {
-    console.warn('[KINDpos] PUT /api/v1/config/system not implemented yet');
-    saveBtn.inner.textContent = 'SAVED';
-    setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-  });
-
-  body.innerHTML = '';
-  body.appendChild(grid);
-  body.appendChild(saveBtn.wrap);
-}
 
 // == HARDWARE: Device Grid =============================
 
 var _selectedDeviceMac = null;
 
 var _deviceTypeMap = {
-  'printers':    ['kitchen', 'receipt'],
-  'readers':     ['card_reader'],
-  'peripherals': [],  // everything else
+  'kitchen-printers': ['kitchen'],
+  'receipt-printers': ['receipt', 'printer'],
+  'card-readers':     ['card_reader'],
 };
 
 function _devicesForCategory(catId) {
@@ -1326,89 +932,53 @@ function renderDeviceEditForm(opsEl, dev, parentBody, catInfo) {
   opsEl.appendChild(form);
 }
 
-// == Scene Builder =====================================
+// == Scene (SM2) =======================================
 
-function buildScene(container) {
-  container.style.cssText = [
-    'display:flex;flex-direction:column;',
-    'width:100%;height:100%;',
-    'background:' + T.bg + ';',
-    'box-sizing:border-box;',
-    'overflow:hidden;',
-  ].join('');
-
-  // Header handled by global #header via setSceneName/setHeaderBack
-
-  // ── Tab cards row ──
-  var tabRow = document.createElement('div');
-  tabRow.style.cssText = [
-    'display:flex;gap:12px;',
-    'padding:12px 16px;',
-    'height:130px;flex-shrink:0;',
-    'box-sizing:border-box;',
-  ].join('');
-
-  // TERMINAL tab (mint, default active)
-  _tabBtns.terminal = buildTabCard('TERMINAL', T.numpadChassis, _activeTab === 'terminal');
-  _tabBtns.terminal.card.addEventListener('pointerup', function() { switchTab('terminal'); });
-  tabRow.appendChild(_tabBtns.terminal.wrap);
-
-  // HARDWARE tab (gold)
-  _tabBtns.hardware = buildTabCard('HARDWARE', T.gold, _activeTab === 'hardware');
-  _tabBtns.hardware.card.addEventListener('pointerup', function() { switchTab('hardware'); });
-  tabRow.appendChild(_tabBtns.hardware.wrap);
-
-  container.appendChild(tabRow);
-
-  // ── Content area ──
-  _contentEl = document.createElement('div');
-  _contentEl.style.cssText = [
-    'flex:1;min-height:0;',
-    'overflow:hidden;',
-    'padding:0 16px 12px;',
-    'box-sizing:border-box;',
-  ].join('');
-  container.appendChild(_contentEl);
-
-  // Initial render
-  renderContent();
-}
-
-// == Registration ======================================
-
-SceneManager.register({
+defineScene({
   name: 'settings',
-  cache: false,
 
-  mount: function(container) {
+  state: {},
+
+  render: function(container) {
     _rootEl = container;
-    _activeTab = 'terminal';
     _contentEl = null;
-    _tabBtns = {};
     _expandedCard = null;
     _savedDevices = [];
     _scanResults = [];
     _scanning = false;
+    _selectedDeviceMac = null;
 
-    setSceneName('Configuration');
+    setSceneName('Hardware');
     setHeaderBack({
       x: true,
       onClose: function() { SceneManager.closeTransactional('settings'); },
     });
 
-    buildScene(container);
+    container.style.cssText = [
+      'display:flex;flex-direction:column;',
+      'width:100%;height:100%;',
+      'background:' + T.bg + ';',
+      'box-sizing:border-box;',
+      'overflow:hidden;',
+    ].join('');
 
-    // Load saved devices for hardware tab
+    _contentEl = document.createElement('div');
+    _contentEl.style.cssText = [
+      'flex:1;min-height:0;',
+      'overflow:hidden;',
+      'padding:12px 16px;',
+      'box-sizing:border-box;',
+    ].join('');
+    container.appendChild(_contentEl);
+
+    renderContent();
     loadDevices();
   },
 
   unmount: function() {
-    if (_clockIv) { clearInterval(_clockIv); _clockIv = null; }
     if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
     _rootEl = null;
     _contentEl = null;
-    _tabBtns = {};
-    _activeTab = 'terminal';
     _expandedCard = null;
     _savedDevices = [];
     _scanResults = [];
@@ -1417,45 +987,41 @@ SceneManager.register({
     _scrollPositions = {};
     _selectedDeviceMac = null;
   },
-});
 
-// == Interrupt: Confirm Delete Device ==================
+  interrupts: {
+    'confirm-delete-device': {
+      render: function(container, params) {
+        var card = document.createElement('div');
+        card.style.cssText = [
+          'background:' + T.bg + ';',
+          'border:3px solid ' + T.vermillion + ';',
+          'padding:24px 32px;text-align:center;max-width:400px;',
+          'clip-path:' + chamfer(10) + ';',
+        ].join('');
 
-SceneManager.register({
-  name: 'confirm-delete-device',
-  mount: function(container, params) {
-    container.style.flexDirection = 'column';
-    container.style.gap = '16px';
+        var msg = document.createElement('div');
+        msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';margin-bottom:20px;';
+        msg.textContent = 'Remove ' + (params.deviceName || 'device') + '?';
+        card.appendChild(msg);
 
-    var card = document.createElement('div');
-    card.style.cssText = [
-      'background:' + T.bg + ';',
-      'border:3px solid ' + T.vermillion + ';',
-      'padding:24px 32px;text-align:center;max-width:400px;',
-      'clip-path:' + chamfer(10) + ';',
-    ].join('');
+        var btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
 
-    var msg = document.createElement('div');
-    msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';margin-bottom:20px;';
-    msg.textContent = 'Remove ' + (params.deviceName || 'device') + '?';
-    card.appendChild(msg);
+        btns.appendChild(buildButton('Remove', {
+          fill: T.vermillion, color: T.embVermLabel, fontSize: '16px',
+          width: 120, height: 40,
+          onTap: function() { params.onConfirm(); },
+        }));
+        btns.appendChild(buildButton('Cancel', {
+          fill: T.darkBtn, color: T.mint, fontSize: '16px',
+          width: 120, height: 40,
+          onTap: function() { params.onCancel(); },
+        }));
 
-    var btns = document.createElement('div');
-    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
-
-    btns.appendChild(buildButton('Remove', {
-      fill: T.vermillion, color: T.embVermLabel, fontSize: '16px',
-      width: 120, height: 40,
-      onTap: function() { params.onConfirm(); },
-    }));
-    btns.appendChild(buildButton('Cancel', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px',
-      width: 120, height: 40,
-      onTap: function() { params.onCancel(); },
-    }));
-
-    card.appendChild(btns);
-    container.appendChild(card);
+        card.appendChild(btns);
+        container.appendChild(card);
+      },
+      unmount: function() {},
+    },
   },
-  unmount: function() {},
 });
