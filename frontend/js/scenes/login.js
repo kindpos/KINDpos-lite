@@ -113,16 +113,15 @@ defineScene({
         if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
         return;
       }
-      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
-      if (!emp) {
-        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
-        return;
-      }
-      var empRoles = emp.roles || [emp.role || 'server'];
-      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-      SceneManager.closeGate('login');
-      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
-      SceneManager.openTransactional('clock-in', { emp: empData });
+      verifyPin(currentPin, function(err, emp) {
+        if (err) {
+          if (state.numpadRef) state.numpadRef.setError(err);
+          return;
+        }
+        SceneManager.closeGate('login');
+        SceneManager.mountWorking(landingScene(emp.roles), { emp: emp });
+        SceneManager.openTransactional('clock-in', { emp: emp });
+      });
     } });
     rightCol.appendChild(clockPair.wrap);
 
@@ -132,15 +131,14 @@ defineScene({
         if (state.numpadRef) state.numpadRef.setHint('Enter PIN');
         return;
       }
-      var emp = state.employees.find(function(e) { return e.pin === currentPin; });
-      if (!emp) {
-        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
-        return;
-      }
-      var empRoles = emp.roles || [emp.role || 'server'];
-      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-      SceneManager.closeGate('login');
-      SceneManager.mountWorking('order-entry', { emp: empData });
+      verifyPin(currentPin, function(err, emp) {
+        if (err) {
+          if (state.numpadRef) state.numpadRef.setError(err);
+          return;
+        }
+        SceneManager.closeGate('login');
+        SceneManager.mountWorking('order-entry', { emp: emp });
+      });
     } });
     rightCol.appendChild(quickOrderPair.wrap);
 
@@ -171,18 +169,39 @@ defineScene({
 
     // ── PIN submit handler (closes over state) ──
     // >>> goes straight to landing — clock-in/out handled by dedicated buttons
+    function verifyPin(pin, callback) {
+      fetch('/api/v1/auth/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.valid) {
+          callback(null, {
+            id: data.employee_id,
+            name: data.name,
+            roles: data.roles,
+            token: data.token,
+          });
+        } else {
+          callback('Invalid PIN');
+        }
+      })
+      .catch(function() {
+        callback('Server error');
+      });
+    }
+
     function handlePinSubmit(pin) {
-      var emp = state.employees.find(function(e) { return e.pin === pin; });
-      if (!emp) {
-        if (state.numpadRef) state.numpadRef.setError('Invalid PIN');
-        return;
-      }
-
-      var empRoles = emp.roles || [emp.role || 'server'];
-      var empData = { id: emp.id, name: emp.name, pin: emp.pin, roles: empRoles };
-
-      SceneManager.closeGate('login');
-      SceneManager.mountWorking(landingScene(empRoles), { emp: empData });
+      verifyPin(pin, function(err, emp) {
+        if (err) {
+          if (state.numpadRef) state.numpadRef.setError(err);
+          return;
+        }
+        SceneManager.closeGate('login');
+        SceneManager.mountWorking(landingScene(emp.roles), { emp: emp });
+      });
     }
   },
 

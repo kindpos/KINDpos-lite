@@ -337,14 +337,14 @@ function buildActionBar(state, sceneState, refreshFn) {
   if (blocked) {
     closePair.inner.style.fontFamily = T.fb;
     closePair.inner.style.fontSize = T.fsSmall;
-    closePair.inner.style.color = '#555';
+    closePair.inner.style.color = T.dimText;
     closePair.inner.textContent = '\uD83D\uDD12 //CLOSE DAY//';
     closePair.wrap.style.pointerEvents = 'none';
     closePair.wrap.style.opacity = '0.5';
   } else if (!sceneState.pinUnlocked) {
     closePair.inner.style.fontFamily = T.fb;
     closePair.inner.style.fontSize = T.fsSmall;
-    closePair.inner.style.color = '#888';
+    closePair.inner.style.color = T.mutedText;
     closePair.inner.textContent = '\uD83D\uDD12 //CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
       SceneManager.interrupt('co-manager-pin', {
@@ -361,7 +361,7 @@ function buildActionBar(state, sceneState, refreshFn) {
   } else {
     closePair.inner.style.fontFamily = T.fb;
     closePair.inner.style.fontSize = T.fsSmall;
-    closePair.inner.style.color = '#1a1a1a';
+    closePair.inner.style.color = T.bgDark;
     closePair.inner.textContent = '//CLOSE DAY//';
     closePair.wrap.addEventListener('pointerup', function() {
       if (isBlocked(state)) return;

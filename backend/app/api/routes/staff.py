@@ -23,7 +23,6 @@ async def get_servers(ledger: EventLedger = Depends(get_ledger)):
             {
                 "id": e.employee_id,
                 "name": e.display_name,
-                "pin": e.pin,
                 "role": e.role_ids[0] if e.role_ids else "server",
                 "roles": e.role_ids,
             }
