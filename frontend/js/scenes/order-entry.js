@@ -1138,6 +1138,8 @@ function cancelSession() {
       if (idx !== -1) ref.inst.mods.splice(idx, 1);
     });
   }
+  // Close modifier panel if open so _modPanelItem doesn't leak
+  if (_modPanel) closeModifierPanel();
   endModifierSession();
 }
 
@@ -1566,7 +1568,7 @@ function _appendModPreview(list) {
 
   var previewMods = (_modPanelItem.mods || []);
   var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
-  var previewPrice = _modPanelItem.basePrice + previewModTotal;
+  var previewPrice = (_modPanelItem.basePrice || 0) + previewModTotal;
   var fs = T.fsCon;
   var fsMod = T.fsConSm;
 

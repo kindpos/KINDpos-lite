@@ -1194,12 +1194,21 @@ defineScene({
           for (var rj = 0; rj < state.seats[ri].items.length; rj++) {
             var it = state.seats[ri].items[rj];
             itemsToAdd.push({
-              menu_item_id: it.menu_item_id || it.item_id,
+              menu_item_id: it.menu_item_id || it.name.toLowerCase().replace(/\s+/g, '_'),
               name: it.name,
-              price: it.effectivePrice || it.price,
+              price: it.price,
               quantity: it.qty,
               category: it.category || null,
               seat_number: seatNum,
+              modifiers: (it.mods || []).map(function(m) {
+                return {
+                  name: m.name,
+                  price: m.price || 0,
+                  charged: m.charged !== false,
+                  prefix: m.prefix || null,
+                  half_price: m.half_price != null ? m.half_price : null,
+                };
+              }),
             });
           }
         }
