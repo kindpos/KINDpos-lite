@@ -5,6 +5,10 @@ __pycache__/
 !backend/data/demo_seed.json
 !frontend/js/data/
 !frontend/js/data/**
+!kindpos-desktop/src-tauri/resources/backend/data/
+!kindpos-desktop/src-tauri/resources/backend/data/**
+!kindpos-desktop/src-tauri/resources/frontend/js/data/
+!kindpos-desktop/src-tauri/resources/frontend/js/data/**
 hardware_config.db
 *.db
 .env
