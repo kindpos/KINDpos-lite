@@ -945,14 +945,8 @@ export function ModifierPanel(container, opts) {
         _source: 'optional',
         _idx: idx,
       };
-      if (m.special && m.includes && m.includes.length > 0) {
-        var excl = m.exclusions || [];
-        m.includes.forEach(function(inc) {
-          if (excl.indexOf(inc) === -1) {
-            parentMod.children.push({ name: inc, price: 0, charged: false });
-          }
-        });
-        excl.forEach(function(ex) {
+      if (m.special && m.exclusions && m.exclusions.length > 0) {
+        m.exclusions.forEach(function(ex) {
           parentMod.children.push({ name: 'NO ' + ex, price: 0, charged: false });
         });
       }
