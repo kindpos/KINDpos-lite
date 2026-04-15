@@ -435,7 +435,6 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
     editBtn.inner.style.color = T.textPrimary;
     editBtn.wrap.addEventListener('pointerup', function() {
       // TODO: Chunk 5 — open device edit form
-      console.log('[KINDpos] Edit device:', dev);
     });
     btnArea.appendChild(editBtn.wrap);
 

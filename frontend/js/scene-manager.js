@@ -332,7 +332,7 @@ function interruptFn(sceneName, opts) {
   // Build frame container
   var frame = document.createElement('div');
   frame.className = 'layer-frame layer-frame-interrupt';
-  frame.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;';
+  frame.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border:3px solid #fbb03b;';
   _layerInterrupt.appendChild(frame);
 
   // Build content container

@@ -372,7 +372,6 @@ function completeFinalizeAfterTips(state) {
       return r.json();
     })
     .then(function(data) {
-      console.log('[KINDpos] Server checkout finalized:', data);
       OrderSummary.hide();
       SceneManager.closeTransactional('server-checkout');
     })

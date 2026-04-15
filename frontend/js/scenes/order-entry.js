@@ -553,7 +553,6 @@ function buildMain(parentEl, params) {
 // ── SEAT ASSIGNMENT AT COMMIT TIME ───────────────
 function assignSeatsIfNeeded(callback) {
   var unsent = ticket.filter(function(i) { return !i.sent; });
-  console.log('[assignSeats] unsent=' + unsent.length + ' seatNumbers=' + JSON.stringify(sceneParams.seatNumbers));
   if (unsent.length === 0) { callback(); return; }
 
   var seats = (sceneParams.seatNumbers && sceneParams.seatNumbers.length > 0)
@@ -2048,7 +2047,7 @@ function buildModRowSized(name, price, fontSize, onRemove) {
       'flex-shrink:0;width:22px;height:22px;margin-right:4px;',
       'display:flex;align-items:center;justify-content:center;',
       'font-size:14px;color:' + T.red + ';cursor:pointer;',
-      'border:1px solid ' + T.red + ';border-radius:3px;',
+      'border:1px solid ' + T.red + ';clip-path:polygon(3px 0%,calc(100% - 3px) 0%,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0% calc(100% - 3px),0% 3px);',
     ].join('');
     x.textContent = '\u2715';
     x.addEventListener('pointerup', function(e) {
@@ -2094,7 +2093,7 @@ function buildHalfTable(leftMods, rightMods, fontSize, removableInst) {
       'flex-shrink:0;width:18px;height:18px;margin:0 2px;',
       'display:inline-flex;align-items:center;justify-content:center;',
       'font-size:11px;color:' + T.red + ';cursor:pointer;',
-      'border:1px solid ' + T.red + ';border-radius:3px;',
+      'border:1px solid ' + T.red + ';clip-path:polygon(3px 0%,calc(100% - 3px) 0%,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0% calc(100% - 3px),0% 3px);',
     ].join('');
     x.textContent = '\u2715';
     x.addEventListener('pointerup', function(e) {
@@ -2480,7 +2479,7 @@ SceneManager.register({
     panel.style.cssText = [
       'display:flex;flex-direction:column;gap:10px;',
       'background:' + T.bgDark + ';',
-      'border:4px solid ' + T.mint + ';border-radius:5px;',
+      'border:4px solid ' + T.mint + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);',
       'padding:20px 24px;min-width:500px;max-width:620px;',
       'max-height:520px;overflow:hidden;',
     ].join('');

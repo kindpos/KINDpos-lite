@@ -277,7 +277,7 @@ class PrintContextBuilder:
                 if p.status != "confirmed":
                     continue
                 amount = Decimal(str(getattr(p, "amount", 0) or 0))
-                tip = float(getattr(p, "tip_amount", 0) or 0)
+                tip = money_float(getattr(p, "tip_amount", 0) or 0)
 
                 if p.method == "cash":
                     cash_sales += amount
@@ -297,12 +297,12 @@ class PrintContextBuilder:
                     cc_transactions.append({
                         "check_number": ticket_num,
                         "card_last_four": last4 or "****",
-                        "total": float(amount),
+                        "total": money_float(amount),
                         "tip": tip,
                         "tip_open": tip_open,
                     })
 
-        net_sales = float(gross_sales - voids_total - comps_total - discounts_total)
+        net_sales = money_float(gross_sales - voids_total - comps_total - discounts_total)
         cc_tips_total = sum(t["tip"] for t in cc_transactions)
         gross_tips = cc_tips_total + (declared_cash_tips or 0.0)
 
@@ -347,10 +347,10 @@ class PrintContextBuilder:
             if basis == "net_sales":
                 base_amount = net_sales
             elif basis == "alcohol" or basis == "alcohol_sales":
-                base_amount = float(preset.get("base_override", 0))
+                base_amount = money_float(preset.get("base_override", 0))
                 # Deferred: derive alcohol sales from category data when available
             elif basis == "food" or basis == "food_sales":
-                base_amount = float(preset.get("base_override", 0))
+                base_amount = money_float(preset.get("base_override", 0))
                 # Deferred: derive food sales from category data when available
             else:
                 base_amount = net_sales
@@ -367,7 +367,7 @@ class PrintContextBuilder:
                     calculated = 0.0
                 else:
                     adjusted = (override_val != calculated)
-                    calculated = money_round(float(override_val))
+                    calculated = money_round(override_val)
 
             tip_outs.append({
                 "role": role,
@@ -403,24 +403,24 @@ class PrintContextBuilder:
             "clock_out": clock_out,
             "shift_duration": shift_duration,
             "checks_closed": checks_closed,
-            "gross_sales": money_round(float(gross_sales)),
-            "voids_total": money_round(float(voids_total)),
-            "comps_total": money_round(float(comps_total)),
-            "discounts_total": money_round(float(discounts_total)),
-            "net_sales": money_round(net_sales),
-            "tax_collected": money_round(float(tax_collected)),
-            "cash_sales": money_round(float(cash_sales)),
-            "card_sales": money_round(float(card_sales)),
+            "gross_sales": money_float(gross_sales),
+            "voids_total": money_float(voids_total),
+            "comps_total": money_float(comps_total),
+            "discounts_total": money_float(discounts_total),
+            "net_sales": money_float(net_sales),
+            "tax_collected": money_float(tax_collected),
+            "cash_sales": money_float(cash_sales),
+            "card_sales": money_float(card_sales),
             "show_cc_detail": getattr(settings, "show_cc_detail", True),
             "cc_transactions": cc_transactions,
-            "cc_tips_total": money_round(cc_tips_total),
+            "cc_tips_total": money_float(cc_tips_total),
             "declared_cash_tips": declared_cash_tips,
-            "gross_tips": money_round(gross_tips),
+            "gross_tips": money_float(gross_tips),
             "tip_pool": tip_pool,
             "tip_outs": tip_outs,
-            "total_tip_out": money_round(total_tip_out),
-            "net_tips": money_round(net_tips),
-            "cash_collected": money_round(float(cash_sales)),
+            "total_tip_out": money_float(total_tip_out),
+            "net_tips": money_float(net_tips),
+            "cash_collected": money_float(cash_sales),
             "cc_tips_payout": getattr(settings, "cc_tips_payout", "cash"),
             "open_tip_count": open_tip_count,
             "require_manager_sign": getattr(settings, "require_manager_sign", True),
@@ -536,15 +536,15 @@ class PrintContextBuilder:
                     card_count += 1
                     card_tips += tip
 
-        net_sales = float(gross_sales - discounts_total - refunds_total)
-        total_payments = float(cash_sales + card_sales)
-        avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
-        per_person_avg = money_round(net_sales / covers) if covers > 0 else 0.0
+        net_sales = money_float(gross_sales - discounts_total - refunds_total)
+        total_payments = money_float(cash_sales + card_sales)
+        avg_check = money_float(net_sales / total_checks) if total_checks > 0 else 0.0
+        per_person_avg = money_float(net_sales / covers) if covers > 0 else 0.0
 
         # ── Category sales (sorted by total descending) ───────────────────────
         category_sales = sorted(
             [
-                {"name": name, "total": money_round(float(data["total"])), "count": data["count"]}
+                {"name": name, "total": money_float(data["total"]), "count": data["count"]}
                 for name, data in category_totals.items()
             ],
             key=lambda c: c["total"],
@@ -552,7 +552,7 @@ class PrintContextBuilder:
         )
 
         # ── Tax lines ─────────────────────────────────────────────────────────
-        tax_lines = [{"label": "Tax", "amount": money_round(float(tax_collected))}]
+        tax_lines = [{"label": "Tax", "amount": money_float(tax_collected)}]
 
         # ── Daypart breakdown ─────────────────────────────────────────────────
         # Deferred: daypart bucketing once order timestamps are available
@@ -574,27 +574,27 @@ class PrintContextBuilder:
             "date_to": "",
             "printed_by": printed_by,
             "printed_at": datetime.now(timezone.utc).isoformat(),
-            "gross_sales": money_round(float(gross_sales)),
-            "voids_total": money_round(float(voids_total)),
+            "gross_sales": money_float(gross_sales),
+            "voids_total": money_float(voids_total),
             "voids_count": voids_count,
-            "comps_total": money_round(float(comps_total)),
+            "comps_total": money_float(comps_total),
             "comps_count": comps_count,
-            "discounts_total": money_round(float(discounts_total)),
+            "discounts_total": money_float(discounts_total),
             "discounts_count": discounts_count,
-            "refunds_total": money_round(float(refunds_total)),
-            "net_sales": money_round(net_sales),
-            "tax_collected": money_round(float(tax_collected)),
+            "refunds_total": money_float(refunds_total),
+            "net_sales": money_float(net_sales),
+            "tax_collected": money_float(tax_collected),
             "tax_lines": tax_lines,
-            "cash_sales": money_round(float(cash_sales)),
+            "cash_sales": money_float(cash_sales),
             "cash_count": cash_count,
-            "card_sales": money_round(float(card_sales)),
+            "card_sales": money_float(card_sales),
             "card_count": card_count,
             "other_payments": [],
-            "total_payments": money_round(total_payments),
-            "total_tips": money_round(float(total_tips)),
-            "cash_tips": money_round(float(cash_tips)),
-            "card_tips": money_round(float(card_tips)),
-            "cash_expected": money_round(float(cash_sales - card_tips)),
+            "total_payments": money_float(total_payments),
+            "total_tips": money_float(total_tips),
+            "cash_tips": money_float(cash_tips),
+            "card_tips": money_float(card_tips),
+            "cash_expected": money_float(cash_sales - card_tips),
             "category_sales": category_sales,
             "total_checks": total_checks,
             "avg_check": avg_check,

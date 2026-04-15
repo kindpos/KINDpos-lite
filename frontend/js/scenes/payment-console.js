@@ -252,7 +252,7 @@ defineScene({
         setSceneName(null);
         setHeaderBack({});
 
-        container.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;background:rgba(0,0,0,0.85);';
+        container.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;background:' + T.scrimInterrupt + ';';
 
         var isCash    = params.paymentMode === 'cash';
         var hasChange = isCash && params.change > 0;

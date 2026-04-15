@@ -384,7 +384,6 @@ function doCloseDay(state) {
       return r.json();
     })
     .then(function(data) {
-      console.log('[KINDpos] Day closed:', data);
       OrderSummary.hide();
       SceneManager.closeTransactional('close-day');
     })

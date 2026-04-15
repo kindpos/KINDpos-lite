@@ -141,7 +141,7 @@ defineScene({
     var ops = params.operations || ['MERGE', 'MOVE', 'SPLIT', 'TRANSFER'];
 
     var opVariants = {
-      MERGE: 'mint', MOVE: 'gold', SPLIT: 'gold',
+      MERGE: 'mint', MOVE: 'dark', SPLIT: 'dark',
       TRANSFER: 'dark', CANCEL: 'vermillion', CONFIRM: 'mint',
     };
 

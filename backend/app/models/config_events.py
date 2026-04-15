@@ -16,7 +16,7 @@ class StoreInfo(BaseModel):
 
 class CCProcessingRate(BaseModel):
     rate_percent: float = 2.9
-    per_transaction_fee: float = 0.30
+    per_transaction_fee: Decimal = Decimal("0.30")
 
 class TaxRule(BaseModel):
     tax_rule_id: str
@@ -69,7 +69,7 @@ class Employee(BaseModel):
     role_ids: List[str] = []
     role_id: Optional[str] = None  # backward compat — migrated to role_ids
     pin: str
-    hourly_rate: float
+    hourly_rate: Decimal = Decimal("0")
     permissions_override: Optional[Dict[str, bool]] = None
     active: bool = True
 
@@ -92,7 +92,7 @@ class MenuItem(BaseModel):
     item_id: str
     name: str
     category_id: str
-    price: float
+    price: Decimal = Decimal("0")
     description: Optional[str] = None
     kitchen_name: Optional[str] = None
     tax_rule_id: Optional[str] = None

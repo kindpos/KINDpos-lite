@@ -1937,12 +1937,12 @@ function renderOpsPanel(state) {
   }
 
   grid.appendChild(buildButton('PRINT', Object.assign({}, btnStyle, { onTap: function() {
-    ids.forEach(function(id) { fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function() {}); });
+    ids.forEach(function(id) { fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function(err) { console.warn('[KINDpos] Operation failed:', err); }); });
     showToast('Print sent' + (ids.length > 1 ? ' for ' + ids.length + ' checks' : ''), { bg: T.goGreen });
   }})));
 
   grid.appendChild(buildButton('RSND', Object.assign({}, btnStyle, { onTap: function() {
-    ids.forEach(function(id) { fetch('/api/v1/orders/' + id + '/send', { method: 'POST' }).catch(function() {}); });
+    ids.forEach(function(id) { fetch('/api/v1/orders/' + id + '/send', { method: 'POST' }).catch(function(err) { console.warn('[KINDpos] Operation failed:', err); }); });
     showToast('Sent to kitchen' + (ids.length > 1 ? ' (' + ids.length + ' checks)' : ''), { bg: T.goGreen });
   }})));
 

@@ -124,7 +124,7 @@ html, body {
 }
 
 *:not(.embossed-btn) {
-  border-radius: 0 !important;
+  border-radius: 0 !important; /* legacy reset — chamfer enforced via clip-path */
 }
 
 #ticket-list::-webkit-scrollbar,

@@ -317,7 +317,7 @@ defineScene({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ guest_count: Math.max.apply(null, state.seats.map(function(s) { return parseInt(s.id.replace('S-', ''), 10) || 0; })) }),
-        }).catch(function() {});
+        }).catch(function() { showToast && showToast('Save failed', { bg: T.red }); });
       }
     });
 
@@ -328,7 +328,7 @@ defineScene({
     // ── Build a seat button (embossed + chamfered) ──
 
     function seatVariant(seat) {
-      if (state.paidSeats[seat.id]) return 'gold';
+      if (state.paidSeats[seat.id]) return 'mint';
       if (state.selected[seat.id]) return 'mint';
       return 'dark';
     }
@@ -1325,7 +1325,7 @@ defineScene({
         container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
 
         var panel = document.createElement('div');
-        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';border-radius:5px;padding:16px;min-width:320px;max-width:440px;max-height:460px;display:flex;flex-direction:column;gap:8px;';
+        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:16px;min-width:320px;max-width:440px;max-height:460px;display:flex;flex-direction:column;gap:8px;';
 
         var title = document.createElement('div');
         title.style.cssText = 'font-family:' + T.fh + ';font-size:11px;letter-spacing:3px;color:' + T.mint + ';text-transform:uppercase;text-align:center;padding:4px 0 8px;';
@@ -1392,7 +1392,7 @@ SceneManager.register({
   mount: function(container, params) {
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
     var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';border-radius:5px;padding:20px;';
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:20px;';
     var lbl = document.createElement('div');
     lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
     lbl.textContent = '// MANAGER PIN //';
@@ -1428,7 +1428,7 @@ SceneManager.register({
   mount: function(container, params) {
     container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
     var panel = document.createElement('div');
-    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';border-radius:5px;padding:20px;min-width:280px;';
+    panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:20px;min-width:280px;';
     var lbl = document.createElement('div');
     lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
     lbl.textContent = '// DISCOUNT //';
@@ -1469,7 +1469,7 @@ SceneManager.register({
     var panel = document.createElement('div');
     panel.style.cssText = [
       'display:flex;flex-direction:column;align-items:center;gap:10px;',
-      'background:' + T.bgDark + ';border:4px solid ' + T.gold + ';border-radius:5px;',
+      'background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);',
       'padding:20px 24px;min-width:320px;max-width:440px;',
     ].join('');
 

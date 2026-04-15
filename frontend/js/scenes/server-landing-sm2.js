@@ -710,7 +710,7 @@ defineScene({
         container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
 
         var panel = document.createElement('div');
-        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';border-radius:5px;padding:16px;min-width:320px;max-width:440px;max-height:460px;display:flex;flex-direction:column;gap:8px;';
+        panel.style.cssText = 'background:' + T.bgDark + ';border:4px solid ' + T.mint + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:16px;min-width:320px;max-width:440px;max-height:460px;display:flex;flex-direction:column;gap:8px;';
 
         var title = document.createElement('div');
         title.style.cssText = 'font-family:' + T.fh + ';font-size:11px;letter-spacing:3px;color:' + T.mint + ';text-transform:uppercase;text-align:center;padding:4px 0 8px;';
@@ -1301,12 +1301,12 @@ function renderOpsPanel(state) {
   }
 
   grid.appendChild(buildButton('PRINT', Object.assign({}, btnStyle, { onTap: function() {
-    ids.forEach(function(id) { fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function() {}); });
+    ids.forEach(function(id) { fetch('/api/v1/print/receipt/' + id, { method: 'POST' }).catch(function(err) { console.warn('[KINDpos] Operation failed:', err); }); });
     showToast('Print sent' + (ids.length > 1 ? ' for ' + ids.length + ' checks' : ''), { bg: T.goGreen });
   }})));
 
   grid.appendChild(buildButton('RSND', Object.assign({}, btnStyle, { onTap: function() {
-    ids.forEach(function(id) { fetch('/api/v1/orders/' + id + '/send', { method: 'POST' }).catch(function() {}); });
+    ids.forEach(function(id) { fetch('/api/v1/orders/' + id + '/send', { method: 'POST' }).catch(function(err) { console.warn('[KINDpos] Operation failed:', err); }); });
     showToast('Sent to kitchen' + (ids.length > 1 ? ' (' + ids.length + ' checks)' : ''), { bg: T.goGreen });
   }})));
 
