@@ -15,7 +15,7 @@ import { OrderSummary } from '../order-summary.js';
 import { buildCard } from '../theme-manager.js';
 import {
   fmt, detailRow, detailDivider, buildMixBar,
-  buildCardGrid, buildExpandedCard,
+  buildCardGrid, buildExpandedCard, buildBlockerBanner,
   CARD_GAP, ACTION_H, BANNER_H, COL_GAP, SCENE_PAD, RED,
 } from './checkout-core.js';
 
@@ -79,10 +79,13 @@ function fetchServerState(params) {
       employeeName:  params.employeeName || '',
       date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
       netSales:      d.net_sales    || 0,
+      taxTotal:      d.tax_total    || 0,
+      totalSales:    d.total_sales  || 0,
       liquorSales:   0,
       cashSales:     d.cash_total   || 0,
       cardSales:     d.card_total   || 0,
       totalChecks:   d.total_checks || 0,
+      closedChecks:  d.closed_orders || 0,
       avgCheck:      d.avg_check    || 0,
       openChecks:    d.open_orders  || 0,
       cardTips:      d.card_tips    || 0,
@@ -117,12 +120,12 @@ function getCardDefs(state, opts) {
       border: T.border,
       statusColor: null,
       buildExpanded: function(el) {
-        el.appendChild(detailRow('Net Sales',    fmt(state.netSales)));
+        el.appendChild(detailRow('Net Sales',    fmt(state.netSales), T.gold));
+        el.appendChild(detailRow('Tax',          fmt(state.taxTotal), T.gold));
+        el.appendChild(detailRow('Total',        fmt(state.totalSales), T.gold));
+        el.appendChild(detailDivider());
         el.appendChild(detailRow('Cash Sales',   fmt(state.cashSales)));
         el.appendChild(detailRow('Card Sales',   fmt(state.cardSales)));
-        el.appendChild(detailDivider());
-        el.appendChild(detailRow('Total Checks', String(state.totalChecks), T.mint));
-        el.appendChild(detailRow('Avg Check',    fmt(state.avgCheck)));
         if (state.openChecks > 0) {
           el.appendChild(detailRow('Open Checks', String(state.openChecks), RED));
         }
@@ -136,17 +139,17 @@ function getCardDefs(state, opts) {
       border: T.border,
       statusColor: state.openChecks > 0 ? T.yellow : null,
       buildExpanded: function(el) {
-        el.appendChild(detailRow('Total Checks', String(state.totalChecks)));
-        el.appendChild(detailRow('Avg Check',    fmt(state.avgCheck)));
+        el.appendChild(detailRow('Checks Opened', String(state.totalChecks + state.openChecks)));
+        el.appendChild(detailRow('Checks Closed', String(state.closedChecks)));
+        el.appendChild(detailRow('Avg Check',     fmt(state.avgCheck)));
         if (state.openChecks > 0) {
-          el.appendChild(detailRow('Open Checks', String(state.openChecks), RED));
+          el.appendChild(detailDivider());
+          el.appendChild(detailRow('Still Open', String(state.openChecks), RED));
         }
-        el.appendChild(detailDivider());
-        el.appendChild(detailRow('Closed',       String(state.closedOrders.length)));
       },
     },
     {
-      title: 'Tip Summary',
+      title: 'Tips Received',
       hero: fmt(state.cardTips + state.cashTips),
       heroColor: T.gold,
       subtitle: 'card tips \u2022 cash tips',
@@ -160,6 +163,14 @@ function getCardDefs(state, opts) {
         el.appendChild(detailRow('Total Tips',   fmt(state.cardTips + state.cashTips), T.gold));
         if (state.unadjustedTips > 0) {
           el.appendChild(detailRow('Unadjusted', String(state.unadjustedTips), T.yellow));
+        }
+        // Per-check card tip breakdown
+        var cardChecks = (state.checks || []).filter(function(c) { return c.method === 'card' && c.tip > 0; });
+        if (cardChecks.length > 0) {
+          el.appendChild(detailDivider());
+          cardChecks.forEach(function(c) {
+            el.appendChild(detailRow(c.checkLabel || c.checkId, fmt(c.tip)));
+          });
         }
         if (opts && opts.buildShortcuts) {
           el.appendChild(buildGap(8));
@@ -200,15 +211,15 @@ function getCardDefs(state, opts) {
     {
       title: 'Take-Home',
       hero: fmt(state.takeHome),
-      heroColor: T.gold,
+      heroColor: T.mint,
       subtitle: 'tips \u2212 tipout + cash',
-      border: T.gold,
+      border: T.mint,
       statusColor: null,
       buildExpanded: function(el) {
         el.appendChild(detailRow('Card Tips',    fmt(state.cardTips)));
         el.appendChild(detailRow('Tip-Out',      '\u2212 ' + fmt(state.tipOutTotal), RED));
         el.appendChild(detailDivider());
-        el.appendChild(detailRow('Take-Home',    fmt(state.takeHome), T.gold));
+        el.appendChild(detailRow('Take-Home',    fmt(state.takeHome), T.mint));
       },
     },
     {
@@ -430,8 +441,9 @@ function buildSections(state) {
     {
       title: 'SALES',
       rows: [
-        { label: 'Checks Closed', value: String(state.totalChecks) },
         { label: 'Net Sales', value: fmt(state.netSales) },
+        { label: 'Tax', value: fmt(state.taxTotal) },
+        { label: 'Total', value: fmt(state.totalSales) },
         { label: 'Cash Sales', value: fmt(state.cashSales) },
         { label: 'Card Sales', value: fmt(state.cardSales) },
       ],
@@ -554,6 +566,13 @@ defineScene({
       var defs = getCardDefs(state.data, cardOpts);
       state.gridContainer.appendChild(buildCardGrid(defs, cardOpts));
       state.rightCol.appendChild(state.gridContainer);
+
+      // Alert panel — shows open blockers
+      var blockerMsgs = [];
+      if (state.data.openChecks > 0) blockerMsgs.push(state.data.openChecks + ' open check' + (state.data.openChecks > 1 ? 's' : ''));
+      if (state.data.unadjustedTips > 0) blockerMsgs.push(state.data.unadjustedTips + ' unadjusted tip' + (state.data.unadjustedTips > 1 ? 's' : ''));
+      state.rightCol.appendChild(buildBlockerBanner(blockerMsgs));
+
       state.rightCol.appendChild(buildActionBar(state.data, state, refreshScene));
     }
 
