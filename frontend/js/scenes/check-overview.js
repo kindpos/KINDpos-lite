@@ -758,6 +758,7 @@ defineScene({
     // ═══════════════════════════════════════════════════
 
     function syncPaidSeats(order) {
+      state.paidSeats = {};
       var ps = order.paid_seats || [];
       for (var i = 0; i < ps.length; i++) {
         var key = 'S-' + String(ps[i]).padStart(3, '0');

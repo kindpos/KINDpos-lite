@@ -925,7 +925,7 @@ async def confirm_payment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Payment {payment_id} is already {initiated.status}"
         )
-    if request.amount != initiated.amount:
+    if money_round(request.amount) != money_round(initiated.amount):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Confirmation amount {request.amount} does not match initiated amount {initiated.amount}"
@@ -955,10 +955,10 @@ async def void_payment(
     """Void a specific confirmed payment, reopening the seat(s) it covered."""
     order = await get_order_or_404(ledger, order_id)
 
-    if order.status == "closed":
+    if order.status in ("closed", "voided"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot void payments on a closed order"
+            detail=f"Cannot void payments on a {order.status} order"
         )
 
     target = None
