@@ -1052,7 +1052,7 @@ defineScene({
 
     var BTN_FONT = 'Chakra Petch, sans-serif';
     var actionArea = document.createElement('div');
-    actionArea.style.cssText = 'position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:12px;padding:20px 16px;';
+    actionArea.style.cssText = 'position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:16px;padding:28px 16px;';
 
     // ── Row 1: EDIT SEATS | DISC | VOID | EDIT SEATS ──
     var row1 = document.createElement('div');
@@ -1130,30 +1130,34 @@ defineScene({
 
     var editSeatsBtn1 = buildStyledButton({ label: 'EDIT SEATS', variant: 'mint', size: 'sm', onClick: openEditSeats });
     editSeatsBtn1.wrap.style.flex = '1';
-    editSeatsBtn1.wrap.style.height = '48px';
+    editSeatsBtn1.wrap.style.height = '58px';
     editSeatsBtn1.inner.style.fontFamily = BTN_FONT;
     editSeatsBtn1.inner.style.fontWeight = 'bold';
+    editSeatsBtn1.inner.style.fontSize = '20px';
     row1.appendChild(editSeatsBtn1.wrap);
 
     var discBtn = buildStyledButton({ label: 'DISC', variant: 'cyan', size: 'sm', onClick: handleDiscount });
     discBtn.wrap.style.flex = '1';
-    discBtn.wrap.style.height = '48px';
+    discBtn.wrap.style.height = '58px';
     discBtn.inner.style.fontFamily = BTN_FONT;
     discBtn.inner.style.fontWeight = 'bold';
+    discBtn.inner.style.fontSize = '20px';
     row1.appendChild(discBtn.wrap);
 
     var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
     voidBtn.wrap.style.flex = '1';
-    voidBtn.wrap.style.height = '48px';
+    voidBtn.wrap.style.height = '58px';
     voidBtn.inner.style.fontFamily = BTN_FONT;
     voidBtn.inner.style.fontWeight = 'bold';
+    voidBtn.inner.style.fontSize = '20px';
     row1.appendChild(voidBtn.wrap);
 
     var resendBtn = buildStyledButton({ label: 'RESEND', variant: 'mint', size: 'sm', onClick: handleResend });
     resendBtn.wrap.style.flex = '1';
-    resendBtn.wrap.style.height = '48px';
+    resendBtn.wrap.style.height = '58px';
     resendBtn.inner.style.fontFamily = BTN_FONT;
     resendBtn.inner.style.fontWeight = 'bold';
+    resendBtn.inner.style.fontSize = '20px';
     row1.appendChild(resendBtn.wrap);
 
     actionArea.appendChild(row1);
@@ -1164,18 +1168,18 @@ defineScene({
 
     var payBtn = buildStyledButton({ label: 'PAY', variant: 'gold', size: 'lg', onClick: handlePay });
     payBtn.wrap.style.flex = '1';
-    payBtn.wrap.style.height = '72px';
+    payBtn.wrap.style.height = '86px';
     payBtn.inner.style.fontFamily = BTN_FONT;
     payBtn.inner.style.fontWeight = 'bold';
-    payBtn.inner.style.fontSize = '32px';
+    payBtn.inner.style.fontSize = '38px';
     row2.appendChild(payBtn.wrap);
 
     var printBtn = buildStyledButton({ label: 'PRINT', variant: 'mint', size: 'lg', onClick: handlePrint });
     printBtn.wrap.style.flex = '1';
-    printBtn.wrap.style.height = '72px';
+    printBtn.wrap.style.height = '86px';
     printBtn.inner.style.fontFamily = BTN_FONT;
     printBtn.inner.style.fontWeight = 'bold';
-    printBtn.inner.style.fontSize = '32px';
+    printBtn.inner.style.fontSize = '38px';
     row2.appendChild(printBtn.wrap);
 
     var addItemBtn = buildStyledButton({
@@ -1202,10 +1206,10 @@ defineScene({
       },
     });
     addItemBtn.wrap.style.flex = '1';
-    addItemBtn.wrap.style.height = '72px';
+    addItemBtn.wrap.style.height = '86px';
     addItemBtn.inner.style.fontFamily = BTN_FONT;
     addItemBtn.inner.style.fontWeight = 'bold';
-    addItemBtn.inner.style.fontSize = '32px';
+    addItemBtn.inner.style.fontSize = '38px';
     addItemBtn.inner.style.lineHeight = '1.1';
     addItemBtn.inner.style.whiteSpace = 'pre';
     row2.appendChild(addItemBtn.wrap);
