@@ -375,7 +375,7 @@ function buildCategoryCard(cat, borderColor) {
       width: rect.width,
       height: rect.height,
     };
-    _expandedCard = { id: cat.id, label: cat.label, tab: _activeTab, borderColor: borderColor };
+    _expandedCard = { id: cat.id, label: cat.label, borderColor: borderColor };
     renderContent();
   });
 
