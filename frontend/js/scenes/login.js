@@ -169,7 +169,7 @@ defineScene({
 
     // Version stamp — bottom-right
     var version = document.createElement('div');
-    version.style.cssText = 'font-family:' + T.fb + ';font-size:9px;color:' + T.gold + ';opacity:0.35;position:absolute;bottom:4px;right:12px;';
+    version.style.cssText = 'font-family:' + T.fb + ';font-size:25px;color:' + T.numpadChassis + ';position:absolute;bottom:8px;right:16px;';
     version.textContent = 'KINDpos/lite // Vz1.2';
     container.appendChild(version);
 
