@@ -18,8 +18,8 @@ import './column-editor.js';
 // TODO: No font-size token exists for 26px card header labels — using inline '9px'.
 
 // ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
-var TAX_RATE = 0.08;
-var CASH_DISCOUNT = 0.03;
+var TAX_RATE = 0.07;
+var CASH_DISCOUNT = 0.04;
 fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
   if (d.tax_rate != null)           TAX_RATE      = d.tax_rate;
   if (d.cash_discount_rate != null) CASH_DISCOUNT = d.cash_discount_rate;

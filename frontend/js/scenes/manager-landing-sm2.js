@@ -43,8 +43,14 @@ function srvColor(map, id) {
   return map[id] || SERVER_PALETTE[0];
 }
 
-var ML_TAX_RATE = 0.08;
-var ML_CASH_DISCOUNT = 0.03;
+var ML_TAX_RATE = 0.07;
+var ML_CASH_DISCOUNT = 0.04;
+
+// Fetch canonical rates from backend so FE/BE always agree
+fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
+  if (d.tax_rate != null)           ML_TAX_RATE      = d.tax_rate;
+  if (d.cash_discount_rate != null) ML_CASH_DISCOUNT = d.cash_discount_rate;
+}).catch(function() { /* keep defaults on network error */ });
 
 function orderTotals(order) {
   var items = order.items || [];

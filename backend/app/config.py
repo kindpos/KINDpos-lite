@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # Tip-out percentage (default 2%)
     tipout_percent: float = 2.0
 
+    # Store mode: "demo" seeds sample data, "production" starts clean
+    store_mode: str = "demo"
+
     # Hardware Discovery
     default_subnet: str = "10.0.0.0/24"
     scan_timeout: float = 2.0

@@ -69,8 +69,8 @@ async def _init_printer_manager(ledger, ephemeral_log=None):
         except Exception as e:
             print(f"  Warning: could not load printers from hardware_config.db: {e}")
 
-    if not printer_found:
-        # Register default mock printers for demo
+    if not printer_found and settings.store_mode == "demo":
+        # Register default mock printers for demo mode only
         receipt_config = PrinterConfig(
             printer_id="mock-receipt-01",
             name="Front Register",
@@ -89,7 +89,9 @@ async def _init_printer_manager(ledger, ephemeral_log=None):
         )
         await manager.register_printer(MockThermalPrinter(receipt_config))
         await manager.register_printer(MockThermalPrinter(kitchen_config))
-        print("  Mock printers registered (no saved printers found)")
+        print("  Mock printers registered (demo mode, no saved printers found)")
+    elif not printer_found:
+        print("  No printers configured — use Settings > Hardware to add printers")
 
     set_printer_manager(manager)
     return manager
@@ -106,7 +108,10 @@ async def lifespan(app: FastAPI):
     ledger = await init_ledger()
     print("Event Ledger initialized")
 
-    await seed_demo_data_if_empty(ledger)
+    if settings.store_mode == "demo":
+        await seed_demo_data_if_empty(ledger)
+    else:
+        print(f"Store mode: {settings.store_mode} — skipping demo seed")
 
     eph_log = await get_ephemeral_log()
     printer_manager = await _init_printer_manager(ledger, ephemeral_log=eph_log)
