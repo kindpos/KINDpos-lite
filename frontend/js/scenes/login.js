@@ -136,8 +136,14 @@ defineScene({
           if (state.numpadRef) state.numpadRef.setError(err);
           return;
         }
-        SceneManager.closeGate('login');
-        SceneManager.mountWorking('order-entry', { emp: emp });
+        checkClockedIn(emp, function(isIn) {
+          if (!isIn) {
+            if (state.numpadRef) state.numpadRef.setError('CLOCK IN FIRST');
+            return;
+          }
+          SceneManager.closeGate('login');
+          SceneManager.mountWorking('order-entry', { emp: emp });
+        });
       });
     } });
     rightCol.appendChild(quickOrderPair.wrap);
@@ -193,14 +199,34 @@ defineScene({
       });
     }
 
+    function checkClockedIn(emp, callback) {
+      fetch('/api/v1/servers/clocked-in')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var staff = data.staff || [];
+          var isIn = staff.some(function(s) { return s.employee_id === emp.id; });
+          callback(isIn);
+        })
+        .catch(function() {
+          // Network error — allow through (fail open for demo)
+          callback(true);
+        });
+    }
+
     function handlePinSubmit(pin) {
       verifyPin(pin, function(err, emp) {
         if (err) {
           if (state.numpadRef) state.numpadRef.setError(err);
           return;
         }
-        SceneManager.closeGate('login');
-        SceneManager.mountWorking(landingScene(emp.roles), { emp: emp });
+        checkClockedIn(emp, function(isIn) {
+          if (!isIn) {
+            if (state.numpadRef) state.numpadRef.setError('CLOCK IN FIRST');
+            return;
+          }
+          SceneManager.closeGate('login');
+          SceneManager.mountWorking(landingScene(emp.roles), { emp: emp });
+        });
       });
     }
   },
