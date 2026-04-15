@@ -7,13 +7,13 @@
 @font-face {
   font-family: 'Chakra Petch';
   src: url('../assets/fonts/ChakraPetch-Bold.ttf') format('truetype');
-  font-weight: 700;
+  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: 'B612 Mono';
   src: url('../assets/fonts/B612Mono-Bold.ttf') format('truetype');
-  font-weight: 700;
+  font-weight: normal;
   font-style: normal;
   size-adjust: 66%;
 }
