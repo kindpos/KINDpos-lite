@@ -398,31 +398,31 @@ function buildCategoryCard(cat, borderColor) {
     deviceList.appendChild(empty);
   } else {
     devices.forEach(function(dev) {
-      var devDc = buildDepthCard(T.green, { chamfer: 6, glow: false });
+      var devDc = buildDepthCard(T.green, { chamfer: 8, glow: false });
       devDc.card.style.cssText += [
-        'padding:10px 12px;',
-        'display:flex;align-items:center;justify-content:space-between;gap:8px;',
+        'padding:16px 20px;',
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;',
         'cursor:pointer;user-select:none;',
+        'min-height:100px;text-align:center;',
       ].join('');
 
-      var info = document.createElement('div');
-      info.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
       var nameEl = document.createElement('div');
-      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.gold + ';';
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:22px;font-weight:bold;color:' + T.gold + ';';
       nameEl.textContent = dev.name || 'Unnamed';
-      info.appendChild(nameEl);
+      devDc.card.appendChild(nameEl);
+
       var ipEl = document.createElement('div');
-      ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.textPrimary + ';';
+      ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.textPrimary + ';';
       ipEl.textContent = dev.ip;
-      info.appendChild(ipEl);
+      devDc.card.appendChild(ipEl);
+
       var macEl = document.createElement('div');
-      macEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.subtleText + ';';
+      macEl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.subtleText + ';';
       macEl.textContent = 'MAC: ' + (dev.mac || '—');
-      info.appendChild(macEl);
-      devDc.card.appendChild(info);
+      devDc.card.appendChild(macEl);
 
       var status = document.createElement('div');
-      status.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.green + ';flex-shrink:0;';
+      status.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.green + ';margin-top:4px;';
       status.textContent = '\u25CF ONLINE';
       devDc.card.appendChild(status);
 
