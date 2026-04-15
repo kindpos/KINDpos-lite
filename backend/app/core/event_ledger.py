@@ -22,6 +22,14 @@ from contextlib import asynccontextmanager
 import logging
 from decimal import Decimal
 
+
+class _DecimalEncoder(json.JSONEncoder):
+    """JSON encoder that converts Decimal to float for ledger storage."""
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return float(o)
+        return super().default(o)
+
 from .events import Event, EventType, parse_event_type
 
 logger = logging.getLogger("kindpos.ledger")
@@ -204,7 +212,7 @@ class EventLedger:
                     event.timestamp.isoformat(),
                     event.terminal_id,
                     event.event_type.value,
-                    json.dumps(event.payload),
+                    json.dumps(event.payload, cls=_DecimalEncoder),
                     event.user_id,
                     event.user_role,
                     event.correlation_id,
@@ -280,7 +288,7 @@ class EventLedger:
                         event.timestamp.isoformat(),
                         event.terminal_id,
                         event.event_type.value,
-                        json.dumps(event.payload),
+                        json.dumps(event.payload, cls=_DecimalEncoder),
                         event.user_id,
                         event.user_role,
                         event.correlation_id,

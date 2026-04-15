@@ -500,6 +500,17 @@ function buildRightColumn() {
   });
 
   col.appendChild(numpadRef);
+
+  // ── CHARGE button (gold, full-width, buildStyledButton) ──
+  var chargePair = buildStyledButton({ variant: 'gold', size: 'lg', label: 'CHARGE', onClick: function() {
+    if (enteredAmount > 0 && !confirmProcessing) handleConfirm();
+  }});
+  chargePair.wrap.style.width = '100%';
+  chargePair.wrap.style.marginTop = '12px';
+  chargePair.inner.style.fontFamily = T.fh;
+  chargePair.inner.style.letterSpacing = '0.08em';
+  col.appendChild(chargePair.wrap);
+
   return col;
 }
 

@@ -111,7 +111,7 @@ async def test_paid_order_rejects_new_payment(ledger):
 
     # Pay the full amount (10.00 + tax)
     order = await _get_order(ledger, oid)
-    await _pay(ledger, oid, pid1, order.total)
+    await _pay(ledger, oid, pid1, float(order.total))
 
     # Order should now be fully paid
     order = await _get_order(ledger, oid)
@@ -138,7 +138,7 @@ async def test_double_payment_events_detectable(ledger):
     total = order.total
 
     # First payment
-    await _pay(ledger, oid, pid1, total)
+    await _pay(ledger, oid, pid1, float(total))
     order = await _get_order(ledger, oid)
     assert order.is_fully_paid
     assert len(order.payments) == 1
@@ -163,7 +163,7 @@ async def test_negative_tip_reduces_batch_total(ledger):
     await _create_order(ledger, oid)
     await _add_item(ledger, oid, iid, "Pasta", 15.00)
     order = await _get_order(ledger, oid)
-    await _pay(ledger, oid, pid, order.total)
+    await _pay(ledger, oid, pid, float(order.total))
 
     # Positive tip
     evt = tip_adjusted(
@@ -370,7 +370,7 @@ async def test_hash_chain_integrity_after_operations(ledger):
     await _create_order(ledger, oid)
     await _add_item(ledger, oid, iid, "Salad", 8.00)
     order = await _get_order(ledger, oid)
-    await _pay(ledger, oid, pid, order.total)
+    await _pay(ledger, oid, pid, float(order.total))
 
     # Verify hash chain — returns (is_valid, first_invalid_sequence)
     is_valid, first_invalid = await ledger.verify_chain()

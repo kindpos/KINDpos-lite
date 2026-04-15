@@ -57,7 +57,7 @@ from app.core.events import (
 )
 from app.core.projections import project_order, project_orders, Order
 from decimal import Decimal
-from app.core.money import money_round
+from app.core.money import money_round, money_float
 
 _ZERO = Decimal('0')
 from app.core.event_ledger import get_open_orders
@@ -443,7 +443,7 @@ async def get_day_summary(
                 "checkLabel": check_label,
                 "paymentId": None,
                 "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
-                "amount": money_round(order.subtotal),
+                "amount": money_float(order.subtotal),
                 "tip": 0,
                 "adjusted": True,
                 "method": None,
@@ -467,7 +467,7 @@ async def get_day_summary(
                 "checkLabel": check_label,
                 "paymentId": None,
                 "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
-                "amount": money_round(order.subtotal),
+                "amount": money_float(order.subtotal),
                 "tip": 0,
                 "adjusted": False,
                 "method": None,
@@ -540,7 +540,7 @@ async def get_day_summary(
                     "checkLabel": check_label,
                     "paymentId": card_payment.payment_id if card_payment else None,
                     "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
-                    "amount": money_round(order.total),
+                    "amount": money_float(order.total),
                     "tip": float(order_tip),
                     "adjusted": any(tip_map.get(p.payment_id) is not None for p in order.payments),
                     "method": "card",
@@ -554,7 +554,7 @@ async def get_day_summary(
                     "checkLabel": check_label,
                     "paymentId": None,
                     "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
-                    "amount": money_round(order.total),
+                    "amount": money_float(order.total),
                     "tip": 0,
                     "adjusted": True,
                     "method": "cash",
@@ -579,39 +579,39 @@ async def get_day_summary(
         else:
             late_net += bucket["net"]; late_chk += bucket["checks"]
     if am_chk:
-        dayparts.append({"name": "AM", "sales": money_round(float(am_net)), "checks": am_chk})
+        dayparts.append({"name": "AM", "sales": money_float(am_net), "checks": am_chk})
     if pm_chk:
-        dayparts.append({"name": "PM", "sales": money_round(float(pm_net)), "checks": pm_chk})
+        dayparts.append({"name": "PM", "sales": money_float(pm_net), "checks": pm_chk})
     if late_chk:
-        dayparts.append({"name": "Late", "sales": money_round(float(late_net)), "checks": late_chk})
+        dayparts.append({"name": "Late", "sales": money_float(late_net), "checks": late_chk})
 
     return {
         "date": __import__("datetime").date.today().isoformat(),
         "open_orders": open_count,
         "closed_orders": closed_count,
         "voided_orders": voided_count,
-        "gross_sales": money_round(float(gross_sales)),
-        "void_total": money_round(float(void_total)),
+        "gross_sales": money_float(gross_sales),
+        "void_total": money_float(void_total),
         "void_count": voided_count,
-        "discount_total": money_round(float(discount_total)),
+        "discount_total": money_float(discount_total),
         "discount_count": discount_count,
-        "net_sales": money_round(net_sales),
-        "tax_total": money_round(float(tax_total)),
-        "cash_total": money_round(float(cash_total)),
+        "net_sales": money_float(net_sales),
+        "tax_total": money_float(tax_total),
+        "cash_total": money_float(cash_total),
         "cash_count": cash_count,
-        "card_total": money_round(float(card_total)),
+        "card_total": money_float(card_total),
         "card_count": card_count,
-        "total_sales": money_round(net_sales + float(tax_total)),
-        "total_tips": money_round(float(total_tips)),
-        "card_tips": money_round(float(card_tips)),
-        "cash_tips": money_round(float(cash_tips)),
+        "total_sales": money_float(net_sales + float(tax_total)),
+        "total_tips": money_float(total_tips),
+        "card_tips": money_float(card_tips),
+        "cash_tips": money_float(cash_tips),
         "total_checks": total_checks,
-        "avg_check": avg_check,
+        "avg_check": money_float(avg_check),
         "guest_count": guest_count,
         "unadjusted_tips": unadjusted,
         "dayparts": dayparts,
         "categories": [
-            {**c, "total": money_round(float(c["total"]))} for c in categories.values()
+            {**c, "total": money_float(c["total"])} for c in categories.values()
         ],
         "payments": payments_list,
         "checks": checks_list,
@@ -1344,9 +1344,9 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
     batch_settlement = batch_card + batch_card_tips
 
     # Convert to float for event factories
-    batch_total_f = money_round(float(batch_total))
-    batch_cash_f = money_round(float(batch_cash))
-    batch_card_f = money_round(float(batch_settlement))
+    batch_total_f = money_float(batch_total)
+    batch_cash_f = money_float(batch_cash)
+    batch_card_f = money_float(batch_settlement)
 
     # Emit BATCH_SUBMITTED with full settlement record
     submit_evt = batch_submitted(
@@ -1361,7 +1361,7 @@ async def close_batch(ledger: EventLedger = Depends(get_ledger)):
 
     # Tender reconciliation check
     tender_sum = batch_cash_f + batch_card_f
-    recon_diff = money_round(abs(batch_total_f - tender_sum))
+    recon_diff = money_float(abs(batch_total_f - tender_sum))
     if recon_diff > 0.01:
         _logger.warning(
             "Tender reconciliation mismatch: batch_total=%.2f, cash+card=%.2f, diff=%.2f",
@@ -1468,10 +1468,10 @@ async def close_day(
     card_settlement = card_total + card_tips_total
 
     # Convert Decimal accumulators to float for event factories and output
-    total_sales_f = money_round(float(total_sales))
-    total_tips_f = money_round(float(total_tips))
-    cash_total_f = money_round(float(cash_total))
-    card_total_f = money_round(float(card_settlement))
+    total_sales_f = money_float(total_sales)
+    total_tips_f = money_float(total_tips)
+    cash_total_f = money_float(cash_total)
+    card_total_f = money_float(card_settlement)
 
     # Emit BATCH_SUBMITTED (settlement record)
     submit_evt = batch_submitted(
@@ -1502,7 +1502,7 @@ async def close_day(
 
     # Tender reconciliation check
     tender_sum = cash_total_f + card_total_f
-    recon_diff = money_round(abs(total_sales_f - tender_sum))
+    recon_diff = money_float(abs(total_sales_f - tender_sum))
     if recon_diff > 0.01:
         _logger.warning(
             "Day close reconciliation mismatch: total_sales=%.2f, cash+card=%.2f, diff=%.2f",
@@ -1510,15 +1510,15 @@ async def close_day(
         )
 
     # Over/Short: Cash Expected = Cash Sales − Card Tips
-    cash_sales_only = money_round(float(cash_total))
-    card_tips_f = money_round(float(card_tips_total))
-    cash_expected = money_round(cash_sales_only - card_tips_f)
+    cash_sales_only = money_float(cash_total)
+    card_tips_f = money_float(card_tips_total)
+    cash_expected = money_float(cash_sales_only - card_tips_f)
 
     over_short = None
     actual_cash = None
     if body and body.actual_cash_counted is not None:
-        actual_cash = money_round(body.actual_cash_counted)
-        over_short = money_round(actual_cash - cash_expected)
+        actual_cash = money_float(body.actual_cash_counted)
+        over_short = money_float(actual_cash - cash_expected)
 
     summary = {
         "date": today,
@@ -1663,9 +1663,9 @@ async def split_evenly(
         )
 
     total = float(order.total)
-    per_person = money_round(total / request.num_ways)
+    per_person = money_float(total / request.num_ways)
     # Last person pays remainder to avoid rounding loss
-    last_person = money_round(total - per_person * (request.num_ways - 1))
+    last_person = money_float(total - money_round(total / request.num_ways) * (request.num_ways - 1))
 
     return {
         "success": True,
@@ -1727,7 +1727,7 @@ async def adjust_tip_on_order(
         terminal_id=settings.terminal_id,
         order_id=order_id,
         payment_id=request.payment_id,
-        tip_amount=tip_amt,
+        tip_amount=money_float(tip_amt),
         previous_tip=previous_tip,
     )
     await ledger.append(evt)
@@ -1756,7 +1756,7 @@ async def adjust_tip_on_order(
         "success": True,
         "order_id": order_id,
         "payment_id": request.payment_id,
-        "tip_amount": tip_amt,
+        "tip_amount": money_float(tip_amt),
         "previous_tip": previous_tip,
         "device_adjusted": device_adjusted,
         "device_warning": device_error,

@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from app.core.event_ledger import EventLedger
 from app.core.events import create_event, EventType
-from app.core.money import money_round
+from app.core.money import money_round, money_float
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
@@ -212,15 +212,15 @@ def _generate_order_events(day_date, order_num, servers, weighted_items):
 
     # PAYMENT
     subtotal_f = float(subtotal)
-    tax = money_round(subtotal_f * TAX_RATE)
-    card_total = money_round(subtotal_f + tax)
+    tax = float(money_round(subtotal_f * TAX_RATE))
+    card_total = float(money_round(subtotal_f + tax))
     payment_id = f"pay-{order_id}"
     payment_ts = order_ts + timedelta(minutes=random.randint(15, 45))
     method = random.choices(["card", "cash"], weights=[70, 30], k=1)[0]
 
     if method == "cash":
-        cash_discount = money_round(card_total * CASH_DISCOUNT_RATE)
-        sale_amount = money_round(card_total - cash_discount)
+        cash_discount = float(money_round(card_total * CASH_DISCOUNT_RATE))
+        sale_amount = float(money_round(card_total - cash_discount))
         events.append(_make_event(
             EventType.DISCOUNT_APPROVED,
             {
@@ -254,7 +254,7 @@ def _generate_order_events(day_date, order_num, servers, weighted_items):
     # TIP (card orders, ~90%)
     if method == "card" and random.random() < 0.90:
         tip_pct = random.choices([0.15, 0.18, 0.20, 0.22, 0.25], weights=[20, 30, 30, 15, 5], k=1)[0]
-        tip_amount = money_round(card_total * tip_pct)
+        tip_amount = float(money_round(card_total * tip_pct))
         tip_ts = confirm_ts + timedelta(seconds=random.randint(5, 60))
         events.append(_make_event(
             EventType.TIP_ADJUSTED,
@@ -323,10 +323,10 @@ def _generate_day(day_date, staff, weighted_items, is_today=False):
             {
                 "date": day_date.strftime("%Y-%m-%d"),
                 "total_orders": len(order_ids),
-                "total_sales": money_round(day_total_sales),
-                "total_tips": money_round(day_total_tips),
-                "cash_total": money_round(day_cash),
-                "card_total": money_round(day_card),
+                "total_sales": money_float(day_total_sales),
+                "total_tips": money_float(day_total_tips),
+                "cash_total": money_float(day_cash),
+                "card_total": money_float(day_card),
                 "order_ids": order_ids,
                 "payment_count": payment_count,
             },

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -18,7 +19,7 @@ from ...core.events import (
     create_event, EventType,
 )
 from ...core.projections import project_order, project_orders
-from ...core.money import money_round
+from ...core.money import money_round, money_float
 from ...config import settings
 from typing import Optional as Opt
 
@@ -248,7 +249,7 @@ async def process_sale(
             close_evt = order_closed(
                 terminal_id=settings.terminal_id,
                 order_id=request.order_id,
-                total=order.total,
+                total=money_float(order.total),
             )
             await ledger.append(close_evt)
 
@@ -298,9 +299,11 @@ async def process_cash_payment(
         # Cap the discount so partial (seat-level) payments don't inflate
         # the discount to include unpaid seats' value.
         rate = settings.cash_discount_rate
-        naive_discount = money_round(order.total - request.amount)
+        req_amount = Decimal(str(request.amount))
+        naive_discount = money_round(order.total - req_amount)
         if rate > 0 and rate < 1:
-            max_discount = money_round(request.amount * rate / (1 - rate))
+            rate_d = Decimal(str(rate))
+            max_discount = money_round(req_amount * rate_d / (Decimal("1") - rate_d))
         else:
             max_discount = naive_discount
         cash_discount = max(0, min(naive_discount, max_discount))
@@ -311,7 +314,7 @@ async def process_cash_payment(
                 payload={
                     "order_id": request.order_id,
                     "discount_type": "cash_dual_pricing",
-                    "amount": cash_discount,
+                    "amount": money_float(cash_discount),
                     "reason": "Cash dual-pricing discount",
                 },
                 correlation_id=request.order_id,
@@ -329,7 +332,7 @@ async def process_cash_payment(
         terminal_id=settings.terminal_id,
         order_id=request.order_id,
         payment_id=payment_id,
-        amount=sale_amount,
+        amount=money_float(sale_amount),
         method="cash",
         seat_numbers=request.seat_numbers,
     )
@@ -341,8 +344,8 @@ async def process_cash_payment(
         order_id=request.order_id,
         payment_id=payment_id,
         transaction_id=f"cash_{uuid.uuid4().hex[:8]}",
-        amount=sale_amount,
-        tax=order.tax,
+        amount=money_float(sale_amount),
+        tax=money_float(order.tax),
         seat_numbers=request.seat_numbers,
     )
     await ledger.append(confirm_evt)
@@ -353,7 +356,7 @@ async def process_cash_payment(
             terminal_id=settings.terminal_id,
             order_id=request.order_id,
             payment_id=payment_id,
-            tip_amount=money_round(request.tip),
+            tip_amount=money_float(money_round(request.tip)),
         )
         await ledger.append(tip_evt)
 
@@ -366,7 +369,7 @@ async def process_cash_payment(
         close_evt = order_closed(
             terminal_id=settings.terminal_id,
             order_id=request.order_id,
-            total=order.total,
+            total=money_float(order.total),
         )
         await ledger.append(close_evt)
 
@@ -374,7 +377,7 @@ async def process_cash_payment(
         "success": True,
         "payment_id": payment_id,
         "order_id": request.order_id,
-        "amount": sale_amount,
+        "amount": money_float(sale_amount),
         "tip": request.tip,
     }
 
@@ -427,7 +430,7 @@ async def adjust_tip(
         terminal_id=settings.terminal_id,
         order_id=request.order_id,
         payment_id=request.payment_id,
-        tip_amount=tip_amt,
+        tip_amount=money_float(tip_amt),
         previous_tip=previous_tip,
     )
     await ledger.append(evt)
@@ -457,7 +460,7 @@ async def adjust_tip(
         "success": True,
         "order_id": request.order_id,
         "payment_id": request.payment_id,
-        "tip_amount": tip_amt,
+        "tip_amount": money_float(tip_amt),
         "previous_tip": previous_tip,
         "device_adjusted": device_adjusted,
         "device_warning": device_error,
@@ -563,11 +566,12 @@ async def process_refund(
     refund_amount = money_round(request.amount if request.amount is not None else target.amount)
     if refund_amount <= 0:
         raise HTTPException(status_code=400, detail="Refund amount must be positive")
-    if refund_amount > money_round(target.amount - already_refunded):
+    remaining = money_round(Decimal(str(target.amount)) - already_refunded)
+    if refund_amount > remaining:
         raise HTTPException(
             status_code=400,
-            detail=f"Refund amount ${refund_amount:.2f} exceeds remaining refundable "
-                   f"${money_round(target.amount - already_refunded):.2f}"
+            detail=f"Refund amount ${money_float(refund_amount):.2f} exceeds remaining refundable "
+                   f"${money_float(remaining):.2f}"
         )
 
     from ...core.events import cash_refund_due
@@ -575,7 +579,7 @@ async def process_refund(
         terminal_id=settings.terminal_id,
         order_id=request.order_id,
         payment_id=request.payment_id,
-        amount=refund_amount,
+        amount=money_float(refund_amount),
         reason=request.reason,
     )
     await ledger.append(refund_evt)
@@ -584,7 +588,7 @@ async def process_refund(
         "success": True,
         "order_id": request.order_id,
         "payment_id": request.payment_id,
-        "refund_amount": refund_amount,
+        "refund_amount": money_float(refund_amount),
         "reason": request.reason,
         "approved_by": request.approved_by,
     }

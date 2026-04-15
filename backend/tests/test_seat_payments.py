@@ -17,6 +17,7 @@ Scenarios:
 
 import os
 import uuid
+from decimal import Decimal
 
 import pytest
 import pytest_asyncio
@@ -236,7 +237,7 @@ class TestSeatPaymentProjection:
         order = await _get_order(ledger, oid)
         assert order.paid_seats == []
         assert order.payments[0].seat_numbers == []
-        assert order.amount_paid == 10.70
+        assert order.amount_paid == Decimal("10.70")
 
     @pytest.mark.asyncio
     async def test_paid_seats_deduplicates(self, ledger):

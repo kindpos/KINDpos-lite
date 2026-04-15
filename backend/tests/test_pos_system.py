@@ -148,9 +148,9 @@ class TestFinancialAccuracy:
         await _create_order(ledger, oid)
         await _add_item(ledger, oid, "i1", "Burger", 10.00)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 10.00
-        assert order.tax == 0.70
-        assert order.total == 10.70
+        assert order.subtotal == Decimal("10.00")
+        assert order.tax == Decimal("0.70")
+        assert order.total == Decimal("10.70")
 
     @pytest.mark.asyncio
     async def test_tax_after_flat_discount(self, ledger):
@@ -167,9 +167,9 @@ class TestFinancialAccuracy:
         )
         await ledger.append(disc)
         order = await _get_order(ledger, oid)
-        assert order.discount_total == 5.00
+        assert order.discount_total == Decimal("5.00")
         assert order.tax == money_round(45.00 * TAX_RATE)  # 3.15
-        assert order.total == money_round(50.00 - 5.00 + 45.00 * TAX_RATE)  # 48.15
+        assert order.total == money_round(50.00 - 5.00 + 45.00 * TAX_RATE)  # 48.15 (both sides Decimal)
 
     @pytest.mark.asyncio
     async def test_tax_rounding_half_up(self, ledger):
@@ -194,7 +194,7 @@ class TestFinancialAccuracy:
         )
         await ledger.append(mod_evt)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 23.00
+        assert order.subtotal == Decimal("23.00")
 
     @pytest.mark.asyncio
     async def test_split_payment_balance_tracking(self, ledger):
@@ -207,13 +207,13 @@ class TestFinancialAccuracy:
 
         await _pay(ledger, oid, "p1", 20.00)
         order = await _get_order(ledger, oid)
-        assert order.amount_paid == 20.00
-        assert order.balance_due == money_round(full - 20.00)
+        assert order.amount_paid == Decimal("20.00")
+        assert order.balance_due == money_round(full - Decimal("20.00"))
 
         await _pay(ledger, oid, "p2", 33.50)
         order = await _get_order(ledger, oid)
-        assert order.amount_paid == 53.50
-        assert order.balance_due == 0.00
+        assert order.amount_paid == Decimal("53.50")
+        assert order.balance_due == Decimal("0.00")
         assert order.is_fully_paid
 
     @pytest.mark.asyncio
@@ -229,7 +229,7 @@ class TestFinancialAccuracy:
         await _pay(ledger, oid, "p2", 10.70, method="card")
         await _pay(ledger, oid, "p3", 10.70, method="cash")
         order = await _get_order(ledger, oid)
-        assert order.amount_paid == 32.10
+        assert order.amount_paid == Decimal("32.10")
         assert order.is_fully_paid
         assert order.status == "paid"
 
@@ -244,7 +244,7 @@ class TestFinancialAccuracy:
 
         await _pay(ledger, oid, "p1", 10.00, method="cash")
         order = await _get_order(ledger, oid)
-        assert order.balance_due == money_round(total - 10.00)  # -4.65
+        assert order.balance_due == money_round(total - Decimal("10.00"))  # -4.65
         assert order.balance_due < 0
 
     @pytest.mark.asyncio
@@ -255,7 +255,7 @@ class TestFinancialAccuracy:
         for i in range(100):
             await _add_item(ledger, oid, f"i{i}", "Penny item", 0.01)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 1.00
+        assert order.subtotal == Decimal("1.00")
 
     @pytest.mark.asyncio
     async def test_discount_exceeding_subtotal_clamped(self, ledger):
@@ -272,16 +272,16 @@ class TestFinancialAccuracy:
         )
         await ledger.append(disc)
         order = await _get_order(ledger, oid)
-        assert order.discount_total == 5.00
-        assert order.tax == 0.00  # taxable clamped to 0
-        assert order.total == 0.00  # total clamped to 0
+        assert order.discount_total == Decimal("5.00")
+        assert order.tax == Decimal("0.00")  # taxable clamped to 0
+        assert order.total == Decimal("0.00")  # total clamped to 0
 
     @pytest.mark.asyncio
     async def test_tip_precision_rounding(self, ledger):
         """Tip of 2.6666666 rounds to 2.67 via money_round."""
-        assert money_round(2.6666666) == 2.67
-        assert money_round(2.665) == 2.67  # half-up
-        assert money_round(2.664) == 2.66
+        assert money_round(2.6666666) == Decimal("2.67")
+        assert money_round(2.665) == Decimal("2.67")  # half-up
+        assert money_round(2.664) == Decimal("2.66")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -304,11 +304,11 @@ class TestTransactionFlow:
         order = await _get_order(ledger, oid)
         assert order.items[0].sent is True
 
-        await _pay(ledger, oid, "p1", order.total)
+        await _pay(ledger, oid, "p1", float(order.total))
         order = await _get_order(ledger, oid)
         assert order.status == "paid"
 
-        await _close_order(ledger, oid, order.total)
+        await _close_order(ledger, oid, float(order.total))
         order = await _get_order(ledger, oid)
         assert order.status == "closed"
 
@@ -366,12 +366,12 @@ class TestTransactionFlow:
         await _add_item(ledger, oid, "i1", "Burger", 10.00)
         await _add_item(ledger, oid, "i2", "Fries", 5.00)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 15.00
+        assert order.subtotal == Decimal("15.00")
 
         evt = item_removed(terminal_id=TERMINAL, order_id=oid, item_id="i1")
         await ledger.append(evt)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 5.00
+        assert order.subtotal == Decimal("5.00")
         assert len(order.items) == 1
 
     @pytest.mark.asyncio
@@ -389,7 +389,7 @@ class TestTransactionFlow:
         )
         await ledger.append(disc)
         order = await _get_order(ledger, oid)
-        assert order.discount_total == 14.00
+        assert order.discount_total == Decimal("14.00")
         assert order.total == money_round(0 + 0 * TAX_RATE)  # 0.00
 
     @pytest.mark.asyncio
@@ -404,7 +404,7 @@ class TestTransactionFlow:
         )
         await ledger.append(add_mod)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 12.00
+        assert order.subtotal == Decimal("12.00")
 
         rm_mod = modifier_applied(
             terminal_id=TERMINAL, order_id=oid, item_id="i1",
@@ -413,7 +413,7 @@ class TestTransactionFlow:
         )
         await ledger.append(rm_mod)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 10.00
+        assert order.subtotal == Decimal("10.00")
 
     @pytest.mark.asyncio
     async def test_payment_failed_not_counted(self, ledger):
@@ -433,7 +433,7 @@ class TestTransactionFlow:
         )
         await ledger.append(fail)
         order = await _get_order(ledger, oid)
-        assert order.amount_paid == 0.00
+        assert order.amount_paid == Decimal("0.00")
         assert order.payments[0].status == "failed"
         assert order.status == "open"
 
@@ -528,7 +528,7 @@ class TestTransactionFlow:
         await _close_order(ledger, oid, 10.70)  # second close
         order = await _get_order(ledger, oid)
         assert order.status == "closed"
-        assert order.total == 10.70
+        assert order.total == Decimal("10.70")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -725,7 +725,7 @@ class TestConcurrencyAndLoad:
         assert len(orders) == 50
         for oid in order_ids:
             assert oid in orders
-            assert orders[oid].subtotal == 10.00
+            assert orders[oid].subtotal == Decimal("10.00")
 
     @pytest.mark.asyncio
     async def test_concurrent_payments_no_cross_contamination(self, ledger):
@@ -742,7 +742,7 @@ class TestConcurrencyAndLoad:
 
         for oid in oids:
             order = await _get_order(ledger, oid)
-            assert order.amount_paid == 10.70
+            assert order.amount_paid == Decimal("10.70")
             assert len(order.payments) == 1
 
     @pytest.mark.asyncio
@@ -765,7 +765,7 @@ class TestConcurrencyAndLoad:
         for i in range(200):
             await _add_item(ledger, oid, f"i{i}", f"Item {i}", 0.50)
         order = await _get_order(ledger, oid)
-        assert order.subtotal == 100.00
+        assert order.subtotal == Decimal("100.00")
         assert len(order.items) == 200
 
 
@@ -783,8 +783,8 @@ class TestReportingReconciliation:
         await _add_item(ledger, o1, "i1", "Steak", 45.00)
         await _add_item(ledger, o1, "i2", "Wine", 14.00)
         order1 = await _get_order(ledger, o1)
-        await _pay(ledger, o1, "p1", order1.total, method="cash")
-        await _close_order(ledger, o1, order1.total)
+        await _pay(ledger, o1, "p1", float(order1.total), method="cash")
+        await _close_order(ledger, o1, float(order1.total))
 
         o2 = _oid()
         await _create_order(ledger, o2, server_id="srv-1", server_name="Alice")
@@ -793,13 +793,13 @@ class TestReportingReconciliation:
         await _add_item(ledger, o2, "i5", "Beer", 9.00)
         await _add_item(ledger, o2, "i6", "Beer", 9.00)
         order2 = await _get_order(ledger, o2)
-        await _pay(ledger, o2, "p2", order2.total, method="card")
+        await _pay(ledger, o2, "p2", float(order2.total), method="card")
         tip_evt = tip_adjusted(
             terminal_id=TERMINAL, order_id=o2, payment_id="p2",
             tip_amount=12.40,
         )
         await ledger.append(tip_evt)
-        await _close_order(ledger, o2, order2.total)
+        await _close_order(ledger, o2, float(order2.total))
 
         return o1, o2, order1, order2
 
@@ -864,16 +864,16 @@ class TestReportingReconciliation:
         total_sales = money_round(order1.total + order2.total)
 
         evt = batch_submitted(
-            terminal_id=TERMINAL, order_count=2, total_amount=total_sales,
-            cash_total=order1.total, card_total=order2.total,
+            terminal_id=TERMINAL, order_count=2, total_amount=float(total_sales),
+            cash_total=float(order1.total), card_total=float(order2.total),
             order_ids=[o1, o2],
         )
         await ledger.append(evt)
         events = await ledger.get_events_by_type(EventType.BATCH_SUBMITTED)
         assert len(events) == 1
-        assert events[0].payload["total_amount"] == total_sales
-        assert events[0].payload["cash_total"] == order1.total
-        assert events[0].payload["card_total"] == order2.total
+        assert events[0].payload["total_amount"] == float(total_sales)
+        assert events[0].payload["cash_total"] == float(order1.total)
+        assert events[0].payload["card_total"] == float(order2.total)
 
     @pytest.mark.asyncio
     async def test_day_closed_boundary(self, ledger):
@@ -883,8 +883,8 @@ class TestReportingReconciliation:
 
         close_evt = day_closed(
             terminal_id=TERMINAL, date="2026-04-05",
-            total_orders=2, total_sales=total, total_tips=12.40,
-            cash_total=order1.total, card_total=order2.total,
+            total_orders=2, total_sales=float(total), total_tips=12.40,
+            cash_total=float(order1.total), card_total=float(order2.total),
             order_ids=[o1, o2], payment_count=2,
         )
         await ledger.append(close_evt)
@@ -917,7 +917,7 @@ class TestReportingReconciliation:
                     else:
                         card += Decimal(str(p.amount))
 
-        total_paid = float(cash + card)
+        total_paid = money_round(cash + card)
         assert total_paid == money_round(order1.total + order2.total)
 
     @pytest.mark.asyncio
@@ -935,10 +935,10 @@ class TestReportingReconciliation:
         )
         await ledger.append(disc)
         order = await _get_order(ledger, oid)
-        assert order.discount_total == 10.00
+        assert order.discount_total == Decimal("10.00")
         # net = subtotal - discount = 50 - 10 = 40
         net = order.subtotal - order.discount_total
-        assert net == 40.00
+        assert net == Decimal("40.00")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -962,7 +962,7 @@ class TestOfflineResilience:
             events = await ledger.get_events_by_correlation(oid)
             assert len(events) == 2
             order = _project(events)
-            assert order.subtotal == 10.00
+            assert order.subtotal == Decimal("10.00")
 
     @pytest.mark.asyncio
     async def test_hash_chain_valid_after_reopen(self, tmp_path):

@@ -5,11 +5,33 @@ The main entry point for the backend API.
 """
 
 from contextlib import asynccontextmanager
+from decimal import Decimal
+import json
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import os
 import sys
+
+
+class DecimalJSONResponse(JSONResponse):
+    """JSONResponse that serializes Decimal values to float."""
+    def render(self, content):
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+            default=self._default,
+        ).encode("utf-8")
+
+    @staticmethod
+    def _default(o):
+        if isinstance(o, Decimal):
+            return float(o)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
 
 from app.api.routes.printing import print_queue
 from app.printing.print_dispatcher import PrintDispatcher
@@ -138,6 +160,7 @@ app = FastAPI(
     version=settings.app_version,
     description="Nice. Dependable. Yours.",
     lifespan=lifespan,
+    default_response_class=DecimalJSONResponse,
 )
 
 # CORS middleware (allows frontend to connect)

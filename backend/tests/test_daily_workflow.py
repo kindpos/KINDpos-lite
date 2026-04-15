@@ -22,6 +22,7 @@ Walks through a complete day of service via the event ledger:
 import pytest
 import pytest_asyncio
 import os
+from decimal import Decimal
 from pathlib import Path
 
 from app.core.event_ledger import EventLedger
@@ -109,7 +110,7 @@ async def test_full_daily_workflow(ledger):
     order1 = project_order(order1_events)
     assert order1 is not None
     assert len(order1.items) == 2
-    assert order1.subtotal == 59.00
+    assert order1.subtotal == Decimal("59.00")
     assert order1.status == "open"
 
     # ─── 4. SEND TO KITCHEN ──────────────────────────────────────
@@ -130,7 +131,7 @@ async def test_full_daily_workflow(ledger):
     # ─── 5. CASH PAYMENT ON ORDER 1 ─────────────────────────────
     # Initiate + confirm (cash is immediate)
     pay1_id = "pay_cash_001"
-    total1 = order1.total
+    total1 = float(order1.total)
 
     evt = payment_initiated(
         terminal_id=TERMINAL,
@@ -155,13 +156,13 @@ async def test_full_daily_workflow(ledger):
     order1 = project_order(order1_events)
     assert order1.status == "paid"
     assert order1.is_fully_paid
-    assert order1.balance_due == 0
+    assert order1.balance_due == Decimal("0")
 
     # Close order 1
     evt = order_closed(
         terminal_id=TERMINAL,
         order_id=order1_id,
-        total=order1.total,
+        total=float(order1.total),
     )
     await ledger.append(evt)
 
@@ -206,11 +207,11 @@ async def test_full_daily_workflow(ledger):
     order2_events = await ledger.get_events_by_correlation(order2_id)
     order2 = project_order(order2_events)
     assert len(order2.items) == 4
-    assert order2.subtotal == 62.00
+    assert order2.subtotal == Decimal("62.00")
 
     # ─── 8. CARD PAYMENT (initiate + confirm) ────────────────────
     pay2_id = "pay_card_001"
-    total2 = order2.total
+    total2 = float(order2.total)
 
     evt = payment_initiated(
         terminal_id=TERMINAL,
@@ -239,7 +240,7 @@ async def test_full_daily_workflow(ledger):
     evt = order_closed(
         terminal_id=TERMINAL,
         order_id=order2_id,
-        total=order2.total,
+        total=float(order2.total),
     )
     await ledger.append(evt)
 
@@ -271,9 +272,9 @@ async def test_full_daily_workflow(ledger):
     submit_evt = batch_submitted(
         terminal_id=TERMINAL,
         order_count=2,
-        total_amount=total_sales,
-        cash_total=pre_close_orders[order1_id].total,
-        card_total=pre_close_orders[order2_id].total,
+        total_amount=float(total_sales),
+        cash_total=float(pre_close_orders[order1_id].total),
+        card_total=float(pre_close_orders[order2_id].total),
         order_ids=[order1_id, order2_id],
     )
     await ledger.append(submit_evt)
@@ -281,7 +282,7 @@ async def test_full_daily_workflow(ledger):
     batch_events = await ledger.get_events_by_type(EventType.BATCH_SUBMITTED)
     assert len(batch_events) == 1
     assert batch_events[0].payload["order_count"] == 2
-    assert batch_events[0].payload["total_amount"] == round(total_sales, 2)
+    assert batch_events[0].payload["total_amount"] == float(round(total_sales, 2))
 
     # ─── 12. CLOCK OUT ───────────────────────────────────────────
     clock_out_evt = user_logged_out(
@@ -299,10 +300,10 @@ async def test_full_daily_workflow(ledger):
         terminal_id=TERMINAL,
         date="2026-03-27",
         total_orders=2,
-        total_sales=total_sales,
+        total_sales=float(total_sales),
         total_tips=12.40,
-        cash_total=pre_close_orders[order1_id].total,
-        card_total=pre_close_orders[order2_id].total,
+        cash_total=float(pre_close_orders[order1_id].total),
+        card_total=float(pre_close_orders[order2_id].total),
         order_ids=[order1_id, order2_id],
         payment_count=2,
     )
@@ -314,7 +315,7 @@ async def test_full_daily_workflow(ledger):
     day_payload = day_events[0].payload
     assert day_payload["date"] == "2026-03-27"
     assert day_payload["total_orders"] == 2
-    assert day_payload["total_sales"] == round(total_sales, 2)
+    assert day_payload["total_sales"] == float(round(total_sales, 2))
     assert day_payload["total_tips"] == 12.40
     assert len(day_payload["order_ids"]) == 2
     assert day_payload["payment_count"] == 2

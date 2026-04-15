@@ -14,7 +14,7 @@ import uuid
 import hashlib
 import json
 
-from .money import money_round
+from .money import money_round, money_float
 
 
 class OrderType(str, Enum):
@@ -116,6 +116,7 @@ class EventType(str, Enum):
     TIPOUT_RULE_CREATED = "tipout.rule_created"
     TIPOUT_RULE_UPDATED = "tipout.rule_updated"
     TIPOUT_RULE_DELETED = "tipout.rule_deleted"
+    TIPOUT_OVERRIDE = "tipout.override"
 
     # ── Menu management (LEDGER_OPERATIONAL) ─────────────────────────
     MENU_ITEM_CREATED = "menu.item_created"
@@ -537,7 +538,7 @@ def payment_initiated(
     payload = {
         "order_id": order_id,
         "payment_id": payment_id,
-        "amount": amount,
+        "amount": money_float(amount),
         "method": method,
     }
     if seat_numbers:
@@ -566,8 +567,8 @@ def payment_confirmed(
         "order_id": order_id,
         "payment_id": payment_id,
         "transaction_id": transaction_id,
-        "amount": amount,
-        "tax": money_round(tax),
+        "amount": money_float(amount),
+        "tax": money_float(tax),
     }
     if seat_numbers:
         payload["seat_numbers"] = seat_numbers
@@ -619,7 +620,7 @@ def order_closed(
         terminal_id=terminal_id,
         payload={
             "order_id": order_id,
-            "total": total,
+            "total": money_float(total),
         },
         correlation_id=order_id,
         **kwargs
@@ -1113,8 +1114,8 @@ def tip_adjusted(
         payload={
             "order_id": order_id,
             "payment_id": payment_id,
-            "tip_amount": tip_amount,
-            "previous_tip": previous_tip,
+            "tip_amount": money_float(tip_amount) if tip_amount is not None else 0.0,
+            "previous_tip": money_float(previous_tip) if previous_tip else 0.0,
         },
         correlation_id=order_id,
         **kwargs
@@ -1136,7 +1137,7 @@ def cash_refund_due(
         payload={
             "order_id": order_id,
             "payment_id": payment_id,
-            "amount": money_round(amount),
+            "amount": money_float(amount),
             "method": "cash",
             "reason": reason,
         },
@@ -1157,7 +1158,25 @@ def cash_tips_declared(
         terminal_id=terminal_id,
         payload={
             "server_id": server_id,
-            "amount": money_round(amount),
+            "amount": money_float(amount),
+        },
+        **kwargs
+    )
+
+
+def tipout_override(
+        terminal_id: str,
+        server_id: str,
+        amount: float,
+        **kwargs
+) -> Event:
+    """Record a manager-approved tip-out override for a server's shift."""
+    return create_event(
+        event_type=EventType.TIPOUT_OVERRIDE,
+        terminal_id=terminal_id,
+        payload={
+            "server_id": server_id,
+            "amount": money_float(amount),
         },
         **kwargs
     )
@@ -1196,9 +1215,9 @@ def batch_submitted(
         terminal_id=terminal_id,
         payload={
             "order_count": order_count,
-            "total_amount": money_round(total_amount),
-            "cash_total": money_round(cash_total),
-            "card_total": money_round(card_total),
+            "total_amount": money_float(total_amount),
+            "cash_total": money_float(cash_total),
+            "card_total": money_float(card_total),
             "order_ids": order_ids,
             "submitted_at": datetime.now(timezone.utc).isoformat(),
         },
@@ -1226,10 +1245,10 @@ def day_closed(
         payload={
             "date": date,
             "total_orders": total_orders,
-            "total_sales": money_round(total_sales),
-            "total_tips": money_round(total_tips),
-            "cash_total": money_round(cash_total),
-            "card_total": money_round(card_total),
+            "total_sales": money_float(total_sales),
+            "total_tips": money_float(total_tips),
+            "cash_total": money_float(cash_total),
+            "card_total": money_float(card_total),
             "order_ids": order_ids,
             "payment_count": payment_count,
             "opened_at": opened_at,

@@ -6,6 +6,7 @@ All tests pass tax_rate=0.07 explicitly to avoid config dependency.
 """
 
 import pytest
+from decimal import Decimal
 from app.core.events import (
     EventType,
     create_event,
@@ -77,7 +78,7 @@ class TestProjectOrder:
             _add_item("item-2", "Fries", 5.50),
         ]
         order = project_order(events, tax_rate=TAX_RATE)
-        assert order.subtotal == 15.50
+        assert order.subtotal == Decimal("15.50")
         assert len(order.items) == 2
 
     def test_item_removed(self):
@@ -103,7 +104,7 @@ class TestProjectOrder:
         order = project_order(events, tax_rate=TAX_RATE)
         assert order.items[0].quantity == 3
         # subtotal = 10.00 * 3 = 30.00
-        assert order.subtotal == 30.00
+        assert order.subtotal == Decimal("30.00")
 
     def test_modifier_applied(self):
         events = [
@@ -120,7 +121,7 @@ class TestProjectOrder:
         ]
         order = project_order(events, tax_rate=TAX_RATE)
         # subtotal = (10.00 + 1.50) * 1 = 11.50
-        assert order.subtotal == 11.50
+        assert order.subtotal == Decimal("11.50")
         assert len(order.items[0].modifiers) == 1
 
     def test_modifier_removed(self):
@@ -147,7 +148,7 @@ class TestProjectOrder:
         ]
         order = project_order(events, tax_rate=TAX_RATE)
         assert len(order.items[0].modifiers) == 0
-        assert order.subtotal == 10.00
+        assert order.subtotal == Decimal("10.00")
 
     def test_payment_initiated_and_confirmed(self):
         events = [
@@ -171,7 +172,7 @@ class TestProjectOrder:
         order = project_order(events, tax_rate=TAX_RATE)
         assert len(order.payments) == 1
         assert order.payments[0].status == "confirmed"
-        assert order.amount_paid == 10.70
+        assert order.amount_paid == Decimal("10.70")
         assert order.is_fully_paid
 
     def test_payment_failed_status(self):
@@ -247,11 +248,11 @@ class TestProjectOrder:
             ),
         ]
         order = project_order(events, tax_rate=TAX_RATE)
-        assert order.discount_total == 5.00
+        assert order.discount_total == Decimal("5.00")
         # tax should be on (50.00 - 5.00) = 45.00 * 0.07 = 3.15
         assert order.tax == money_round(45.00 * TAX_RATE)
         # total = 50.00 - 5.00 + 3.15 = 48.15
-        assert order.total == money_round(50.00 - 5.00 + 45.00 * TAX_RATE)
+        assert order.total == money_round(50.00 - 5.00 + 45.00 * TAX_RATE)  # both sides Decimal
 
     def test_split_payment_balance_due(self):
         events = [
@@ -275,9 +276,9 @@ class TestProjectOrder:
             ),
         ]
         order = project_order(events, tax_rate=TAX_RATE)
-        assert order.amount_paid == 30.00
+        assert order.amount_paid == Decimal("30.00")
         expected_total = money_round(50.00 + 50.00 * TAX_RATE)
-        assert order.balance_due == money_round(expected_total - 30.00)
+        assert order.balance_due == money_round(expected_total - Decimal("30.00"))
 
     def test_fully_paid_auto_status(self):
         # When confirmed payments >= total, status should become "paid"
@@ -351,6 +352,6 @@ class TestProjectOrder:
         ]
         order = project_order(events, tax_rate=0.10)
         # tax = 10.00 * 0.10 = 1.00
-        assert order.tax == 1.00
+        assert order.tax == Decimal("1.00")
         # total = 10.00 + 1.00 = 11.00
-        assert order.total == 11.00
+        assert order.total == Decimal("11.00")

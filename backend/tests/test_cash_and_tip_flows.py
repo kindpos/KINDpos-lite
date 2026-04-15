@@ -1,4 +1,5 @@
 import pytest
+from decimal import Decimal
 from app.core.event_ledger import EventLedger
 from app.core.events import (
     EventType,
@@ -127,7 +128,7 @@ async def test_cash_payment_auto_closes_order(ledger):
     events = await ledger.get_events_by_correlation(order_id)
     order = project_order(events, tax_rate=TEST_TAX_RATE)
     assert order.status == "open"
-    assert order.total == 16.05 # 15.00 * 1.07
+    assert order.total == Decimal("16.05") # 15.00 * 1.07
 
     # Pay EXACT total (including tax)
     request = CashPaymentRequest(order_id=order_id, amount=16.05)

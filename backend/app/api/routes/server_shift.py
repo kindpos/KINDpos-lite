@@ -17,9 +17,9 @@ from datetime import datetime, timezone
 
 from app.api.dependencies import get_ledger
 from app.core.event_ledger import EventLedger
-from app.core.events import EventType
+from app.core.events import EventType, tipout_override
 from app.core.projections import project_orders
-from app.core.money import money_round
+from app.core.money import money_round, money_float
 from app.config import settings
 
 router = APIRouter(prefix="/server/shift", tags=["server-shift"])
@@ -240,11 +240,16 @@ async def patch_tipout(
 ):
     """Update the server's tip-out amount for this shift.
     Requires manager PIN gate on the frontend side."""
-    # For now, this is a stub — tip out is calculated client-side
-    # from the tipout config rules. A proper implementation would
-    # store a shift-level override event.
+    if request.amount < 0:
+        raise HTTPException(status_code=400, detail="Tip-out amount cannot be negative")
+    evt = tipout_override(
+        terminal_id=settings.terminal_id,
+        server_id=server_id,
+        amount=request.amount,
+    )
+    await ledger.append(evt)
     return {
         "success": True,
         "server_id": server_id,
-        "tipout": request.amount,
+        "tipout": money_float(money_round(request.amount)),
     }

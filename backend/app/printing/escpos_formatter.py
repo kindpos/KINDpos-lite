@@ -66,7 +66,12 @@ class ESCPOSFormatter:
         if chars_per_line is not None:
             self.chars_per_line = chars_per_line
         else:
-            self.chars_per_line = 42 if paper_width == 80 else 33
+            if paper_width == 80:
+                self.chars_per_line = 42
+            elif paper_width <= 58:
+                self.chars_per_line = 32
+            else:
+                self.chars_per_line = 33
 
     def _safe_encode(self, text: str) -> bytes:
         """Encode text to bytes, replacing Unicode characters the printer can't handle."""
