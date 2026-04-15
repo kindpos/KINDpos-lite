@@ -94,19 +94,19 @@ class Order:
     _tax_rate: float = None
 
     @property
-    def subtotal(self) -> float:
+    def subtotal(self):
         """Sum of all items. Rounded to prevent float addition drift."""
-        return money_round(sum(item.subtotal for item in self.items))
+        return money_round(sum((Decimal(str(item.subtotal)) for item in self.items), Decimal("0")))
 
     @property
-    def discount_total(self) -> float:
+    def discount_total(self):
         """Sum of all discounts. Rounded to prevent float addition drift."""
-        return money_round(sum(d.get("amount", 0) for d in self.discounts))
+        return money_round(sum((Decimal(str(d.get("amount", 0))) for d in self.discounts), Decimal("0")))
 
     @property
-    def refund_total(self) -> float:
+    def refund_total(self):
         """Sum of all refunds issued on this order."""
-        return money_round(sum(r.get("amount", 0) for r in self.refunds))
+        return money_round(sum((Decimal(str(r.get("amount", 0))) for r in self.refunds), Decimal("0")))
 
     @property
     def tax_rate(self) -> float:
@@ -116,29 +116,29 @@ class Order:
         return settings.tax_rate
 
     @property
-    def tax(self) -> float:
+    def tax(self):
         """Tax collected — prefer event-sourced value from confirmed payments.
         Falls back to computed tax only when no payment has captured tax.
         Fallback is rounded to avoid float drift (e.g. 10.00*0.07)."""
-        captured = sum(p.tax_amount for p in self.payments if p.status == "confirmed")
+        captured = money_round(sum(p.tax_amount for p in self.payments if p.status == "confirmed"))
         if captured > 0:
             return captured
-        taxable = max(0.0, self.subtotal - self.discount_total)
-        return money_round(taxable * self.tax_rate)
+        taxable = max(Decimal("0"), self.subtotal - self.discount_total)
+        return money_round(taxable * Decimal(str(self.tax_rate)))
 
     @property
-    def total(self) -> float:
+    def total(self):
         """Final total (clamped to zero — discount cannot make total negative)."""
         raw = self.subtotal - self.discount_total + self.tax
-        return money_round(max(0.0, raw))
+        return money_round(max(Decimal("0"), raw))
 
     @property
-    def amount_paid(self) -> float:
+    def amount_paid(self):
         """Sum of confirmed payments. Rounded to avoid float addition drift."""
-        return money_round(sum(p.amount for p in self.payments if p.status == "confirmed"))
+        return money_round(sum((Decimal(str(p.amount)) for p in self.payments if p.status == "confirmed"), Decimal("0")))
 
     @property
-    def balance_due(self) -> float:
+    def balance_due(self):
         """Remaining balance."""
         return money_round(self.total - self.amount_paid)
 
