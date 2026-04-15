@@ -1128,7 +1128,7 @@ defineScene({
       });
     }
 
-    var editSeatsBtn1 = buildStyledButton({ label: 'EDIT SEATS', variant: 'dark', size: 'sm', onClick: openEditSeats });
+    var editSeatsBtn1 = buildStyledButton({ label: 'EDIT SEATS', variant: 'mint', size: 'sm', onClick: openEditSeats });
     editSeatsBtn1.wrap.style.flex = '1';
     editSeatsBtn1.wrap.style.height = '48px';
     editSeatsBtn1.inner.style.fontFamily = BTN_FONT;
@@ -1149,7 +1149,7 @@ defineScene({
     voidBtn.inner.style.fontWeight = 'bold';
     row1.appendChild(voidBtn.wrap);
 
-    var resendBtn = buildStyledButton({ label: 'RESEND', variant: 'dark', size: 'sm', onClick: handleResend });
+    var resendBtn = buildStyledButton({ label: 'RESEND', variant: 'mint', size: 'sm', onClick: handleResend });
     resendBtn.wrap.style.flex = '1';
     resendBtn.wrap.style.height = '48px';
     resendBtn.inner.style.fontFamily = BTN_FONT;
