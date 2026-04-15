@@ -199,11 +199,14 @@ function startNetworkScan(card, wrap) {
       var data = JSON.parse(e.data);
       if (data.type === 'device') {
         _scanResults.push(data);
-        discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
+        if (!data.saved_name) {
+          discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
+        }
       } else if (data.type === 'complete') {
         _scanning = false;
         card.style.animation = '';
-        scanLabel.textContent = _scanResults.length + ' device' + (_scanResults.length !== 1 ? 's' : '') + ' found';
+        var newDevices = _scanResults.filter(function(d) { return !d.saved_name; });
+        scanLabel.textContent = newDevices.length + ' new device' + (newDevices.length !== 1 ? 's' : '') + ' found';
         if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
 
         // Add re-scan button at bottom
@@ -249,19 +252,19 @@ function buildDiscoveryCard(dev, scanCard, scanWrap) {
 
   // Device name
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + (isSaved ? T.green : T.gold) + ';';
+  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + (isSaved ? T.green : T.gold) + ';';
   nameEl.textContent = dev.saved_name || dev.name || dev.type || 'Unknown Device';
   dc.card.appendChild(nameEl);
 
   // IP
   var ipEl = document.createElement('div');
-  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.textPrimary + ';';
+  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.textPrimary + ';';
   ipEl.textContent = dev.ip;
   dc.card.appendChild(ipEl);
 
   // MAC
   var macEl = document.createElement('div');
-  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.subtleText + ';';
+  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.subtleText + ';';
   macEl.textContent = 'MAC: ' + (dev.mac || '—');
   dc.card.appendChild(macEl);
 

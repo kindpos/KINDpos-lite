@@ -398,6 +398,7 @@ async def scan_network_stream(
                 })
 
                 # Step 3: TCP probe hosts in batches of 5, stream as found
+                found_ips = set()
                 batch_size = 5
                 for i in range(0, len(arp_hosts), batch_size):
                     batch = arp_hosts[i:i + batch_size]
@@ -406,6 +407,21 @@ async def scan_network_stream(
                           for h in batch]
                     )
                     for r in results:
+                        if r is not None:
+                            found_ips.add(r['ip'])
+                            yield _sse({**_annotate(r), 'type': 'device'})
+
+                # Step 4: Probe saved device IPs not found in ARP sweep
+                missed = [
+                    s for s in saved.values()
+                    if s['ip'] not in found_ips
+                ]
+                if missed:
+                    missed_results = await asyncio.gather(
+                        *[_probe_host(s['ip'], s['mac'], ports, PROBE_TIMEOUT)
+                          for s in missed]
+                    )
+                    for r in missed_results:
                         if r is not None:
                             yield _sse({**_annotate(r), 'type': 'device'})
 
