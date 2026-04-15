@@ -354,6 +354,10 @@ def project_order(events: list[Event], tax_rate: float = None) -> Optional[Order
                         payment.error = payload.get("error") or payload.get("processor_message")
                         break
 
+                # Revert order to "open" if no longer fully paid
+                if order.status == "paid" and not order.is_fully_paid:
+                    order.status = "open"
+
         elif event.event_type == EventType.TIP_ADJUSTED:
             if order:
                 for payment in order.payments:

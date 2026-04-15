@@ -463,14 +463,35 @@ defineScene({
     }
 
     function reopenSeat(seatId) {
-      SceneManager.interrupt('disc-pin', {
-        onConfirm: function() {
-          delete state.paidSeats[seatId];
-          state.selected[seatId] = true;
-          showToast(seatId + ' reopened', { bg: T.gold, duration: 2000 });
-          rebuildSeatGrid();
-          updateSeatVisuals();
-          updateSummary();
+      // Find payment(s) covering this seat
+      var seatNum = parseInt(seatId.replace('S-', ''), 10) || 0;
+      var seatPayments = [];
+      if (state.order && state.order.payments) {
+        for (var pi = 0; pi < state.order.payments.length; pi++) {
+          var p = state.order.payments[pi];
+          if (p.status === 'confirmed' && p.seat_numbers && p.seat_numbers.indexOf(seatNum) >= 0) {
+            seatPayments.push(p);
+          }
+        }
+      }
+      SceneManager.interrupt('seat-payment', {
+        params: { seatId: seatId, payments: seatPayments },
+        onConfirm: function(paymentId) {
+          // Void the selected payment
+          fetch('/api/v1/orders/' + state.orderId + '/payments/' + paymentId + '/void', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'Payment voided from check overview' }),
+          }).then(function(r) {
+            if (r.ok) {
+              showToast(seatId + ' payment voided', { bg: T.gold, duration: 2000 });
+              refreshOrder();
+            } else {
+              showToast('Failed to void payment', { bg: T.red });
+            }
+          }).catch(function() {
+            showToast('Failed to void payment', { bg: T.red });
+          });
         },
         onCancel: function() {},
       });
@@ -1419,6 +1440,77 @@ SceneManager.register({
     cancelBtn.style.width = '240px';
     panel.appendChild(cancelBtn);
     container.appendChild(panel);
+  },
+  unmount: function() {},
+});
+
+// ═══════════════════════════════════════════════════
+//  Seat Payment Interrupt — shown on long-press of paid seat
+// ═══════════════════════════════════════════════════
+
+SceneManager.register({
+  name: 'seat-payment',
+  mount: function(container, params) {
+    var seatId = params.seatId || '??';
+    var payments = params.payments || [];
+
+    container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+    var panel = document.createElement('div');
+    panel.style.cssText = [
+      'display:flex;flex-direction:column;align-items:center;gap:10px;',
+      'background:' + T.bgDark + ';border:4px solid ' + T.gold + ';border-radius:5px;',
+      'padding:20px 24px;min-width:320px;max-width:440px;',
+    ].join('');
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-family:' + T.fh + ';font-size:' + T.fsConSm + ';color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;';
+    title.textContent = '// ' + seatId + ' PAYMENT //';
+    panel.appendChild(title);
+
+    if (payments.length === 0) {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.dimText + ';padding:8px 0;';
+      empty.textContent = 'No payments found for this seat';
+      panel.appendChild(empty);
+    } else {
+      for (var pi = 0; pi < payments.length; pi++) {
+        (function(p) {
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:4px 0;';
+
+          var info = document.createElement('div');
+          info.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsConSm + ';color:' + T.textPrimary + ';';
+          info.textContent = p.method.toUpperCase() + '  ' + fmt(p.amount);
+          row.appendChild(info);
+
+          var delBtn = buildButton('DELETE', {
+            fill: T.darkBtn, color: T.vermillion, fontSize: T.fsConSm, height: 38,
+            onTap: function() {
+              SceneManager.resolveInterrupt('seat-payment');
+              params.onConfirm(p.payment_id);
+            },
+          });
+          delBtn.style.minWidth = '90px';
+          row.appendChild(delBtn);
+
+          panel.appendChild(row);
+        })(payments[pi]);
+      }
+    }
+
+    var cancelBtn = buildButton('CANCEL', {
+      fill: T.darkBtn, color: T.textPrimary, fontSize: T.fsCon, height: 44,
+      onTap: function() { SceneManager.resolveInterrupt('seat-payment'); params.onCancel(); },
+    });
+    cancelBtn.style.width = '100%';
+    cancelBtn.style.marginTop = '4px';
+    panel.appendChild(cancelBtn);
+    container.appendChild(panel);
+
+    container.addEventListener('pointerup', function(e) {
+      if (e.target === container) { SceneManager.resolveInterrupt('seat-payment'); params.onCancel(); }
+    });
   },
   unmount: function() {},
 });

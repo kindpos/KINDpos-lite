@@ -945,6 +945,54 @@ async def confirm_payment(
     return OrderResponse.from_order(order)
 
 
+@router.post("/{order_id}/payments/{payment_id}/void", response_model=OrderResponse)
+async def void_payment(
+        order_id: str,
+        payment_id: str,
+        reason: Optional[str] = None,
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Void a specific confirmed payment, reopening the seat(s) it covered."""
+    order = await get_order_or_404(ledger, order_id)
+
+    if order.status == "closed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot void payments on a closed order"
+        )
+
+    target = None
+    for p in order.payments:
+        if p.payment_id == payment_id:
+            target = p
+            break
+    if not target:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Payment {payment_id} not found"
+        )
+    if target.status != "confirmed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Payment {payment_id} is {target.status}, not confirmed"
+        )
+
+    event = create_event(
+        event_type=EventType.PAYMENT_CANCELLED,
+        terminal_id=settings.terminal_id,
+        correlation_id=order_id,
+        payload={
+            "order_id": order_id,
+            "payment_id": payment_id,
+            "error": reason or "Payment voided",
+        },
+    )
+    await ledger.append(event)
+
+    order = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(order)
+
+
 @router.post("/{order_id}/close", response_model=OrderResponse)
 async def close_order(
         order_id: str,
