@@ -6,8 +6,7 @@
 
 import { T, chamfer, buildStyledButton } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
-import { SceneManager } from '../scene-manager.js';
-import { defineScene } from '../scene-manager-2.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { buildCard, applyCardBevel, hexToRgba } from '../theme-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import './check-overview.js';

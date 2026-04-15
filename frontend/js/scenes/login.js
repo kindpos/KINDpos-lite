@@ -6,8 +6,7 @@
 
 import { T, buildStyledButton } from '../tokens.js';
 import { buildNumpad } from '../numpad.js';
-import { SceneManager } from '../scene-manager.js';
-import { defineScene } from '../scene-manager-2.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 // ── Constants (immutable — no state reset needed) ──

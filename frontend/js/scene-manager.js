@@ -519,3 +519,98 @@ export const SceneManager = {
   // Hooks
   onBeforeTransition:    onBeforeTransition,
 };
+
+// ═══════════════════════════════════════════════════
+//  defineScene — SM2 higher-level API
+//  Compact scene format with auto-managed state and event cleanup
+// ═══════════════════════════════════════════════════
+
+function _deepCopy(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    var arr = [];
+    for (var i = 0; i < obj.length; i++) arr.push(_deepCopy(obj[i]));
+    return arr;
+  }
+  var copy = {};
+  var keys = Object.keys(obj);
+  for (var j = 0; j < keys.length; j++) {
+    copy[keys[j]] = _deepCopy(obj[keys[j]]);
+  }
+  return copy;
+}
+
+function _registerSubScene(name, subDef) {
+  if (!subDef || !subDef.render) {
+    console.error('defineScene: sub-scene "' + name + '" must have a render function');
+    return;
+  }
+  SceneManager.register({
+    name: name,
+    mount: function(container, params) {
+      if (params === undefined) params = {};
+      return subDef.render(container, params);
+    },
+    unmount: function() {
+      if (subDef.unmount) subDef.unmount();
+    },
+  });
+}
+
+export function defineScene(def) {
+  if (!def || !def.name) {
+    console.error('defineScene: scene must have a name');
+    return;
+  }
+  if (!def.render) {
+    console.error('defineScene: scene "' + def.name + '" must have a render function');
+    return;
+  }
+
+  var defaultState = def.state ? _deepCopy(def.state) : {};
+  var currentState = null;
+  var boundEvents = [];
+
+  var scene = {
+    name: def.name,
+    mount: function(container, params) {
+      if (params === undefined) params = {};
+      currentState = _deepCopy(defaultState);
+      if (def.events) {
+        var eventKeys = Object.keys(def.events);
+        for (var i = 0; i < eventKeys.length; i++) {
+          var evName = eventKeys[i];
+          var handler = def.events[evName];
+          SceneManager.on(evName, handler);
+          boundEvents.push({ event: evName, handler: handler });
+        }
+      }
+      return def.render(container, params, currentState);
+    },
+    unmount: function() {
+      for (var i = 0; i < boundEvents.length; i++) {
+        SceneManager.off(boundEvents[i].event, boundEvents[i].handler);
+      }
+      boundEvents = [];
+      if (def.unmount) def.unmount(currentState);
+      currentState = null;
+    },
+  };
+
+  SceneManager.register(scene);
+
+  if (def.interrupts) {
+    var intKeys = Object.keys(def.interrupts);
+    for (var j = 0; j < intKeys.length; j++) {
+      _registerSubScene(intKeys[j], def.interrupts[intKeys[j]]);
+    }
+  }
+  if (def.transactionals) {
+    var trKeys = Object.keys(def.transactionals);
+    for (var k = 0; k < trKeys.length; k++) {
+      _registerSubScene(trKeys[k], def.transactionals[trKeys[k]]);
+    }
+  }
+
+  return scene;
+}

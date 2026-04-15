@@ -4,8 +4,7 @@
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
-import { defineScene } from '../scene-manager-2.js';
-import { SceneManager } from '../scene-manager.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { T, buildStyledButton, applySunkenStyle, chamfer, bevelEdges } from '../tokens.js';
 import { buildButton, showToast } from '../components.js';
 import { setSceneName, setHeaderBack } from '../app.js';

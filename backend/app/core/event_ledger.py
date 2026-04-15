@@ -14,6 +14,13 @@ Key properties:
 import asyncio
 import aiosqlite
 import json
+from decimal import Decimal
+
+
+def _decimal_default(o):
+    if isinstance(o, Decimal):
+        return float(o)
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, AsyncGenerator
@@ -21,14 +28,6 @@ from contextlib import asynccontextmanager
 
 import logging
 from decimal import Decimal
-
-
-class _DecimalEncoder(json.JSONEncoder):
-    """JSON encoder that converts Decimal to float for ledger storage."""
-    def default(self, o):
-        if isinstance(o, Decimal):
-            return float(o)
-        return super().default(o)
 
 from .events import Event, EventType, parse_event_type
 
@@ -212,7 +211,7 @@ class EventLedger:
                     event.timestamp.isoformat(),
                     event.terminal_id,
                     event.event_type.value,
-                    json.dumps(event.payload, cls=_DecimalEncoder),
+                    json.dumps(event.payload, default=_decimal_default),
                     event.user_id,
                     event.user_role,
                     event.correlation_id,
@@ -288,7 +287,7 @@ class EventLedger:
                         event.timestamp.isoformat(),
                         event.terminal_id,
                         event.event_type.value,
-                        json.dumps(event.payload, cls=_DecimalEncoder),
+                        json.dumps(event.payload, default=_decimal_default),
                         event.user_id,
                         event.user_role,
                         event.correlation_id,

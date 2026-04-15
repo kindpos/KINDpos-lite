@@ -7,8 +7,7 @@
 import { T, buildStyledButton } from '../tokens.js';
 import { showToast, buildRoleButton } from '../components.js';
 import { buildCard } from '../theme-manager.js';
-import { SceneManager } from '../scene-manager.js';
-import { defineScene } from '../scene-manager-2.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 
 var API = '/api/v1';

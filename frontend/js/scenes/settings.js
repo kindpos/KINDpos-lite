@@ -1,15 +1,15 @@
 // =======================================================
-//  KINDpos Terminal — Configuration Scene (v2 Rebuild)
-//  Two-tab dashboard: TERMINAL | HARDWARE
+//  KINDpos Terminal — Hardware Configuration Scene
+//  Single-page device manager: Kitchen Printers, Receipt Printers,
+//  Card Readers, Scan Network
 //  Nice. Dependable. Yours.
 // =======================================================
 
 import { T, chamfer, buildStyledButton, shadowColor } from '../tokens.js';
 import { buildButton } from '../components.js';
-import { SceneManager } from '../scene-manager.js';
+import { SceneManager, defineScene } from '../scene-manager.js';
 import { setSceneName, setHeaderBack } from '../app.js';
-// Theme picker disabled — venue themes deferred to Overseer settings
-// import { THEMES } from '../themes/index.js';
+import { showKeyboard, hideKeyboard } from '../keyboard.js';
 
 // == Helpers ============================================
 
@@ -72,82 +72,25 @@ function buildDepthCard(borderColor, opts) {
 
 // == State =============================================
 
-var _activeTab = 'terminal';  // 'terminal' | 'hardware'
-var _contentEl = null;        // container for tab content
-var _tabBtns = {};            // { terminal: {wrap,card,label}, hardware: {wrap,card,label} }
+var _contentEl = null;
 var _rootEl = null;
-var _clockIv = null;
-
-// Theme state — deferred to Overseer settings
-
-// Data state (carried over for later chunks)
 var _savedDevices = [];
 var _scanResults = [];
 var _scanning = false;
-var _expandedCard = null;     // for drill-down
-var _scrollPositions = {};    // scroll position per tab
-var _terminalConfig = {
-  terminalName: 'KIND BBQ',
-  ipAddress: '—',
-  wifiSSID: '—',
-  taxRate: '7.0',
-  cashDiscount: '4.0',
-};
+var _expandedCard = null;
+var _scrollPositions = {};
+var _scanEventSource = null;
+var _scanGen = 0;
+var _selectedDeviceMac = null;
+var _autoEditMac = null;
 
-// == Tab Card Builder ==================================
+// == Device Categories =================================
 
-function buildTabCard(label, borderColor, isActive) {
-  var dc = buildDepthCard(borderColor, { chamfer: 10, glow: true });
-
-  dc.card.style.display = 'flex';
-  dc.card.style.alignItems = 'center';
-  dc.card.style.justifyContent = 'center';
-  dc.card.style.cursor = 'pointer';
-  dc.card.style.transition = 'background 80ms';
-  dc.card.style.userSelect = 'none';
-  dc.card.style.webkitUserSelect = 'none';
-
-  var lbl = document.createElement('div');
-  lbl.style.cssText = [
-    'font-family:' + T.fh + ';',
-    'font-size:50px;font-weight:bold;font-style:italic;',
-    'text-align:center;',
-    'pointer-events:none;',
-  ].join('');
-  lbl.textContent = label;
-  dc.card.appendChild(lbl);
-
-  function applyState(active) {
-    if (active) {
-      dc.card.style.background = borderColor;
-      lbl.style.color = T.bgDark;
-    } else {
-      dc.card.style.background = T.bgDark;
-      lbl.style.color = borderColor;
-    }
-  }
-
-  applyState(isActive);
-
-  dc.wrap.style.flex = '1';
-  dc.wrap.style.height = '100%';
-
-  return { wrap: dc.wrap, card: dc.card, label: lbl, applyState: applyState };
-}
-
-// == Tab Switching =====================================
-
-function switchTab(tabName) {
-  if (_activeTab === tabName) return;
-  _activeTab = tabName;
-
-  // Update tab visual states
-  if (_tabBtns.terminal) _tabBtns.terminal.applyState(tabName === 'terminal');
-  if (_tabBtns.hardware) _tabBtns.hardware.applyState(tabName === 'hardware');
-
-  // Re-render content area
-  renderContent();
-}
+var DEVICE_CATEGORIES = [
+  { id: 'kitchen-printers', label: 'KITCHEN\nPRINTERS' },
+  { id: 'receipt-printers', label: 'RECEIPT\nPRINTERS' },
+  { id: 'card-readers',     label: 'CARD\nREADERS' },
+];
 
 // == Content Rendering =================================
 
@@ -155,102 +98,37 @@ function renderContent() {
   if (!_contentEl) return;
   _contentEl.innerHTML = '';
 
-  // If a card is expanded (drill-down), render that instead
   if (_expandedCard) {
     renderDrillDown(_contentEl, _expandedCard);
     return;
   }
 
-  if (_activeTab === 'terminal') {
-    renderTerminalContent(_contentEl);
-  } else {
-    renderHardwareContent(_contentEl);
-  }
+  loadDevices().then(function() {
+    if (!_contentEl) return;
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;height:100%;box-sizing:border-box;';
+
+    DEVICE_CATEGORIES.forEach(function(cat) {
+      grid.appendChild(buildCategoryCard(cat, T.gold));
+    });
+    grid.appendChild(buildScanNetworkCard());
+
+    _contentEl.innerHTML = '';
+    _contentEl.appendChild(grid);
+  });
 }
 
-// == TERMINAL Tab: 2-column category grid ==============
-
-var TERMINAL_CATEGORIES = [
-  { id: 'display',      label: 'DISPLAY' },
-  { id: 'network',      label: 'NETWORK' },
-  { id: 'store-info',   label: 'STORE INFO' },
-  { id: 'tax-pricing',  label: 'TAX & PRICING' },
-  { id: 'security',     label: 'SECURITY' },
-  { id: 'system',       label: 'SYSTEM' },
-];
-
-function renderTerminalContent(el) {
-  var grid = document.createElement('div');
-  grid.style.cssText = [
-    'display:grid;',
-    'grid-template-columns:1fr 1fr;',
-    'gap:12px;',
-    'height:100%;',
-    'overflow-y:auto;',
-    'scrollbar-width:none;',
-    '-webkit-overflow-scrolling:touch;',
-    'align-content:start;',
-    'padding-bottom:8px;',
-  ].join('');
-
-  // Hide scrollbar for WebKit
-  if (!document.getElementById('cfg-grid-style')) {
-    var style = document.createElement('style');
-    style.id = 'cfg-grid-style';
-    style.textContent = '.cfg-grid::-webkit-scrollbar{display:none}';
-    document.head.appendChild(style);
-  }
-  grid.classList.add('cfg-grid');
-
-  _scrollPositions = _scrollPositions || {};
-
-  // Restore scroll position
-  var savedScroll = _scrollPositions[_activeTab] || 0;
-  requestAnimationFrame(function() { grid.scrollTop = savedScroll; });
-
-  // Save scroll on scroll
-  grid.addEventListener('scroll', function() {
-    _scrollPositions[_activeTab] = grid.scrollTop;
+function _refreshCategoryCards() {
+  if (!_contentEl) return;
+  var cards = _contentEl.querySelectorAll('[data-cat-id]');
+  cards.forEach(function(oldWrap) {
+    var catId = oldWrap.dataset.catId;
+    var cat = DEVICE_CATEGORIES.find(function(c) { return c.id === catId; });
+    if (cat) {
+      var newCard = buildCategoryCard(cat, T.gold);
+      oldWrap.parentNode.replaceChild(newCard, oldWrap);
+    }
   });
-
-  TERMINAL_CATEGORIES.forEach(function(cat) {
-    grid.appendChild(buildCategoryCard(cat, T.numpadChassis));
-  });
-
-  el.appendChild(grid);
-}
-
-// == HARDWARE Tab: 2x2 category grid ==================
-
-var HARDWARE_CATEGORIES = [
-  { id: 'printers',    label: 'PRINTERS' },
-  { id: 'readers',     label: 'CARD READERS' },
-  { id: 'peripherals', label: 'PERIPHERAL DEVICES' },
-];
-
-var _scanEventSource = null;
-var _scanGen = 0;
-
-function renderHardwareContent(el) {
-  var grid = document.createElement('div');
-  grid.style.cssText = [
-    'display:grid;',
-    'grid-template-columns:1fr 1fr;',
-    'gap:12px;',
-    'height:100%;',
-    'align-content:start;',
-    'box-sizing:border-box;',
-  ].join('');
-
-  // Device category cards (PRINTERS, CARD READERS, PERIPHERAL DEVICES)
-  HARDWARE_CATEGORIES.forEach(function(cat) {
-    grid.appendChild(buildCategoryCard(cat, T.gold));
-  });
-
-  // SCAN NETWORK card
-  grid.appendChild(buildScanNetworkCard());
-
-  el.appendChild(grid);
 }
 
 // == SCAN NETWORK Card (3 states) ======================
@@ -324,9 +202,9 @@ function startNetworkScan(card, wrap) {
   // Discovery area (devices appear here as found)
   var discoveryArea = document.createElement('div');
   discoveryArea.style.cssText = [
-    'display:flex;flex-direction:column;gap:6px;',
+    'display:grid;grid-template-columns:1fr 1fr;gap:8px;',
     'width:100%;overflow-y:auto;scrollbar-width:none;',
-    'max-height:calc(100% - 60px);',
+    'max-height:calc(100% - 60px);align-content:start;',
   ].join('');
   card.appendChild(discoveryArea);
 
@@ -339,11 +217,16 @@ function startNetworkScan(card, wrap) {
       var data = JSON.parse(e.data);
       if (data.type === 'device') {
         _scanResults.push(data);
-        discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
+        if (!data.saved_name) {
+          discoveryArea.appendChild(buildDiscoveryCard(data, card, wrap));
+        }
       } else if (data.type === 'complete') {
         _scanning = false;
         card.style.animation = '';
-        scanLabel.textContent = _scanResults.length + ' device' + (_scanResults.length !== 1 ? 's' : '') + ' found';
+        var newCount = _scanResults.filter(function(d) { return !d.saved_name; }).length;
+        scanLabel.textContent = newCount > 0
+          ? newCount + ' new device' + (newCount !== 1 ? 's' : '') + ' found'
+          : 'All devices configured';
         if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
 
         // Add re-scan button at bottom
@@ -377,71 +260,72 @@ function startNetworkScan(card, wrap) {
 // == Discovery Card (inside SCAN NETWORK) ==============
 
 function buildDiscoveryCard(dev, scanCard, scanWrap) {
-  var row = document.createElement('div');
-  row.style.cssText = [
-    'background:' + T.bg + ';',
-    'padding:6px 10px;',
-    'clip-path:' + chamfer(4) + ';',
-    'display:flex;align-items:center;justify-content:space-between;gap:8px;',
+  var dc = buildDepthCard(T.gold, { chamfer: 8, glow: false });
+
+  dc.card.style.cssText += [
+    'padding:10px 12px;',
+    'display:flex;flex-direction:column;gap:3px;',
+    'min-height:70px;',
   ].join('');
 
-  var info = document.createElement('div');
-  info.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;';
+  // Device name
+  var nameEl = document.createElement('div');
+  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.gold + ';';
+  nameEl.textContent = dev.name || dev.type || 'Unknown Device';
+  dc.card.appendChild(nameEl);
 
-  var typeName = dev.name || dev.type || 'Unknown Device';
-  var typeEl = document.createElement('div');
-  typeEl.style.cssText = 'font-family:' + T.fh + ';font-size:12px;color:' + T.gold + ';';
-  typeEl.textContent = typeName;
-  info.appendChild(typeEl);
+  // IP
+  var ipEl = document.createElement('div');
+  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.textPrimary + ';';
+  ipEl.textContent = dev.ip;
+  dc.card.appendChild(ipEl);
 
-  var addrEl = document.createElement('div');
-  addrEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.mint + ';';
-  addrEl.textContent = 'IP: ' + dev.ip + '   MAC: ' + (dev.mac || '—');
-  info.appendChild(addrEl);
+  // MAC
+  var macEl = document.createElement('div');
+  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.subtleText + ';';
+  macEl.textContent = 'MAC: ' + (dev.mac || '—');
+  dc.card.appendChild(macEl);
 
-  row.appendChild(info);
+  // Type selection buttons
+  var btnArea = document.createElement('div');
+  btnArea.style.cssText = 'display:flex;gap:6px;margin-top:6px;';
 
-  // Already saved?
-  if (dev.saved_name) {
-    var confLabel = document.createElement('div');
-    confLabel.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.green + ';white-space:nowrap;';
-    confLabel.textContent = 'CONFIGURED';
-    row.appendChild(confLabel);
-  } else {
-    var btnArea = document.createElement('div');
-    btnArea.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
-
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.height = '24px';
-    saveBtn.wrap.style.minWidth = '50px';
-    saveBtn.inner.style.fontSize = '10px';
-    saveBtn.wrap.addEventListener('pointerup', function() {
+  function _saveAs(type, label) {
+    var btn = buildStyledButton({ variant: 'mint', size: 'sm', label: label });
+    btn.wrap.style.height = '28px';
+    btn.wrap.style.flex = '1';
+    btn.inner.style.fontSize = '10px';
+    btn.wrap.addEventListener('pointerup', function() {
+      dev._saveType = type;
+      dev._saveName = label + ' ' + dev.ip.split('.').pop();
       saveDiscoveredDevice(dev).then(function(ok) {
         if (ok) {
           btnArea.innerHTML = '';
-          var done = document.createElement('span');
-          done.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.green + ';';
-          done.textContent = 'SAVED';
+          var done = document.createElement('div');
+          done.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.green + ';';
+          done.textContent = '\u2713 SAVED AS ' + label.toUpperCase();
           btnArea.appendChild(done);
+          dc.card.style.borderTopColor = _lightenHex(T.green, 0.2);
+          dc.card.style.borderLeftColor = _lightenHex(T.green, 0.2);
+          dc.card.style.borderBottomColor = _darkenHex(T.green, 0.3);
+          dc.card.style.borderRightColor = _darkenHex(T.green, 0.3);
         }
       });
     });
-    btnArea.appendChild(saveBtn.wrap);
-
-    var editBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'EDIT' });
-    editBtn.wrap.style.height = '24px';
-    editBtn.wrap.style.minWidth = '50px';
-    editBtn.inner.style.fontSize = '10px';
-    editBtn.inner.style.color = T.textPrimary;
-    editBtn.wrap.addEventListener('pointerup', function() {
-      // TODO: Chunk 5 — open device edit form
-    });
-    btnArea.appendChild(editBtn.wrap);
-
-    row.appendChild(btnArea);
+    return btn.wrap;
   }
 
-  return row;
+  // Show type-appropriate buttons
+  var isPrinter = dev.type === 'printer' || dev.type === 'thermal' || /printer|thermal/i.test(dev.name || '');
+  if (isPrinter) {
+    btnArea.appendChild(_saveAs('kitchen', 'Kitchen'));
+    btnArea.appendChild(_saveAs('receipt', 'Receipt'));
+  } else {
+    btnArea.appendChild(_saveAs('card_reader', 'Card Reader'));
+  }
+  dc.card.appendChild(btnArea);
+
+  return dc.wrap;
 }
 
 // == Hardware API ======================================
@@ -450,8 +334,8 @@ function saveDiscoveredDevice(dev) {
   var device = {
     mac: dev.mac,
     ip: dev.ip,
-    type: dev.type || 'receipt',
-    name: dev.name || 'Device ' + dev.ip,
+    type: dev._saveType || dev.type || 'receipt',
+    name: dev._saveName || dev.name || 'Device ' + dev.ip,
     port: dev.port || 9100,
   };
   return fetch('/api/v1/hardware/devices', {
@@ -462,8 +346,10 @@ function saveDiscoveredDevice(dev) {
     if (r.ok) {
       return r.json().then(function(saved) {
         _savedDevices.push(saved);
-        // Hot-reload
+        // Hot-reload payment device
         fetch('/api/v1/payments/reload-devices', { method: 'POST' }).catch(function() {});
+        // Refresh category cards to show new device
+        _refreshCategoryCards();
         return true;
       });
     }
@@ -484,36 +370,87 @@ function buildCategoryCard(cat, borderColor) {
   var dc = buildDepthCard(borderColor, { chamfer: 10, glow: true });
 
   dc.card.style.display = 'flex';
-  dc.card.style.alignItems = 'center';
-  dc.card.style.justifyContent = 'center';
-  dc.card.style.cursor = 'pointer';
-  dc.card.style.minHeight = '100px';
-  dc.card.style.userSelect = 'none';
-  dc.card.style.webkitUserSelect = 'none';
+  dc.card.style.flexDirection = 'column';
+  dc.card.style.padding = '12px';
+  dc.card.style.gap = '8px';
+  dc.card.style.overflow = 'hidden';
 
+  // Title
   var lbl = document.createElement('div');
   lbl.style.cssText = [
     'font-family:' + T.fh + ';',
-    'font-size:32px;font-weight:bold;font-style:italic;',
+    'font-size:28px;font-weight:bold;font-style:italic;',
     'color:' + borderColor + ';',
-    'text-align:center;',
-    'pointer-events:none;',
+    'text-align:center;flex-shrink:0;',
   ].join('');
-  lbl.textContent = cat.label;
+  lbl.textContent = cat.label.replace('\n', ' ');
   dc.card.appendChild(lbl);
+
+  // Device list area
+  var deviceList = document.createElement('div');
+  deviceList.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;scrollbar-width:none;';
+
+  var devices = _devicesForCategory(cat.id);
+  if (devices.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.subtleText + ';text-align:center;padding:8px;';
+    empty.textContent = 'No devices';
+    deviceList.appendChild(empty);
+  } else {
+    devices.forEach(function(dev) {
+      var devDc = buildDepthCard(T.green, { chamfer: 8, glow: false });
+      devDc.card.style.cssText += [
+        'padding:10px 12px;',
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
+        'cursor:pointer;user-select:none;',
+        'text-align:center;',
+      ].join('');
+
+      var nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:26px;font-weight:bold;color:' + T.gold + ';';
+      nameEl.textContent = dev.name || 'Unnamed';
+      devDc.card.appendChild(nameEl);
+
+      var ipEl = document.createElement('div');
+      ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:20px;color:' + T.textPrimary + ';';
+      ipEl.textContent = dev.ip;
+      devDc.card.appendChild(ipEl);
+
+      var macEl = document.createElement('div');
+      macEl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.numpadChassis + ';';
+      macEl.textContent = 'MAC: ' + (dev.mac || '—');
+      devDc.card.appendChild(macEl);
+
+      var status = document.createElement('div');
+      status.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.green + ';margin-top:2px;';
+      status.textContent = '\u25CF ONLINE';
+      devDc.card.appendChild(status);
+
+      devDc.wrap.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        _selectedDeviceMac = dev.mac;
+        _autoEditMac = dev.mac;
+        _expandOrigin = {
+          top: dc.wrap.getBoundingClientRect().top,
+          left: dc.wrap.getBoundingClientRect().left,
+          width: dc.wrap.getBoundingClientRect().width,
+          height: dc.wrap.getBoundingClientRect().height,
+        };
+        _expandedCard = { id: cat.id, label: cat.label.replace('\n', ' '), borderColor: borderColor };
+        renderContent();
+      });
+
+      deviceList.appendChild(devDc.wrap);
+    });
+  }
+  dc.card.appendChild(deviceList);
 
   dc.wrap.dataset.catId = cat.id;
 
   dc.wrap.addEventListener('pointerup', function() {
-    // Store origin rect for animation
     var rect = dc.wrap.getBoundingClientRect();
-    _expandOrigin = {
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-    };
-    _expandedCard = { id: cat.id, label: cat.label, tab: _activeTab, borderColor: borderColor };
+    _expandOrigin = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+    _expandedCard = { id: cat.id, label: cat.label.replace('\n', ' '), borderColor: borderColor };
     renderContent();
   });
 
@@ -645,15 +582,9 @@ function collapseDrillDown(expandedEl, containerEl) {
 // == Drill-Down Content Dispatcher =====================
 
 var _drillDownRenderers = {
-  'display':     renderDisplaySettings,
-  'network':     renderNetworkSettings,
-  'store-info':  renderStoreInfoSettings,
-  'tax-pricing': renderTaxPricingSettings,
-  'security':    renderSecuritySettings,
-  'system':      renderSystemSettings,
-  'printers':    renderDeviceGrid,
-  'readers':     renderDeviceGrid,
-  'peripherals': renderDeviceGrid,
+  'kitchen-printers': renderDeviceGrid,
+  'receipt-printers': renderDeviceGrid,
+  'card-readers':     renderDeviceGrid,
 };
 
 function renderDrillDownContent(body, catInfo) {
@@ -730,22 +661,38 @@ function buildPresetButtons(options, current, onSelect) {
 }
 
 function buildTextInput(value, placeholder, onChange) {
-  var input = document.createElement('input');
-  input.type = 'text';
-  input.value = value || '';
-  input.placeholder = placeholder || '';
-  input.style.cssText = [
+  var currentVal = value || '';
+
+  var el = document.createElement('div');
+  el.style.cssText = [
     'background:' + T.bgDark + ';color:' + T.gold + ';',
     'border:2px solid ' + T.border + ';',
     'font-family:' + T.fb + ';font-size:14px;',
     'padding:6px 10px;',
     'clip-path:' + chamfer(4) + ';',
-    'outline:none;width:180px;',
+    'min-width:180px;min-height:28px;',
+    'cursor:pointer;user-select:none;',
   ].join('');
-  input.addEventListener('change', function() {
-    if (onChange) onChange(input.value);
+  el.textContent = currentVal || placeholder || '';
+  if (!currentVal) el.style.color = T.subtleText;
+
+  el.addEventListener('pointerup', function() {
+    showKeyboard({
+      initialValue: currentVal,
+      placeholder: placeholder || '',
+      maxLength: 60,
+      onDone: function(val) {
+        currentVal = val;
+        el.textContent = val || placeholder || '';
+        el.style.color = val ? T.gold : T.subtleText;
+        if (onChange) onChange(val);
+      },
+      onDismiss: function() {},
+      dismissOnDone: true,
+    });
   });
-  return input;
+
+  return el;
 }
 
 function buildSettingsGrid(rows) {
@@ -755,273 +702,36 @@ function buildSettingsGrid(rows) {
   return grid;
 }
 
-// == TERMINAL: DISPLAY =================================
-
-function renderDisplaySettings(body) {
-  var brightness = 100;
-  var resolution = '1024x600';
-  var orientation = 'landscape';
-
-  var grid = buildSettingsGrid([
-    buildSettingRow('Brightness', buildValueLabel(brightness + '%')),
-    buildSettingRow('Resolution', buildPresetButtons([
-      { label: '1024×600', value: '1024x600' },
-      { label: '800×480', value: '800x480' },
-    ], resolution, function(v) {
-      resolution = v;
-      renderDisplaySettings(body);
-    })),
-    buildSettingRow('Orientation', buildPresetButtons([
-      { label: 'Landscape', value: 'landscape' },
-      { label: 'Portrait', value: 'portrait' },
-    ], orientation, function(v) {
-      orientation = v;
-      renderDisplaySettings(body);
-    })),
-  ]);
-
-  body.innerHTML = '';
-  body.appendChild(grid);
-}
-
-// == TERMINAL: NETWORK =================================
-
-function renderNetworkSettings(body) {
-  // Load current values
-  fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).catch(function() { return {}; }).then(function() {
-    var connected = true; // placeholder — no endpoint for connection status
-
-    var connEl = document.createElement('div');
-    connEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (connected ? T.green : T.vermillion) + ';';
-    connEl.textContent = connected ? '● CONNECTED' : '● DISCONNECTED';
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('WiFi SSID', buildTextInput(_terminalConfig.wifiSSID, 'SSID', function(v) {
-        _terminalConfig.wifiSSID = v;
-      })),
-      buildSettingRow('Static IP', buildValueLabel(_terminalConfig.ipAddress)),
-      buildSettingRow('Hostname', buildTextInput('kindpos-terminal', 'hostname')),
-      buildSettingRow('Status', connEl),
-    ]);
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-  });
-}
-
-// == TERMINAL: STORE INFO ==============================
-
-var _storeInfo = {
-  business_name: '',
-  address: '',
-  phone: '',
-  receipt_header: '',
-  receipt_footer: '',
-};
-
-function renderStoreInfoSettings(body) {
-  // Load store config
-  fetch('/api/v1/config/store').then(function(r) {
-    return r.ok ? r.json() : {};
-  }).catch(function() { return {}; }).then(function(data) {
-    if (data.store) {
-      _storeInfo.business_name = data.store.business_name || '';
-      _storeInfo.address = data.store.address || '';
-      _storeInfo.phone = data.store.phone || '';
-      _storeInfo.receipt_header = data.store.receipt_header || '';
-      _storeInfo.receipt_footer = data.store.receipt_footer || '';
-    }
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('Business Name', buildTextInput(_storeInfo.business_name, 'Business name', function(v) { _storeInfo.business_name = v; })),
-      buildSettingRow('Address', buildTextInput(_storeInfo.address, 'Address', function(v) { _storeInfo.address = v; })),
-      buildSettingRow('Phone', buildTextInput(_storeInfo.phone, 'Phone', function(v) { _storeInfo.phone = v; })),
-      buildSettingRow('Receipt Header', buildTextInput(_storeInfo.receipt_header, 'Header text', function(v) { _storeInfo.receipt_header = v; })),
-      buildSettingRow('Receipt Footer', buildTextInput(_storeInfo.receipt_footer, 'Footer text', function(v) { _storeInfo.receipt_footer = v; })),
-    ]);
-
-    // Save button
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.marginTop = '12px';
-    saveBtn.wrap.style.alignSelf = 'flex-start';
-    saveBtn.wrap.addEventListener('pointerup', function() {
-      fetch('/api/v1/config/store/info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(_storeInfo),
-      }).then(function(r) {
-        if (r.ok) saveBtn.inner.textContent = 'SAVED';
-        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-      }).catch(function() {
-        console.warn('[KINDpos] Store info save failed');
-      });
-    });
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-    body.appendChild(saveBtn.wrap);
-  });
-}
-
-// == TERMINAL: TAX & PRICING ===========================
-
-function renderTaxPricingSettings(body) {
-  fetch('/api/v1/config/pricing').then(function(r) {
-    return r.ok ? r.json() : {};
-  }).catch(function() { return {}; }).then(function(data) {
-    var taxRate = data.tax_rate != null ? String(data.tax_rate) : _terminalConfig.taxRate;
-    var cashDiscount = data.cash_discount_rate != null ? String(data.cash_discount_rate) : _terminalConfig.cashDiscount;
-    var dualPricing = parseFloat(cashDiscount) > 0;
-    var rounding = 'standard';
-    var currency = 'USD';
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('Tax Rate %', buildValueLabel(taxRate + '%')),
-      buildSettingRow('Dual Pricing', buildToggleBtn(dualPricing, function(v) {
-        dualPricing = v;
-        renderTaxPricingSettings(body);
-      })),
-      buildSettingRow('Cash Discount %', buildValueLabel(cashDiscount + '%')),
-      buildSettingRow('Rounding', buildPresetButtons([
-        { label: 'Standard', value: 'standard' },
-        { label: 'Up', value: 'up' },
-        { label: 'Down', value: 'down' },
-      ], rounding, function(v) { rounding = v; })),
-      buildSettingRow('Currency', buildPresetButtons([
-        { label: 'USD', value: 'USD' },
-        { label: 'CAD', value: 'CAD' },
-        { label: 'EUR', value: 'EUR' },
-      ], currency, function(v) { currency = v; })),
-    ]);
-
-    // Save button
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.marginTop = '12px';
-    saveBtn.wrap.addEventListener('pointerup', function() {
-      fetch('/api/v1/config/store/cc-rate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cc_processing_rate: parseFloat(taxRate) || 0 }),
-      }).then(function(r) {
-        if (r.ok) saveBtn.inner.textContent = 'SAVED';
-        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-      }).catch(function() {
-        console.warn('[KINDpos] Pricing save failed');
-      });
-    });
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-    body.appendChild(saveBtn.wrap);
-  });
-}
-
-// == TERMINAL: SECURITY ================================
-
-function renderSecuritySettings(body) {
-  fetch('/api/v1/config/roles').then(function(r) {
-    return r.ok ? r.json() : [];
-  }).catch(function() { return []; }).then(function(roles) {
-    var sessionTimeout = 30;
-
-    var grid = buildSettingsGrid([
-      buildSettingRow('Manager PIN', buildValueLabel('••••')),
-      buildSettingRow('Session Timeout', buildValueLabel(sessionTimeout + ' min')),
-    ]);
-
-    // Role permissions grid
-    if (roles.length > 0) {
-      var roleHeader = document.createElement('div');
-      roleHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + T.mint + ';margin-top:12px;margin-bottom:6px;';
-      roleHeader.textContent = 'ROLE PERMISSIONS';
-      grid.appendChild(roleHeader);
-
-      roles.forEach(function(role) {
-        var roleName = role.name || role.role_id || 'Unknown';
-        var perms = role.permissions || [];
-        var permStr = perms.length > 0 ? perms.join(', ') : 'none';
-        grid.appendChild(buildSettingRow(roleName, buildValueLabel(permStr, T.textPrimary)));
-      });
-    }
-
-    // Save button
-    var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-    saveBtn.wrap.style.marginTop = '12px';
-    saveBtn.wrap.addEventListener('pointerup', function() {
-      fetch('/api/v1/config/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([]),
-      }).then(function(r) {
-        if (r.ok) saveBtn.inner.textContent = 'SAVED';
-        setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-      }).catch(function() {
-        console.warn('[KINDpos] Security save failed');
-      });
-    });
-
-    body.innerHTML = '';
-    body.appendChild(grid);
-    body.appendChild(saveBtn.wrap);
-  });
-}
-
-// == TERMINAL: SYSTEM ==================================
-
-function renderSystemSettings(body) {
-  var language = 'en';
-  var updateChannel = 'stable';
-
-  var versionEl = document.createElement('div');
-  versionEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.green + ';';
-  versionEl.textContent = 'KINDpos/lite Vz1.2';
-
-  var grid = buildSettingsGrid([
-    buildSettingRow('Version', versionEl),
-    buildSettingRow('Language', buildPresetButtons([
-      { label: 'English', value: 'en' },
-      { label: 'Español', value: 'es' },
-    ], language, function(v) { language = v; })),
-    buildSettingRow('Update Channel', buildPresetButtons([
-      { label: 'Stable', value: 'stable' },
-      { label: 'Beta', value: 'beta' },
-    ], updateChannel, function(v) { updateChannel = v; })),
-    buildSettingRow('Date', buildValueLabel(new Date().toLocaleDateString())),
-    buildSettingRow('Time', buildValueLabel(new Date().toLocaleTimeString())),
-  ]);
-
-  // Save button
-  var saveBtn = buildStyledButton({ variant: 'mint', size: 'sm', label: 'SAVE' });
-  saveBtn.wrap.style.marginTop = '12px';
-  saveBtn.wrap.addEventListener('pointerup', function() {
-    console.warn('[KINDpos] PUT /api/v1/config/system not implemented yet');
-    saveBtn.inner.textContent = 'SAVED';
-    setTimeout(function() { saveBtn.inner.textContent = 'SAVE'; }, 1500);
-  });
-
-  body.innerHTML = '';
-  body.appendChild(grid);
-  body.appendChild(saveBtn.wrap);
-}
 
 // == HARDWARE: Device Grid =============================
 
 var _selectedDeviceMac = null;
 
 var _deviceTypeMap = {
-  'printers':    ['kitchen', 'receipt'],
-  'readers':     ['card_reader'],
-  'peripherals': [],  // everything else
+  'kitchen-printers': ['kitchen'],
+  'receipt-printers': ['receipt', 'printer', 'thermal'],
+  'card-readers':     ['card_reader', 'dejavoo'],
 };
 
+function _isCardReader(d) {
+  return d.type === 'card_reader' || d.type === 'dejavoo' || /dejavoo|card|reader/i.test(d.name || '');
+}
+function _isKitchenPrinter(d) {
+  return d.type === 'kitchen' || /kitchen|hot|cold|bar|expo/i.test(d.name || '');
+}
+
 function _devicesForCategory(catId) {
-  var types = _deviceTypeMap[catId];
-  if (!types || types.length === 0) {
-    // Peripherals: everything not printer or reader
-    var knownTypes = ['kitchen', 'receipt', 'card_reader'];
-    return _savedDevices.filter(function(d) { return knownTypes.indexOf(d.type) < 0; });
+  if (catId === 'kitchen-printers') {
+    return _savedDevices.filter(function(d) { return _isKitchenPrinter(d); });
   }
-  return _savedDevices.filter(function(d) { return types.indexOf(d.type) >= 0; });
+  if (catId === 'receipt-printers') {
+    // All printers that aren't kitchen and aren't card readers
+    return _savedDevices.filter(function(d) { return !_isCardReader(d) && !_isKitchenPrinter(d); });
+  }
+  if (catId === 'card-readers') {
+    return _savedDevices.filter(function(d) { return _isCardReader(d); });
+  }
+  return _savedDevices;
 }
 
 function _typeLabel(type) {
@@ -1078,7 +788,14 @@ function _renderDeviceGridInner(body, catInfo) {
 
   if (_selectedDeviceMac) {
     var selectedDev = devices.filter(function(d) { return d.mac === _selectedDeviceMac; })[0];
-    if (selectedDev) renderDeviceOps(opsEl, selectedDev, body, catInfo);
+    if (selectedDev) {
+      if (_autoEditMac === selectedDev.mac) {
+        _autoEditMac = null;
+        renderDeviceEditForm(opsEl, selectedDev, body, catInfo);
+      } else {
+        renderDeviceOps(opsEl, selectedDev, body, catInfo);
+      }
+    }
   }
 }
 
@@ -1091,42 +808,43 @@ function buildDeviceCard(dev, parentBody, catInfo) {
   var dc = buildDepthCard(borderColor, { chamfer: 8, glow: isSelected });
 
   dc.card.style.cssText += [
-    'padding:10px 12px;',
-    'display:flex;flex-direction:column;gap:3px;',
+    'padding:16px;',
+    'display:flex;flex-direction:column;gap:6px;',
     'cursor:pointer;',
     'user-select:none;-webkit-user-select:none;',
-    'min-height:80px;',
+    'min-height:120px;',
+    'justify-content:center;',
   ].join('');
 
   if (isSelected) {
     dc.card.style.background = borderColor;
   }
 
-  var textColor = isSelected ? T.bgDark : T.mint;
+  var textColor = isSelected ? T.bgDark : T.gold;
   var subColor = isSelected ? T.bgDark : T.textPrimary;
   var mutedColor = isSelected ? T.bgDark : T.subtleText;
 
   // Device name
   var nameEl = document.createElement('div');
-  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + textColor + ';';
+  nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:22px;font-weight:bold;color:' + textColor + ';';
   nameEl.textContent = dev.name || 'Unnamed';
   dc.card.appendChild(nameEl);
 
   // IP
   var ipEl = document.createElement('div');
-  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + subColor + ';';
+  ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + subColor + ';';
   ipEl.textContent = dev.ip || '—';
   dc.card.appendChild(ipEl);
 
   // MAC
   var macEl = document.createElement('div');
-  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + mutedColor + ';';
+  macEl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + mutedColor + ';';
   macEl.textContent = 'MAC: ' + _shortenMac(dev.mac);
   dc.card.appendChild(macEl);
 
   // Status indicator
   var statusEl = document.createElement('div');
-  statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + (isSelected ? T.bgDark : T.green) + ';margin-top:2px;';
+  statusEl.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + (isSelected ? T.bgDark : T.green) + ';margin-top:4px;';
   statusEl.textContent = '\u25CF ONLINE';
   dc.card.appendChild(statusEl);
 
@@ -1186,39 +904,33 @@ function renderDeviceOps(opsEl, dev, parentBody, catInfo) {
   });
   bar.appendChild(delBtn.wrap);
 
-  // TEST button
-  var testBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'TEST' });
-  testBtn.inner.style.color = T.green;
-  testBtn.inner.style.fontSize = '11px';
-  testBtn.wrap.style.height = '30px';
+  // TEST PRINT button (printers only)
   var testResult = document.createElement('span');
   testResult.style.cssText = 'font-family:' + T.fb + ';font-size:11px;margin-left:8px;';
-  testBtn.wrap.addEventListener('pointerup', function() {
-    testBtn.inner.textContent = '...';
-    var url, payload;
-    if (dev.type === 'kitchen' || dev.type === 'receipt') {
-      url = '/api/v1/hardware/test-print';
-      payload = { ip: dev.ip, port: dev.port || 9100 };
-    } else {
-      url = '/api/v1/hardware/test-connection';
-      payload = { ip: dev.ip, port: dev.port || 9000 };
-    }
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).then(function(r) { return r.json(); }).then(function(d) {
-      testBtn.inner.textContent = 'TEST';
-      testResult.style.color = d.success ? T.green : T.vermillion;
-      testResult.textContent = d.success ? 'OK' : (d.message || 'FAIL');
-    }).catch(function() {
-      testBtn.inner.textContent = 'TEST';
-      testResult.style.color = T.vermillion;
+  if (dev.type === 'kitchen' || dev.type === 'receipt' || dev.type === 'printer' || dev.type === 'thermal') {
+    var testBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'TEST PRINT' });
+    testBtn.inner.style.color = T.green;
+    testBtn.inner.style.fontSize = '11px';
+    testBtn.wrap.style.height = '30px';
+    testBtn.wrap.addEventListener('pointerup', function() {
+      testBtn.inner.textContent = '...';
+      fetch('/api/v1/hardware/test-print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: dev.ip, port: dev.port || 9100 }),
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        testBtn.inner.textContent = 'TEST PRINT';
+        testResult.style.color = d.success ? T.green : T.vermillion;
+        testResult.textContent = d.success ? 'OK' : (d.message || 'FAIL');
+      }).catch(function() {
+        testBtn.inner.textContent = 'TEST PRINT';
+        testResult.style.color = T.vermillion;
       testResult.textContent = 'ERROR';
     });
   });
-  bar.appendChild(testBtn.wrap);
-  bar.appendChild(testResult);
+    bar.appendChild(testBtn.wrap);
+    bar.appendChild(testResult);
+  }
 
   opsEl.appendChild(bar);
 }
@@ -1252,27 +964,6 @@ function renderDeviceEditForm(opsEl, dev, parentBody, catInfo) {
     editType = v;
   })));
   form.appendChild(buildSettingRow('Port', buildTextInput(editPort, 'Port', function(v) { editPort = v; })));
-
-  // Card reader fields
-  if (editType === 'card_reader') {
-    form.appendChild(buildSettingRow('Register ID', buildTextInput(editRegisterId, 'SPIn Register ID', function(v) { editRegisterId = v; })));
-    form.appendChild(buildSettingRow('TPN', buildTextInput(editTpn, 'Terminal Processing #', function(v) { editTpn = v; })));
-    form.appendChild(buildSettingRow('Auth Key', buildTextInput(editAuthKey, 'Auth key', function(v) { editAuthKey = v; })));
-  }
-
-  // Printer-specific: receipt settings
-  if (editType === 'kitchen' || editType === 'receipt') {
-    if (editType === 'kitchen') {
-      form.appendChild(buildSettingRow('Categories', buildTextInput(editCategories, 'e.g. pizza,apps,subs', function(v) { editCategories = v; })));
-    }
-    if (editType === 'receipt') {
-      form.appendChild(buildSettingRow('Chars/Line', buildValueLabel('42')));
-      form.appendChild(buildSettingRow('Paper Width', buildPresetButtons([
-        { label: '80mm', value: '80' },
-        { label: '58mm', value: '58' },
-      ], '80', function() {})));
-    }
-  }
 
   // Save / Cancel
   var btnRow = document.createElement('div');
@@ -1326,89 +1017,53 @@ function renderDeviceEditForm(opsEl, dev, parentBody, catInfo) {
   opsEl.appendChild(form);
 }
 
-// == Scene Builder =====================================
+// == Scene (SM2) =======================================
 
-function buildScene(container) {
-  container.style.cssText = [
-    'display:flex;flex-direction:column;',
-    'width:100%;height:100%;',
-    'background:' + T.bg + ';',
-    'box-sizing:border-box;',
-    'overflow:hidden;',
-  ].join('');
-
-  // Header handled by global #header via setSceneName/setHeaderBack
-
-  // ── Tab cards row ──
-  var tabRow = document.createElement('div');
-  tabRow.style.cssText = [
-    'display:flex;gap:12px;',
-    'padding:12px 16px;',
-    'height:130px;flex-shrink:0;',
-    'box-sizing:border-box;',
-  ].join('');
-
-  // TERMINAL tab (mint, default active)
-  _tabBtns.terminal = buildTabCard('TERMINAL', T.numpadChassis, _activeTab === 'terminal');
-  _tabBtns.terminal.card.addEventListener('pointerup', function() { switchTab('terminal'); });
-  tabRow.appendChild(_tabBtns.terminal.wrap);
-
-  // HARDWARE tab (gold)
-  _tabBtns.hardware = buildTabCard('HARDWARE', T.gold, _activeTab === 'hardware');
-  _tabBtns.hardware.card.addEventListener('pointerup', function() { switchTab('hardware'); });
-  tabRow.appendChild(_tabBtns.hardware.wrap);
-
-  container.appendChild(tabRow);
-
-  // ── Content area ──
-  _contentEl = document.createElement('div');
-  _contentEl.style.cssText = [
-    'flex:1;min-height:0;',
-    'overflow:hidden;',
-    'padding:0 16px 12px;',
-    'box-sizing:border-box;',
-  ].join('');
-  container.appendChild(_contentEl);
-
-  // Initial render
-  renderContent();
-}
-
-// == Registration ======================================
-
-SceneManager.register({
+defineScene({
   name: 'settings',
-  cache: false,
 
-  mount: function(container) {
+  state: {},
+
+  render: function(container) {
     _rootEl = container;
-    _activeTab = 'terminal';
     _contentEl = null;
-    _tabBtns = {};
     _expandedCard = null;
     _savedDevices = [];
     _scanResults = [];
     _scanning = false;
+    _selectedDeviceMac = null;
 
-    setSceneName('Configuration');
+    setSceneName('Hardware');
     setHeaderBack({
       x: true,
       onClose: function() { SceneManager.closeTransactional('settings'); },
     });
 
-    buildScene(container);
+    container.style.cssText = [
+      'display:flex;flex-direction:column;',
+      'width:100%;height:100%;',
+      'background:' + T.bg + ';',
+      'box-sizing:border-box;',
+      'overflow:hidden;',
+    ].join('');
 
-    // Load saved devices for hardware tab
+    _contentEl = document.createElement('div');
+    _contentEl.style.cssText = [
+      'flex:1;min-height:0;',
+      'overflow:hidden;',
+      'padding:12px 16px;',
+      'box-sizing:border-box;',
+    ].join('');
+    container.appendChild(_contentEl);
+
+    renderContent();
     loadDevices();
   },
 
   unmount: function() {
-    if (_clockIv) { clearInterval(_clockIv); _clockIv = null; }
     if (_scanEventSource) { _scanEventSource.close(); _scanEventSource = null; }
     _rootEl = null;
     _contentEl = null;
-    _tabBtns = {};
-    _activeTab = 'terminal';
     _expandedCard = null;
     _savedDevices = [];
     _scanResults = [];
@@ -1417,45 +1072,41 @@ SceneManager.register({
     _scrollPositions = {};
     _selectedDeviceMac = null;
   },
-});
 
-// == Interrupt: Confirm Delete Device ==================
+  interrupts: {
+    'confirm-delete-device': {
+      render: function(container, params) {
+        var card = document.createElement('div');
+        card.style.cssText = [
+          'background:' + T.bg + ';',
+          'border:3px solid ' + T.vermillion + ';',
+          'padding:24px 32px;text-align:center;max-width:400px;',
+          'clip-path:' + chamfer(10) + ';',
+        ].join('');
 
-SceneManager.register({
-  name: 'confirm-delete-device',
-  mount: function(container, params) {
-    container.style.flexDirection = 'column';
-    container.style.gap = '16px';
+        var msg = document.createElement('div');
+        msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';margin-bottom:20px;';
+        msg.textContent = 'Remove ' + (params.deviceName || 'device') + '?';
+        card.appendChild(msg);
 
-    var card = document.createElement('div');
-    card.style.cssText = [
-      'background:' + T.bg + ';',
-      'border:3px solid ' + T.vermillion + ';',
-      'padding:24px 32px;text-align:center;max-width:400px;',
-      'clip-path:' + chamfer(10) + ';',
-    ].join('');
+        var btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
 
-    var msg = document.createElement('div');
-    msg.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mint + ';margin-bottom:20px;';
-    msg.textContent = 'Remove ' + (params.deviceName || 'device') + '?';
-    card.appendChild(msg);
+        btns.appendChild(buildButton('Remove', {
+          fill: T.vermillion, color: T.embVermLabel, fontSize: '16px',
+          width: 120, height: 40,
+          onTap: function() { params.onConfirm(); },
+        }));
+        btns.appendChild(buildButton('Cancel', {
+          fill: T.darkBtn, color: T.mint, fontSize: '16px',
+          width: 120, height: 40,
+          onTap: function() { params.onCancel(); },
+        }));
 
-    var btns = document.createElement('div');
-    btns.style.cssText = 'display:flex;gap:12px;justify-content:center;';
-
-    btns.appendChild(buildButton('Remove', {
-      fill: T.vermillion, color: T.embVermLabel, fontSize: '16px',
-      width: 120, height: 40,
-      onTap: function() { params.onConfirm(); },
-    }));
-    btns.appendChild(buildButton('Cancel', {
-      fill: T.darkBtn, color: T.mint, fontSize: '16px',
-      width: 120, height: 40,
-      onTap: function() { params.onCancel(); },
-    }));
-
-    card.appendChild(btns);
-    container.appendChild(card);
+        card.appendChild(btns);
+        container.appendChild(card);
+      },
+      unmount: function() {},
+    },
   },
-  unmount: function() {},
 });

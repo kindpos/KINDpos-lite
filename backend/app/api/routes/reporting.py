@@ -342,10 +342,10 @@ async def get_sales_summary(
 
     if server_id:
         # Server-specific fields
-        tipout_rate = app_settings.tipout_percent / 100.0
-        tips = float(agg["total_tips"])
-        cash_t = float(agg["cash_tips"])
-        card_t = float(agg["card_tips"])
+        tipout_rate = Decimal(str(app_settings.tipout_percent)) / 100
+        tips = Decimal(str(agg["total_tips"]))
+        cash_t = Decimal(str(agg["cash_tips"]))
+        card_t = Decimal(str(agg["card_tips"]))
         tipout = money_round(tips * tipout_rate)
         take_home = money_round(tips - tipout)
 
@@ -579,8 +579,8 @@ async def get_labor_summary(
 
     tipout_percent = app_settings.tipout_percent
     total_tips_all = sum(Decimal(str(emp.get("tips", 0))) for emp in employees)
-    tipout_deducted = money_round(float(total_tips_all) * tipout_percent / 100)
-    tip_pool = money_round(float(total_tips_all) - tipout_deducted)
+    tipout_deducted = money_round(total_tips_all * Decimal(str(tipout_percent)) / 100)
+    tip_pool = money_round(total_tips_all - tipout_deducted)
 
     # OT alerts: anyone at or over 35 weekly hours
     ot_alerts = []

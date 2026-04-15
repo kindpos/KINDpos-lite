@@ -91,29 +91,8 @@ async def _init_printer_manager(ledger, ephemeral_log=None):
         except Exception as e:
             print(f"  Warning: could not load printers from hardware_config.db: {e}")
 
-    if not printer_found and settings.store_mode == "demo":
-        # Register default mock printers for demo mode only
-        receipt_config = PrinterConfig(
-            printer_id="mock-receipt-01",
-            name="Front Register",
-            printer_type=PrinterType.THERMAL,
-            role="receipt",
-            connection_string="127.0.0.1:9100",
-            cut_type=CutType.FULL,
-        )
-        kitchen_config = PrinterConfig(
-            printer_id="mock-kitchen-01",
-            name="Kitchen Printer",
-            printer_type=PrinterType.THERMAL,
-            role="kitchen",
-            connection_string="127.0.0.1:9101",
-            cut_type=CutType.PARTIAL,
-        )
-        await manager.register_printer(MockThermalPrinter(receipt_config))
-        await manager.register_printer(MockThermalPrinter(kitchen_config))
-        print("  Mock printers registered (demo mode, no saved printers found)")
-    elif not printer_found:
-        print("  No printers configured — use Settings > Hardware to add printers")
+    if not printer_found:
+        print("  No printers configured — use Settings > Hardware to scan and add printers")
 
     set_printer_manager(manager)
     return manager
