@@ -1044,48 +1044,145 @@ defineScene({
     SceneManager.on('payment:complete', onPaymentComplete);
     state.listeners.push({ el: null, event: 'payment:complete', handler: onPaymentComplete, bus: true });
 
-    // Row 1 (y:272): PRINT    RSND    DISC
-    // Row 2 (y:318): PAY      DRAWER  VOID
-    var btnTop1 = '272px';
-    var btnTop2 = '334px';
+    // ═══════════════════════════════════════════════════
+    //  ACTION BUTTONS — 2-row layout per mockup
+    //  Row 1: EDIT SEATS | DISC | VOID | EDIT SEATS
+    //  Row 2: PAY | PRINT | ADD ITEMS
+    // ═══════════════════════════════════════════════════
 
-    var printBtn = buildStyledButton({ label: 'PRINT', variant: 'gold', size: 'md', onClick: handlePrint });
-    Object.assign(printBtn.wrap.style, { position: 'absolute', left: '12px', top: btnTop1 });
-    root.appendChild(printBtn.wrap);
+    var BTN_FONT = 'Chakra Petch, sans-serif';
+    var actionArea = document.createElement('div');
+    actionArea.style.cssText = 'position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;padding:12px 16px;';
 
-    var rsndBtn = buildStyledButton({ label: 'RSND', variant: 'dark', size: 'sm', onClick: handleResend });
-    Object.assign(rsndBtn.wrap.style, { position: 'absolute', left: '240px', top: btnTop1 });
-    root.appendChild(rsndBtn.wrap);
+    // ── Row 1: EDIT SEATS | DISC | VOID | EDIT SEATS ──
+    var row1 = document.createElement('div');
+    row1.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+
+    function openEditSeats() {
+      var selectedSeats = [];
+      for (var si = 0; si < state.seats.length; si++) {
+        if (state.selected[state.seats[si].id]) selectedSeats.push(state.seats[si]);
+      }
+      if (selectedSeats.length === 0) selectedSeats = state.seats.slice();
+      SceneManager.openTransactional('column-editor', {
+        columns: selectedSeats.map(function(s) {
+          return { id: s.id, label: s.id, items: s.items.slice() };
+        }),
+        operations: ['MERGE', 'MOVE', 'SPLIT', 'TRANSFER'],
+        orderId: state.orderId,
+        serverId: state.order ? state.order.server_id : null,
+        onSave: function(columns) {
+          state.seats = [];
+          for (var ci = 0; ci < columns.length; ci++) {
+            state.seats.push({
+              id: columns[ci].id,
+              label: columns[ci].label,
+              items: columns[ci].items,
+            });
+          }
+          rebuildSeatGrid();
+          selectAll();
+          if (state.orderId) {
+            var _cePending = 0;
+            var _ceFailed = 0;
+            function _ceTrack(promise) {
+              _cePending++;
+              promise
+                .then(function(r) { if (!r.ok) _ceFailed++; })
+                .catch(function() { _ceFailed++; })
+                .finally(function() {
+                  if (--_cePending === 0) {
+                    if (_ceFailed > 0) {
+                      showToast(_ceFailed + ' seat edit(s) failed to save', { bg: T.red });
+                      refreshOrder();
+                    }
+                  }
+                });
+            }
+            for (var pi = 0; pi < columns.length; pi++) {
+              var seatNum = pi + 1;
+              var colItems = columns[pi].items;
+              for (var qi = 0; qi < colItems.length; qi++) {
+                if (colItems[qi].item_id) {
+                  _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + colItems[qi].item_id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seat_number: seatNum, price: colItems[qi].price }),
+                  }));
+                } else {
+                  _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: colItems[qi].name,
+                      price: colItems[qi].price,
+                      quantity: colItems[qi].qty || 1,
+                      seat_number: seatNum,
+                    }),
+                  }));
+                }
+              }
+            }
+          }
+        },
+      });
+    }
+
+    var editSeatsBtn1 = buildStyledButton({ label: 'EDIT SEATS', variant: 'dark', size: 'sm', onClick: openEditSeats });
+    editSeatsBtn1.wrap.style.flex = '1';
+    editSeatsBtn1.wrap.style.height = '48px';
+    editSeatsBtn1.inner.style.fontFamily = BTN_FONT;
+    editSeatsBtn1.inner.style.fontWeight = 'bold';
+    row1.appendChild(editSeatsBtn1.wrap);
 
     var discBtn = buildStyledButton({ label: 'DISC', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
-    Object.assign(discBtn.wrap.style, { position: 'absolute', left: '358px', top: btnTop1 });
-    root.appendChild(discBtn.wrap);
-
-    var payBtn = buildStyledButton({ label: 'PAY', variant: 'mint', size: 'md', onClick: handlePay });
-    Object.assign(payBtn.wrap.style, { position: 'absolute', left: '12px', top: btnTop2 });
-    root.appendChild(payBtn.wrap);
-
-    var drawerBtn = buildStyledButton({ label: 'DRAWER', variant: 'dark', size: 'sm', onClick: handleDrawer });
-    Object.assign(drawerBtn.wrap.style, { position: 'absolute', left: '240px', top: btnTop2 });
-    root.appendChild(drawerBtn.wrap);
+    discBtn.wrap.style.flex = '1';
+    discBtn.wrap.style.height = '48px';
+    discBtn.inner.style.fontFamily = BTN_FONT;
+    discBtn.inner.style.fontWeight = 'bold';
+    row1.appendChild(discBtn.wrap);
 
     var voidBtn = buildStyledButton({ label: 'VOID', variant: 'vermillion', size: 'sm', onClick: handleVoid });
-    Object.assign(voidBtn.wrap.style, { position: 'absolute', left: '358px', top: btnTop2 });
-    root.appendChild(voidBtn.wrap);
+    voidBtn.wrap.style.flex = '1';
+    voidBtn.wrap.style.height = '48px';
+    voidBtn.inner.style.fontFamily = BTN_FONT;
+    voidBtn.inner.style.fontWeight = 'bold';
+    row1.appendChild(voidBtn.wrap);
 
-    // ═══════════════════════════════════════════════════
-    //  Floating buttons
-    // ═══════════════════════════════════════════════════
+    var editSeatsBtn2 = buildStyledButton({ label: 'EDIT SEATS', variant: 'dark', size: 'sm', onClick: openEditSeats });
+    editSeatsBtn2.wrap.style.flex = '1';
+    editSeatsBtn2.wrap.style.height = '48px';
+    editSeatsBtn2.inner.style.fontFamily = BTN_FONT;
+    editSeatsBtn2.inner.style.fontWeight = 'bold';
+    row1.appendChild(editSeatsBtn2.wrap);
 
-    // ADD ITEM(S) — open order-entry for this check
+    actionArea.appendChild(row1);
+
+    // ── Row 2: PAY | PRINT | ADD ITEMS ──
+    var row2 = document.createElement('div');
+    row2.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+
+    var payBtn = buildStyledButton({ label: 'PAY', variant: 'gold', size: 'lg', onClick: handlePay });
+    payBtn.wrap.style.flex = '1';
+    payBtn.wrap.style.height = '72px';
+    payBtn.inner.style.fontFamily = BTN_FONT;
+    payBtn.inner.style.fontWeight = 'bold';
+    payBtn.inner.style.fontSize = '32px';
+    row2.appendChild(payBtn.wrap);
+
+    var printBtn = buildStyledButton({ label: 'PRINT', variant: 'mint', size: 'lg', onClick: handlePrint });
+    printBtn.wrap.style.flex = '1';
+    printBtn.wrap.style.height = '72px';
+    printBtn.inner.style.fontFamily = BTN_FONT;
+    printBtn.inner.style.fontWeight = 'bold';
+    printBtn.inner.style.fontSize = '32px';
+    row2.appendChild(printBtn.wrap);
+
     var addItemBtn = buildStyledButton({
-      label: 'ADD ITEM(S)', variant: 'gold', size: 'lg',
+      label: 'ADD\nITEMS', variant: 'mint', size: 'lg',
       onClick: function() {
-        // Always pass ALL seat numbers so the seat-assign interrupt
-        // knows the full seat count (prevents empty seats from being lost)
         var allSeatNums = [];
         for (var aj = 0; aj < state.seats.length; aj++) allSeatNums.push(aj + 1);
-        // Pass currently selected seats so order-entry can auto-assign
         var selSeatNums = [];
         for (var sj = 0; sj < state.seats.length; sj++) {
           if (state.selected[state.seats[sj].id]) selSeatNums.push(sj + 1);
@@ -1104,198 +1201,17 @@ defineScene({
         });
       },
     });
-    Object.assign(addItemBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '401px', zIndex: '50',
-    });
-    root.appendChild(addItemBtn.wrap);
+    addItemBtn.wrap.style.flex = '1';
+    addItemBtn.wrap.style.height = '72px';
+    addItemBtn.inner.style.fontFamily = BTN_FONT;
+    addItemBtn.inner.style.fontWeight = 'bold';
+    addItemBtn.inner.style.fontSize = '32px';
+    addItemBtn.inner.style.lineHeight = '1.1';
+    addItemBtn.inner.style.whiteSpace = 'pre';
+    row2.appendChild(addItemBtn.wrap);
 
-    // EDIT SEATS — open column-editor with selected seats
-    var editSeatsBtn = buildStyledButton({
-      label: 'EDIT SEATS', variant: 'dark', size: 'lg',
-      onClick: function() {
-        var selectedSeats = [];
-        for (var si = 0; si < state.seats.length; si++) {
-          if (state.selected[state.seats[si].id]) selectedSeats.push(state.seats[si]);
-        }
-        if (selectedSeats.length === 0) selectedSeats = state.seats.slice();
-        SceneManager.openTransactional('column-editor', {
-          columns: selectedSeats.map(function(s) {
-            return { id: s.id, label: s.id, items: s.items.slice() };
-          }),
-          operations: ['MERGE', 'MOVE', 'SPLIT', 'TRANSFER'],
-          orderId: state.orderId,
-          serverId: state.order ? state.order.server_id : null,
-          onSave: function(columns) {
-            // Apply column-editor changes back to seat state
-            state.seats = [];
-            for (var ci = 0; ci < columns.length; ci++) {
-              state.seats.push({
-                id: columns[ci].id,
-                label: columns[ci].label,
-                items: columns[ci].items,
-              });
-            }
-            rebuildSeatGrid();
-            selectAll();
-            // Persist changes via API
-            if (state.orderId) {
-              var _cePending = 0;
-              var _ceFailed = 0;
-              function _ceTrack(promise) {
-                _cePending++;
-                promise
-                  .then(function(r) { if (!r.ok) _ceFailed++; })
-                  .catch(function() { _ceFailed++; })
-                  .finally(function() {
-                    if (--_cePending === 0) {
-                      if (_ceFailed > 0) {
-                        showToast(_ceFailed + ' seat edit(s) failed to save', { bg: T.red });
-                        refreshOrder();
-                      }
-                    }
-                  });
-              }
-              for (var pi = 0; pi < columns.length; pi++) {
-                var seatNum = pi + 1;
-                var colItems = columns[pi].items;
-                for (var qi = 0; qi < colItems.length; qi++) {
-                  if (colItems[qi].item_id) {
-                    // Existing item — update seat_number and price
-                    _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + colItems[qi].item_id, {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ seat_number: seatNum, price: colItems[qi].price }),
-                    }));
-                  } else {
-                    // New item (e.g. from split) — add to order
-                    _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        name: colItems[qi].name,
-                        price: colItems[qi].price,
-                        quantity: colItems[qi].qty || 1,
-                        seat_number: seatNum,
-                      }),
-                    }));
-                  }
-                }
-              }
-            }
-          },
-        });
-      },
-    });
-    Object.assign(editSeatsBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '272px', zIndex: '50',
-      display: 'none',
-    });
-    root.appendChild(editSeatsBtn.wrap);
-
-    // +1 ROUND — duplicate selected seat items, auto-send to kitchen
-    var _roundInProgress = false;
-    var roundBtn = buildStyledButton({
-      label: '+1 ROUND', variant: 'gold', size: 'md',
-      onClick: function() {
-        if (_roundInProgress) return;
-        _roundInProgress = true;
-        // Collect items from selected seats
-        var itemsToAdd = [];
-        for (var ri = 0; ri < state.seats.length; ri++) {
-          if (!state.selected[state.seats[ri].id]) continue;
-          var seatNum = ri + 1;
-          for (var rj = 0; rj < state.seats[ri].items.length; rj++) {
-            var it = state.seats[ri].items[rj];
-            itemsToAdd.push({
-              menu_item_id: it.menu_item_id || it.name.toLowerCase().replace(/\s+/g, '_'),
-              name: it.name,
-              price: it.price,
-              quantity: it.qty,
-              category: it.category || null,
-              seat_number: seatNum,
-              modifiers: (it.mods || []).map(function(m) {
-                return {
-                  name: m.name,
-                  price: m.price || 0,
-                  charged: m.charged !== false,
-                  prefix: m.prefix || null,
-                  half_price: m.half_price != null ? m.half_price : null,
-                };
-              }),
-            });
-          }
-        }
-
-        if (itemsToAdd.length === 0) {
-          _roundInProgress = false;
-          showToast('No items to reorder', { bg: T.gold });
-          return;
-        }
-
-        // Create order first if needed, then POST items
-        var doRound = function() {
-        var pending = itemsToAdd.length;
-        var failed = 0;
-        for (var rk = 0; rk < itemsToAdd.length; rk++) {
-          fetch('/api/v1/orders/' + state.orderId + '/items', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(itemsToAdd[rk]),
-          }).then(function(r) {
-            if (!r.ok) failed++;
-            if (--pending === 0) finishRound();
-          }).catch(function() {
-            failed++;
-            if (--pending === 0) finishRound();
-          });
-        }
-
-        function finishRound() {
-          _roundInProgress = false;
-          if (failed > 0) {
-            showToast(failed + ' item(s) failed to add', { bg: T.red });
-          }
-          // Send unsent items to kitchen
-          fetch('/api/v1/orders/' + state.orderId + '/send', { method: 'POST' })
-            .then(function() {
-              showToast('+1 Round sent to kitchen', { bg: T.goGreen });
-              refreshOrder();
-            })
-            .catch(function() {
-              showToast('Send failed', { bg: T.red });
-              refreshOrder();
-            });
-        }
-        };
-
-        if (!state.orderId) {
-          // Create order first
-          fetch('/api/v1/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              order_type: 'quick_service',
-              guest_count: 1,
-              server_id: params.employeeId || null,
-              server_name: params.employeeName || null,
-            }),
-          }).then(function(r) { return r.json(); })
-            .then(function(created) {
-              state.orderId = created.order_id;
-              state.checkNumber = created.check_number || '';
-              setSceneName(state.checkNumber);
-              doRound();
-            })
-            .catch(function() { _roundInProgress = false; showToast('Failed to create check', { bg: T.red }); });
-        } else {
-          doRound();
-        }
-      },
-    });
-    Object.assign(roundBtn.wrap.style, {
-      position: 'absolute', left: '492px', top: '340px', zIndex: '50',
-    });
-    root.appendChild(roundBtn.wrap);
+    actionArea.appendChild(row2);
+    root.appendChild(actionArea);
   },
 
   unmount: function(state) {
