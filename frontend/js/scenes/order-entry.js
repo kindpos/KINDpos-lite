@@ -386,6 +386,18 @@ defineScene({
     if (hexNav) { hexNav.destroy(); hexNav = null; }
     if (_modPanel) { _modPanel.destroy(); _modPanel = null; }
     _modPanelItem = null;
+    ticket = [];
+    ticketSeq = 0;
+    modHistory = [];
+    modifierSession = { active: false, selectedItems: [], activePrefix: null, activePlacement: null, appliedMods: [], panelEl: null, hexNav: null, hasPizza: false };
+    comboFlow = null;
+    currentOrderId = null;
+    isSending = false;
+    currentCheckNumber = null;
+    currentCustomerName = null;
+    _bottomBar = null;
+    _mainArea = null;
+    _activeSeat = 1;
   },
 });
 
@@ -1500,6 +1512,7 @@ function addToTicket(item) {
 }
 
 function renderTicket() {
+  if (SceneManager.getActiveWorking() !== 'order-entry') return;
   var list = document.getElementById('ticket-list');
   if (!list) return;
   list.innerHTML = '';
@@ -2424,6 +2437,7 @@ function recallFromBackend(orderId) {
       return r.json();
     })
     .then(function(order) {
+      if (SceneManager.getActiveWorking() !== 'order-entry') return;
       currentOrderId = order.order_id;
       currentCheckNumber = order.check_number || null;
       if (currentCheckNumber) setSceneName(currentCheckNumber);

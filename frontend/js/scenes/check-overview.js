@@ -25,6 +25,8 @@ fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(func
   if (d.cash_discount_rate != null) CASH_DISCOUNT = d.cash_discount_rate;
 }).catch(function() { /* keep defaults on network error */ });
 
+var _refreshInFlight = false;
+
 // ── Inject invisible scrollbar style ──
 (function() {
   if (document.getElementById('co-scroll-style')) return;
@@ -140,6 +142,12 @@ defineScene({
     state.orderId = params.checkId || null;
     state.checkNumber = '';
     state.customerName = '';
+    state.selected = {};
+    state.selectedItems = {};
+    state.seatEls = {};
+    state.paidSeats = {};
+    state._payingSeats = [];
+    state._backConfirmed = false;
 
     // Determine which landing to return to
     var _landing = params.returnLanding || 'server-landing';
@@ -975,7 +983,8 @@ defineScene({
     var _undoWindowActive = false;
 
     function refreshOrder() {
-      if (!state.orderId) return;
+      if (_refreshInFlight || !state.orderId) return;
+      _refreshInFlight = true;
       fetch('/api/v1/orders/' + state.orderId)
         .then(function(r) { return r.json(); })
         .then(function(order) {
@@ -1015,11 +1024,13 @@ defineScene({
             return;
           }
         })
-        .catch(function() { showToast('Refresh failed', { bg: T.red }); });
+        .catch(function() { showToast('Refresh failed', { bg: T.red }); })
+        .finally(function() { _refreshInFlight = false; });
     }
 
     // Listen for payment completion — mark seats paid, then refresh
     function onPaymentComplete() {
+      if (SceneManager.getActiveWorking() !== 'check-overview') return;
       // Mark the stashed seats as paid
       for (var ps = 0; ps < state._payingSeats.length; ps++) {
         state.paidSeats[state._payingSeats[ps]] = true;
@@ -1286,6 +1297,7 @@ defineScene({
   },
 
   unmount: function(state) {
+    if (OrderSummary.unlockItemRender) OrderSummary.unlockItemRender();
     OrderSummary.hide();
     for (var i = 0; i < state.listeners.length; i++) {
       var l = state.listeners[i];
