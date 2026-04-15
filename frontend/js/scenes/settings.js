@@ -102,15 +102,19 @@ function renderContent() {
     return;
   }
 
-  var grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;height:100%;box-sizing:border-box;';
+  loadDevices().then(function() {
+    if (!_contentEl) return;
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;height:100%;box-sizing:border-box;';
 
-  DEVICE_CATEGORIES.forEach(function(cat) {
-    grid.appendChild(buildCategoryCard(cat, T.gold));
+    DEVICE_CATEGORIES.forEach(function(cat) {
+      grid.appendChild(buildCategoryCard(cat, T.gold));
+    });
+    grid.appendChild(buildScanNetworkCard());
+
+    _contentEl.innerHTML = '';
+    _contentEl.appendChild(grid);
   });
-  grid.appendChild(buildScanNetworkCard());
-
-  _contentEl.appendChild(grid);
 }
 
 // == SCAN NETWORK Card (3 states) ======================
@@ -343,36 +347,83 @@ function buildCategoryCard(cat, borderColor) {
   var dc = buildDepthCard(borderColor, { chamfer: 10, glow: true });
 
   dc.card.style.display = 'flex';
-  dc.card.style.alignItems = 'center';
-  dc.card.style.justifyContent = 'center';
-  dc.card.style.cursor = 'pointer';
-  dc.card.style.minHeight = '100px';
-  dc.card.style.userSelect = 'none';
-  dc.card.style.webkitUserSelect = 'none';
+  dc.card.style.flexDirection = 'column';
+  dc.card.style.padding = '12px';
+  dc.card.style.gap = '8px';
+  dc.card.style.overflow = 'hidden';
 
+  // Title
   var lbl = document.createElement('div');
   lbl.style.cssText = [
     'font-family:' + T.fh + ';',
-    'font-size:32px;font-weight:bold;font-style:italic;',
+    'font-size:24px;font-weight:bold;font-style:italic;',
     'color:' + borderColor + ';',
-    'text-align:center;',
-    'pointer-events:none;',
+    'text-align:center;flex-shrink:0;',
   ].join('');
-  lbl.textContent = cat.label;
+  lbl.textContent = cat.label.replace('\n', ' ');
   dc.card.appendChild(lbl);
+
+  // Device list area
+  var deviceList = document.createElement('div');
+  deviceList.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;scrollbar-width:none;';
+
+  var devices = _devicesForCategory(cat.id);
+  if (devices.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.subtleText + ';text-align:center;padding:8px;';
+    empty.textContent = 'No devices';
+    deviceList.appendChild(empty);
+  } else {
+    devices.forEach(function(dev) {
+      var row = document.createElement('div');
+      row.style.cssText = [
+        'background:' + T.bg + ';padding:8px 10px;',
+        'clip-path:' + chamfer(4) + ';',
+        'display:flex;align-items:center;justify-content:space-between;gap:8px;',
+        'cursor:pointer;user-select:none;',
+      ].join('');
+
+      var info = document.createElement('div');
+      info.style.cssText = 'display:flex;flex-direction:column;gap:1px;';
+      var nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.gold + ';';
+      nameEl.textContent = dev.name || 'Unnamed';
+      info.appendChild(nameEl);
+      var ipEl = document.createElement('div');
+      ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.textPrimary + ';';
+      ipEl.textContent = dev.ip;
+      info.appendChild(ipEl);
+      row.appendChild(info);
+
+      var status = document.createElement('div');
+      status.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.green + ';flex-shrink:0;';
+      status.textContent = '\u25CF';
+      row.appendChild(status);
+
+      row.addEventListener('pointerup', function(e) {
+        e.stopPropagation();
+        _selectedDeviceMac = dev.mac;
+        _expandOrigin = {
+          top: dc.wrap.getBoundingClientRect().top,
+          left: dc.wrap.getBoundingClientRect().left,
+          width: dc.wrap.getBoundingClientRect().width,
+          height: dc.wrap.getBoundingClientRect().height,
+        };
+        _expandedCard = { id: cat.id, label: cat.label.replace('\n', ' '), borderColor: borderColor };
+        renderContent();
+      });
+
+      deviceList.appendChild(row);
+    });
+  }
+  dc.card.appendChild(deviceList);
 
   dc.wrap.dataset.catId = cat.id;
 
   dc.wrap.addEventListener('pointerup', function() {
-    // Store origin rect for animation
     var rect = dc.wrap.getBoundingClientRect();
-    _expandOrigin = {
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-    };
-    _expandedCard = { id: cat.id, label: cat.label, borderColor: borderColor };
+    _expandOrigin = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+    _expandedCard = { id: cat.id, label: cat.label.replace('\n', ' '), borderColor: borderColor };
     renderContent();
   });
 
