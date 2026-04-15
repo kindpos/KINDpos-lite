@@ -397,32 +397,35 @@ function buildCategoryCard(cat, borderColor) {
     deviceList.appendChild(empty);
   } else {
     devices.forEach(function(dev) {
-      var row = document.createElement('div');
-      row.style.cssText = [
-        'background:' + T.bg + ';padding:8px 10px;',
-        'clip-path:' + chamfer(4) + ';',
+      var devDc = buildDepthCard(T.green, { chamfer: 6, glow: false });
+      devDc.card.style.cssText += [
+        'padding:10px 12px;',
         'display:flex;align-items:center;justify-content:space-between;gap:8px;',
         'cursor:pointer;user-select:none;',
       ].join('');
 
       var info = document.createElement('div');
-      info.style.cssText = 'display:flex;flex-direction:column;gap:1px;';
+      info.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
       var nameEl = document.createElement('div');
-      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:14px;color:' + T.gold + ';';
+      nameEl.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.gold + ';';
       nameEl.textContent = dev.name || 'Unnamed';
       info.appendChild(nameEl);
       var ipEl = document.createElement('div');
-      ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.textPrimary + ';';
+      ipEl.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.textPrimary + ';';
       ipEl.textContent = dev.ip;
       info.appendChild(ipEl);
-      row.appendChild(info);
+      var macEl = document.createElement('div');
+      macEl.style.cssText = 'font-family:' + T.fb + ';font-size:10px;color:' + T.subtleText + ';';
+      macEl.textContent = 'MAC: ' + (dev.mac || '—');
+      info.appendChild(macEl);
+      devDc.card.appendChild(info);
 
       var status = document.createElement('div');
-      status.style.cssText = 'font-family:' + T.fb + ';font-size:11px;color:' + T.green + ';flex-shrink:0;';
-      status.textContent = '\u25CF';
-      row.appendChild(status);
+      status.style.cssText = 'font-family:' + T.fb + ';font-size:12px;color:' + T.green + ';flex-shrink:0;';
+      status.textContent = '\u25CF ONLINE';
+      devDc.card.appendChild(status);
 
-      row.addEventListener('pointerup', function(e) {
+      devDc.wrap.addEventListener('pointerup', function(e) {
         e.stopPropagation();
         _selectedDeviceMac = dev.mac;
         _expandOrigin = {
@@ -435,7 +438,7 @@ function buildCategoryCard(cat, borderColor) {
         renderContent();
       });
 
-      deviceList.appendChild(row);
+      deviceList.appendChild(devDc.wrap);
     });
   }
   dc.card.appendChild(deviceList);
@@ -876,39 +879,33 @@ function renderDeviceOps(opsEl, dev, parentBody, catInfo) {
   });
   bar.appendChild(delBtn.wrap);
 
-  // TEST button
-  var testBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'TEST' });
-  testBtn.inner.style.color = T.green;
-  testBtn.inner.style.fontSize = '11px';
-  testBtn.wrap.style.height = '30px';
+  // TEST PRINT button (printers only)
   var testResult = document.createElement('span');
   testResult.style.cssText = 'font-family:' + T.fb + ';font-size:11px;margin-left:8px;';
-  testBtn.wrap.addEventListener('pointerup', function() {
-    testBtn.inner.textContent = '...';
-    var url, payload;
-    if (dev.type === 'kitchen' || dev.type === 'receipt') {
-      url = '/api/v1/hardware/test-print';
-      payload = { ip: dev.ip, port: dev.port || 9100 };
-    } else {
-      url = '/api/v1/hardware/test-connection';
-      payload = { ip: dev.ip, port: dev.port || 9000 };
-    }
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).then(function(r) { return r.json(); }).then(function(d) {
-      testBtn.inner.textContent = 'TEST';
-      testResult.style.color = d.success ? T.green : T.vermillion;
-      testResult.textContent = d.success ? 'OK' : (d.message || 'FAIL');
-    }).catch(function() {
-      testBtn.inner.textContent = 'TEST';
-      testResult.style.color = T.vermillion;
+  if (dev.type === 'kitchen' || dev.type === 'receipt' || dev.type === 'printer' || dev.type === 'thermal') {
+    var testBtn = buildStyledButton({ variant: 'dark', size: 'sm', label: 'TEST PRINT' });
+    testBtn.inner.style.color = T.green;
+    testBtn.inner.style.fontSize = '11px';
+    testBtn.wrap.style.height = '30px';
+    testBtn.wrap.addEventListener('pointerup', function() {
+      testBtn.inner.textContent = '...';
+      fetch('/api/v1/hardware/test-print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: dev.ip, port: dev.port || 9100 }),
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        testBtn.inner.textContent = 'TEST PRINT';
+        testResult.style.color = d.success ? T.green : T.vermillion;
+        testResult.textContent = d.success ? 'OK' : (d.message || 'FAIL');
+      }).catch(function() {
+        testBtn.inner.textContent = 'TEST PRINT';
+        testResult.style.color = T.vermillion;
       testResult.textContent = 'ERROR';
     });
   });
-  bar.appendChild(testBtn.wrap);
-  bar.appendChild(testResult);
+    bar.appendChild(testBtn.wrap);
+    bar.appendChild(testResult);
+  }
 
   opsEl.appendChild(bar);
 }
