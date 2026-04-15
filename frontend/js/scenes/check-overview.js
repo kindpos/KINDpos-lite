@@ -1014,6 +1014,11 @@ defineScene({
         // knows the full seat count (prevents empty seats from being lost)
         var allSeatNums = [];
         for (var aj = 0; aj < state.seats.length; aj++) allSeatNums.push(aj + 1);
+        // Pass currently selected seats so order-entry can auto-assign
+        var selSeatNums = [];
+        for (var sj = 0; sj < state.seats.length; sj++) {
+          if (state.selected[state.seats[sj].id]) selSeatNums.push(sj + 1);
+        }
         SceneManager.mountWorking('order-entry', {
           recallOrderId: state.orderId || undefined,
           recallCheckNumber: state.checkNumber || undefined,
@@ -1024,6 +1029,7 @@ defineScene({
           returnScene: 'check-overview',
           returnLanding: _landing,
           seatNumbers: allSeatNums,
+          selectedSeatNumbers: selSeatNums,
         });
       },
     });

@@ -565,6 +565,14 @@ function assignSeatsIfNeeded(callback) {
     return;
   }
 
+  // If exactly one seat is selected in check-overview, auto-assign to it
+  var selSeats = sceneParams.selectedSeatNumbers;
+  if (selSeats && selSeats.length === 1) {
+    for (var i = 0; i < unsent.length; i++) unsent[i].seat_number = selSeats[0];
+    callback();
+    return;
+  }
+
   // 2+ seats → open seat assignment interrupt
   var itemsForAssign = unsent.map(function(inst) {
     return { id: inst.id, name: inst.name, mods: inst.mods };
@@ -2568,7 +2576,21 @@ SceneManager.register({
     }
     panel.appendChild(list);
 
-    // Bottom bar: confirm + cancel
+    // Helper: refresh visual state for all seat buttons
+    function refreshAllBtnVisuals() {
+      for (var ii = 0; ii < items.length; ii++) {
+        var refs = seatBtnRefs[items[ii].id];
+        var sel = assignments[items[ii].id];
+        for (var ri = 0; ri < refs.length; ri++) {
+          var isOn = sel.indexOf(refs[ri].seatNum) >= 0;
+          refs[ri].wrap.style.background = isOn ? T.numpadChassis : refs[ri].wrap._embV.bg;
+          refs[ri].wrap.style.boxShadow = isOn ? refs[ri].wrap._embV.shadowActive : refs[ri].wrap._embV.shadow;
+          refs[ri].inner.style.color = isOn ? T.bgDark : refs[ri].wrap._embV.label;
+        }
+      }
+    }
+
+    // Bottom bar: select-all + confirm + cancel
     var bottomBar = document.createElement('div');
     bottomBar.style.cssText = 'display:flex;gap:10px;margin-top:8px;';
 
@@ -2578,6 +2600,19 @@ SceneManager.register({
     });
     cancelBtn.style.flex = '1';
     bottomBar.appendChild(cancelBtn);
+
+    var selectAllBtn = buildButton('SELECT ALL', {
+      fill: T.darkBtn, color: T.gold, fontSize: T.fsCon, height: 48,
+      onTap: function() {
+        for (var ai = 0; ai < items.length; ai++) {
+          assignments[items[ai].id] = seatNumbers.slice();
+        }
+        refreshAllBtnVisuals();
+        updateConfirmState();
+      },
+    });
+    selectAllBtn.style.flex = '1';
+    bottomBar.appendChild(selectAllBtn);
 
     var confirmBtn = buildButton('CONFIRM', {
       fill: T.darkBtn, color: T.dimText, fontSize: T.fsCon, height: 48,
