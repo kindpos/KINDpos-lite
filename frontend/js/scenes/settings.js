@@ -620,13 +620,26 @@ var _deviceTypeMap = {
 };
 
 function _devicesForCategory(catId) {
-  var types = _deviceTypeMap[catId];
-  if (!types || types.length === 0) {
-    // Peripherals: everything not printer or reader
-    var knownTypes = ['kitchen', 'receipt', 'card_reader'];
-    return _savedDevices.filter(function(d) { return knownTypes.indexOf(d.type) < 0; });
+  if (catId === 'kitchen-printers') {
+    return _savedDevices.filter(function(d) {
+      return (d.type === 'kitchen') ||
+        (d.type === 'printer' && /kitchen|hot|cold|bar|expo/i.test(d.name || ''));
+    });
   }
-  return _savedDevices.filter(function(d) { return types.indexOf(d.type) >= 0; });
+  if (catId === 'receipt-printers') {
+    return _savedDevices.filter(function(d) {
+      if (d.type === 'receipt' || d.type === 'thermal') return true;
+      if (d.type === 'printer' && !/kitchen|hot|cold|bar|expo/i.test(d.name || '')) return true;
+      return false;
+    });
+  }
+  if (catId === 'card-readers') {
+    return _savedDevices.filter(function(d) {
+      return d.type === 'card_reader' || d.type === 'dejavoo' ||
+        /dejavoo|card|reader/i.test(d.name || '');
+    });
+  }
+  return _savedDevices;
 }
 
 function _typeLabel(type) {
