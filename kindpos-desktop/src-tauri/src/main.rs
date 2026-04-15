@@ -112,7 +112,8 @@ fn main() {
         .on_window_event(|event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
                 let state = event.window().state::<Mutex<Option<ServerManager>>>();
-                if let Some(srv) = state.lock().unwrap().as_mut() {
+                let mut guard = state.lock().unwrap();
+                if let Some(srv) = guard.as_mut() {
                     srv.stop();
                 }
             }
