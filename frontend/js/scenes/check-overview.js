@@ -1052,7 +1052,7 @@ defineScene({
 
     var BTN_FONT = 'Chakra Petch, sans-serif';
     var actionArea = document.createElement('div');
-    actionArea.style.cssText = 'position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;padding:12px 16px;';
+    actionArea.style.cssText = 'position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:12px;padding:20px 16px;';
 
     // ── Row 1: EDIT SEATS | DISC | VOID | EDIT SEATS ──
     var row1 = document.createElement('div');
@@ -1135,7 +1135,7 @@ defineScene({
     editSeatsBtn1.inner.style.fontWeight = 'bold';
     row1.appendChild(editSeatsBtn1.wrap);
 
-    var discBtn = buildStyledButton({ label: 'DISC', variant: 'vermillion', size: 'sm', onClick: handleDiscount });
+    var discBtn = buildStyledButton({ label: 'DISC', variant: 'cyan', size: 'sm', onClick: handleDiscount });
     discBtn.wrap.style.flex = '1';
     discBtn.wrap.style.height = '48px';
     discBtn.inner.style.fontFamily = BTN_FONT;
@@ -1149,12 +1149,12 @@ defineScene({
     voidBtn.inner.style.fontWeight = 'bold';
     row1.appendChild(voidBtn.wrap);
 
-    var editSeatsBtn2 = buildStyledButton({ label: 'EDIT SEATS', variant: 'dark', size: 'sm', onClick: openEditSeats });
-    editSeatsBtn2.wrap.style.flex = '1';
-    editSeatsBtn2.wrap.style.height = '48px';
-    editSeatsBtn2.inner.style.fontFamily = BTN_FONT;
-    editSeatsBtn2.inner.style.fontWeight = 'bold';
-    row1.appendChild(editSeatsBtn2.wrap);
+    var resendBtn = buildStyledButton({ label: 'RESEND', variant: 'dark', size: 'sm', onClick: handleResend });
+    resendBtn.wrap.style.flex = '1';
+    resendBtn.wrap.style.height = '48px';
+    resendBtn.inner.style.fontFamily = BTN_FONT;
+    resendBtn.inner.style.fontWeight = 'bold';
+    row1.appendChild(resendBtn.wrap);
 
     actionArea.appendChild(row1);
 

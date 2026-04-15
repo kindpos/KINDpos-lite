@@ -290,7 +290,6 @@ function _injectEmbossedStyles() {
   s.id = 'embossed-btn-styles';
   s.textContent =
     '.embossed-btn{position:relative;clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;transition:transform 50ms,filter 50ms,box-shadow 50ms;box-sizing:border-box;border:none;outline:none;isolation:isolate;}' +
-    '.embossed-btn::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;clip-path:inherit;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.10) 3px,rgba(0,0,0,0.10) 4px);pointer-events:none;opacity:0.6;z-index:2;}' +
     '.embossed-btn-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;width:100%;height:100%;box-sizing:border-box;}';
   document.head.appendChild(s);
 }
