@@ -24,10 +24,14 @@ export function getDayIndex(dateStr) {
 }
 
 export function calcDuration(startStr, endStr) {
-    if (!startStr) return 0;
+    if (!startStr) return { totalHrs: 0, text: '—' };
     const start = new Date(startStr).getTime();
     const end = endStr ? new Date(endStr).getTime() : Date.now();
-    return (end - start) / 3600000;
+    const totalHrs = (end - start) / 3600000;
+    const hours = Math.floor(totalHrs);
+    const minutes = Math.floor((totalHrs - hours) * 60);
+    const text = `${hours}h ${String(minutes).padStart(2, '0')}m`;
+    return { totalHrs, text };
 }
 
 export function durationColor(hours) {
@@ -54,16 +58,21 @@ export async function loadTimeData() {
         const data = await res.json();
         const clocked = data.staff || data.clocked_in || [];
 
-        ACTIVE_SHIFTS = clocked.map(s => ({
-            employeeId: s.employee_id,
-            name: s.employee_name || s.name || s.employee_id,
-            role: s.role || 'server',
-            clockIn: s.clocked_in_at || s.clock_in,
-            onBreak: s.on_break || false,
-            breakStart: s.break_start || null,
-            sales: s.sales || 0,
-            tips: s.tips || 0,
-        }));
+        ACTIVE_SHIFTS = clocked.map(s => {
+            const emp = EMPLOYEES.find(e => e.id === s.employee_id);
+            return {
+                employeeId: s.employee_id,
+                name: s.employee_name || (emp ? `${emp.firstName} ${emp.lastName}` : s.employee_id),
+                role: s.role || (emp && emp.roles) || [],
+                clockIn: s.clocked_in_at || s.clock_in,
+                onBreak: s.on_break || false,
+                breakStart: s.break_start || null,
+                breaksTaken: s.breaks_taken || [],
+                sales: s.sales || 0,
+                tips: s.tips || 0,
+                tables: s.tables || 0,
+            };
+        });
     } catch (e) {
         console.warn('[TimeData] Failed to load clocked-in data:', e);
     }
