@@ -13,16 +13,16 @@
    COLORS (consistent with Overseer palette)
 ------------------------------------------ */
 const COLORS = {
-    mint:       '#C6FFBB',
+    mint:       'var(--color-mint)',
     mintHover:  '#d4ffca',
-    mintFaded:  'rgba(198, 255, 187, 0.8)',
-    mintGhost:  'rgba(198, 255, 187, 0.4)',
-    mintDim:    'rgba(198, 255, 187, 0.15)',
-    yellow:     '#FBDE42',
-    yellowFaded:'rgba(251, 222, 66, 0.4)',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.8)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.4)',
+    mintDim:    'rgba(var(--color-mint-rgb), 0.15)',
+    yellow:     'var(--color-gold)',
+    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     grey:       '#999999',
     white:      '#FFFFFF',
     green:      '#4CAF50',
@@ -265,7 +265,7 @@ function buildMainView(wrapper) {
             <div style="
                 font-family: var(--font-body);
                 font-size: 18px;
-                color: rgba(198, 255, 187, 0.5);
+                color: rgba(var(--color-mint-rgb), 0.5);
                 margin-top: 4px;
             ">Schedules, Specials & 86 Board</div>
         </div>
@@ -296,7 +296,7 @@ function buildMainView(wrapper) {
         <div style="
             width: 120px;
             height: 12px;
-            background: rgba(198, 255, 187, 0.15);
+            background: rgba(var(--color-mint-rgb), 0.15);
             border-radius: 6px;
             overflow: hidden;
         ">
@@ -368,8 +368,8 @@ function buildMainView(wrapper) {
     searchInput.style.cssText = `
         width: 100%;
         padding: 12px 16px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
         border-radius: 8px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -380,7 +380,7 @@ function buildMainView(wrapper) {
         transition: border-color 0.2s ease;
     `;
     searchInput.addEventListener('focus', () => { searchInput.style.borderColor = COLORS.mint; });
-    searchInput.addEventListener('blur', () => { searchInput.style.borderColor = 'rgba(198, 255, 187, 0.2)'; });
+    searchInput.addEventListener('blur', () => { searchInput.style.borderColor = 'rgba(var(--color-mint-rgb), 0.2)'; });
     searchInput.addEventListener('input', (e) => {
         displayState.searchTerm = e.target.value;
         renderItemBoard();
@@ -428,8 +428,8 @@ function buildCategoryScheduleCard(baseCat) {
     const card = document.createElement('div');
     card.id = `cat-sched-${cat.id}`;
     card.style.cssText = `
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)'};
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)'};
         border-radius: 10px;
         margin-bottom: 12px;
         overflow: hidden;
@@ -446,7 +446,7 @@ function buildCategoryScheduleCard(baseCat) {
         cursor: pointer;
         transition: background 0.2s ease;
     `;
-    headerRow.addEventListener('mouseenter', () => { headerRow.style.background = 'rgba(198, 255, 187, 0.08)'; });
+    headerRow.addEventListener('mouseenter', () => { headerRow.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
     headerRow.addEventListener('mouseleave', () => { headerRow.style.background = 'transparent'; });
 
     // Left: emoji + name + badge
@@ -515,7 +515,7 @@ function buildCategoryScheduleCard(baseCat) {
         const body = document.createElement('div');
         body.style.cssText = `
             padding: 0 20px 20px 20px;
-            border-top: 1px solid rgba(198, 255, 187, 0.1);
+            border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
         `;
 
         // Schedule Type Selector
@@ -536,7 +536,7 @@ function buildCategoryScheduleCard(baseCat) {
                 flex: 1;
                 padding: 14px 16px;
                 background: ${isActive ? COLORS.mintDim : 'transparent'};
-                border: 2px solid ${isActive ? COLORS.mint : 'rgba(198, 255, 187, 0.15)'};
+                border: 2px solid ${isActive ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.15)'};
                 border-radius: 8px;
                 color: ${isActive ? COLORS.mint : COLORS.grey};
                 font-family: var(--font-body);
@@ -550,7 +550,7 @@ function buildCategoryScheduleCard(baseCat) {
                 if (!isActive) btn.style.borderColor = COLORS.mintGhost;
             });
             btn.addEventListener('mouseleave', () => {
-                if (!isActive) btn.style.borderColor = 'rgba(198, 255, 187, 0.15)';
+                if (!isActive) btn.style.borderColor = 'rgba(var(--color-mint-rgb), 0.15)';
             });
             btn.addEventListener('click', () => {
                 const updated = clone(getWorkingCategory(cat.id));
@@ -576,8 +576,8 @@ function buildCategoryScheduleCard(baseCat) {
             const timeInputStyle = `
                 width: 160px;
                 padding: 12px 14px;
-                background: rgba(198, 255, 187, 0.12);
-                border: 1px solid rgba(198, 255, 187, 0.35);
+                background: rgba(var(--color-mint-rgb), 0.12);
+                border: 1px solid rgba(var(--color-mint-rgb), 0.35);
                 border-radius: 8px;
                 color: ${COLORS.white};
                 font-family: var(--font-body);
@@ -599,7 +599,7 @@ function buildCategoryScheduleCard(baseCat) {
             startInput.style.cssText = timeInputStyle;
             startInput.addEventListener('focus', () => { startInput.style.borderColor = COLORS.mint; });
             startInput.addEventListener('blur', () => {
-                startInput.style.borderColor = 'rgba(198, 255, 187, 0.25)';
+                startInput.style.borderColor = 'rgba(var(--color-mint-rgb), 0.25)';
                 startInput.value = formatTimeString(startInput.value);
                 const updated = clone(getWorkingCategory(cat.id));
                 updated.time_start = startInput.value;
@@ -619,7 +619,7 @@ function buildCategoryScheduleCard(baseCat) {
             endInput.style.cssText = timeInputStyle;
             endInput.addEventListener('focus', () => { endInput.style.borderColor = COLORS.mint; });
             endInput.addEventListener('blur', () => {
-                endInput.style.borderColor = 'rgba(198, 255, 187, 0.25)';
+                endInput.style.borderColor = 'rgba(var(--color-mint-rgb), 0.25)';
                 endInput.value = formatTimeString(endInput.value);
                 const updated = clone(getWorkingCategory(cat.id));
                 updated.time_end = endInput.value;
@@ -643,7 +643,7 @@ function buildCategoryScheduleCard(baseCat) {
                     width: 64px;
                     padding: 10px 0;
                     background: ${isOn ? COLORS.mint : 'transparent'};
-                    border: 2px solid ${isOn ? COLORS.mint : 'rgba(198, 255, 187, 0.2)'};
+                    border: 2px solid ${isOn ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.2)'};
                     border-radius: 8px;
                     color: ${isOn ? COLORS.dark : COLORS.grey};
                     font-family: var(--font-body);
@@ -670,7 +670,7 @@ function buildCategoryScheduleCard(baseCat) {
             everyDayBtn.style.cssText = `
                 padding: 10px 16px;
                 background: ${allDaysOn ? COLORS.yellowFaded : 'transparent'};
-                border: 2px solid ${allDaysOn ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)'};
+                border: 2px solid ${allDaysOn ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)'};
                 border-radius: 8px;
                 color: ${allDaysOn ? COLORS.yellow : COLORS.grey};
                 font-family: var(--font-body);
@@ -739,8 +739,8 @@ function buildCategoryScheduleCard(baseCat) {
                 background: linear-gradient(to right,
                     ${COLORS.mint} 0%,
                     ${COLORS.mint} ${(cat.grace_minutes / 15) * 100}%,
-                    rgba(198, 255, 187, 0.15) ${(cat.grace_minutes / 15) * 100}%,
-                    rgba(198, 255, 187, 0.15) 100%
+                    rgba(var(--color-mint-rgb), 0.15) ${(cat.grace_minutes / 15) * 100}%,
+                    rgba(var(--color-mint-rgb), 0.15) 100%
                 );
                 border-radius: 5px;
                 outline: none;
@@ -754,7 +754,7 @@ function buildCategoryScheduleCard(baseCat) {
                 // Update slider track fill
                 slider.style.background = `linear-gradient(to right,
                     ${COLORS.mint} 0%, ${COLORS.mint} ${pct}%,
-                    rgba(198, 255, 187, 0.15) ${pct}%, rgba(198, 255, 187, 0.15) 100%
+                    rgba(var(--color-mint-rgb), 0.15) ${pct}%, rgba(var(--color-mint-rgb), 0.15) 100%
                 )`;
 
                 // Update display value
@@ -831,8 +831,8 @@ function buildCategoryScheduleCard(baseCat) {
             labelInput.style.cssText = `
                 width: 100%;
                 padding: 12px 14px;
-                background: rgba(198, 255, 187, 0.08);
-                border: 1px solid rgba(198, 255, 187, 0.25);
+                background: rgba(var(--color-mint-rgb), 0.08);
+                border: 1px solid rgba(var(--color-mint-rgb), 0.25);
                 border-radius: 8px;
                 color: ${COLORS.mint};
                 font-family: var(--font-body);
@@ -843,7 +843,7 @@ function buildCategoryScheduleCard(baseCat) {
             `;
             labelInput.addEventListener('focus', () => { labelInput.style.borderColor = COLORS.mint; });
             labelInput.addEventListener('blur', () => {
-                labelInput.style.borderColor = 'rgba(198, 255, 187, 0.25)';
+                labelInput.style.borderColor = 'rgba(var(--color-mint-rgb), 0.25)';
                 const updated = clone(getWorkingCategory(cat.id));
                 updated.special_label = labelInput.value.trim();
                 trackCategoryChange(updated);
@@ -858,8 +858,8 @@ function buildCategoryScheduleCard(baseCat) {
                 align-items: center;
                 justify-content: space-between;
                 padding: 16px 20px;
-                background: ${cat.special_active ? 'rgba(156, 39, 176, 0.15)' : 'rgba(198, 255, 187, 0.04)'};
-                border: 2px solid ${cat.special_active ? '#CE93D8' : 'rgba(198, 255, 187, 0.1)'};
+                background: ${cat.special_active ? 'rgba(156, 39, 176, 0.15)' : 'rgba(var(--color-mint-rgb), 0.04)'};
+                border: 2px solid ${cat.special_active ? '#CE93D8' : 'rgba(var(--color-mint-rgb), 0.1)'};
                 border-radius: 10px;
             `;
 
@@ -976,8 +976,8 @@ function buildItemRow(item) {
         align-items: center;
         justify-content: space-between;
         padding: 14px 20px;
-        background: ${item.available ? 'rgba(198, 255, 187, 0.04)' : COLORS.redFaded};
-        border: 1px solid ${hasPending ? COLORS.yellow : (item.available ? 'rgba(198, 255, 187, 0.08)' : 'rgba(255, 51, 51, 0.3)')};
+        background: ${item.available ? 'rgba(var(--color-mint-rgb), 0.04)' : COLORS.redFaded};
+        border: 1px solid ${hasPending ? COLORS.yellow : (item.available ? 'rgba(var(--color-mint-rgb), 0.08)' : 'rgba(var(--color-vermillion-rgb), 0.3)')};
         border-radius: 8px;
         margin-bottom: 6px;
         transition: all 0.2s ease;
@@ -1055,7 +1055,7 @@ function buildToggleSwitch(isOn, onChange) {
     track.style.cssText = `
         width: 64px;
         height: 34px;
-        background: ${isOn ? COLORS.mint : 'rgba(255, 51, 51, 0.5)'};
+        background: ${isOn ? COLORS.mint : 'rgba(var(--color-vermillion-rgb), 0.5)'};
         border-radius: 17px;
         position: relative;
         cursor: pointer;
@@ -1183,7 +1183,7 @@ function updateFooter() {
 function handleSaveChanges() {
     const events = generateAvailabilityEvents(pendingChanges);
 
-    console.log('%c[KINDpos] Availability Events Generated', 'background: #333; color: #FBDE42; font-size: 14px; padding: 2px 8px;');
+    console.log('%c[KINDpos] Availability Events Generated', 'background: #333; color: var(--color-gold); font-size: 14px; padding: 2px 8px;');
     console.log(`Batch contains ${events.length} events:`);
     events.forEach((evt, i) => {
         console.log(`  ${i + 1}. ${evt.event_type} — ${JSON.stringify(evt.payload)}`);
@@ -1306,7 +1306,7 @@ function showConfirmDialog(title, message, confirmLabel, onConfirm) {
     `;
     keepBtn.textContent = 'Keep Editing';
     keepBtn.addEventListener('mouseenter', () => {
-        keepBtn.style.background = 'rgba(198, 255, 187, 0.1)';
+        keepBtn.style.background = 'rgba(var(--color-mint-rgb), 0.1)';
     });
     keepBtn.addEventListener('mouseleave', () => {
         keepBtn.style.background = 'transparent';
@@ -1329,7 +1329,7 @@ function showConfirmDialog(title, message, confirmLabel, onConfirm) {
     `;
     discardBtn.textContent = confirmLabel;
     discardBtn.addEventListener('mouseenter', () => {
-        discardBtn.style.background = 'rgba(255, 51, 51, 0.5)';
+        discardBtn.style.background = 'rgba(var(--color-vermillion-rgb), 0.5)';
     });
     discardBtn.addEventListener('mouseleave', () => {
         discardBtn.style.background = COLORS.redFaded;

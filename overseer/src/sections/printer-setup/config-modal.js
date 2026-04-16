@@ -104,19 +104,19 @@ export class ConfigModal {
         this.modal.innerHTML = `
             <div class="modal-header" style="
                 padding: 20px 24px 16px;
-                border-bottom: 1px solid rgba(198, 255, 187, 0.1);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.1);
             ">
                 <div style="
                     font-family: 'Orbitron', monospace;
                     font-size: 14px;
-                    color: #FBDE42;
+                    color: var(--color-gold);
                     letter-spacing: 1px;
                     margin-bottom: 4px;
                 ">CONFIGURE PRINTER</div>
                 <div style="
                     font-family: 'Space Mono', monospace;
                     font-size: 16px;
-                    color: #C6FFBB;
+                    color: var(--color-mint);
                 ">${this.printer.model}</div>
             </div>
 
@@ -143,7 +143,7 @@ export class ConfigModal {
                 </div>
 
                 <div class="config-divider" style="
-                    border-top: 1px solid rgba(198, 255, 187, 0.1);
+                    border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
                     margin: 16px 0;
                 "></div>
 
@@ -166,7 +166,7 @@ export class ConfigModal {
                                         border: 2px solid ${opt.color};
                                         border-radius: 4px;
                                         background: ${this.printer.role === opt.value ? opt.color : 'transparent'};
-                                        color: ${this.printer.role === opt.value ? '#1a1a1a' : opt.color};
+                                        color: ${this.printer.role === opt.value ? 'var(--color-bg-dark)' : opt.color};
                                         font-family: 'Space Mono', monospace;
                                         font-size: 11px;
                                         font-weight: bold;
@@ -195,10 +195,10 @@ export class ConfigModal {
                            style="
                                width: 100%;
                                padding: 10px 12px;
-                               background: #1a1a1a;
-                               border: 1px solid rgba(198, 255, 187, 0.2);
+                               background: var(--color-bg-dark);
+                               border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                border-radius: 4px;
-                               color: #C6FFBB;
+                               color: var(--color-mint);
                                font-family: 'Space Mono', monospace;
                                font-size: 13px;
                                outline: none;
@@ -208,7 +208,7 @@ export class ConfigModal {
                 </div>
 
                 <div class="config-divider" style="
-                    border-top: 1px solid rgba(198, 255, 187, 0.1);
+                    border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
                     margin: 16px 0;
                 "></div>
 
@@ -228,13 +228,13 @@ export class ConfigModal {
                                    ${this.printer.settings.auto_cut ? 'checked' : ''}
                                    style="
                                        width: 16px; height: 16px;
-                                       accent-color: #C6FFBB;
+                                       accent-color: var(--color-mint);
                                        cursor: pointer;
                                    ">
                             <span style="
                                 font-family: 'Space Mono', monospace;
                                 font-size: 12px;
-                                color: #C6FFBB;
+                                color: var(--color-mint);
                             ">Auto-cut paper</span>
                         </label>
                     </div>
@@ -251,10 +251,10 @@ export class ConfigModal {
                             <select id="config-paper-width" style="
                                 width: 100%;
                                 padding: 8px;
-                                background: #1a1a1a;
-                                border: 1px solid rgba(198, 255, 187, 0.2);
+                                background: var(--color-bg-dark);
+                                border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                 border-radius: 4px;
-                                color: #C6FFBB;
+                                color: var(--color-mint);
                                 font-family: 'Space Mono', monospace;
                                 font-size: 12px;
                                 cursor: pointer;
@@ -274,10 +274,10 @@ export class ConfigModal {
                             <select id="config-print-speed" style="
                                 width: 100%;
                                 padding: 8px;
-                                background: #1a1a1a;
-                                border: 1px solid rgba(198, 255, 187, 0.2);
+                                background: var(--color-bg-dark);
+                                border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                 border-radius: 4px;
-                                color: #C6FFBB;
+                                color: var(--color-mint);
                                 font-family: 'Space Mono', monospace;
                                 font-size: 12px;
                                 cursor: pointer;
@@ -295,7 +295,7 @@ export class ConfigModal {
                 display: flex;
                 justify-content: space-between;
                 padding: 16px 24px;
-                border-top: 1px solid rgba(198, 255, 187, 0.1);
+                border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
                 gap: 8px;
             ">
                 <div style="display: flex; gap: 8px;">
@@ -336,10 +336,10 @@ export class ConfigModal {
                     ">Cancel</button>
                     <button id="config-save-btn" class="modal-btn save" style="
                         padding: 8px 24px;
-                        background: #C6FFBB;
+                        background: var(--color-mint);
                         border: none;
                         border-radius: 4px;
-                        color: #1a1a1a;
+                        color: var(--color-bg-dark);
                         font-family: 'Space Mono', monospace;
                         font-size: 12px;
                         font-weight: bold;
@@ -382,7 +382,7 @@ export class ConfigModal {
                 locationInput.style.borderColor = '#00E5FF';
             });
             locationInput.addEventListener('blur', () => {
-                locationInput.style.borderColor = 'rgba(198, 255, 187, 0.2)';
+                locationInput.style.borderColor = 'rgba(var(--color-mint-rgb), 0.2)';
             });
         }
 
@@ -415,7 +415,7 @@ export class ConfigModal {
             if (btn.dataset.role === role) {
                 btn.classList.add('selected');
                 btn.style.background = opt.color;
-                btn.style.color = '#1a1a1a';
+                btn.style.color = 'var(--color-bg-dark)';
             } else {
                 btn.classList.remove('selected');
                 btn.style.background = 'transparent';

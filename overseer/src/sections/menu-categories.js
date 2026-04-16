@@ -13,15 +13,15 @@
    COLORS (consistent with Overseer palette)
 ------------------------------------------ */
 const COLORS = {
-    mint:       '#C6FFBB',
+    mint:       'var(--color-mint)',
     mintHover:  '#d4ffca',
-    mintFaded:  'rgba(198, 255, 187, 0.8)',
-    mintGhost:  'rgba(198, 255, 187, 0.4)',
-    yellow:     '#FBDE42',
-    yellowFaded:'rgba(251, 222, 66, 0.4)',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.8)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.4)',
+    yellow:     'var(--color-gold)',
+    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     grey:       '#999999',
     white:      '#FFFFFF',
 };
@@ -169,7 +169,7 @@ function buildMainView(wrapper) {
             <div style="
                 font-family: var(--font-body);
                 font-size: 18px;
-                color: rgba(198, 255, 187, 0.5);
+                color: rgba(var(--color-mint-rgb), 0.5);
                 margin-top: 4px;
             ">Sample Data · Connect to backend for live menu</div>
         </div>
@@ -219,8 +219,8 @@ function buildMainView(wrapper) {
     searchInput.style.cssText = `
         flex: 1;
         padding: 12px 16px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
         border-radius: 8px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -232,7 +232,7 @@ function buildMainView(wrapper) {
         searchInput.style.borderColor = COLORS.mint;
     });
     searchInput.addEventListener('blur', () => {
-        searchInput.style.borderColor = 'rgba(198, 255, 187, 0.2)';
+        searchInput.style.borderColor = 'rgba(var(--color-mint-rgb), 0.2)';
     });
     searchInput.addEventListener('input', (e) => {
         displayState.searchTerm = e.target.value;
@@ -244,8 +244,8 @@ function buildMainView(wrapper) {
     const filterSelect = document.createElement('select');
     filterSelect.style.cssText = `
         padding: 12px 16px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
         border-radius: 8px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -425,7 +425,7 @@ function buildItemCard(item) {
             card.style.background = COLORS.mintHover;
             card.style.borderColor = COLORS.yellow;
             card.style.transform = 'translateY(-2px)';
-            card.style.boxShadow = '0 4px 12px rgba(198, 255, 187, 0.3)';
+            card.style.boxShadow = '0 4px 12px rgba(var(--color-mint-rgb), 0.3)';
         });
         card.addEventListener('mouseleave', () => {
             card.style.background = COLORS.mint;
@@ -582,7 +582,7 @@ function openModal(titleText, contentBuilder) {
         justify-content: space-between;
         align-items: center;
         padding: 20px 24px;
-        border-bottom: 1px solid rgba(198, 255, 187, 0.15);
+        border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.15);
     `;
 
     const titleEl = document.createElement('div');
@@ -666,8 +666,8 @@ function buildFormField(container, label, inputType, value, options = {}) {
     const inputStyle = `
         width: 100%;
         padding: 12px 14px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.25);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.25);
         border-radius: 8px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -731,7 +731,7 @@ function buildFormField(container, label, inputType, value, options = {}) {
         input.style.borderColor = COLORS.mint;
     });
     input.addEventListener('blur', () => {
-        input.style.borderColor = 'rgba(198, 255, 187, 0.25)';
+        input.style.borderColor = 'rgba(var(--color-mint-rgb), 0.25)';
     });
 
     input._fieldName = options.fieldName || label;
@@ -787,7 +787,7 @@ function openEditModal(itemId) {
             <div style="font-weight: bold;">🗑 Delete Item</div>
             <div style="font-size: 18px; opacity: 0.8; margin-top: 4px;">This will mark the item for deletion</div>
         `;
-        deleteBtn.addEventListener('mouseenter', () => { deleteBtn.style.background = 'rgba(255, 51, 51, 0.5)'; });
+        deleteBtn.addEventListener('mouseenter', () => { deleteBtn.style.background = 'rgba(var(--color-vermillion-rgb), 0.5)'; });
         deleteBtn.addEventListener('mouseleave', () => { deleteBtn.style.background = COLORS.redFaded; });
         deleteBtn.addEventListener('click', () => {
             handleDelete(item.id);
@@ -800,8 +800,8 @@ function openEditModal(itemId) {
         dupeBtn.style.cssText = `
             width: 100%;
             padding: 14px;
-            background: rgba(198, 255, 187, 0.08);
-            border: 1px solid rgba(198, 255, 187, 0.25);
+            background: rgba(var(--color-mint-rgb), 0.08);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.25);
             border-radius: 8px;
             color: ${COLORS.mint};
             font-family: var(--font-body);
@@ -814,8 +814,8 @@ function openEditModal(itemId) {
             <div style="font-weight: bold;">📋 Duplicate Item</div>
             <div style="font-size: 18px; opacity: 0.6; margin-top: 4px;">Create copy with same settings</div>
         `;
-        dupeBtn.addEventListener('mouseenter', () => { dupeBtn.style.background = 'rgba(198, 255, 187, 0.15)'; });
-        dupeBtn.addEventListener('mouseleave', () => { dupeBtn.style.background = 'rgba(198, 255, 187, 0.08)'; });
+        dupeBtn.addEventListener('mouseenter', () => { dupeBtn.style.background = 'rgba(var(--color-mint-rgb), 0.15)'; });
+        dupeBtn.addEventListener('mouseleave', () => { dupeBtn.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
         dupeBtn.addEventListener('click', () => {
             handleDuplicate(item);
             closeModal();
@@ -831,7 +831,7 @@ function openEditModal(itemId) {
             gap: 12px;
             margin-top: 28px;
             padding-top: 20px;
-            border-top: 1px solid rgba(198, 255, 187, 0.1);
+            border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
         `;
 
         const cancelBtn = document.createElement('button');
@@ -928,7 +928,7 @@ function openAddModal() {
             gap: 12px;
             margin-top: 28px;
             padding-top: 20px;
-            border-top: 1px solid rgba(198, 255, 187, 0.1);
+            border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
         `;
 
         const cancelBtn = document.createElement('button');
@@ -1068,7 +1068,7 @@ function handleDuplicate(sourceItem) {
             gap: 12px;
             margin-top: 28px;
             padding-top: 20px;
-            border-top: 1px solid rgba(198, 255, 187, 0.1);
+            border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
         `;
 
         const cancelBtn = document.createElement('button');
@@ -1227,7 +1227,7 @@ function updateFooter() {
 function handleSaveChanges() {
     const events = generateMenuEvents(pendingChanges);
 
-    console.log('%c[KINDpos] Menu Events Generated', 'background: #333; color: #FBDE42; font-size: 14px; padding: 2px 8px;');
+    console.log('%c[KINDpos] Menu Events Generated', 'background: #333; color: var(--color-gold); font-size: 14px; padding: 2px 8px;');
     console.log(`Batch contains ${events.length} events:`);
     events.forEach((evt, i) => {
         console.log(`  ${i + 1}. ${evt.event_type} — ${JSON.stringify(evt.payload)}`);

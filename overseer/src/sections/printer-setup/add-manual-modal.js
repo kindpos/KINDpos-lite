@@ -94,12 +94,12 @@ export class AddManualModal {
         this.modal.innerHTML = `
             <div style="
                 padding: 20px 24px 16px;
-                border-bottom: 1px solid rgba(198, 255, 187, 0.1);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.1);
             ">
                 <div style="
                     font-family: 'Orbitron', monospace;
                     font-size: 14px;
-                    color: #FBDE42;
+                    color: var(--color-gold);
                     letter-spacing: 1px;
                 ">ADD PRINTER MANUALLY</div>
             </div>
@@ -120,10 +120,10 @@ export class AddManualModal {
                            style="
                                width: 100%;
                                padding: 10px 12px;
-                               background: #1a1a1a;
-                               border: 1px solid rgba(198, 255, 187, 0.2);
+                               background: var(--color-bg-dark);
+                               border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                border-radius: 4px;
-                               color: #C6FFBB;
+                               color: var(--color-mint);
                                font-family: 'Space Mono', monospace;
                                font-size: 14px;
                                outline: none;
@@ -154,10 +154,10 @@ export class AddManualModal {
                            style="
                                width: 100%;
                                padding: 10px 12px;
-                               background: #1a1a1a;
-                               border: 1px solid rgba(198, 255, 187, 0.2);
+                               background: var(--color-bg-dark);
+                               border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                border-radius: 4px;
-                               color: #C6FFBB;
+                               color: var(--color-mint);
                                font-family: 'Space Mono', monospace;
                                font-size: 14px;
                                outline: none;
@@ -195,10 +195,10 @@ export class AddManualModal {
                                style="
                                    width: 100%;
                                    padding: 8px 10px;
-                                   background: #1a1a1a;
-                                   border: 1px solid rgba(198, 255, 187, 0.15);
+                                   background: var(--color-bg-dark);
+                                   border: 1px solid rgba(var(--color-mint-rgb), 0.15);
                                    border-radius: 4px;
-                                   color: #C6FFBB;
+                                   color: var(--color-mint);
                                    font-family: 'Space Mono', monospace;
                                    font-size: 12px;
                                    outline: none;
@@ -218,10 +218,10 @@ export class AddManualModal {
                                style="
                                    width: 100%;
                                    padding: 8px 10px;
-                                   background: #1a1a1a;
-                                   border: 1px solid rgba(198, 255, 187, 0.15);
+                                   background: var(--color-bg-dark);
+                                   border: 1px solid rgba(var(--color-mint-rgb), 0.15);
                                    border-radius: 4px;
-                                   color: #C6FFBB;
+                                   color: var(--color-mint);
                                    font-family: 'Space Mono', monospace;
                                    font-size: 12px;
                                    outline: none;
@@ -245,7 +245,7 @@ export class AddManualModal {
                 display: flex;
                 justify-content: flex-end;
                 padding: 16px 24px;
-                border-top: 1px solid rgba(198, 255, 187, 0.1);
+                border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
                 gap: 8px;
             ">
                 <button id="add-cancel-btn" style="
@@ -261,10 +261,10 @@ export class AddManualModal {
                 ">Cancel</button>
                 <button id="add-submit-btn" style="
                     padding: 8px 24px;
-                    background: #C6FFBB;
+                    background: var(--color-mint);
                     border: none;
                     border-radius: 4px;
-                    color: #1a1a1a;
+                    color: var(--color-bg-dark);
                     font-family: 'Space Mono', monospace;
                     font-size: 12px;
                     font-weight: bold;
@@ -300,7 +300,7 @@ export class AddManualModal {
                 input.style.borderColor = '#00E5FF';
             });
             input.addEventListener('blur', () => {
-                input.style.borderColor = 'rgba(198, 255, 187, 0.2)';
+                input.style.borderColor = 'rgba(var(--color-mint-rgb), 0.2)';
             });
         });
 
@@ -344,7 +344,7 @@ export class AddManualModal {
 
         // Clear error
         if (errorEl) errorEl.textContent = '';
-        if (ipInput) ipInput.style.borderColor = 'rgba(198, 255, 187, 0.2)';
+        if (ipInput) ipInput.style.borderColor = 'rgba(var(--color-mint-rgb), 0.2)';
 
         // Show testing status
         if (statusEl) {

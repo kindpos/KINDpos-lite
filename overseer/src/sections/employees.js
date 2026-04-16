@@ -29,15 +29,15 @@ import {
    COLOR PALETTE (matches reporting.js)
 ------------------------------------------ */
 const C = {
-    mint:       '#C6FFBB',
-    mintFaded:  'rgba(198, 255, 187, 0.4)',
-    mintGhost:  'rgba(198, 255, 187, 0.15)',
-    mintBorder: 'rgba(198, 255, 187, 0.25)',
-    mintHover:  'rgba(198, 255, 187, 0.12)',
-    yellow:     '#FBDE42',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mint:       'var(--color-mint)',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.4)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.15)',
+    mintBorder: 'rgba(var(--color-mint-rgb), 0.25)',
+    mintHover:  'rgba(var(--color-mint-rgb), 0.12)',
+    yellow:     'var(--color-gold)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     darkCard:   '#2a2a2a',
     white:      '#FFFFFF',
     green:      '#00FF00',
@@ -140,8 +140,8 @@ function showToast(message, type = 'success') {
 
     const colors = {
         success: { bg: 'rgba(0, 255, 0, 0.15)', border: C.green, text: C.green },
-        error:   { bg: 'rgba(255, 51, 51, 0.15)', border: C.red, text: C.red },
-        info:    { bg: 'rgba(198, 255, 187, 0.15)', border: C.mint, text: C.mint },
+        error:   { bg: 'rgba(var(--color-vermillion-rgb), 0.15)', border: C.red, text: C.red },
+        info:    { bg: 'rgba(var(--color-mint-rgb), 0.15)', border: C.mint, text: C.mint },
     };
     const tc = colors[type] || colors.info;
 
@@ -203,11 +203,11 @@ function buildEmployeeList(container) {
                         font-size: 36px; color: ${C.yellow};">
                 Employee Management
             </div>
-            <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+            <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
                 The Honeycomb Bistro
             </div>
         </div>
-        <div style="font-size: 22px; color: rgba(198, 255, 187, 0.3);">
+        <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.3);">
             ⚠ Sample Data — Connect backend to load live records
         </div>
     `;
@@ -240,10 +240,10 @@ function buildEmployeeList(container) {
     searchBox.style.cssText = 'position: relative;';
     searchBox.innerHTML = `
         <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-                     color: rgba(198, 255, 187, 0.4); font-size: 22px;">🔍</span>
+                     color: rgba(var(--color-mint-rgb), 0.4); font-size: 22px;">🔍</span>
         <input type="text" id="emp-search" placeholder="Search by name or role..."
                value="${searchTerm}"
-               style="background: rgba(198, 255, 187, 0.06); border: 1px solid ${C.mintBorder};
+               style="background: rgba(var(--color-mint-rgb), 0.06); border: 1px solid ${C.mintBorder};
                       color: ${C.mint}; padding: 14px 16px 14px 38px; border-radius: 8px;
                       font-size: 25px; width: 300px; outline: none;
                       font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
@@ -284,7 +284,7 @@ function buildTableSection(wrapper) {
     // ── Active Employees ──
     const activeSection = document.createElement('div');
     activeSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden; margin-bottom: 20px;
     `;
 
@@ -310,7 +310,7 @@ function buildTableSection(wrapper) {
     // ── Inactive Employees ──
     const inactiveSection = document.createElement('div');
     inactiveSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden;
     `;
 
@@ -354,7 +354,7 @@ function buildTable(list, isInactive = false) {
         display: grid;
         grid-template-columns: 2.2fr 1.2fr 0.8fr 1fr 0.6fr 1.4fr;
         padding: 14px 20px; gap: 8px;
-        background: rgba(198, 255, 187, 0.08);
+        background: rgba(var(--color-mint-rgb), 0.08);
         border-bottom: 1px solid ${C.mintBorder};
         font-size: 20px; color: ${C.mintFaded};
         text-transform: uppercase; letter-spacing: 1px;
@@ -388,12 +388,12 @@ function buildTable(list, isInactive = false) {
     // ── Data Rows ──
     list.forEach((emp, i) => {
         const row = document.createElement('div');
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
         row.style.cssText = `
             display: grid;
             grid-template-columns: 2.2fr 1.2fr 0.8fr 1fr 0.6fr 1.4fr;
             padding: 16px 20px; gap: 8px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg}; transition: background 0.15s ease;
             min-width: 700px;
             ${isInactive ? 'opacity: 0.6;' : ''}
@@ -415,8 +415,8 @@ function buildTable(list, isInactive = false) {
             </div>
             <div style="color: ${C.mint}; font-size: 22px;">${getRoleLabel(emp.role)}</div>
             <div style="color: ${C.grey}; font-size: 22px; letter-spacing: 2px;">••••</div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${fmtDate(emp.hireDate)}</div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">$${emp.payRate.toFixed(2)}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${fmtDate(emp.hireDate)}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">$${emp.payRate.toFixed(2)}</div>
             <div class="emp-action-cell"></div>
         `;
 
@@ -926,7 +926,7 @@ function showPINDisplayModal(container, employee, pin, forceChange) {
         <div style="color: ${C.grey}; font-size: 20px; margin-bottom: 8px;">
             This will not be shown again.
         </div>
-        ${forceChange ? `<div style="color: rgba(198, 255, 187, 0.6); font-size: 20px;">
+        ${forceChange ? `<div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 20px;">
             Employee must change PIN on next login.
         </div>` : ''}
     `;
@@ -982,7 +982,7 @@ const fieldLabelStyle = `
 
 const inputStyle = `
     width: 100%; box-sizing: border-box;
-    background: rgba(198, 255, 187, 0.06);
+    background: rgba(var(--color-mint-rgb), 0.06);
     border: 1px solid ${C.mintBorder}; color: ${C.mint};
     padding: 12px 14px; border-radius: 6px; font-size: 25px;
     font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
@@ -1087,10 +1087,10 @@ function buildPlaceholder(container, title, subtitle, items) {
                     font-size: 36px; color: ${C.yellow}; margin-bottom: 8px;">
             ${title}
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5); margin-bottom: 32px;">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5); margin-bottom: 32px;">
             ${subtitle}
         </div>
-        <div style="background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        <div style="background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
                     border-radius: 10px; padding: 40px; text-align: center;">
             <div style="font-size: 56px; margin-bottom: 16px; opacity: 0.3;">🚧</div>
             <div style="color: ${C.mint}; font-size: 28px; margin-bottom: 12px;">

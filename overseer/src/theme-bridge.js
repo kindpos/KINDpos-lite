@@ -32,11 +32,29 @@ const TOKEN_TO_CSS = {
     fb:         '--font-body',
 };
 
+const TOKEN_TO_CSS_RGB = {
+    gold:       '--color-gold-rgb',
+    mint:       '--color-mint-rgb',
+    vermillion: '--color-vermillion-rgb',
+    bg:         '--color-bg-rgb',
+    bgDark:     '--color-bg-dark-rgb',
+};
+
+function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
+}
+
 function syncCSSVars() {
     const root = document.documentElement.style;
     for (const [tokenKey, cssVar] of Object.entries(TOKEN_TO_CSS)) {
         if (T[tokenKey] != null) {
             root.setProperty(cssVar, T[tokenKey]);
+        }
+    }
+    for (const [tokenKey, cssVar] of Object.entries(TOKEN_TO_CSS_RGB)) {
+        if (T[tokenKey] != null && T[tokenKey].startsWith('#')) {
+            root.setProperty(cssVar, hexToRgb(T[tokenKey]));
         }
     }
 }

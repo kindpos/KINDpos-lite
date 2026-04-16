@@ -34,10 +34,10 @@ export function registerPrinterConfig(sm) {
                 <div class="detail-content" style="padding: 20px; max-width: 900px;">
 
                     <div style="margin-bottom: 24px;">
-                        <h1 style="font-family: var(--font-display); color: #FBDE42; font-size: 32px; margin-bottom: 4px;">
+                        <h1 style="font-family: var(--font-display); color: var(--color-gold); font-size: 32px; margin-bottom: 4px;">
                             🖨️ Printer Discovery
                         </h1>
-                        <p style="color: rgba(198, 255, 187, 0.5); font-size: 25px;">
+                        <p style="color: rgba(var(--color-mint-rgb), 0.5); font-size: 25px;">
                             Scan your network for ESC/POS printers
                         </p>
                     </div>
@@ -59,13 +59,13 @@ export function registerPrinterConfig(sm) {
 
                     <div class="test-controls">
                         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                            <label style="color: rgba(198, 255, 187, 0.7); font-family: var(--font-mono); font-size: 25px;">
+                            <label style="color: rgba(var(--color-mint-rgb), 0.7); font-family: var(--font-mono); font-size: 25px;">
                                 Subnet:
                             </label>
                             <input type="text" id="subnet-input" value="10.0.0.0/24"
-                                style="background: rgba(198, 255, 187, 0.08);
-                                       border: 1px solid rgba(198, 255, 187, 0.2);
-                                       color: #C6FFBB;
+                                style="background: rgba(var(--color-mint-rgb), 0.08);
+                                       border: 1px solid rgba(var(--color-mint-rgb), 0.2);
+                                       color: var(--color-mint);
                                        font-family: var(--font-mono);
                                        font-size: 25px;
                                        padding: 8px 12px;
@@ -267,8 +267,8 @@ function renderPrinterCard(printer) {
     const card = document.createElement('div');
     card.id = cardId;
     card.style.cssText = `
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid rgba(198, 255, 187, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
         border-radius: 8px;
         padding: 16px 20px;
         transition: border-color 0.2s;
@@ -284,15 +284,15 @@ function renderPrinterCard(printer) {
     card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
             <div style="flex: 1; min-width: 200px;">
-                <div style="font-family: var(--font-display); color: #FBDE42; font-size: 35px; margin-bottom: 6px;">
+                <div style="font-family: var(--font-display); color: var(--color-gold); font-size: 35px; margin-bottom: 6px;">
                     🖨️ ${mfg}
                 </div>
-                <div style="font-family: var(--font-mono); color: rgba(198, 255, 187, 0.7); font-size: 25px; line-height: 1.8;">
-                    <div><span style="color: rgba(198,255,187,0.4);">IP:</span>    ${ip}</div>
-                    <div><span style="color: rgba(198,255,187,0.4);">MAC:</span>   ${mac}</div>
-                    <div><span style="color: rgba(198,255,187,0.4);">Port:</span>  ${port}</div>
-                    <div><span style="color: rgba(198,255,187,0.4);">Model:</span> ${model}</div>
-                    <div><span style="color: rgba(198,255,187,0.4);">Role:</span>  ${role}</div>
+                <div style="font-family: var(--font-mono); color: rgba(var(--color-mint-rgb), 0.7); font-size: 25px; line-height: 1.8;">
+                    <div><span style="color: rgba(var(--color-mint-rgb),0.4);">IP:</span>    ${ip}</div>
+                    <div><span style="color: rgba(var(--color-mint-rgb),0.4);">MAC:</span>   ${mac}</div>
+                    <div><span style="color: rgba(var(--color-mint-rgb),0.4);">Port:</span>  ${port}</div>
+                    <div><span style="color: rgba(var(--color-mint-rgb),0.4);">Model:</span> ${model}</div>
+                    <div><span style="color: rgba(var(--color-mint-rgb),0.4);">Role:</span>  ${role}</div>
                 </div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
@@ -343,10 +343,10 @@ async function sendTestPrint(ip, port, btn) {
 
         if (result.success) {
             btn.textContent = '✓ Print Sent!';
-            btn.style.borderColor = '#C6FFBB';
+            btn.style.borderColor = 'var(--color-mint)';
             if (resultEl) {
                 resultEl.textContent = 'Receipt printed successfully';
-                resultEl.style.color = '#C6FFBB';
+                resultEl.style.color = 'var(--color-mint)';
             }
         } else {
             btn.textContent = '✗ Failed';
@@ -392,7 +392,7 @@ function handleScanComplete(data) {
     if (data) {
         if (statusEl) {
             statusEl.textContent = data.printers_found > 0 ? 'Complete ✓' : 'No Printers';
-            statusEl.style.color = data.printers_found > 0 ? '#C6FFBB' : '#FFE66D';
+            statusEl.style.color = data.printers_found > 0 ? 'var(--color-mint)' : '#FFE66D';
         }
         if (durationEl) durationEl.textContent = data.duration_seconds + 's';
 

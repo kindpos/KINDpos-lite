@@ -126,7 +126,7 @@ export class DeviceTable {
                 <td class="col-role">
                     <span class="role-badge" style="
                         background-color: ${roleColor};
-                        color: #1a1a1a;
+                        color: var(--color-bg-dark);
                         padding: 2px 8px;
                         border-radius: 3px;
                         font-size: 10px;

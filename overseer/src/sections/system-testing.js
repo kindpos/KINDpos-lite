@@ -39,10 +39,10 @@ export function registerSystemTesting(sm) {
                 <div class="detail-content" style="padding: 20px; max-width: 900px;">
 
                     <div style="margin-bottom: 24px;">
-                        <h1 style="font-family: var(--font-display); color: #FBDE42; font-size: 28px; margin-bottom: 4px;">
+                        <h1 style="font-family: var(--font-display); color: var(--color-gold); font-size: 28px; margin-bottom: 4px;">
                             🧪 System Test Suite
                         </h1>
-                        <p style="color: rgba(198, 255, 187, 0.5); font-size: 14px;">
+                        <p style="color: rgba(var(--color-mint-rgb), 0.5); font-size: 14px;">
                             Verify KINDpos core integrity
                         </p>
                     </div>
@@ -319,7 +319,7 @@ function handleTestComplete(exitCode) {
     if (statusEl) {
         if (exitCode === 0) {
             statusEl.textContent = 'All Passed ✓';
-            statusEl.style.color = '#C6FFBB';
+            statusEl.style.color = 'var(--color-mint)';
             appendTerminalLine('', 'normal');
             appendTerminalLine(`✓ All tests passed in ${duration}s`, 'passed');
         } else if (exitCode === 130) {

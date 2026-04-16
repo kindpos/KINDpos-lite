@@ -13,15 +13,15 @@
    COLORS
 ------------------------------------------ */
 const COLORS = {
-    mint:       '#C6FFBB',
+    mint:       'var(--color-mint)',
     mintHover:  '#d4ffca',
-    mintDim:    'rgba(198, 255, 187, 0.15)',
-    mintGhost:  'rgba(198, 255, 187, 0.4)',
-    yellow:     '#FBDE42',
-    yellowFaded:'rgba(251, 222, 66, 0.4)',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mintDim:    'rgba(var(--color-mint-rgb), 0.15)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.4)',
+    yellow:     'var(--color-gold)',
+    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     grey:       '#999999',
     white:      '#FFFFFF',
     green:      '#4CAF50',
@@ -234,7 +234,7 @@ function buildSectionBlock(container, title, subtitle, onAdd, contentId) {
     return content;
 }
 
-function buildToggleSwitch(isOn, onChange, colorOn = COLORS.mint, colorOff = 'rgba(255, 51, 51, 0.5)') {
+function buildToggleSwitch(isOn, onChange, colorOn = COLORS.mint, colorOff = 'rgba(var(--color-vermillion-rgb), 0.5)') {
     const track = document.createElement('div');
     track.style.cssText = `
         width: 56px; height: 30px;
@@ -258,8 +258,8 @@ function buildSmallButton(label, onClick, isDanger = false) {
     const btn = document.createElement('button');
     btn.style.cssText = `
         padding: 6px 16px;
-        background: ${isDanger ? COLORS.redFaded : 'rgba(198, 255, 187, 0.08)'};
-        border: 1px solid ${isDanger ? COLORS.red : 'rgba(198, 255, 187, 0.2)'};
+        background: ${isDanger ? COLORS.redFaded : 'rgba(var(--color-mint-rgb), 0.08)'};
+        border: 1px solid ${isDanger ? COLORS.red : 'rgba(var(--color-mint-rgb), 0.2)'};
         border-radius: 6px; color: ${isDanger ? COLORS.red : COLORS.mint};
         font-family: var(--font-body); font-size: 18px;
         cursor: pointer; transition: all 0.2s ease;
@@ -276,8 +276,8 @@ function buildTimeInput(value, onChange) {
     input.placeholder = '3:00 PM';
     input.style.cssText = `
         width: 140px; padding: 10px 12px;
-        background: rgba(198, 255, 187, 0.12);
-        border: 1px solid rgba(198, 255, 187, 0.35);
+        background: rgba(var(--color-mint-rgb), 0.12);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.35);
         border-radius: 8px; color: ${COLORS.white};
         font-family: var(--font-body); font-size: 22px;
         text-align: center; outline: none;
@@ -285,7 +285,7 @@ function buildTimeInput(value, onChange) {
     `;
     input.addEventListener('focus', () => { input.style.borderColor = COLORS.mint; });
     input.addEventListener('blur', () => {
-        input.style.borderColor = 'rgba(198, 255, 187, 0.35)';
+        input.style.borderColor = 'rgba(var(--color-mint-rgb), 0.35)';
         input.value = formatTimeString(input.value);
         if (onChange) onChange(input.value);
     });
@@ -302,7 +302,7 @@ function buildDayCheckboxes(container, activeDays, onChange) {
         btn.style.cssText = `
             width: 56px; padding: 8px 0;
             background: ${isOn ? COLORS.mint : 'transparent'};
-            border: 2px solid ${isOn ? COLORS.mint : 'rgba(198, 255, 187, 0.2)'};
+            border: 2px solid ${isOn ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.2)'};
             border-radius: 8px; color: ${isOn ? COLORS.dark : COLORS.grey};
             font-family: var(--font-body); font-size: 18px;
             font-weight: ${isOn ? 'bold' : 'normal'};
@@ -313,7 +313,7 @@ function buildDayCheckboxes(container, activeDays, onChange) {
             activeDays[i] = !activeDays[i];
             onChange(activeDays);
             btn.style.background = activeDays[i] ? COLORS.mint : 'transparent';
-            btn.style.borderColor = activeDays[i] ? COLORS.mint : 'rgba(198, 255, 187, 0.2)';
+            btn.style.borderColor = activeDays[i] ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.2)';
             btn.style.color = activeDays[i] ? COLORS.dark : COLORS.grey;
             btn.style.fontWeight = activeDays[i] ? 'bold' : 'normal';
         });
@@ -326,7 +326,7 @@ function buildDayCheckboxes(container, activeDays, onChange) {
     everyBtn.style.cssText = `
         padding: 8px 14px;
         background: ${allOn ? COLORS.yellowFaded : 'transparent'};
-        border: 2px solid ${allOn ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)'};
+        border: 2px solid ${allOn ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)'};
         border-radius: 8px; color: ${allOn ? COLORS.yellow : COLORS.grey};
         font-family: var(--font-body); font-size: 18px;
         cursor: pointer; margin-left: 8px; transition: all 0.15s ease;
@@ -366,7 +366,7 @@ function openModal(titleText, contentBuilder, width = 600) {
     `;
 
     const header = document.createElement('div');
-    header.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(198, 255, 187, 0.15);`;
+    header.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.15);`;
     header.innerHTML = `<div style="font-family: var(--font-display); font-size: 28px; color: ${COLORS.yellow};">${titleText}</div>`;
     const closeBtn = document.createElement('button');
     closeBtn.style.cssText = `background: none; border: none; color: ${COLORS.grey}; font-size: 30px; cursor: pointer; padding: 4px 8px; line-height: 1;`;
@@ -405,8 +405,8 @@ function buildModalField(container, label, type, value, opts = {}) {
 
     const inputStyle = `
         width: 100%; padding: 12px 14px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.25);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.25);
         border-radius: 8px; color: ${COLORS.white};
         font-family: var(--font-body); font-size: 25px;
         outline: none; box-sizing: border-box;
@@ -433,7 +433,7 @@ function buildModalField(container, label, type, value, opts = {}) {
         if (opts.step) input.step = opts.step;
     }
     input.addEventListener('focus', () => { input.style.borderColor = COLORS.mint; });
-    input.addEventListener('blur', () => { input.style.borderColor = 'rgba(198, 255, 187, 0.25)'; });
+    input.addEventListener('blur', () => { input.style.borderColor = 'rgba(var(--color-mint-rgb), 0.25)'; });
 
     group.appendChild(input);
     container.appendChild(group);
@@ -446,13 +446,13 @@ function buildCheckboxList(container, label, items, selectedIds) {
     group.innerHTML = `<div style="font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint}; margin-bottom: 10px;">${label}</div>`;
 
     const listBox = document.createElement('div');
-    listBox.style.cssText = `max-height: 200px; overflow-y: auto; border: 1px solid rgba(198, 255, 187, 0.15); border-radius: 8px; padding: 8px;`;
+    listBox.style.cssText = `max-height: 200px; overflow-y: auto; border: 1px solid rgba(var(--color-mint-rgb), 0.15); border-radius: 8px; padding: 8px;`;
 
     const selected = new Set(selectedIds);
     items.forEach(item => {
         const row = document.createElement('label');
         row.style.cssText = `display: flex; align-items: center; gap: 12px; padding: 8px 12px; cursor: pointer; border-radius: 6px; transition: background 0.15s ease;`;
-        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(198, 255, 187, 0.06)'; });
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.06)'; });
         row.addEventListener('mouseleave', () => { row.style.background = 'transparent'; });
 
         const cb = document.createElement('input');
@@ -477,7 +477,7 @@ function buildCheckboxList(container, label, items, selectedIds) {
 
 function buildModalFooter(container, onSave, saveLabel = 'Save') {
     const footer = document.createElement('div');
-    footer.style.cssText = `display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(198, 255, 187, 0.1);`;
+    footer.style.cssText = `display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);`;
 
     const cancelBtn = document.createElement('button');
     cancelBtn.style.cssText = `padding: 12px 28px; background: transparent; border: 1px solid ${COLORS.grey}; border-radius: 8px; color: ${COLORS.grey}; font-family: var(--font-body); font-size: 22px; cursor: pointer;`;
@@ -507,7 +507,7 @@ function buildMainView(wrapper) {
     header.style.cssText = `margin-bottom: 28px;`;
     header.innerHTML = `
         <div style="font-family: var(--font-display); font-size: 34px; color: ${COLORS.yellow};">Pricing & Specials</div>
-        <div style="font-family: var(--font-body); font-size: 18px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">Promotions, day-parts, order types & comps</div>
+        <div style="font-family: var(--font-body); font-size: 18px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">Promotions, day-parts, order types & comps</div>
     `;
     wrapper.appendChild(header);
 
@@ -557,7 +557,7 @@ function buildMainView(wrapper) {
 
 function buildDivider() {
     const d = document.createElement('div');
-    d.style.cssText = `border-bottom: 2px solid rgba(198, 255, 187, 0.1); margin-bottom: 32px;`;
+    d.style.cssText = `border-bottom: 2px solid rgba(var(--color-mint-rgb), 0.1); margin-bottom: 32px;`;
     return d;
 }
 
@@ -580,14 +580,14 @@ function renderSpecialsList() {
         const hasPending = pendingChanges.specials.some(p => p.id === spec.id);
         const card = document.createElement('div');
         card.style.cssText = `
-            background: rgba(198, 255, 187, 0.04);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.1)'};
+            background: rgba(var(--color-mint-rgb), 0.04);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.1)'};
             border-radius: 10px; padding: 20px; margin-bottom: 12px;
             cursor: pointer; transition: all 0.2s ease;
             opacity: ${spec.active ? '1' : '0.5'};
         `;
-        card.addEventListener('mouseenter', () => { card.style.background = 'rgba(198, 255, 187, 0.08)'; });
-        card.addEventListener('mouseleave', () => { card.style.background = 'rgba(198, 255, 187, 0.04)'; });
+        card.addEventListener('mouseenter', () => { card.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
+        card.addEventListener('mouseleave', () => { card.style.background = 'rgba(var(--color-mint-rgb), 0.04)'; });
         card.addEventListener('click', () => openSpecialModal(spec));
 
         // Type badge colors
@@ -662,7 +662,7 @@ function openSpecialModal(existing) {
             btn.style.cssText = `
                 flex: 1; padding: 12px;
                 background: ${active ? COLORS.mintDim : 'transparent'};
-                border: 2px solid ${active ? COLORS.mint : 'rgba(198, 255, 187, 0.15)'};
+                border: 2px solid ${active ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.15)'};
                 border-radius: 8px; color: ${active ? COLORS.mint : COLORS.grey};
                 font-family: var(--font-body); font-size: 22px; cursor: pointer;
             `;
@@ -672,7 +672,7 @@ function openSpecialModal(existing) {
                 modeRow.querySelectorAll('button').forEach((b, i) => {
                     const a = (mode === 'auto' && i === 0) || (mode === 'manual' && i === 1);
                     b.style.background = a ? COLORS.mintDim : 'transparent';
-                    b.style.borderColor = a ? COLORS.mint : 'rgba(198, 255, 187, 0.15)';
+                    b.style.borderColor = a ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.15)';
                     b.style.color = a ? COLORS.mint : COLORS.grey;
                 });
                 schedDetails.style.display = mode === 'auto' ? 'block' : 'none';
@@ -713,7 +713,7 @@ function openSpecialModal(existing) {
         const dateStartInput = document.createElement('input');
         dateStartInput.type = 'date';
         dateStartInput.value = existing?.date_start || '';
-        dateStartInput.style.cssText = `padding: 8px; background: rgba(198,255,187,0.08); border: 1px solid rgba(198,255,187,0.25); border-radius: 6px; color: ${COLORS.white}; font-family: var(--font-body); font-size: 18px;`;
+        dateStartInput.style.cssText = `padding: 8px; background: rgba(var(--color-mint-rgb),0.08); border: 1px solid rgba(var(--color-mint-rgb),0.25); border-radius: 6px; color: ${COLORS.white}; font-family: var(--font-body); font-size: 18px;`;
         dateRow.appendChild(dateStartInput);
         dateRow.innerHTML += `<span style="color: ${COLORS.grey};">to</span>`;
         const dateEndInput = document.createElement('input');
@@ -850,14 +850,14 @@ function renderDayPartList() {
         row.style.cssText = `
             display: flex; align-items: center; justify-content: space-between;
             padding: 16px 20px;
-            background: rgba(198, 255, 187, 0.04);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.08)'};
+            background: rgba(var(--color-mint-rgb), 0.04);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.08)'};
             border-radius: 8px; margin-bottom: 8px;
             transition: all 0.2s ease; cursor: pointer;
             opacity: ${dp.active ? '1' : '0.5'};
         `;
-        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(198, 255, 187, 0.08)'; });
-        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(198, 255, 187, 0.04)'; });
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
+        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.04)'; });
         row.addEventListener('click', () => openDayPartModal(dp));
 
         const adjustText = dp.adjustment_type === 'none' ? 'Base price'
@@ -894,8 +894,8 @@ function renderDayPartList() {
             const row = document.createElement('div');
             row.style.cssText = `
                 display: flex; align-items: center; justify-content: space-between;
-                padding: 10px 20px; background: rgba(251, 222, 66, 0.05);
-                border: 1px dashed rgba(251, 222, 66, 0.3);
+                padding: 10px 20px; background: rgba(var(--color-gold-rgb), 0.05);
+                border: 1px dashed rgba(var(--color-gold-rgb), 0.3);
                 border-radius: 6px; margin-bottom: 6px;
             `;
             row.innerHTML = `
@@ -979,8 +979,8 @@ function renderOrderTypeList() {
         row.style.cssText = `
             display: flex; align-items: center; justify-content: space-between;
             padding: 16px 20px;
-            background: rgba(198, 255, 187, 0.04);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.08)'};
+            background: rgba(var(--color-mint-rgb), 0.04);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.08)'};
             border-radius: 8px; margin-bottom: 8px;
         `;
 
@@ -1002,8 +1002,8 @@ function renderOrderTypeList() {
         adjInput.value = ot.adjustment;
         adjInput.style.cssText = `
             width: 80px; padding: 8px; text-align: center;
-            background: rgba(198, 255, 187, 0.08);
-            border: 1px solid rgba(198, 255, 187, 0.25);
+            background: rgba(var(--color-mint-rgb), 0.08);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.25);
             border-radius: 6px; color: ${COLORS.yellow};
             font-family: var(--font-body); font-size: 22px; outline: none;
         `;
@@ -1046,8 +1046,8 @@ function renderOrderTypeList() {
             const row = document.createElement('div');
             row.style.cssText = `
                 display: flex; align-items: center; justify-content: space-between;
-                padding: 10px 20px; background: rgba(251, 222, 66, 0.05);
-                border: 1px dashed rgba(251, 222, 66, 0.3);
+                padding: 10px 20px; background: rgba(var(--color-gold-rgb), 0.05);
+                border: 1px dashed rgba(var(--color-gold-rgb), 0.3);
                 border-radius: 6px; margin-bottom: 6px;
             `;
             row.innerHTML = `
@@ -1073,8 +1073,8 @@ function renderEmployeeDiscount() {
 
     const card = document.createElement('div');
     card.style.cssText = `
-        background: rgba(198, 255, 187, 0.04);
-        border: 1px solid ${pendingChanges.employee.length > 0 ? COLORS.yellow : 'rgba(198, 255, 187, 0.1)'};
+        background: rgba(var(--color-mint-rgb), 0.04);
+        border: 1px solid ${pendingChanges.employee.length > 0 ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.1)'};
         border-radius: 10px; padding: 24px;
     `;
 
@@ -1119,8 +1119,8 @@ function renderEmployeeDiscount() {
     // Edit button
     const editBtn = document.createElement('button');
     editBtn.style.cssText = `
-        padding: 10px 24px; background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.2); border-radius: 8px;
+        padding: 10px 24px; background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2); border-radius: 8px;
         color: ${COLORS.mint}; font-family: var(--font-body); font-size: 20px;
         cursor: pointer; transition: all 0.2s ease;
     `;
@@ -1223,13 +1223,13 @@ function renderCompReasons() {
         row.style.cssText = `
             display: flex; align-items: center; justify-content: space-between;
             padding: 14px 20px;
-            background: rgba(198, 255, 187, 0.04);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.08)'};
+            background: rgba(var(--color-mint-rgb), 0.04);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.08)'};
             border-radius: 8px; margin-bottom: 6px;
             cursor: pointer; transition: all 0.2s ease;
         `;
-        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(198, 255, 187, 0.08)'; });
-        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(198, 255, 187, 0.04)'; });
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
+        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.04)'; });
         row.addEventListener('click', () => openCompReasonModal(reason));
 
         row.innerHTML = `
@@ -1351,7 +1351,7 @@ function handleSaveChanges() {
         });
     });
 
-    console.log('%c[KINDpos] Pricing Events Generated', 'background: #333; color: #FBDE42; font-size: 14px; padding: 2px 8px;');
+    console.log('%c[KINDpos] Pricing Events Generated', 'background: #333; color: var(--color-gold); font-size: 14px; padding: 2px 8px;');
     console.log(`Batch contains ${events.length} events:`);
     events.forEach((evt, i) => {
         console.log(`  ${i + 1}. ${evt.event_type}`);

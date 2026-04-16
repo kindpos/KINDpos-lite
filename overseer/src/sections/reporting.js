@@ -12,18 +12,18 @@ import { SAMPLE_DATA, calcDelta, fmt$, fmtPct } from '../data/sample-reports.js'
    CHART COLOR PALETTE (Retro 80s)
 ------------------------------------------ */
 const COLORS = {
-    mint:       '#C6FFBB',
-    mintFaded:  'rgba(198, 255, 187, 0.8)',
-    mintGhost:  'rgba(198, 255, 187, 0.4)',
-    yellow:     '#FBDE42',
-    yellowFaded:'rgba(251, 222, 66, 0.4)',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mint:       'var(--color-mint)',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.8)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.4)',
+    yellow:     'var(--color-gold)',
+    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     white:      '#FFFFFF',
     // Donut segments
     segments: [
-        '#C6FFBB', '#FBDE42', '#FF3333',
+        'var(--color-mint)', 'var(--color-gold)', 'var(--color-vermillion)',
         '#66DDAA', '#FFB347', '#77BBFF',
         '#E8A0BF', '#95E1D3',
     ],
@@ -144,8 +144,8 @@ function buildBackButton(container, label) {
         gap: 8px;
         padding: 8px 16px;
         margin-bottom: 16px;
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid rgba(198, 255, 187, 0.15);
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.15);
         border-radius: 4px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -155,10 +155,10 @@ function buildBackButton(container, label) {
     `;
     btn.textContent = `← Back to ${label}`;
     btn.addEventListener('mouseenter', () => {
-        btn.style.background = 'rgba(198, 255, 187, 0.15)';
+        btn.style.background = 'rgba(var(--color-mint-rgb), 0.15)';
     });
     btn.addEventListener('mouseleave', () => {
-        btn.style.background = 'rgba(198, 255, 187, 0.06)';
+        btn.style.background = 'rgba(var(--color-mint-rgb), 0.06)';
     });
     btn.addEventListener('click', () => popView());
     container.appendChild(btn);
@@ -191,7 +191,7 @@ function buildComingSoon(container, viewName) {
         <div style="font-family: var(--font-display); font-size: 40px; color: ${COLORS.yellow}; margin-bottom: 16px;">
             ${displayName}
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             Coming soon — this drill-down is next in the build queue.
         </div>
     `;
@@ -215,7 +215,7 @@ function buildDateSubheader(container, title) {
         <div style="font-family: var(--font-display); font-size: 40px; color: ${COLORS.yellow};">
             ${title}
         </div>
-        <div style="font-size: 17px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+        <div style="font-size: 17px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
             ${dateStr}
         </div>
     `;
@@ -329,7 +329,7 @@ function buildSalesByCategory(wrapper) {
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(198, 255, 187, 0.05)' },
+                        grid: { color: 'rgba(var(--color-mint-rgb), 0.05)' },
                         ticks: {
                             color: COLORS.mintFaded,
                             callback: v => '$' + v,
@@ -364,7 +364,7 @@ function buildSalesByCategory(wrapper) {
             padding: 12px 8px;
             background: transparent;
             border: none;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             cursor: pointer;
             transition: background 0.2s ease;
             font-family: var(--font-body);
@@ -374,12 +374,12 @@ function buildSalesByCategory(wrapper) {
         row.innerHTML = `
             <span style="flex: 1; color: ${COLORS.mint};">${cat.category}</span>
             <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 110px; text-align: right;">${fmt$(cat.net_sales)}</span>
-            <span style="color: rgba(198, 255, 187, 0.4); min-width: 80px; text-align: right;">${cat.items_sold} items</span>
-            <span style="color: rgba(198, 255, 187, 0.4); min-width: 55px; text-align: right;">${cat.pct}%</span>
-            <span style="color: rgba(198, 255, 187, 0.3); font-size: 20px; margin-left: 4px;">→</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 80px; text-align: right;">${cat.items_sold} items</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 55px; text-align: right;">${cat.pct}%</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.3); font-size: 20px; margin-left: 4px;">→</span>
         `;
         row.addEventListener('mouseenter', () => {
-            row.style.background = 'rgba(198, 255, 187, 0.06)';
+            row.style.background = 'rgba(var(--color-mint-rgb), 0.06)';
         });
         row.addEventListener('mouseleave', () => {
             row.style.background = 'transparent';
@@ -403,13 +403,13 @@ function buildSalesByCategory(wrapper) {
         align-items: center;
         gap: 12px;
         padding: 14px 8px;
-        border-top: 2px solid rgba(198, 255, 187, 0.2);
+        border-top: 2px solid rgba(var(--color-mint-rgb), 0.2);
         font-size: 25px;
     `;
     totalRow.innerHTML = `
         <span style="flex: 1; color: ${COLORS.mint}; font-family: var(--font-display);">Total</span>
         <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 110px; text-align: right;">${fmt$(totalSales)}</span>
-        <span style="color: rgba(198, 255, 187, 0.4); min-width: 80px; text-align: right;">${totalItems} items</span>
+        <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 80px; text-align: right;">${totalItems} items</span>
         <span style="min-width: 55px;"></span>
         <span style="min-width: 24px; margin-left: 4px;"></span>
     `;
@@ -432,8 +432,8 @@ function buildTaxBreakdown(wrapper) {
     refLine.style.cssText = `
         margin-bottom: 24px;
         padding: 16px;
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid rgba(198, 255, 187, 0.15);
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.15);
         border-radius: 4px;
     `;
     refLine.innerHTML = `
@@ -455,14 +455,14 @@ function buildTaxBreakdown(wrapper) {
             align-items: baseline;
             gap: 12px;
             padding: 10px 8px;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             font-size: 25px;
         `;
         row.innerHTML = `
             <span style="flex: 1; color: ${COLORS.mint};">${tax.type}</span>
-            <span style="color: rgba(198, 255, 187, 0.4); min-width: 65px; text-align: right;">${tax.rate.toFixed(2)}%</span>
-            <span style="color: rgba(198, 255, 187, 0.35); min-width: 220px; text-align: right; font-size: 22px;">${fmt$(netSales)} × ${multiplier}</span>
-            <span style="color: rgba(198, 255, 187, 0.4); font-size: 22px;">=</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 65px; text-align: right;">${tax.rate.toFixed(2)}%</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.35); min-width: 220px; text-align: right; font-size: 22px;">${fmt$(netSales)} × ${multiplier}</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.4); font-size: 22px;">=</span>
             <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 90px; text-align: right;">${fmt$(tax.amount)}</span>
         `;
         table.appendChild(row);
@@ -480,12 +480,12 @@ function buildTaxBreakdown(wrapper) {
         align-items: baseline;
         gap: 12px;
         padding: 14px 8px;
-        border-top: 2px solid rgba(198, 255, 187, 0.2);
+        border-top: 2px solid rgba(var(--color-mint-rgb), 0.2);
         font-size: 25px;
     `;
     totalRow.innerHTML = `
         <span style="flex: 1; color: ${COLORS.mint}; font-family: var(--font-display);">Total Tax</span>
-        <span style="color: rgba(198, 255, 187, 0.6); min-width: 65px; text-align: right; font-family: var(--font-display);">${totalRate.toFixed(2)}%</span>
+        <span style="color: rgba(var(--color-mint-rgb), 0.6); min-width: 65px; text-align: right; font-family: var(--font-display);">${totalRate.toFixed(2)}%</span>
         <span style="min-width: 220px;"></span>
         <span style="font-size: 22px; visibility: hidden;">=</span>
         <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 90px; text-align: right; font-size: 30px;">${fmt$(totalAmount)}</span>
@@ -498,8 +498,8 @@ function buildTaxBreakdown(wrapper) {
     verify.style.cssText = `
         margin-top: 16px;
         padding: 12px 16px;
-        background: ${matches ? 'rgba(198, 255, 187, 0.06)' : 'rgba(255, 51, 51, 0.1)'};
-        border: 1px solid ${matches ? 'rgba(198, 255, 187, 0.15)' : 'rgba(255, 51, 51, 0.3)'};
+        background: ${matches ? 'rgba(var(--color-mint-rgb), 0.06)' : 'rgba(var(--color-vermillion-rgb), 0.1)'};
+        border: 1px solid ${matches ? 'rgba(var(--color-mint-rgb), 0.15)' : 'rgba(var(--color-vermillion-rgb), 0.3)'};
         border-radius: 4px;
         font-size: 22px;
         color: ${matches ? COLORS.mint : COLORS.red};
@@ -570,7 +570,7 @@ function buildTipsByServer(wrapper) {
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(198, 255, 187, 0.05)' },
+                        grid: { color: 'rgba(var(--color-mint-rgb), 0.05)' },
                         ticks: {
                             color: COLORS.mintFaded,
                             callback: v => '$' + v,
@@ -596,9 +596,9 @@ function buildTipsByServer(wrapper) {
         align-items: center;
         gap: 12px;
         padding: 8px 8px;
-        border-bottom: 2px solid rgba(198, 255, 187, 0.15);
+        border-bottom: 2px solid rgba(var(--color-mint-rgb), 0.15);
         font-size: 20px;
-        color: rgba(198, 255, 187, 0.4);
+        color: rgba(var(--color-mint-rgb), 0.4);
         text-transform: uppercase;
         letter-spacing: 1px;
     `;
@@ -623,15 +623,15 @@ function buildTipsByServer(wrapper) {
             align-items: center;
             gap: 12px;
             padding: 10px 8px;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             font-size: 25px;
         `;
         row.innerHTML = `
-            <span style="width: 30px; text-align: center; color: rgba(198, 255, 187, 0.4);">${i + 1}</span>
+            <span style="width: 30px; text-align: center; color: rgba(var(--color-mint-rgb), 0.4);">${i + 1}</span>
             <span style="flex: 1; color: ${COLORS.mint};">${server.server}</span>
             <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 100px; text-align: right;">${fmt$(server.tips)}</span>
-            <span style="color: rgba(198, 255, 187, 0.4); min-width: 70px; text-align: right;">${server.orders}</span>
-            <span style="min-width: 90px; text-align: right; color: ${isHighestPct ? COLORS.mint : 'rgba(198, 255, 187, 0.4)'};">${server.avg_tip_pct}%${isHighestPct ? ' ★' : ''}</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 70px; text-align: right;">${server.orders}</span>
+            <span style="min-width: 90px; text-align: right; color: ${isHighestPct ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.4)'};">${server.avg_tip_pct}%${isHighestPct ? ' ★' : ''}</span>
         `;
         wrapper.appendChild(row);
     });
@@ -645,7 +645,7 @@ function buildTipsByServer(wrapper) {
         align-items: center;
         gap: 12px;
         padding: 14px 8px;
-        border-top: 2px solid rgba(198, 255, 187, 0.2);
+        border-top: 2px solid rgba(var(--color-mint-rgb), 0.2);
         font-size: 25px;
     `;
     totalRow.innerHTML = `
@@ -688,8 +688,8 @@ function buildAdjustmentsDetail(wrapper) {
         const card = document.createElement('div');
         card.style.cssText = `
             flex: 1;
-            background: rgba(198, 255, 187, 0.8);
-            border: 1px solid rgba(198, 255, 187, 0.12);
+            background: rgba(var(--color-mint-rgb), 0.8);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.12);
             border-radius: 4px;
             padding: 14px;
             text-align: center;
@@ -705,8 +705,8 @@ function buildAdjustmentsDetail(wrapper) {
     const totalCard = document.createElement('div');
     totalCard.style.cssText = `
         flex: 1;
-        background: rgba(198, 255, 187, 0.8);
-        border: 1px solid rgba(255, 51, 51, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.8);
+        border: 1px solid rgba(var(--color-vermillion-rgb), 0.2);
         border-radius: 4px;
         padding: 14px;
         text-align: center;
@@ -734,7 +734,7 @@ function buildAdjustmentsDetail(wrapper) {
             color: ${COLORS.yellow};
             margin: 20px 0 8px 0;
             padding-bottom: 4px;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.1);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.1);
         `;
         heading.textContent = group.label;
         wrapper.appendChild(heading);
@@ -747,13 +747,13 @@ function buildAdjustmentsDetail(wrapper) {
                 align-items: center;
                 gap: 12px;
                 padding: 10px 8px;
-                border-bottom: 1px solid rgba(198, 255, 187, 0.06);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.06);
                 font-size: 25px;
             `;
             row.innerHTML = `
                 <span style="flex: 1; color: ${COLORS.mint};">${item.reason}</span>
-                <span style="color: rgba(198, 255, 187, 0.4); min-width: 80px; text-align: right;">${item.table}</span>
-                <span style="color: rgba(198, 255, 187, 0.4); min-width: 70px; text-align: right;">${item.server}</span>
+                <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 80px; text-align: right;">${item.table}</span>
+                <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 70px; text-align: right;">${item.server}</span>
                 <span style="color: ${COLORS.red}; font-family: var(--font-display); min-width: 90px; text-align: right;">-${fmt$(item.amount)}</span>
             `;
             wrapper.appendChild(row);
@@ -768,13 +768,13 @@ function buildAdjustmentsDetail(wrapper) {
         gap: 12px;
         padding: 14px 8px;
         margin-top: 8px;
-        border-top: 2px solid rgba(198, 255, 187, 0.2);
+        border-top: 2px solid rgba(var(--color-mint-rgb), 0.2);
         font-size: 25px;
     `;
     totalRow.innerHTML = `
         <span style="flex: 1; color: ${COLORS.mint}; font-family: var(--font-display);">Total Adjustments</span>
         <span style="color: ${COLORS.red}; font-family: var(--font-display); font-size: 30px;">-${fmt$(total)}</span>
-        <span style="color: rgba(198, 255, 187, 0.4); margin-left: 8px;">(${pctOfSales}% of net sales)</span>
+        <span style="color: rgba(var(--color-mint-rgb), 0.4); margin-left: 8px;">(${pctOfSales}% of net sales)</span>
     `;
     wrapper.appendChild(totalRow);
 }
@@ -814,8 +814,8 @@ function buildKPICards(container) {
     kpis.forEach(kpi => {
         const card = document.createElement('div');
         card.style.cssText = `
-            background: rgba(198, 255, 187, 0.06);
-            border: 1px solid rgba(198, 255, 187, 0.15);
+            background: rgba(var(--color-mint-rgb), 0.06);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.15);
             border-radius: 4px;
             padding: 16px;
             text-align: center;
@@ -852,7 +852,7 @@ function buildSectionHeading(container, text) {
         color: ${COLORS.yellow};
         margin: 28px 0 12px 0;
         padding-bottom: 6px;
-        border-bottom: 1px solid rgba(198, 255, 187, 0.1);
+        border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.1);
     `;
     h.textContent = text;
     container.appendChild(h);
@@ -916,11 +916,11 @@ function buildHourlySalesChart(container) {
             },
             scales: {
                 x: {
-                    grid: { color: 'rgba(198, 255, 187, 0.05)' },
+                    grid: { color: 'rgba(var(--color-mint-rgb), 0.05)' },
                     ticks: { color: COLORS.mintFaded },
                 },
                 y: {
-                    grid: { color: 'rgba(198, 255, 187, 0.05)' },
+                    grid: { color: 'rgba(var(--color-mint-rgb), 0.05)' },
                     ticks: {
                         color: COLORS.mintFaded,
                         callback: v => '$' + v,
@@ -981,7 +981,7 @@ function buildTopSellersChart(container) {
             },
             scales: {
                 x: {
-                    grid: { color: 'rgba(198, 255, 187, 0.05)' },
+                    grid: { color: 'rgba(var(--color-mint-rgb), 0.05)' },
                     ticks: { color: COLORS.mintFaded },
                 },
                 y: {
@@ -1015,7 +1015,7 @@ function buildPaymentDonut(container) {
 
     // Stats side
     const stats = document.createElement('div');
-    stats.style.cssText = 'flex: 1; font-family: var(--font-body); color: #C6FFBB;';
+    stats.style.cssText = 'flex: 1; font-family: var(--font-body); color: var(--color-mint);';
     stats.innerHTML = `
         <div style="margin-bottom: 25px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
@@ -1102,15 +1102,15 @@ function buildDaypartSection(container) {
             align-items: center;
             gap: 12px;
             padding: 8px 0;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             font-size: 25px;
         `;
         item.innerHTML = `
             <span style="width: 12px; height: 12px; background: ${COLORS.segments[i]}; display: inline-block; border-radius: 2px; flex-shrink: 0;"></span>
             <span style="flex: 1; color: ${COLORS.mint};">${dp.name}</span>
             <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 80px; text-align: right;">${fmt$(dp.net_sales)}</span>
-            <span style="color: rgba(198, 255, 187, 0.4); min-width: 60px; text-align: right;">${dp.orders} orders</span>
-            <span style="color: rgba(198, 255, 187, 0.4); min-width: 50px; text-align: right;">${dp.pct}%</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 60px; text-align: right;">${dp.orders} orders</span>
+            <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 50px; text-align: right;">${dp.pct}%</span>
         `;
         table.appendChild(item);
     });
@@ -1168,8 +1168,8 @@ function buildDrillDownLinks(container) {
         const btn = document.createElement('button');
         btn.style.cssText = `
             padding: 10px 20px;
-            background: rgba(198, 255, 187, 0.06);
-            border: 1px solid rgba(198, 255, 187, 0.2);
+            background: rgba(var(--color-mint-rgb), 0.06);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.2);
             color: ${COLORS.mint};
             font-family: var(--font-body);
             font-size: 25px;
@@ -1178,10 +1178,10 @@ function buildDrillDownLinks(container) {
         `;
         btn.textContent = `${link.label} →`;
         btn.addEventListener('mouseenter', () => {
-            btn.style.background = 'rgba(198, 255, 187, 0.15)';
+            btn.style.background = 'rgba(var(--color-mint-rgb), 0.15)';
         });
         btn.addEventListener('mouseleave', () => {
-            btn.style.background = 'rgba(198, 255, 187, 0.06)';
+            btn.style.background = 'rgba(var(--color-mint-rgb), 0.06)';
         });
         btn.addEventListener('click', () => pushView(link.target));
         grid.appendChild(btn);
@@ -1215,8 +1215,8 @@ function buildAdjustmentsSummary(container) {
         const card = document.createElement('div');
         card.style.cssText = `
             flex: 1;
-            background: rgba(198, 255, 187, 0.8);
-            border: 1px solid rgba(198, 255, 187, 0.12);
+            background: rgba(var(--color-mint-rgb), 0.8);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.12);
             border-radius: 4px;
             padding: 14px;
             text-align: center;
@@ -1232,8 +1232,8 @@ function buildAdjustmentsSummary(container) {
     const totalCard = document.createElement('div');
     totalCard.style.cssText = `
         flex: 1;
-        background: rgba(198, 255, 187, 0.8);
-        border: 1px solid rgba(255, 51, 51, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.8);
+        border: 1px solid rgba(var(--color-vermillion-rgb), 0.2);
         border-radius: 4px;
         padding: 14px;
         text-align: center;
@@ -1258,7 +1258,7 @@ function buildDateHeader(container) {
         align-items: center;
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 1px solid rgba(198, 255, 187, 0.15);
+        border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.15);
     `;
 
     const dateStr = new Date(SAMPLE_DATA.dailyFlash.date + 'T12:00:00').toLocaleDateString('en-US', {
@@ -1270,11 +1270,11 @@ function buildDateHeader(container) {
             <div style="font-family: var(--font-display); font-size: 40px; color: ${COLORS.yellow};">
                 Daily Flash Report
             </div>
-            <div style="font-size: 17px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+            <div style="font-size: 17px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
                 ${dateStr}
             </div>
         </div>
-        <div style="font-size: 16px; color: rgba(198, 255, 187, 0.3);">
+        <div style="font-size: 16px; color: rgba(var(--color-mint-rgb), 0.3);">
             Sample Data · Connect to backend for live reports
         </div>
     `;

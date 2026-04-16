@@ -13,14 +13,14 @@ import { parseMenuTemplate, getSummary } from '../services/excel-parser.js';
    Duplicated here to keep modules independent.
 ------------------------------------------ */
 const COLORS = {
-    mint:       '#C6FFBB',
-    mintFaded:  'rgba(198, 255, 187, 0.8)',
-    mintGhost:  'rgba(198, 255, 187, 0.4)',
-    yellow:     '#FBDE42',
-    yellowFaded:'rgba(251, 222, 66, 0.4)',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mint:       'var(--color-mint)',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.8)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.4)',
+    yellow:     'var(--color-gold)',
+    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     white:      '#FFFFFF',
 };
 
@@ -92,8 +92,8 @@ function buildBackButton(container, label) {
         gap: 8px;
         padding: 8px 16px;
         margin-bottom: 16px;
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid rgba(198, 255, 187, 0.15);
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.15);
         border-radius: 4px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -103,10 +103,10 @@ function buildBackButton(container, label) {
     `;
     btn.textContent = `← Back to ${label}`;
     btn.addEventListener('mouseenter', () => {
-        btn.style.background = 'rgba(198, 255, 187, 0.15)';
+        btn.style.background = 'rgba(var(--color-mint-rgb), 0.15)';
     });
     btn.addEventListener('mouseleave', () => {
-        btn.style.background = 'rgba(198, 255, 187, 0.06)';
+        btn.style.background = 'rgba(var(--color-mint-rgb), 0.06)';
     });
     btn.addEventListener('click', () => popView());
     container.appendChild(btn);
@@ -130,7 +130,7 @@ function buildComingSoon(container, viewName) {
         <div style="font-family: var(--font-display); font-size: 40px; color: ${COLORS.yellow}; margin-bottom: 16px;">
             ${displayName}
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             Coming soon — this step is next in the build queue.
         </div>
     `;
@@ -153,7 +153,7 @@ function buildFileSelect(wrapper) {
         <div style="font-family: var(--font-display); font-size: 40px; color: ${COLORS.yellow};">
             Import Menu Template
         </div>
-        <div style="font-size: 22px; color: rgba(198, 255, 187, 0.6); margin-top: 8px;">
+        <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.6); margin-top: 8px;">
             Select your completed KINDpos menu template file
         </div>
     `;
@@ -170,7 +170,7 @@ function buildFileSelect(wrapper) {
     // Drop zone
     const dropZone = document.createElement('div');
     dropZone.style.cssText = `
-        border: 3px dashed rgba(198, 255, 187, 0.4);
+        border: 3px dashed rgba(var(--color-mint-rgb), 0.4);
         border-radius: 15px;
         padding: 60px 40px;
         text-align: center;
@@ -197,7 +197,7 @@ function buildFileSelect(wrapper) {
     const dzFormats = document.createElement('div');
     dzFormats.style.cssText = `
         font-size: 18px;
-        color: rgba(198, 255, 187, 0.4);
+        color: rgba(var(--color-mint-rgb), 0.4);
     `;
     dzFormats.textContent = 'Supported: .xlsx, .xls';
 
@@ -207,8 +207,8 @@ function buildFileSelect(wrapper) {
         display: none;
         margin-top: 20px;
         padding: 12px 20px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
         border-radius: 4px;
         font-size: 22px;
         color: ${COLORS.yellow};
@@ -258,7 +258,7 @@ function buildFileSelect(wrapper) {
         text-align: center;
         margin-top: 32px;
         font-size: 18px;
-        color: rgba(198, 255, 187, 0.3);
+        color: rgba(var(--color-mint-rgb), 0.3);
     `;
     note.textContent = 'Use the KINDpos Excel template for best results';
     wrapper.appendChild(note);
@@ -281,18 +281,18 @@ function buildFileSelect(wrapper) {
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.style.borderColor = COLORS.yellow;
-        dropZone.style.background = 'rgba(251, 222, 66, 0.05)';
+        dropZone.style.background = 'rgba(var(--color-gold-rgb), 0.05)';
     });
 
     dropZone.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = 'rgba(198, 255, 187, 0.4)';
+        dropZone.style.borderColor = 'rgba(var(--color-mint-rgb), 0.4)';
         dropZone.style.background = 'transparent';
     });
 
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = 'rgba(198, 255, 187, 0.4)';
+        dropZone.style.borderColor = 'rgba(var(--color-mint-rgb), 0.4)';
         dropZone.style.background = 'transparent';
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -355,7 +355,7 @@ function buildParsing(wrapper) {
     const fileName = document.createElement('div');
     fileName.style.cssText = `
         font-size: 22px;
-        color: rgba(198, 255, 187, 0.6);
+        color: rgba(var(--color-mint-rgb), 0.6);
         margin-bottom: 40px;
     `;
     fileName.textContent = selectedFile ? `File: ${selectedFile.name}` : '';
@@ -366,8 +366,8 @@ function buildParsing(wrapper) {
         max-width: 500px;
         margin: 0 auto;
         padding: 30px;
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid rgba(198, 255, 187, 0.15);
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.15);
         border-radius: 10px;
         text-align: left;
     `;
@@ -386,7 +386,7 @@ function buildParsing(wrapper) {
         const step = document.createElement('div');
         step.style.cssText = `
             font-size: 22px;
-            color: rgba(198, 255, 187, 0.3);
+            color: rgba(var(--color-mint-rgb), 0.3);
             padding: 6px 0;
             font-family: var(--font-body);
         `;
@@ -412,7 +412,7 @@ function buildParsing(wrapper) {
         header.textContent = 'SheetJS library not loaded';
         header.style.color = COLORS.red;
         const hint = document.createElement('div');
-        hint.style.cssText = `font-size: 20px; color: rgba(198, 255, 187, 0.5); margin-top: 20px;`;
+        hint.style.cssText = `font-size: 20px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 20px;`;
         hint.textContent = 'Add xlsx.mini.min.js to assets/js/ and load it in index.html';
         container.appendChild(hint);
 
@@ -421,8 +421,8 @@ function buildParsing(wrapper) {
         backBtn.style.cssText = `
             margin-top: 24px;
             padding: 10px 24px;
-            background: rgba(198, 255, 187, 0.06);
-            border: 1px solid rgba(198, 255, 187, 0.15);
+            background: rgba(var(--color-mint-rgb), 0.06);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.15);
             border-radius: 4px;
             color: ${COLORS.mint};
             font-family: var(--font-body);
@@ -498,8 +498,8 @@ function buildPreview(wrapper) {
         gap: 8px;
         padding: 8px 16px;
         margin-bottom: 16px;
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid rgba(198, 255, 187, 0.15);
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.15);
         border-radius: 4px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -508,8 +508,8 @@ function buildPreview(wrapper) {
         transition: background 0.2s ease;
     `;
     backBtn.textContent = '← Back to File Select';
-    backBtn.addEventListener('mouseenter', () => { backBtn.style.background = 'rgba(198, 255, 187, 0.15)'; });
-    backBtn.addEventListener('mouseleave', () => { backBtn.style.background = 'rgba(198, 255, 187, 0.06)'; });
+    backBtn.addEventListener('mouseenter', () => { backBtn.style.background = 'rgba(var(--color-mint-rgb), 0.15)'; });
+    backBtn.addEventListener('mouseleave', () => { backBtn.style.background = 'rgba(var(--color-mint-rgb), 0.06)'; });
     backBtn.addEventListener('click', () => {
         selectedFile = null;
         parsedData = null;
@@ -554,7 +554,7 @@ function buildPreview(wrapper) {
         card.style.cssText = `
             flex: 1;
             min-width: 120px;
-            background: rgba(198, 255, 187, 0.8);
+            background: rgba(var(--color-mint-rgb), 0.8);
             border-radius: 6px;
             padding: 12px;
             text-align: center;
@@ -588,11 +588,11 @@ function buildPreview(wrapper) {
                 row.style.cssText = `
                     display: flex;
                     padding: 6px 0;
-                    border-bottom: 1px solid rgba(198, 255, 187, 0.06);
+                    border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.06);
                     font-size: 22px;
                 `;
                 row.innerHTML = `
-                    <span style="color: rgba(198, 255, 187, 0.5); min-width: 200px;">${label}</span>
+                    <span style="color: rgba(var(--color-mint-rgb), 0.5); min-width: 200px;">${label}</span>
                     <span style="color: ${COLORS.mint}; flex: 1;">${value}</span>
                 `;
                 content.appendChild(row);
@@ -604,7 +604,7 @@ function buildPreview(wrapper) {
     buildCollapsibleSection(wrapper, `📋 Tax Rules (${(data.tax_rules || []).length})`, false, (content) => {
         const rules = data.tax_rules || [];
         if (rules.length === 0) {
-            content.innerHTML = `<div style="color: rgba(198, 255, 187, 0.4); font-size: 20px;">No tax rules defined</div>`;
+            content.innerHTML = `<div style="color: rgba(var(--color-mint-rgb), 0.4); font-size: 20px;">No tax rules defined</div>`;
             return;
         }
         rules.forEach(tax => {
@@ -619,13 +619,13 @@ function buildPreview(wrapper) {
                 align-items: center;
                 gap: 12px;
                 padding: 8px 0;
-                border-bottom: 1px solid rgba(198, 255, 187, 0.06);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.06);
                 font-size: 22px;
             `;
             row.innerHTML = `
                 <span style="color: ${COLORS.mint}; flex: 1;">${tax.name}</span>
                 <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 70px; text-align: right;">${tax.rate}%</span>
-                <span style="color: rgba(198, 255, 187, 0.4); min-width: 180px; text-align: right; font-size: 18px;">${flags.join(' · ')}</span>
+                <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 180px; text-align: right; font-size: 18px;">${flags.join(' · ')}</span>
             `;
             content.appendChild(row);
         });
@@ -635,7 +635,7 @@ function buildPreview(wrapper) {
     buildCollapsibleSection(wrapper, `📂 Categories (${(data.categories || []).length})`, false, (content) => {
         const cats = data.categories || [];
         if (cats.length === 0) {
-            content.innerHTML = `<div style="color: rgba(198, 255, 187, 0.4); font-size: 20px;">No categories defined</div>`;
+            content.innerHTML = `<div style="color: rgba(var(--color-mint-rgb), 0.4); font-size: 20px;">No categories defined</div>`;
             return;
         }
         cats.forEach(cat => {
@@ -645,14 +645,14 @@ function buildPreview(wrapper) {
                 align-items: center;
                 gap: 12px;
                 padding: 8px 0;
-                border-bottom: 1px solid rgba(198, 255, 187, 0.06);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.06);
                 font-size: 22px;
             `;
             row.innerHTML = `
                 <span style="width: 20px; height: 20px; border-radius: 3px; background: ${cat.color}; flex-shrink: 0;"></span>
                 <span style="color: ${COLORS.mint}; flex: 1;">${cat.name}</span>
-                <span style="color: rgba(198, 255, 187, 0.4); font-size: 18px;">#${cat.display_order}</span>
-                <span style="color: rgba(198, 255, 187, 0.4); font-size: 18px;">${cat.tax_category || ''}</span>
+                <span style="color: rgba(var(--color-mint-rgb), 0.4); font-size: 18px;">#${cat.display_order}</span>
+                <span style="color: rgba(var(--color-mint-rgb), 0.4); font-size: 18px;">${cat.tax_category || ''}</span>
                 <span style="color: ${cat.active ? COLORS.mint : COLORS.red}; font-size: 18px;">${cat.active ? '✓' : '✗'}</span>
             `;
             content.appendChild(row);
@@ -663,7 +663,7 @@ function buildPreview(wrapper) {
     buildCollapsibleSection(wrapper, `🍕 Menu Items (${(data.items || []).length})`, false, (content) => {
         const items = data.items || [];
         if (items.length === 0) {
-            content.innerHTML = `<div style="color: rgba(198, 255, 187, 0.4); font-size: 20px;">No items defined</div>`;
+            content.innerHTML = `<div style="color: rgba(var(--color-mint-rgb), 0.4); font-size: 20px;">No items defined</div>`;
             return;
         }
 
@@ -686,7 +686,7 @@ function buildPreview(wrapper) {
                 color: ${COLORS.yellow};
                 margin: 16px 0 8px 0;
                 padding-bottom: 4px;
-                border-bottom: 1px solid rgba(198, 255, 187, 0.1);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.1);
             `;
             catHeading.textContent = `${catName}: ${catItems.length} items`;
             content.appendChild(catHeading);
@@ -721,7 +721,7 @@ function buildPreview(wrapper) {
                 const more = document.createElement('div');
                 more.style.cssText = `
                     font-size: 20px;
-                    color: rgba(198, 255, 187, 0.4);
+                    color: rgba(var(--color-mint-rgb), 0.4);
                     padding: 4px 8px;
                     font-style: italic;
                 `;
@@ -735,7 +735,7 @@ function buildPreview(wrapper) {
     buildCollapsibleSection(wrapper, `💰 Discounts (${(data.discounts || []).length})`, false, (content) => {
         const discounts = data.discounts || [];
         if (discounts.length === 0) {
-            content.innerHTML = `<div style="color: rgba(198, 255, 187, 0.4); font-size: 20px;">No discounts defined</div>`;
+            content.innerHTML = `<div style="color: rgba(var(--color-mint-rgb), 0.4); font-size: 20px;">No discounts defined</div>`;
             return;
         }
         discounts.forEach(disc => {
@@ -749,13 +749,13 @@ function buildPreview(wrapper) {
                 align-items: center;
                 gap: 12px;
                 padding: 8px 0;
-                border-bottom: 1px solid rgba(198, 255, 187, 0.06);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.06);
                 font-size: 22px;
             `;
             row.innerHTML = `
                 <span style="color: ${COLORS.mint}; flex: 1;">${disc.name}</span>
                 <span style="color: ${COLORS.yellow}; font-family: var(--font-display); min-width: 100px; text-align: right;">${amountStr}</span>
-                <span style="color: rgba(198, 255, 187, 0.4); min-width: 100px; text-align: right; font-size: 18px;">${disc.schedule}</span>
+                <span style="color: rgba(var(--color-mint-rgb), 0.4); min-width: 100px; text-align: right; font-size: 18px;">${disc.schedule}</span>
                 ${disc.requires_approval ? `<span style="color: ${COLORS.red}; font-size: 18px;">🔒 Approval</span>` : ''}
             `;
             content.appendChild(row);
@@ -766,8 +766,8 @@ function buildPreview(wrapper) {
     if (parseWarnings.length > 0) {
         const warnBox = document.createElement('div');
         warnBox.style.cssText = `
-            background: rgba(251, 222, 66, 0.06);
-            border: 1px solid rgba(251, 222, 66, 0.2);
+            background: rgba(var(--color-gold-rgb), 0.06);
+            border: 1px solid rgba(var(--color-gold-rgb), 0.2);
             border-radius: 8px;
             padding: 16px;
             margin-top: 16px;
@@ -779,7 +779,7 @@ function buildPreview(wrapper) {
 
         parseWarnings.forEach(warn => {
             const line = document.createElement('div');
-            line.style.cssText = `font-size: 20px; color: rgba(198, 255, 187, 0.6); padding: 3px 0;`;
+            line.style.cssText = `font-size: 20px; color: rgba(var(--color-mint-rgb), 0.6); padding: 3px 0;`;
             line.textContent = `⚠ ${warn}`;
             warnBox.appendChild(line);
         });
@@ -815,7 +815,7 @@ function buildPreview(wrapper) {
         text-align: center;
         margin-top: 12px;
         font-size: 18px;
-        color: rgba(198, 255, 187, 0.3);
+        color: rgba(var(--color-mint-rgb), 0.3);
     `;
     readyNote.textContent = `Ready to import: ${summary.categories_count} categories, ${summary.items_count} items, ${summary.tax_rules_count} tax rules, ${summary.discounts_count} discounts`;
     wrapper.appendChild(readyNote);
@@ -832,7 +832,7 @@ function buildCollapsibleSection(wrapper, title, startOpen, contentBuilder) {
     const section = document.createElement('div');
     section.style.cssText = `
         margin-bottom: 8px;
-        border: 1px solid rgba(198, 255, 187, 0.12);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.12);
         border-radius: 6px;
         overflow: hidden;
     `;
@@ -845,7 +845,7 @@ function buildCollapsibleSection(wrapper, title, startOpen, contentBuilder) {
         gap: 10px;
         width: 100%;
         padding: 12px 16px;
-        background: rgba(198, 255, 187, 0.06);
+        background: rgba(var(--color-mint-rgb), 0.06);
         border: none;
         color: ${COLORS.mint};
         font-family: var(--font-display);
@@ -867,8 +867,8 @@ function buildCollapsibleSection(wrapper, title, startOpen, contentBuilder) {
     header.appendChild(arrow);
     header.appendChild(titleSpan);
 
-    header.addEventListener('mouseenter', () => { header.style.background = 'rgba(198, 255, 187, 0.12)'; });
-    header.addEventListener('mouseleave', () => { header.style.background = 'rgba(198, 255, 187, 0.06)'; });
+    header.addEventListener('mouseenter', () => { header.style.background = 'rgba(var(--color-mint-rgb), 0.12)'; });
+    header.addEventListener('mouseleave', () => { header.style.background = 'rgba(var(--color-mint-rgb), 0.06)'; });
 
     // Content
     const content = document.createElement('div');
@@ -954,7 +954,7 @@ function buildSuccess(wrapper) {
         card.style.cssText = `
             flex: 1;
             min-width: 120px;
-            background: rgba(198, 255, 187, 0.8);
+            background: rgba(var(--color-mint-rgb), 0.8);
             border-radius: 6px;
             padding: 12px;
             text-align: center;
@@ -970,8 +970,8 @@ function buildSuccess(wrapper) {
     // --- Event generation note ---
     const eventBox = document.createElement('div');
     eventBox.style.cssText = `
-        background: rgba(198, 255, 187, 0.06);
-        border: 1px solid rgba(198, 255, 187, 0.15);
+        background: rgba(var(--color-mint-rgb), 0.06);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.15);
         border-radius: 8px;
         padding: 20px;
         text-align: center;
@@ -981,7 +981,7 @@ function buildSuccess(wrapper) {
         <div style="font-family: var(--font-display); font-size: 40px; color: ${COLORS.yellow}; margin-bottom: 8px;">
             ${eventCount} events
         </div>
-        <div style="font-size: 20px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 20px; color: rgba(var(--color-mint-rgb), 0.5);">
             ready for the event ledger
         </div>
     `;
@@ -990,8 +990,8 @@ function buildSuccess(wrapper) {
     // --- What's next box ---
     const nextBox = document.createElement('div');
     nextBox.style.cssText = `
-        background: rgba(251, 222, 66, 0.05);
-        border: 1px solid rgba(251, 222, 66, 0.15);
+        background: rgba(var(--color-gold-rgb), 0.05);
+        border: 1px solid rgba(var(--color-gold-rgb), 0.15);
         border-radius: 8px;
         padding: 16px 20px;
         text-align: center;
@@ -999,7 +999,7 @@ function buildSuccess(wrapper) {
     `;
     nextBox.innerHTML = `
         <div style="font-size: 22px; color: ${COLORS.yellow}; margin-bottom: 4px;">What's Next</div>
-        <div style="font-size: 20px; color: rgba(198, 255, 187, 0.5); line-height: 1.5;">
+        <div style="font-size: 20px; color: rgba(var(--color-mint-rgb), 0.5); line-height: 1.5;">
             Events will be written to the local event ledger<br>
             and synced to your terminals automatically.
         </div>
@@ -1053,7 +1053,7 @@ function buildSuccess(wrapper) {
     `;
     anotherBtn.textContent = 'Import Another';
     anotherBtn.addEventListener('mouseenter', () => {
-        anotherBtn.style.background = 'rgba(198, 255, 187, 0.08)';
+        anotherBtn.style.background = 'rgba(var(--color-mint-rgb), 0.08)';
         anotherBtn.style.borderColor = COLORS.yellow;
     });
     anotherBtn.addEventListener('mouseleave', () => {
@@ -1074,16 +1074,16 @@ function buildSuccess(wrapper) {
     doneBtn.style.cssText = `
         padding: 14px 36px;
         background: transparent;
-        border: 1px solid rgba(198, 255, 187, 0.2);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
         border-radius: 8px;
-        color: rgba(198, 255, 187, 0.5);
+        color: rgba(var(--color-mint-rgb), 0.5);
         font-family: var(--font-body);
         font-size: 22px;
         cursor: pointer;
         transition: background 0.2s ease;
     `;
     doneBtn.textContent = '← Done';
-    doneBtn.addEventListener('mouseenter', () => { doneBtn.style.background = 'rgba(198, 255, 187, 0.06)'; });
+    doneBtn.addEventListener('mouseenter', () => { doneBtn.style.background = 'rgba(var(--color-mint-rgb), 0.06)'; });
     doneBtn.addEventListener('mouseleave', () => { doneBtn.style.background = 'transparent'; });
     doneBtn.addEventListener('click', () => {
         // Go back to Menu subcategory screen
@@ -1114,7 +1114,7 @@ function buildError(wrapper) {
         <div style="font-family: var(--font-display); font-size: 40px; color: ${COLORS.red};">
             Import Errors
         </div>
-        <div style="font-size: 22px; color: rgba(198, 255, 187, 0.5); margin-top: 8px;">
+        <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 8px;">
             The template could not be parsed. Please check the errors below.
         </div>
     `;
@@ -1124,8 +1124,8 @@ function buildError(wrapper) {
     if (parseErrors.length > 0) {
         const errBox = document.createElement('div');
         errBox.style.cssText = `
-            background: rgba(255, 51, 51, 0.08);
-            border: 1px solid rgba(255, 51, 51, 0.25);
+            background: rgba(var(--color-vermillion-rgb), 0.08);
+            border: 1px solid rgba(var(--color-vermillion-rgb), 0.25);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 16px;
@@ -1159,8 +1159,8 @@ function buildError(wrapper) {
     if (parseWarnings.length > 0) {
         const warnBox = document.createElement('div');
         warnBox.style.cssText = `
-            background: rgba(251, 222, 66, 0.06);
-            border: 1px solid rgba(251, 222, 66, 0.2);
+            background: rgba(var(--color-gold-rgb), 0.06);
+            border: 1px solid rgba(var(--color-gold-rgb), 0.2);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 16px;
@@ -1180,7 +1180,7 @@ function buildError(wrapper) {
             const line = document.createElement('div');
             line.style.cssText = `
                 font-size: 22px;
-                color: rgba(198, 255, 187, 0.6);
+                color: rgba(var(--color-mint-rgb), 0.6);
                 padding: 4px 0;
             `;
             line.textContent = `⚠ ${warn}`;
