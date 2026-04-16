@@ -37,11 +37,13 @@ export const SHIFT_TEMPLATES = [
 export let TODAYS_SCHEDULE = [];
 export let SWAP_REQUESTS = [];
 
-export const COVERAGE_REQUIREMENTS = [
-    { daypart: 'Lunch (11a–2p)',  minStaff: 3 },
-    { daypart: 'Dinner (5p–9p)',  minStaff: 4 },
-    { daypart: 'Late (9p–Close)', minStaff: 2 },
-];
+export const COVERAGE_REQUIREMENTS = {
+    dayparts: [
+        { name: 'Lunch (11a–2p)', startHour: 11, endHour: 14, roles: { server: 2, manager: 1 } },
+        { name: 'Dinner (5p–9p)', startHour: 17, endHour: 21, roles: { server: 3, manager: 1 } },
+        { name: 'Late (9p–Close)', startHour: 21, endHour: 23, roles: { server: 1, manager: 1 } },
+    ],
+};
 
 export function timeToPercent(timeStr) {
     const [h, m] = timeStr.split(':').map(Number);
