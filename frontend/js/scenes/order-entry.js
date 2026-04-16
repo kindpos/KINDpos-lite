@@ -137,11 +137,13 @@ function fetchMenuFromAPI() {
           if (item.mods) hexItem.requiredMods = item.mods;
           return hexItem;
         });
-      var textColor = _textColorForHex(cat.color || T.mutedText);
+      // Prefer the user-set color from the Overseer; fall back to theme token
+      var catColor = cat.color || cat.hex_color || T.catColor(cat.label || cat.name.toUpperCase()) || T.mutedText;
+      var textColor = _textColorForHex(catColor);
       return {
         id: cat.category_id,
         label: cat.label || cat.name.toUpperCase(),
-        color: T.catColor(cat.label || cat.name.toUpperCase()) || cat.color,
+        color: catColor,
         textColor: textColor,
         pizzaBuilder: cat.pizza_builder || false,
         subcats: [{ id: cat.category_id + '-items', label: cat.name, items: catItems }],

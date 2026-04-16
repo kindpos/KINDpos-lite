@@ -336,14 +336,15 @@ function renderCardGrid() {
         if (catItems.length === 0 && displayState.searchTerm.trim()) return;
 
         // --- Category Header ---
+        const catColor = cat.color || COLORS.yellow;
         const catHeader = document.createElement('div');
         catHeader.style.cssText = `
             font-family: var(--font-display);
             font-size: 34px;
-            color: ${COLORS.yellow};
+            color: ${catColor};
             margin: 32px 0 16px 0;
             padding-bottom: 8px;
-            border-bottom: 3px solid ${COLORS.yellow};
+            border-bottom: 3px solid ${catColor};
             display: flex;
             align-items: center;
             gap: 12px;
