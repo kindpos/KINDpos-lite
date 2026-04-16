@@ -29,10 +29,7 @@ const COLORS = {
 };
 
 /* ------------------------------------------
-   TEST DATA
-   5 categories, ~25 items for realistic
-   browsing. Will be replaced by API call
-   when backend integration happens.
+   MENU DATA (fetched from /api/v1/config/menu/*)
 ------------------------------------------ */
 async function fetchMenuData() {
     try {
@@ -88,7 +85,7 @@ async function fetchMenuData() {
 ------------------------------------------ */
 let currentWrapper = null;
 
-/** Working copy of menu data (cloned from test data on enter) */
+/** Working copy of menu data (fetched from API on enter) */
 let menuData = { categories: [], items: [] };
 
 /** Tracks all uncommitted changes */
@@ -173,7 +170,7 @@ function buildMainView(wrapper) {
                 font-size: 18px;
                 color: rgba(var(--color-mint-rgb), 0.5);
                 margin-top: 4px;
-            ">Sample Data · Connect to backend for live menu</div>
+            ">${menuData.categories.length} categories · ${menuData.items.length} items</div>
         </div>
     `;
 

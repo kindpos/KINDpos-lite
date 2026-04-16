@@ -1320,9 +1320,6 @@ function buildDateHeader(container) {
                 ${dateStr}
             </div>
         </div>
-        <div style="font-size: 16px; color: rgba(var(--color-mint-rgb), 0.3);">
-            Sample Data · Connect to backend for live reports
-        </div>
     `;
     container.appendChild(header);
 }

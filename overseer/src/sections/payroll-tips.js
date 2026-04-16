@@ -1,3 +1,4 @@
+import { pushChanges } from '../services/config-push.js';
 /* ============================================
    KINDpos Overseer — Payroll & Tips
 
@@ -134,18 +135,14 @@ function showToast(message, type = 'success') {
 }
 
 /* ------------------------------------------
-   EVENT SIMULATION
+   EVENT DISPATCH — posts to /api/v1/config/push
 ------------------------------------------ */
+const _pendingEvents = [];
+
 function emitEvent(eventType, payload) {
-    const event = {
-        event_type: eventType,
-        event_id: `evt_${Date.now().toString(36)}`,
-        timestamp: new Date().toISOString(),
-        terminal_id: 'overseer_001',
-        manager_id: 'mgr_tyler',
-        payload,
-    };
-    console.log(`[KINDpos Event] ${eventType}`, event);
+    const event = { event_type: eventType, payload };
+    _pendingEvents.push(event);
+    pushChanges([event]).catch(e => console.warn("[Overseer] Event push failed:", e));
     return event;
 }
 
@@ -238,9 +235,6 @@ function buildPayrollSummary(wrapper) {
             <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
                 ${fmtDateRange(PAYROLL_SUMMARY.period.start, PAYROLL_SUMMARY.period.end)}
             </div>
-        </div>
-        <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.3);">
-            ⚠ Sample Data
         </div>
     `;
     wrapper.appendChild(header);

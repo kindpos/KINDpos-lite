@@ -212,11 +212,8 @@ function buildEmployeeList(container) {
                 Employee Management
             </div>
             <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
-                The Honeycomb Bistro
+                ${EMPLOYEES.length} active employee${EMPLOYEES.length !== 1 ? 's' : ''}
             </div>
-        </div>
-        <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.3);">
-            ⚠ Sample Data — Connect backend to load live records
         </div>
     `;
     wrapper.appendChild(header);
