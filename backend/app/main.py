@@ -164,6 +164,12 @@ async def health_check():
         "terminal_id": settings.terminal_id,
     }
 
+from fastapi.responses import RedirectResponse
+
+@app.get("/overseer")
+async def overseer_redirect():
+    return RedirectResponse(url="/overseer/")
+
 overseer_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'overseer')
 if os.path.exists(overseer_path):
     print(f'Serving Overseer from: {overseer_path}')
