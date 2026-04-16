@@ -40,20 +40,35 @@ async function fetchMenuData() {
         ]);
         const categories = catRes.ok ? await catRes.json() : [];
         const items = itemRes.ok ? await itemRes.json() : [];
+
+        const cats = categories.map((c, i) => ({
+            id: c.category_id || c.id || `cat_${i}`,
+            name: c.name || c.label,
+            emoji: '',
+            display_order: c.display_order || i + 1,
+            color: c.hex_color || c.color || null,
+        }));
+
+        // Build name→id lookup so items with category="Pizza" resolve to id="pizza"
+        const nameToId = {};
+        cats.forEach(c => {
+            nameToId[c.name.toLowerCase()] = c.id;
+            nameToId[c.id.toLowerCase()] = c.id;
+        });
+
+        const resolveCategory = (raw) => {
+            if (!raw) return '';
+            return nameToId[raw.toLowerCase()] || raw;
+        };
+
         return {
-            categories: categories.map((c, i) => ({
-                id: c.category_id || c.id || `cat_${i}`,
-                name: c.name || c.label,
-                emoji: '',
-                display_order: c.display_order || i + 1,
-                color: c.color || null,
-            })),
+            categories: cats,
             items: items.map((item, i) => ({
                 id: item.item_id || item.id || `item_${i}`,
                 name: item.name,
                 price: parseFloat(item.price) || 0,
                 description: item.description || '',
-                category_id: item.category_id || item.category || '',
+                category_id: resolveCategory(item.category_id || item.category),
                 active: item.active !== false,
                 display_order: item.display_order || i + 1,
             })),
