@@ -135,6 +135,24 @@ class MenuCategory(BaseModel):
             data['hex_color'] = data['color']
         super().__init__(**data)
 
+# Modifier Models
+class ModifierOption(BaseModel):
+    modifier_id: str
+    name: str
+    price: Decimal = Decimal("0")
+
+class ModifierGroup(BaseModel):
+    group_id: str
+    name: str
+    modifier_ids: List[str] = []
+    modifiers: List[ModifierOption] = []
+    template_id: Optional[str] = None
+    min_selections: int = 0
+    max_selections: Optional[int] = None
+    color: Optional[str] = None
+    category_id: Optional[str] = None
+    active: bool = True
+
 # Floor Plan Models
 class TableElement(BaseModel):
     id: str
