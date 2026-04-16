@@ -7,6 +7,7 @@ import { SceneManager }              from './components/scene-manager.js';
 import { T }                          from './components/tokens.js';
 import { initThemeBridge, applyTheme, getCurrentThemeId, getThemeCatalog }
                                       from './theme-bridge.js';
+import { loadEmployeeData }           from './data/sample-employees.js';
 
 import { registerSalesReports }       from './sections/reporting.js';
 import { registerMenuImport }         from './sections/menu-import.js';
@@ -462,6 +463,7 @@ async function boot() {
         }
     });
     await initThemeBridge();
+    await loadEmployeeData();
     buildNav();
     registerAllSections();
 
