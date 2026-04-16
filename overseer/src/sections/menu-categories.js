@@ -33,12 +33,14 @@ const COLORS = {
 ------------------------------------------ */
 async function fetchMenuData() {
     try {
-        const [catRes, itemRes] = await Promise.all([
+        const [catRes, itemRes, modRes] = await Promise.all([
             fetch('/api/v1/config/menu/categories'),
             fetch('/api/v1/config/menu/items'),
+            fetch('/api/v1/config/modifier-groups'),
         ]);
         const categories = catRes.ok ? await catRes.json() : [];
         const items = itemRes.ok ? await itemRes.json() : [];
+        const modifierGroups = modRes.ok ? await modRes.json() : [];
 
         const cats = categories.map((c, i) => ({
             id: c.category_id || c.id || `cat_${i}`,
@@ -60,21 +62,48 @@ async function fetchMenuData() {
             return nameToId[raw.toLowerCase()] || raw;
         };
 
+        // Flatten non-hidden groups into a deduped master modifier list
+        const allModifiers = [];
+        const modSet = new Set();
+        for (const grp of modifierGroups) {
+            if (grp.hidden) continue;
+            for (const m of (grp.modifiers || [])) {
+                const mid = m.modifier_id || m.id;
+                if (!mid || modSet.has(mid)) continue;
+                modSet.add(mid);
+                allModifiers.push({ id: mid, name: m.name, price: parseFloat(m.price) || 0 });
+            }
+        }
+
+        // Hydrate each item's included_modifier_ids from its hidden "included_<item_id>" group
+        const includedByItem = {};
+        for (const grp of modifierGroups) {
+            if (grp.hidden && grp.owner_item_id) {
+                includedByItem[grp.owner_item_id] = grp.modifier_ids || [];
+            }
+        }
+
         return {
             categories: cats,
-            items: items.map((item, i) => ({
-                id: item.item_id || item.id || `item_${i}`,
-                name: item.name,
-                price: parseFloat(item.price) || 0,
-                description: item.description || '',
-                category_id: resolveCategory(item.category_id || item.category),
-                active: item.active !== false,
-                display_order: item.display_order || i + 1,
-            })),
+            items: items.map((item, i) => {
+                const id = item.item_id || item.id || `item_${i}`;
+                return {
+                    id,
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    description: item.description || '',
+                    category_id: resolveCategory(item.category_id || item.category),
+                    active: item.active !== false,
+                    display_order: item.display_order || i + 1,
+                    included_modifier_ids: includedByItem[id] || [],
+                };
+            }),
+            modifierGroups,
+            allModifiers,
         };
     } catch (e) {
         console.warn('[MenuCategories] Failed to fetch menu data:', e);
-        return { categories: [], items: [] };
+        return { categories: [], items: [], modifierGroups: [], allModifiers: [] };
     }
 }
 
@@ -86,7 +115,7 @@ async function fetchMenuData() {
 let currentWrapper = null;
 
 /** Working copy of menu data (fetched from API on enter) */
-let menuData = { categories: [], items: [] };
+let menuData = { categories: [], items: [], modifierGroups: [], allModifiers: [] };
 
 /** Tracks all uncommitted changes */
 let pendingChanges = { new: [], edited: [], deleted: [] };
@@ -766,6 +795,90 @@ function buildFormField(container, label, inputType, value, options = {}) {
 }
 
 /* ------------------------------------------
+   FIELD: INCLUDED MODIFIERS (checkbox list)
+   Drives a hidden "included_<item_id>" modifier group
+------------------------------------------ */
+function buildIncludedModifiersField(container, currentIds) {
+    const selected = new Set(currentIds);
+    const group = document.createElement('div');
+    group.style.cssText = 'margin-bottom: 20px;';
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-family: var(--font-body); font-size: 20px; color: var(--color-mint); margin-bottom: 6px;';
+    label.textContent = 'Included Modifiers';
+    group.appendChild(label);
+
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-family: var(--font-body); font-size: 16px; color: #999; margin-bottom: 10px;';
+    hint.textContent = 'Pre-added on the check. Tap on terminal acts as NO (removal).';
+    group.appendChild(hint);
+
+    const listWrap = document.createElement('div');
+    listWrap.style.cssText = [
+        'max-height: 220px; overflow-y: auto;',
+        'border: 1px solid rgba(var(--color-mint-rgb), 0.2);',
+        'border-radius: 8px; padding: 10px;',
+        'background: rgba(var(--color-mint-rgb), 0.04);',
+    ].join('');
+
+    const mods = menuData.allModifiers || [];
+    if (mods.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'color: #999; font-family: var(--font-body); font-size: 18px; font-style: italic; padding: 6px;';
+        empty.textContent = 'No modifiers defined yet. Add them in Configure Modifiers.';
+        listWrap.appendChild(empty);
+    } else {
+        mods.forEach(mod => {
+            const row = document.createElement('label');
+            row.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 6px 4px; cursor: pointer;';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = selected.has(mod.id);
+            cb.style.cssText = 'width: 18px; height: 18px; accent-color: var(--color-mint);';
+            cb.addEventListener('change', () => {
+                if (cb.checked) selected.add(mod.id);
+                else selected.delete(mod.id);
+            });
+            const name = document.createElement('span');
+            name.style.cssText = 'font-family: var(--font-body); font-size: 20px; color: #ddd;';
+            name.textContent = mod.name;
+            row.appendChild(cb);
+            row.appendChild(name);
+            listWrap.appendChild(row);
+        });
+
+        // Also render checked ids that no longer resolve (e.g. modifier removed from all groups)
+        const knownIds = new Set(mods.map(m => m.id));
+        currentIds.filter(id => !knownIds.has(id)).forEach(id => {
+            const row = document.createElement('label');
+            row.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 6px 4px; cursor: pointer; opacity: 0.6;';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = true;
+            cb.style.cssText = 'width: 18px; height: 18px; accent-color: var(--color-vermillion);';
+            cb.addEventListener('change', () => {
+                if (cb.checked) selected.add(id);
+                else selected.delete(id);
+            });
+            const name = document.createElement('span');
+            name.style.cssText = 'font-family: var(--font-body); font-size: 20px; color: var(--color-vermillion);';
+            name.textContent = `${id} (removed)`;
+            row.appendChild(cb);
+            row.appendChild(name);
+            listWrap.appendChild(row);
+        });
+    }
+
+    group.appendChild(listWrap);
+    container.appendChild(group);
+
+    return {
+        group,
+        getSelected: () => Array.from(selected),
+    };
+}
+
+/* ------------------------------------------
    MODAL: EDIT ITEM
 ------------------------------------------ */
 function openEditModal(itemId) {
@@ -782,6 +895,9 @@ function openEditModal(itemId) {
         const catField    = buildFormField(content, 'Category', 'select', item.category_id, { fieldName: 'category_id', choices: categoryChoices });
         const descField   = buildFormField(content, 'Description', 'textarea', item.description, { fieldName: 'description' });
         const activeField = buildFormField(content, 'Active', 'checkbox', item.active, { fieldName: 'active' });
+
+        // --- Included Modifiers (checkbox list against master mod pool) ---
+        const includedField = buildIncludedModifiersField(content, item.included_modifier_ids || []);
 
         // --- Action Buttons: Delete + Duplicate ---
         const actionsArea = document.createElement('div');
@@ -898,6 +1014,7 @@ function openEditModal(itemId) {
                 category_id: catField.input.value,
                 description: descField.input.value.trim(),
                 active:      activeField.input.checked,
+                included_modifier_ids: includedField.getSelected(),
             };
 
             // Validate
@@ -1520,7 +1637,7 @@ function generateMenuEvents(changes) {
         });
     });
 
-    // Deleted items → menu.item_deleted
+    // Deleted items → menu.item_deleted (+ clean up hidden included group)
     changes.deleted.forEach(item_id => {
         events.push({
             event_type: 'menu.item_deleted',
@@ -1530,7 +1647,45 @@ function generateMenuEvents(changes) {
                 item_id: item_id,
             }
         });
+        const hiddenId = `included_${item_id}`;
+        if ((menuData.modifierGroups || []).some(g => g.group_id === hiddenId)) {
+            events.push({
+                event_type: 'modifier.group_deleted',
+                batch_id: batch_id,
+                timestamp: new Date().toISOString(),
+                payload: { group_id: hiddenId },
+            });
+        }
     });
+
+    // Hidden "included" groups for new + edited items (one per item with an included list)
+    const pushHiddenIncluded = (item) => {
+        if (!Array.isArray(item.included_modifier_ids)) return;
+        const itemId = item.id.replace('temp_', '');
+        const hiddenId = `included_${itemId}`;
+        const exists = (menuData.modifierGroups || []).some(g => g.group_id === hiddenId);
+        const modifiers = item.included_modifier_ids.map(mid => {
+            const mod = (menuData.allModifiers || []).find(m => m.id === mid);
+            return mod
+                ? { modifier_id: mid, name: mod.name, price: mod.price || 0 }
+                : { modifier_id: mid, name: mid, price: 0 };
+        });
+        events.push({
+            event_type: exists ? 'modifier.group_updated' : 'modifier.group_created',
+            batch_id: batch_id,
+            timestamp: new Date().toISOString(),
+            payload: {
+                group_id: hiddenId,
+                name: `__included__${itemId}`,
+                hidden: true,
+                owner_item_id: itemId,
+                modifier_ids: item.included_modifier_ids,
+                modifiers,
+            },
+        });
+    };
+    changes.new.filter(i => !i._isCategory).forEach(pushHiddenIncluded);
+    changes.edited.forEach(pushHiddenIncluded);
 
     return events;
 }

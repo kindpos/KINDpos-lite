@@ -151,6 +151,8 @@ class ModifierGroup(BaseModel):
     max_selections: Optional[int] = None
     color: Optional[str] = None
     category_id: Optional[str] = None
+    hidden: bool = False
+    owner_item_id: Optional[str] = None
     active: bool = True
 
 # Floor Plan Models

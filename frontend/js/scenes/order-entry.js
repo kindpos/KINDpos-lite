@@ -106,6 +106,9 @@ var MENU_DATA = [];
 
 var MOD_DATA = [];
 
+// ── Per-item included-modifier lookup (from hidden "included_<item_id>" groups) ──
+var INCLUDED_BY_ITEM = {};
+
 // ── Fetch menu from API and transform to HexNav format ──
 var _menuFetched = false;
 
@@ -132,7 +135,7 @@ function fetchMenuFromAPI() {
       var catItems = (itemsByCatId[cat.category_id] || [])
         .sort(function(a, b) { return (a.display_order || 999) - (b.display_order || 999); })
         .map(function(item) {
-          var hexItem = { label: item.name, price: item.price };
+          var hexItem = { label: item.name, price: item.price, id: item.item_id || item.id };
           if (item.pizza_size) hexItem.pizzaSize = true;
           if (item.mods) hexItem.requiredMods = item.mods;
           return hexItem;
@@ -148,6 +151,17 @@ function fetchMenuFromAPI() {
         pizzaBuilder: cat.pizza_builder || false,
         subcats: [{ id: cat.category_id + '-items', label: cat.name, items: catItems }],
       };
+    });
+
+    // Build per-item included-modifier lookup from hidden "included_<item_id>" groups.
+    // Each entry is shape { id, label } — matches ModifierPanel's includedItems contract.
+    INCLUDED_BY_ITEM = {};
+    (menu.modifier_groups || []).forEach(function(g) {
+      if (!g.hidden || !g.owner_item_id) return;
+      var mods = (g.modifiers || []).map(function(m) {
+        return { id: m.modifier_id, label: m.name };
+      });
+      if (mods.length > 0) INCLUDED_BY_ITEM[g.owner_item_id] = mods;
     });
 
     // Extract pizza builder modifier groups
@@ -1554,12 +1568,18 @@ function handleItemSelect(item) {
     return;
   }
 
-  // ── Modifier panel: item with modifierConfig opens the panel ──
+  // ── Modifier panel: item with modifierConfig OR Overseer-authored included list ──
   var modConfig = getModifierConfig(item.label);
-  if (modConfig) {
+  var overseerIncluded = item.id ? INCLUDED_BY_ITEM[item.id] : null;
+  if (modConfig || (overseerIncluded && overseerIncluded.length > 0)) {
+    var effectiveConfig = modConfig ? Object.assign({}, modConfig) : {};
+    if (overseerIncluded && overseerIncluded.length > 0) {
+      // Overseer-authored included list wins over any hardcoded fallback
+      effectiveConfig.includedItems = overseerIncluded;
+    }
     var catId = hexNav ? hexNav.getCatId() : null;
     var catColor = catId ? T.catColor(catId.toUpperCase()) : T.mint;
-    openModifierPanel(item, modConfig, catColor);
+    openModifierPanel(item, effectiveConfig, catColor);
     return;
   }
 

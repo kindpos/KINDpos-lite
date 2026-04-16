@@ -50,6 +50,8 @@ async function fetchModifierData() {
         const modIdSet = new Set();
 
         for (const grp of (menu.modifier_groups || [])) {
+            // Skip hidden per-item "included" groups — they're managed from item edit
+            if (grp.hidden) continue;
             const mods = grp.modifiers || [];
             const subcatMods = (grp.subcats || []).flatMap(sc => sc.modifiers || []);
             const allGrpMods = [...mods, ...subcatMods];
