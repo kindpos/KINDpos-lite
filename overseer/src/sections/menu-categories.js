@@ -174,9 +174,9 @@ function buildMainView(wrapper) {
         </div>
     `;
 
-    // + Add Item button
-    const addBtn = document.createElement('button');
-    addBtn.style.cssText = `
+    // + Add Category button
+    const addCatBtn = document.createElement('button');
+    addCatBtn.style.cssText = `
         padding: 12px 24px;
         background: ${COLORS.mint};
         color: ${COLORS.dark};
@@ -188,17 +188,17 @@ function buildMainView(wrapper) {
         cursor: pointer;
         transition: all 0.2s ease;
     `;
-    addBtn.textContent = '+ Add Item';
-    addBtn.addEventListener('mouseenter', () => {
-        addBtn.style.background = COLORS.mintHover;
-        addBtn.style.transform = 'translateY(-1px)';
+    addCatBtn.textContent = '+ Add Category';
+    addCatBtn.addEventListener('mouseenter', () => {
+        addCatBtn.style.background = COLORS.mintHover;
+        addCatBtn.style.transform = 'translateY(-1px)';
     });
-    addBtn.addEventListener('mouseleave', () => {
-        addBtn.style.background = COLORS.mint;
-        addBtn.style.transform = 'translateY(0)';
+    addCatBtn.addEventListener('mouseleave', () => {
+        addCatBtn.style.background = COLORS.mint;
+        addCatBtn.style.transform = 'translateY(0)';
     });
-    addBtn.addEventListener('click', () => openAddModal());
-    header.appendChild(addBtn);
+    addCatBtn.addEventListener('click', () => openAddCategoryModal());
+    header.appendChild(addCatBtn);
     wrapper.appendChild(header);
 
     // --- SEARCH / FILTER ROW ---
@@ -357,7 +357,20 @@ function renderCardGrid() {
                 color: ${COLORS.grey};
                 margin-left: 8px;
             ">(${catItems.length} items)</span>
+            <span style="flex: 1;"></span>
         `;
+        const addItemBtn = document.createElement('button');
+        addItemBtn.textContent = '+ Add Item';
+        addItemBtn.style.cssText = `
+            padding: 6px 14px; background: rgba(var(--color-mint-rgb), 0.1);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.25); border-radius: 6px;
+            color: var(--color-mint); font-family: var(--font-body); font-size: 18px;
+            cursor: pointer; transition: all 0.15s ease;
+        `;
+        addItemBtn.addEventListener('mouseenter', () => addItemBtn.style.background = 'rgba(var(--color-mint-rgb), 0.2)');
+        addItemBtn.addEventListener('mouseleave', () => addItemBtn.style.background = 'rgba(var(--color-mint-rgb), 0.1)');
+        addItemBtn.addEventListener('click', () => openAddModal(cat.id));
+        catHeader.appendChild(addItemBtn);
         container.appendChild(catHeader);
 
         if (catItems.length === 0) {
@@ -894,17 +907,49 @@ function openEditModal(itemId) {
 }
 
 /* ------------------------------------------
+   MODAL: ADD NEW CATEGORY
+------------------------------------------ */
+function openAddCategoryModal() {
+    openModal('Add New Category', (content) => {
+        const nameField = buildFormField(content, 'Category Name', 'text', '', { required: true, fieldName: 'name', placeholder: 'e.g. Pizza, Appetizers, Drinks...' });
+        const colorField = buildFormField(content, 'Color', 'text', '#fcbe40', { fieldName: 'color', placeholder: '#hex color' });
+
+        return () => {
+            const name = nameField.getValue().trim();
+            if (!name) { showToast('Category name is required', 'error'); return false; }
+
+            const catId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+            const newCat = {
+                id: catId,
+                name: name,
+                emoji: '',
+                display_order: menuData.categories.length + 1,
+                color: colorField.getValue() || '#fcbe40',
+            };
+            menuData.categories.push(newCat);
+
+            pendingChanges.new.push({ _isCategory: true, ...newCat });
+            renderCardGrid();
+            updateFooter();
+            showToast(`Category "${name}" created`);
+            return true;
+        };
+    });
+}
+
+/* ------------------------------------------
    MODAL: ADD NEW ITEM
 ------------------------------------------ */
-function openAddModal() {
+function openAddModal(preselectedCategoryId) {
     openModal('Add New Item', (content) => {
         const categoryChoices = menuData.categories
             .sort((a, b) => a.display_order - b.display_order)
             .map(c => ({ value: c.id, label: `${c.emoji} ${c.name}` }));
 
+        const defaultCat = preselectedCategoryId || menuData.categories[0]?.id;
         const nameField   = buildFormField(content, 'Item Name', 'text', '', { required: true, fieldName: 'name', placeholder: 'Enter item name...' });
         const priceField  = buildFormField(content, 'Price', 'number', '0.00', { required: true, fieldName: 'price' });
-        const catField    = buildFormField(content, 'Category', 'select', menuData.categories[0]?.id, { fieldName: 'category_id', choices: categoryChoices });
+        const catField    = buildFormField(content, 'Category', 'select', defaultCat, { fieldName: 'category_id', choices: categoryChoices });
         const descField   = buildFormField(content, 'Description', 'textarea', '', { fieldName: 'description', placeholder: 'Optional description...' });
         const activeField = buildFormField(content, 'Active', 'checkbox', true, { fieldName: 'active' });
 
@@ -1270,8 +1315,23 @@ function generateMenuEvents(changes) {
     const events = [];
     const batch_id = `menu_batch_${Date.now()}`;
 
+    // New categories → menu.category_created
+    changes.new.filter(c => c._isCategory).forEach(cat => {
+        events.push({
+            event_type: 'menu.category_created',
+            batch_id: batch_id,
+            timestamp: new Date().toISOString(),
+            payload: {
+                category_id: cat.id,
+                name: cat.name,
+                display_order: cat.display_order,
+                color: cat.color || '#fcbe40',
+            }
+        });
+    });
+
     // New items → menu.item_created
-    changes.new.forEach(item => {
+    changes.new.filter(i => !i._isCategory).forEach(item => {
         events.push({
             event_type: 'menu.item_created',
             batch_id: batch_id,

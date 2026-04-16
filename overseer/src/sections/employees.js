@@ -676,22 +676,16 @@ async function handleSave(isEdit, original, backdrop) {
             termReason: status !== 'active' ? termReason : null, notes,
         });
 
-        // Emit appropriate event
-        if (oldStatus !== status) {
-            emitEvent('employee.updated', {
-                employee_id: original.id,
-                old_status: oldStatus,
-                new_status: status,
-                termination_date: termDate || null,
-                termination_reason: termReason || null,
-            });
-        }
-
-        if (Object.keys(changedFields).length > 0) {
-            emitEvent('employee.updated', {
-                employee_id: original.id,
-                changed_fields: changedFields,
-            });
+        // Emit full employee snapshot as update event
+        emitEvent('employee.updated', {
+            employee_id: original.id,
+            first_name: firstName,
+            last_name: lastName,
+            display_name: `${firstName} ${lastName}`,
+            role_id: role,
+            hourly_rate: payRate,
+            active: status === 'active',
+        });
         }
 
         showToast(`${firstName} ${lastName} updated successfully`, 'success');
@@ -709,11 +703,11 @@ async function handleSave(isEdit, original, backdrop) {
             employee_id: newEmp.id,
             first_name: firstName,
             last_name: lastName,
-            role,
-            pay_rate: payRate,
-            is_tipped: isTipped,
-            hire_date: hireDate,
-            status,
+            display_name: `${firstName} ${lastName}`,
+            role_id: role,
+            hourly_rate: payRate,
+            pin: generatePIN(),
+            active: status === 'active',
         });
 
         showToast(`${firstName} ${lastName} added successfully`, 'success');
