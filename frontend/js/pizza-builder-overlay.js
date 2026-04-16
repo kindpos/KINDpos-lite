@@ -11,78 +11,7 @@ import { HexNav } from './hex-nav.js';
 import { PREFIXES as UNI_PREFIXES } from './data/universal-modifiers.js';
 
 // ── Pizza builder HexNav categories ──────────────
-var PIZZA_BUILDER_DATA = [
-  {
-    id: 'specials', label: 'SPECIALS', color: T.gold, textColor: '#1a1000',
-    subcats: [{ id: 'specials-items', label: 'Specials', items: [
-      { label: 'Bianco', id: 'bianco' },
-      { label: 'Breakfast Bacon', id: 'breakfast-bacon' },
-      { label: 'Cheeseburger', id: 'cheeseburger' },
-      { label: 'Chicken Alfredo', id: 'chicken-alfredo' },
-      { label: 'Crew', id: 'crew' },
-      { label: 'Hawaiian', id: 'hawaiian' },
-      { label: 'House', id: 'house' },
-      { label: 'Kosher', id: 'kosher' },
-      { label: 'Mac N Cheese', id: 'mac-n-cheese' },
-      { label: 'Moccho', id: 'moccho' },
-      { label: 'Nick Special', id: 'nick-special' },
-      { label: 'Primo', id: 'primo' },
-      { label: "Sammy's Special", id: 'sammys-special' },
-      { label: 'Taco', id: 'taco' },
-      { label: 'Veggie', id: 'veggie' },
-    ]}],
-  },
-  {
-    id: 'prep', label: 'PREP', color: T.lavender, textColor: '#1a0030',
-    subcats: [
-      { id: 'prep-crust', label: 'Crust', items: [
-        { label: 'Sub GF Crust', id: 'gf-crust' },
-        { label: 'Stuffed Crust', id: 'stuffed-crust' },
-        { label: 'Thick Crust', id: 'thick-crust' },
-        { label: 'Thin Crust', id: 'thin-crust' },
-      ]},
-      { id: 'prep-temp', label: 'Temp', items: [
-        { label: 'Light Bake', id: 'light-bake' },
-        { label: 'Well Done', id: 'well-done' },
-      ]},
-      { id: 'prep-sauce', label: 'Sauce', items: [
-        { label: 'BBQ Sauce', id: 'bbq-sauce' },
-        { label: 'Extra Sauce', id: 'extra-sauce' },
-        { label: 'Light Sauce', id: 'light-sauce' },
-        { label: 'No Sauce', id: 'no-sauce' },
-        { label: 'White Sauce', id: 'white-sauce' },
-      ]},
-      { id: 'prep-cut', label: 'Cut', items: [
-        { label: 'Cut Square', id: 'cut-square' },
-        { label: 'No Cut', id: 'no-cut' },
-      ]},
-    ],
-  },
-  {
-    id: 'toppings', label: 'TOPPINGS', color: T.catColor('PIZZA'), textColor: '#1a0a0a',
-    subcats: [{ id: 'toppings-items', label: 'Toppings', items: [
-      { label: 'Banana Peppers', id: 'banana-peppers', price: 1.00 },
-      { label: 'Beef', id: 'beef', price: 1.50 },
-      { label: 'Black Olives', id: 'black-olives', price: 1.00 },
-      { label: 'Canadian Bacon', id: 'canadian-bacon', price: 1.50 },
-      { label: 'Cheddar', id: 'cheddar', price: 1.50 },
-      { label: 'Chicken', id: 'chicken', price: 2.00 },
-      { label: 'Garlic', id: 'garlic', price: 0.50 },
-      { label: 'Green Olives', id: 'green-olives', price: 1.00 },
-      { label: 'Green Peppers', id: 'green-peppers', price: 1.00 },
-      { label: 'Ground Beef', id: 'ground-beef', price: 1.50 },
-      { label: 'Jalapenos', id: 'jalapenos', price: 1.00 },
-      { label: 'Mozzarella', id: 'mozzarella', price: 1.50 },
-      { label: 'Mushroom', id: 'mushroom', price: 1.00 },
-      { label: 'Onion', id: 'onion', price: 1.00 },
-      { label: 'Pepperoni', id: 'pepperoni', price: 1.50 },
-      { label: 'Pineapple', id: 'pineapple', price: 1.00 },
-      { label: 'Sausage', id: 'sausage', price: 1.50 },
-      { label: 'Spinach', id: 'spinach', price: 1.00 },
-      { label: 'Tomatoe', id: 'tomatoe', price: 1.00 },
-    ]}],
-  },
-];
+var PIZZA_BUILDER_DATA = [];
 
 // ── Prefix definitions (mirrors order-entry) ─────
 var PREFIXES = [

@@ -101,86 +101,10 @@ function _handleNameTap() {
 // ── Pizza builder data (populated by API or fallback) ──
 var PIZZA_BUILDER_DATA = null;
 
-// ── Menu data (fallback — overwritten by API fetch) ──
-var MENU_DATA = [
-  {
-    id: 'pizza', label: 'PIZZA', color: T.catColor('PIZZA'), textColor: T.bgDark,
-    subcats: [
-      { id: 'pizza-items', label: 'Pizza', items: [
-        { label: 'Pizza', price: 0 },
-      ] },
-    ]
-  },
-  {
-    id: 'apps', label: 'APPS', color: T.catColor('APPS'), textColor: T.bgDark,
-    subcats: [
-      { id: 'apps-items', label: 'Appetizers', items: [
-        { label: 'Garlic Knots', price: 6.00 },
-        { label: 'Mozz Sticks', price: 8.00 },
-        { label: 'Buffalo Wings', price: 10.00 },
-        { label: 'Garlic Bread', price: 5.00 },
-      ] },
-    ]
-  },
-  {
-    id: 'subs', label: 'SUBS', color: T.catColor('SUBS'), textColor: T.bgDark,
-    subcats: [
-      { id: 'subs-items', label: 'Subs', items: [
-        { label: 'Italian Sub', price: 10.00 },
-        { label: 'Meatball Sub', price: 9.00 },
-        { label: 'Chicken Parm Sub', price: 11.00 },
-      ] },
-    ]
-  },
-  {
-    id: 'sides', label: 'SIDES', color: T.catColor('SIDES'), textColor: T.bgDark,
-    subcats: [
-      { id: 'side-items', label: 'Sides', items: [
-        { label: 'House Salad', price: 7.00 },
-        { label: 'Caesar Salad', price: 8.00 },
-        { label: 'Fries', price: 4.00 },
-      ] },
-    ]
-  },
-  {
-    id: 'drinks', label: 'DRINKS', color: T.catColor('DRINKS'), textColor: T.bgDark,
-    subcats: [
-      { id: 'drinks-items', label: 'Drinks', items: [
-        { label: 'Soda', price: 2.50 },
-        { label: 'Iced Tea', price: 2.50 },
-        { label: 'Water', price: 1.50 },
-      ] },
-    ]
-  },
-];
+// ── Menu data (loaded from API on scene entry) ──
+var MENU_DATA = [];
 
-var MOD_DATA = [
-  {
-    id: 'toppings', label: 'TOPPINGS', color: T.red, textColor: T.textPrimary,
-    half_placement: true,
-    subcats: [
-      { id: 'toppings-items', label: 'Toppings', items: [
-        { label: 'Pepperoni', price: 1.50, half_price: 0.75 },
-        { label: 'Sausage', price: 1.50, half_price: 0.75 },
-        { label: 'Mushrooms', price: 1.00, half_price: 0.50 },
-        { label: 'Onions', price: 1.00, half_price: 0.50 },
-        { label: 'Peppers', price: 1.00, half_price: 0.50 },
-        { label: 'Extra Cheese', price: 2.00, half_price: 1.00 },
-      ] },
-    ]
-  },
-  {
-    id: 'dressing', label: 'DRESSING', color: T.cyan, textColor: T.bgDark,
-    subcats: [
-      { id: 'dressing-items', label: 'Dressing', items: [
-        { label: 'Ranch', price: 0 },
-        { label: 'Blue Cheese', price: 0 },
-        { label: 'Italian', price: 0 },
-        { label: 'Caesar', price: 0 },
-      ] },
-    ]
-  },
-];
+var MOD_DATA = [];
 
 // ── Fetch menu from API and transform to HexNav format ──
 var _menuFetched = false;
