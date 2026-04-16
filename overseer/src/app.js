@@ -26,6 +26,7 @@ import { registerPrinterConfig }      from './sections/printer-config.js';
 import { registerPrinterSetup }       from './sections/printer-setup.js';
 
 // Build-pattern sections (no register wrapper — wrap manually below)
+import { buildStoreInfoScene,     cleanupStoreInfo     } from './sections/store-info.js';
 import { buildPayrollTipsScene,    cleanupPayrollTips    } from './sections/payroll-tips.js';
 import { buildTimeAttendanceScene, cleanupTimeAttendance } from './sections/time-attendance.js';
 import { buildShiftConfigScene,    cleanupShiftConfig    } from './sections/shift-config.js';
@@ -272,6 +273,11 @@ function registerAllSections() {
         mount: (container) => buildShiftConfigScene(container),
         unmount: () => cleanupShiftConfig(),
     });
+    SceneManager.register({
+        name: 'store-info',
+        mount: (container) => buildStoreInfoScene(container),
+        unmount: (container) => cleanupStoreInfo(container),
+    });
 
     // Placeholder sections for categories documented in CONFIGURABLE_COMPONENTS.md
     registerPlaceholders();
@@ -298,13 +304,6 @@ const PLACEHOLDERS = [
         icon: '\u{1F4C8}',
         fields: ['Item sales velocity', 'Profitability per item', 'Waste & 86 tracking'],
         api: '/api/v1/reporting/menu-performance',
-    },
-    {
-        name: 'store-info',
-        title: 'Store Information',
-        icon: '\u{1F3EA}',
-        fields: ['Restaurant name & legal entity', 'Address, phone, email, website', 'Receipt header & footer text'],
-        api: 'GET/POST /api/v1/config/store/info',
     },
     {
         name: 'floor-plan',
