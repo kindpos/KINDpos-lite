@@ -18,7 +18,9 @@
 import {
     PAY_PERIODS, PAY_SCHEDULE, PAYROLL_SUMMARY,
     TIP_POOL_CONFIG, EXPORT_FORMATS, LABOR_BENCHMARKS,
+    loadPayrollData,
 } from '../data/sample-payroll.js';
+import { buildDateRangePicker } from '../components/date-picker.js';
 import { getRoleLabel } from '../data/sample-employees.js';
 
 /* ------------------------------------------
@@ -946,6 +948,21 @@ export function buildPayrollTipsScene(container) {
 
     // Clone tip pool config for mutable editing
     tipPoolConfig = JSON.parse(JSON.stringify(TIP_POOL_CONFIG));
+
+    // Date range picker
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'padding: 12px 20px 0 20px; max-width: 1100px; margin: 0 auto;';
+    const rangePicker = buildDateRangePicker({
+        start: PAYROLL_SUMMARY.period.start,
+        end: PAYROLL_SUMMARY.period.end,
+        onChange: async ({ start, end }) => {
+            await loadPayrollData(start, end);
+            const vw = container.querySelector('#pt-view-wrapper');
+            if (vw) { viewHistory = []; pushView('payroll-summary'); }
+        },
+    });
+    toolbar.appendChild(rangePicker);
+    container.appendChild(toolbar);
 
     const viewWrapper = document.createElement('div');
     viewWrapper.id = 'pt-view-wrapper';

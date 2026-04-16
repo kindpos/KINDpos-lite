@@ -39,9 +39,10 @@ export const LABOR_BENCHMARKS = {
     overtimeRate: 1.5,
 };
 
-export async function loadPayrollData() {
+export async function loadPayrollData(startDate, endDate) {
+    const qDate = endDate || todayStr();
     try {
-        const res = await fetch(`/api/v1/reports/labor-summary?date=${todayStr()}`);
+        const res = await fetch(`/api/v1/reports/labor-summary?date=${qDate}`);
         if (!res.ok) return;
         const data = await res.json();
 
@@ -66,7 +67,7 @@ export async function loadPayrollData() {
         const overtimeHours = employees.reduce((s, e) => s + e.overtimeHours, 0);
 
         PAYROLL_SUMMARY = {
-            period: { start: weekAgoStr(), end: todayStr() },
+            period: { start: startDate || weekAgoStr(), end: endDate || todayStr() },
             totalSales,
             laborSummary: {
                 totalHours: Math.round(totalHours * 100) / 100,

@@ -33,18 +33,22 @@ export async function loadEmployeeData() {
 
     if (empRes.status === 'fulfilled' && empRes.value.ok) {
         const employees = await empRes.value.json();
-        EMPLOYEES = employees.map(e => ({
-            id: e.employee_id,
-            firstName: e.first_name,
-            lastName: e.last_name,
-            role: (e.role_ids && e.role_ids[0]) || e.role_id || 'server',
-            status: e.active ? 'active' : 'inactive',
-            hireDate: new Date().toISOString().slice(0, 10),
-            payRate: parseFloat(e.hourly_rate) || 0,
-            pin: e.pin,
-            phone: '',
-            email: '',
-        }));
+        EMPLOYEES = employees.map(e => {
+            const firstName = e.first_name || (e.name || '').split(' ')[0] || e.employee_id;
+            const lastName = e.last_name || (e.name || '').split(' ').slice(1).join(' ') || '';
+            return {
+                id: e.employee_id,
+                firstName,
+                lastName,
+                role: (e.role_ids && e.role_ids[0]) || e.role_id || 'server',
+                status: e.active !== false ? 'active' : 'inactive',
+                hireDate: new Date().toISOString().slice(0, 10),
+                payRate: parseFloat(e.hourly_rate) || 0,
+                pin: e.pin || '',
+                phone: '',
+                email: '',
+            };
+        });
     }
 }
 

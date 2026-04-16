@@ -63,17 +63,26 @@ class Role(BaseModel):
 
 class Employee(BaseModel):
     employee_id: str
-    first_name: str
-    last_name: str
-    display_name: str
+    first_name: str = ""
+    last_name: str = ""
+    display_name: str = ""
+    name: Optional[str] = None
     role_ids: List[str] = []
-    role_id: Optional[str] = None  # backward compat — migrated to role_ids
-    pin: str
+    role_id: Optional[str] = None
+    pin: str = ""
     hourly_rate: Decimal = Decimal("0")
     permissions_override: Optional[Dict[str, bool]] = None
     active: bool = True
 
     def __init__(self, **data):
+        # Migrate legacy "name" field to first_name/last_name/display_name
+        if 'name' in data and 'first_name' not in data:
+            parts = data['name'].split(' ', 1)
+            data['first_name'] = parts[0]
+            data['last_name'] = parts[1] if len(parts) > 1 else ''
+            data.setdefault('display_name', data['name'])
+        if 'display_name' not in data or not data.get('display_name'):
+            data['display_name'] = f"{data.get('first_name', '')} {data.get('last_name', '')}".strip()
         # Migrate legacy single role_id to role_ids list
         if 'role_id' in data and 'role_ids' not in data:
             rid = data.pop('role_id')

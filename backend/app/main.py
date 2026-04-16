@@ -5,7 +5,7 @@ The main entry point for the backend API.
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -14,7 +14,7 @@ import sys
 from app.api.routes.printing import print_queue
 from app.printing.print_dispatcher import PrintDispatcher
 from app.config import settings
-from app.api.dependencies import init_ledger, close_ledger, set_printer_manager, get_ephemeral_log, set_print_dispatcher
+from app.api.dependencies import init_ledger, close_ledger, set_printer_manager, get_ephemeral_log, set_print_dispatcher, get_ledger
 from app.services.demo_seeder import seed_demo_data_if_empty
 from app.core.adapters.printer_manager import PrinterManager
 from app.core.adapters.mock_thermal import MockThermalPrinter
@@ -146,9 +146,12 @@ app.include_router(auth.router, prefix="/api/v1")
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'frontend')
 
 @app.get("/api/v1/staff")
-async def get_staff_stub():
-    """Stub endpoint for Overseer badge — mirrors /api/v1/servers shape."""
-    return []
+async def get_staff_list(ledger = Depends(get_ledger)):
+    """Returns active employees for Overseer badge count."""
+    from app.services.overseer_config_service import OverseerConfigService
+    service = OverseerConfigService(ledger)
+    employees = await service.get_employees()
+    return [e for e in employees if e.active]
 
 
 @app.get("/health")
