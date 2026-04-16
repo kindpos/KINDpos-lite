@@ -41,36 +41,49 @@ const NAV = [
         label: 'MENU',
         subs: [
             { id: 'menu-categories',     label: 'Categories'        },
-            { id: 'configure-modifiers', label: 'Modifiers'         },
+            { id: 'modifier-groups',      label: 'Modifiers'         },
             { id: 'menu-availability',   label: 'Availability'      },
             { id: 'pricing-specials',    label: 'Pricing & Specials' },
             { id: 'display-order',       label: 'Display Order'     },
-            { id: 'menu-import',         label: 'Import Menu'       },
+            { id: 'import-excel',        label: 'Import Menu'       },
         ]
     },
     {
         id: 'employees',
         label: 'EMPLOYEES',
         subs: [
-            { id: 'employee-list',    label: 'Staff List'        },
+            { id: 'employee-management', label: 'Staff List'     },
             { id: 'time-attendance',  label: 'Time & Attendance' },
             { id: 'payroll-tips',     label: 'Payroll & Tips'    },
             { id: 'shift-config',     label: 'Shift Config'      },
         ]
     },
     {
+        id: 'store',
+        label: 'STORE',
+        subs: [
+            { id: 'store-info',      label: 'Store Information' },
+            { id: 'floor-plan',      label: 'Floor Plan'        },
+            { id: 'order-settings',  label: 'Order Settings'    },
+        ]
+    },
+    {
         id: 'hardware',
         label: 'HARDWARE',
         subs: [
-            { id: 'printer-setup',  label: 'Printer Setup'  },
-            { id: 'printer-config', label: 'Printer Config' },
+            { id: 'printer-setup',    label: 'Printer Setup'    },
+            { id: 'printer-config',   label: 'Printer Config'   },
+            { id: 'card-readers',     label: 'Card Readers'     },
+            { id: 'receipt-settings', label: 'Receipt Settings'  },
         ]
     },
     {
         id: 'system',
         label: 'SYSTEM',
         subs: [
-            { id: 'system-testing', label: 'System Testing' },
+            { id: 'system-testing',     label: 'System Testing'    },
+            { id: 'terminal-settings',  label: 'Terminal Settings'  },
+            { id: 'system-appearance',  label: 'Appearance'         },
         ]
     },
 ];
@@ -187,23 +200,56 @@ async function setVersionStamp() {
 }
 
 /* ------------------------------------------
+   LEGACY REGISTRATION ADAPTER
+
+   Sections use the old sm.register(name, config) format
+   with { onEnter, onExit } callbacks.
+   SceneManager v3 expects register({ name, mount, unmount }).
+   This adapter bridges the two without modifying section files.
+------------------------------------------ */
+function createLegacyAdapter(nameOverrides) {
+    return {
+        register(name, config) {
+            const resolvedName = (nameOverrides && nameOverrides[name]) || name;
+            let activeContainer = null;
+            SceneManager.register({
+                name: resolvedName,
+                mount(container, params) {
+                    activeContainer = container;
+                    if (config.onEnter) config.onEnter(container, params);
+                },
+                unmount() {
+                    if (config.onExit && activeContainer) config.onExit(activeContainer);
+                    activeContainer = null;
+                },
+            });
+        }
+    };
+}
+
+/* ------------------------------------------
    SECTION REGISTRATION
 ------------------------------------------ */
 function registerAllSections() {
-    // Register-pattern sections (pass SceneManager directly)
-    registerSalesReports(SceneManager);
-    registerMenuImport(SceneManager);
-    registerEmployeeSections(SceneManager);
-    registerSystemTesting(SceneManager);
-    registerMenuCategories(SceneManager);
-    registerMenuAvailability(SceneManager);
-    registerConfigureModifiers(SceneManager);
-    registerPricingSpecials(SceneManager);
-    registerDisplayOrder(SceneManager);
-    registerPrinterConfig(SceneManager);
-    registerPrinterSetup(SceneManager);
+    const adapter = createLegacyAdapter();
 
-    // Build-pattern sections (wrap manually)
+    // Register-pattern sections (use adapter to bridge old format)
+    registerSalesReports(adapter);
+    registerMenuImport(adapter);
+    registerEmployeeSections(adapter);
+    registerSystemTesting(adapter);
+    registerMenuCategories(adapter);
+    registerMenuAvailability(adapter);
+    registerConfigureModifiers(adapter);
+    registerPricingSpecials(adapter);
+    registerDisplayOrder(adapter);
+    registerPrinterConfig(adapter);
+
+    // printer-setup.js registers as 'printer-config' in source — remap to
+    // 'printer-setup' so it doesn't overwrite the real printer-config scene
+    registerPrinterSetup(createLegacyAdapter({ 'printer-config': 'printer-setup' }));
+
+    // Build-pattern sections (already use correct format)
     SceneManager.register({
         name: 'payroll-tips',
         mount: (container) => buildPayrollTipsScene(container),
@@ -219,6 +265,120 @@ function registerAllSections() {
         mount: (container) => buildShiftConfigScene(container),
         unmount: (container) => cleanupShiftConfig(container),
     });
+
+    // Placeholder sections for categories documented in CONFIGURABLE_COMPONENTS.md
+    registerPlaceholders();
+}
+
+/* ------------------------------------------
+   PLACEHOLDER SCENE BUILDER
+
+   Renders a consistent "coming soon" card for
+   sections documented in CONFIGURABLE_COMPONENTS.md
+   that don't have full implementations yet.
+------------------------------------------ */
+const PLACEHOLDERS = [
+    {
+        name: 'labor-reports',
+        title: 'Labor Reports',
+        icon: '\u{1F4CA}',
+        fields: ['Staff hours & overtime', 'Labor cost vs. revenue', 'Schedule adherence'],
+        api: '/api/v1/reporting/labor',
+    },
+    {
+        name: 'menu-performance',
+        title: 'Menu Performance',
+        icon: '\u{1F4C8}',
+        fields: ['Item sales velocity', 'Profitability per item', 'Waste & 86 tracking'],
+        api: '/api/v1/reporting/menu-performance',
+    },
+    {
+        name: 'store-info',
+        title: 'Store Information',
+        icon: '\u{1F3EA}',
+        fields: ['Restaurant name & legal entity', 'Address, phone, email, website', 'Receipt header & footer text'],
+        api: 'GET/POST /api/v1/config/store/info',
+    },
+    {
+        name: 'floor-plan',
+        title: 'Floor Plan & Sections',
+        icon: '\u{1F5FA}\u{FE0F}',
+        fields: ['Sections & table layout', 'Seat counts & shapes', 'Walls, barriers, fixtures'],
+        api: 'GET /api/v1/config/floorplan',
+    },
+    {
+        name: 'order-settings',
+        title: 'Order & Service Settings',
+        icon: '\u{1F4CB}',
+        fields: ['Dine-in, takeout, delivery toggles', 'Operating hours per day', 'Auto-gratuity rules'],
+        api: 'GET /api/v1/config/store',
+    },
+    {
+        name: 'card-readers',
+        title: 'Card Readers',
+        icon: '\u{1F4B3}',
+        fields: ['Device name & type', 'IP address & port', 'Register ID & TPN'],
+        api: 'GET/POST /api/v1/hardware/devices',
+    },
+    {
+        name: 'receipt-settings',
+        title: 'Printing & Receipts',
+        icon: '\u{1F9FE}',
+        fields: ['Print logo toggle', 'Tip suggestion percentages', 'Customer / merchant / itemized copies'],
+        api: 'POST /api/v1/print/receipt/{order_id}',
+    },
+    {
+        name: 'terminal-settings',
+        title: 'Terminal Settings',
+        icon: '\u{1F5A5}\u{FE0F}',
+        fields: ['Terminal ID & name', 'Display resolution & brightness', 'WiFi / static IP config'],
+        api: 'GET /api/v1/config/terminals',
+    },
+    {
+        name: 'system-appearance',
+        title: 'System & Appearance',
+        icon: '\u{1F3A8}',
+        fields: ['Language (English / Espa\u{F1}ol)', 'Theme selection (13 themes)', 'Update channel (Stable / Beta)'],
+        api: null,
+    },
+];
+
+function mountPlaceholder(container, def) {
+    const fieldListHtml = def.fields
+        .map(f => `<div style="padding:6px 0;border-bottom:1px solid rgba(198,255,187,0.06);color:rgba(198,255,187,0.7);font-size:22px;">${f}</div>`)
+        .join('');
+
+    const apiLine = def.api
+        ? `<div style="margin-top:16px;padding:10px 14px;background:rgba(198,255,187,0.04);border:1px solid rgba(198,255,187,0.1);border-radius:4px;font-family:var(--font-mono,monospace);font-size:18px;color:rgba(198,255,187,0.4);">API: ${def.api}</div>`
+        : '';
+
+    container.innerHTML = `
+        <div style="max-width:700px;margin:0 auto;padding:40px 24px;">
+            <div style="font-family:var(--font-display);font-size:44px;color:#FBDE42;margin-bottom:4px;">
+                ${def.icon} ${def.title}
+            </div>
+            <div style="font-size:20px;color:rgba(198,255,187,0.35);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase;">
+                Coming Soon
+            </div>
+            <div style="background:rgba(198,255,187,0.06);border:1px solid rgba(198,255,187,0.15);border-radius:6px;padding:20px;">
+                <div style="font-size:18px;color:rgba(198,255,187,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+                    Planned Features
+                </div>
+                ${fieldListHtml}
+            </div>
+            ${apiLine}
+        </div>
+    `;
+}
+
+function registerPlaceholders() {
+    PLACEHOLDERS.forEach(def => {
+        SceneManager.register({
+            name: def.name,
+            mount(container) { mountPlaceholder(container, def); },
+            unmount() {},
+        });
+    });
 }
 
 /* ------------------------------------------
@@ -227,7 +387,14 @@ function registerAllSections() {
 async function boot() {
     console.log('[Overseer] Booting...');
 
-    SceneManager.init();
+    SceneManager.init({
+        layers: {
+            working:       document.getElementById('working-layer'),
+            transactional: document.getElementById('transactional-layer'),
+            interrupt:     document.getElementById('interrupt-layer'),
+            gate:          document.getElementById('gate-layer'),
+        }
+    });
     buildNav();
     registerAllSections();
 

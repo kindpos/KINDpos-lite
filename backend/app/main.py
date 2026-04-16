@@ -145,6 +145,12 @@ app.include_router(auth.router, prefix="/api/v1")
 # Serve frontend
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'frontend')
 
+@app.get("/api/v1/staff")
+async def get_staff_stub():
+    """Stub endpoint for Overseer badge — mirrors /api/v1/servers shape."""
+    return []
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
