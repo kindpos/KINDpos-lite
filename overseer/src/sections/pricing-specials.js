@@ -39,112 +39,34 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 /* ------------------------------------------
    TEST DATA
 ------------------------------------------ */
-const TEST_DATA = {
-    specials: [
-        {
-            id: 'spec_happy_hour',
-            name: 'Happy Hour',
-            discount_type: 'fixed_price',   // 'percentage' | 'flat' | 'fixed_price' | 'combo'
-            discount_value: 5.00,
-            schedule_mode: 'auto',           // 'auto' | 'manual'
-            time_start: '4:00 PM',
-            time_end: '6:00 PM',
-            active_days: [true, true, true, true, true, false, false],
-            date_start: '',
-            date_end: '',
-            scope: 'categories',             // 'all' | 'categories' | 'items'
-            scope_ids: ['cat_beverages'],
-            stacking: false,
-            requires_approval: false,
-            priority: 1,
-            active: true,
-        },
-        {
-            id: 'spec_taco_tuesday',
-            name: 'Taco Tuesday',
-            discount_type: 'percentage',
-            discount_value: 25,
-            schedule_mode: 'auto',
-            time_start: '11:00 AM',
-            time_end: '10:00 PM',
-            active_days: [false, true, false, false, false, false, false],
-            date_start: '',
-            date_end: '',
-            scope: 'categories',
-            scope_ids: ['cat_appetizers'],
-            stacking: false,
-            requires_approval: false,
-            priority: 2,
-            active: true,
-        },
-        {
-            id: 'spec_early_bird',
-            name: 'Early Bird Special',
-            discount_type: 'percentage',
-            discount_value: 15,
-            schedule_mode: 'auto',
-            time_start: '4:00 PM',
-            time_end: '5:30 PM',
-            active_days: [true, true, true, true, true, true, true],
-            date_start: '',
-            date_end: '',
-            scope: 'categories',
-            scope_ids: ['cat_entrees'],
-            stacking: false,
-            requires_approval: false,
-            priority: 3,
-            active: false,
-        },
-    ],
-
-    day_parts: [
-        { id: 'dp_lunch',  name: 'Lunch',      time_start: '11:00 AM', time_end: '3:00 PM',  adjustment_type: 'none', adjustment_value: 0, active: true },
-        { id: 'dp_dinner', name: 'Dinner',      time_start: '5:00 PM',  time_end: '10:00 PM', adjustment_type: 'flat', adjustment_value: 3.00, active: true },
-        { id: 'dp_late',   name: 'Late Night',  time_start: '10:00 PM', time_end: '1:00 AM',  adjustment_type: 'percentage', adjustment_value: -10, active: false },
-    ],
-
-    day_part_overrides: [
-        { id: 'dpo_bev', category_id: 'cat_beverages', category_name: 'Beverages', dp_id: 'dp_dinner', adjustment_type: 'none', adjustment_value: 0 },
-    ],
-
-    order_types: [
-        { id: 'ot_dinein',   name: 'Dine-In',   adjustment: 0,  active: true },
-        { id: 'ot_takeout',  name: 'Takeout',    adjustment: 0,  active: true },
-        { id: 'ot_delivery', name: 'Delivery',   adjustment: 15, active: true },
-    ],
-
-    order_type_overrides: [
-        { id: 'oto_bev_del', category_id: 'cat_beverages', category_name: 'Beverages', order_type_id: 'ot_delivery', adjustment: 0 },
-    ],
-
-    employee_discount: {
-        id: 'emp_disc',
-        percentage: 20,
-        applies_to: 'food_only',           // 'everything' | 'food_only' | 'drinks_only' | 'categories'
-        exclude_categories: ['cat_beverages'],
-        on_duty_rate: 50,
-        off_duty_rate: 20,
-        separate_rates: true,
-        requires_approval: true,
-        active: true,
-    },
-
-    comp_reasons: [
-        { id: 'comp_complaint', name: 'Customer Complaint',  requires_pin: true,  max_amount: null, active: true },
-        { id: 'comp_kitchen',   name: 'Kitchen Error',       requires_pin: false, max_amount: null, active: true },
-        { id: 'comp_manager',   name: 'Manager Discretion',  requires_pin: true,  max_amount: 50.00, active: true },
-        { id: 'comp_vip',       name: 'VIP Guest',           requires_pin: true,  max_amount: null, active: true },
-        { id: 'comp_quality',   name: 'Quality Issue',       requires_pin: false, max_amount: 25.00, active: true },
-    ],
-
-    categories: [
-        { id: 'cat_appetizers', name: 'Appetizers', emoji: '🍕' },
-        { id: 'cat_pasta',      name: 'Pasta',      emoji: '🍝' },
-        { id: 'cat_entrees',    name: 'Entrees',    emoji: '🥩' },
-        { id: 'cat_desserts',   name: 'Desserts',   emoji: '🍰' },
-        { id: 'cat_beverages',  name: 'Beverages',  emoji: '🥤' },
-    ],
-};
+async function fetchPricingData() {
+    try {
+        const catRes = await fetch("/api/v1/config/menu/categories");
+        const categories = catRes.ok ? await catRes.json() : [];
+        return {
+            specials: [],
+            day_parts: [
+                { id: "dp_lunch", name: "Lunch", time_start: "11:00 AM", time_end: "3:00 PM", adjustment_type: "none", adjustment_value: 0, active: true },
+                { id: "dp_dinner", name: "Dinner", time_start: "5:00 PM", time_end: "10:00 PM", adjustment_type: "none", adjustment_value: 0, active: true },
+                { id: "dp_late", name: "Late Night", time_start: "10:00 PM", time_end: "1:00 AM", adjustment_type: "none", adjustment_value: 0, active: false },
+            ],
+            day_part_overrides: [],
+            order_types: [
+                { id: "ot_dinein", name: "Dine-In", adjustment: 0, active: true },
+                { id: "ot_takeout", name: "Takeout", adjustment: 0, active: true },
+                { id: "ot_delivery", name: "Delivery", adjustment: 0, active: true },
+            ],
+            order_type_overrides: [],
+            employee_discount: {
+                id: "emp_disc", percentage: 20, applies_to: "food_only",
+                exclude_categories: [], on_duty_rate: 50, off_duty_rate: 20,
+                separate_rates: true, requires_approval: true, active: true,
+            },
+            comp_reasons: [],
+            categories: categories.map(c => ({ id: c.category_id || c.id, name: c.name, emoji: "" })),
+        };
+    } catch (e) { console.warn("[PricingSpecials] Failed to fetch:", e); return { specials: [], day_parts: [], day_part_overrides: [], order_types: [], order_type_overrides: [], employee_discount: { id: "emp_disc", percentage: 0, applies_to: "all", exclude_categories: [], on_duty_rate: 0, off_duty_rate: 0, separate_rates: false, requires_approval: false, active: false }, comp_reasons: [], categories: [] }; }
+}
 
 /* ------------------------------------------
    MODULE STATE
@@ -1314,9 +1236,9 @@ function updateFooter() {
     cancelBtn.addEventListener('mouseenter', () => { cancelBtn.style.borderColor = COLORS.red; cancelBtn.style.color = COLORS.red; });
     cancelBtn.addEventListener('mouseleave', () => { cancelBtn.style.borderColor = COLORS.grey; cancelBtn.style.color = COLORS.grey; });
     cancelBtn.addEventListener('click', () => {
-        showConfirmDialog('Discard Changes?', `You have ${count} unsaved change${count !== 1 ? 's' : ''}. This cannot be undone.`, 'Discard', () => {
+        showConfirmDialog('Discard Changes?', `You have ${count} unsaved change${count !== 1 ? 's' : ''}. This cannot be undone.`, 'Discard', async () => {
             pendingChanges = { specials: [], day_parts: [], day_part_overrides: [], order_types: [], order_type_overrides: [], employee: [], comp_reasons: [] };
-            pricingData = clone(TEST_DATA);
+            pricingData = await fetchPricingData();
             buildMainView(currentWrapper);
         });
     });
@@ -1446,10 +1368,10 @@ export function registerPricingSpecials(sceneManager) {
         type: 'detail',
         title: 'Pricing & Specials',
         parent: 'menu-subs',
-        onEnter(container) {
+        async onEnter(container) {
             console.log('[PricingSpecials] Scene loaded — initializing...');
 
-            pricingData = clone(TEST_DATA);
+            pricingData = await fetchPricingData();
             pendingChanges = { specials: [], day_parts: [], day_part_overrides: [], order_types: [], order_type_overrides: [], employee: [], comp_reasons: [] };
 
             currentWrapper = document.createElement('div');
