@@ -1520,18 +1520,22 @@ function resolveBackendModifierConfig(itemId, catId) {
   if (!itemId && !catId) return null;
 
   var mandatoryGroups = [];
+  var pricingDriverKey = null;
   MANDATORY_ASSIGNMENTS.forEach(function(asgn) {
     var hit = (asgn.target_type === 'item' && asgn.target_id === itemId)
            || (asgn.target_type === 'category' && asgn.target_id === catId);
     if (!hit) return;
-    mandatoryGroups.push({
+    var entry = {
       key: asgn.assignment_id,
       label: (asgn.label || '').toUpperCase(),
+      drivesPricing: !!asgn.drives_pricing,
       options: (asgn.modifier_ids || []).map(function(mid) {
         var m = MODIFIER_MASTER[mid] || { name: mid, price: 0 };
         return { key: mid, label: m.name, price: m.price };
       }),
-    });
+    };
+    if (entry.drivesPricing && !pricingDriverKey) pricingDriverKey = asgn.assignment_id;
+    mandatoryGroups.push(entry);
   });
 
   var optionalGroups = [];
@@ -1544,14 +1548,25 @@ function resolveBackendModifierConfig(itemId, catId) {
         key: grp.group_id,
         label: (grp.name || '').toUpperCase(),
         options: (grp.modifiers || []).map(function(m) {
-          return { id: m.modifier_id, label: m.name, price: parseFloat(m.price) || 0 };
+          var priceByOption = m.price_by_option && Object.keys(m.price_by_option).length > 0 ? m.price_by_option : null;
+          return {
+            id: m.modifier_id,
+            label: m.name,
+            price: parseFloat(m.price) || 0,
+            priceByOption: priceByOption,
+          };
         }),
       });
     });
   });
 
   if (mandatoryGroups.length === 0 && optionalGroups.length === 0) return null;
-  return { mandatoryGroups: mandatoryGroups, optionalGroups: optionalGroups, includedItems: [] };
+  return {
+    mandatoryGroups: mandatoryGroups,
+    optionalGroups: optionalGroups,
+    includedItems: [],
+    pricingDriverKey: pricingDriverKey,
+  };
 }
 
 function getMenuCat(id) {
