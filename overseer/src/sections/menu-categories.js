@@ -1,3 +1,5 @@
+import { pushChanges } from '../services/config-push.js';
+
 /* ============================================
    KINDpos Overseer - Menu Categories & Items
    Browse, Add, Edit, Duplicate, Delete
@@ -1220,18 +1222,16 @@ function updateFooter() {
 }
 
 /* ------------------------------------------
-   SAVE: Generate Events & Log
-   Phase 1: Console log only
-   Phase 2: POST to /api/v1/menu/events
+   SAVE: Generate Events & POST to backend
 ------------------------------------------ */
-function handleSaveChanges() {
+async function handleSaveChanges() {
     const events = generateMenuEvents(pendingChanges);
 
-    console.log('%c[KINDpos] Menu Events Generated', 'background: #333; color: var(--color-gold); font-size: 14px; padding: 2px 8px;');
-    console.log(`Batch contains ${events.length} events:`);
-    events.forEach((evt, i) => {
-        console.log(`  ${i + 1}. ${evt.event_type} — ${JSON.stringify(evt.payload)}`);
-    });
+    const result = await pushChanges(events);
+    if (!result.ok) {
+        showToast('Failed to save changes — try again', 'error');
+        return;
+    }
 
     // Apply changes to base data so they persist in this session
     // New items → add to menuData

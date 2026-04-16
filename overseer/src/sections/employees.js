@@ -10,6 +10,7 @@
    "Nice. Dependable. Yours."
    ============================================ */
 
+import { pushChanges } from '../services/config-push.js';
 import {
     EMPLOYEES, ROLES, STATUSES,
     getRoleLabel, getStatusInfo, fmtDate,
@@ -166,20 +167,27 @@ function showToast(message, type = 'success') {
 }
 
 /* ------------------------------------------
-   EVENT SIMULATION (Console log for now)
-   Will become POST to backend later.
+   EVENT DISPATCH — posts to /api/v1/config/push
 ------------------------------------------ */
+const _pendingEvents = [];
+
 function emitEvent(eventType, payload) {
-    const event = {
-        event_type: eventType,
-        event_id: `evt_${Date.now().toString(36)}`,
-        timestamp: new Date().toISOString(),
-        terminal_id: 'overseer_001',
-        manager_id: 'mgr_tyler',
-        payload,
-    };
-    console.log(`[KINDpos Event] ${eventType}`, event);
+    const event = { event_type: eventType, payload };
+    _pendingEvents.push(event);
+    console.log(`[Overseer] Queued: ${eventType}`, payload);
     return event;
+}
+
+async function flushEvents() {
+    if (_pendingEvents.length === 0) return true;
+    const batch = _pendingEvents.splice(0);
+    const result = await pushChanges(batch);
+    if (!result.ok) {
+        _pendingEvents.unshift(...batch);
+        showToast('Failed to save — changes queued for retry', 'error');
+        return false;
+    }
+    return true;
 }
 
 /* ------------------------------------------
@@ -624,7 +632,7 @@ function showAddEditModal(container, employee) {
 /* ------------------------------------------
    SAVE HANDLER (Add / Edit)
 ------------------------------------------ */
-function handleSave(isEdit, original, backdrop) {
+async function handleSave(isEdit, original, backdrop) {
     // Read form values
     const firstName  = (backdrop.querySelector('#emp-first')?.value || '').trim();
     const lastName   = (backdrop.querySelector('#emp-last')?.value || '').trim();
@@ -673,7 +681,7 @@ function handleSave(isEdit, original, backdrop) {
 
         // Emit appropriate event
         if (oldStatus !== status) {
-            emitEvent('EMPLOYEE_STATUS_CHANGED', {
+            emitEvent('employee.updated', {
                 employee_id: original.id,
                 old_status: oldStatus,
                 new_status: status,
@@ -683,7 +691,7 @@ function handleSave(isEdit, original, backdrop) {
         }
 
         if (Object.keys(changedFields).length > 0) {
-            emitEvent('EMPLOYEE_UPDATED', {
+            emitEvent('employee.updated', {
                 employee_id: original.id,
                 changed_fields: changedFields,
             });
@@ -700,7 +708,7 @@ function handleSave(isEdit, original, backdrop) {
         };
         employees.push(newEmp);
 
-        emitEvent('EMPLOYEE_CREATED', {
+        emitEvent('employee.created', {
             employee_id: newEmp.id,
             first_name: firstName,
             last_name: lastName,
@@ -714,6 +722,7 @@ function handleSave(isEdit, original, backdrop) {
         showToast(`${firstName} ${lastName} added successfully`, 'success');
     }
 
+    await flushEvents();
     backdrop.remove();
     refreshTable();
 }
@@ -835,7 +844,7 @@ function showPINResetModal(container, employee) {
 
         const forceChange = backdrop.querySelector('#pin-force-change')?.checked ?? true;
 
-        emitEvent('EMPLOYEE_PIN_RESET', {
+        emitEvent('employee.updated', {
             employee_id: employee.id,
             new_pin_hash: 'SHA256_SIMULATED',
             force_change_on_login: forceChange,
@@ -947,7 +956,8 @@ function showPINDisplayModal(container, employee, pin, forceChange) {
         font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
         font-weight: bold;
     `;
-    closeBtn.addEventListener('click', () => {
+    closeBtn.addEventListener('click', async () => {
+        await flushEvents();
         backdrop.remove();
         showToast(`PIN reset for ${employee.firstName} ${employee.lastName}`, 'success');
     });
