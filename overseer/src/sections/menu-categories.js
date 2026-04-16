@@ -359,14 +359,25 @@ function renderCardGrid() {
             ">(${catItems.length} items)</span>
             <span style="flex: 1;"></span>
         `;
-        const addItemBtn = document.createElement('button');
-        addItemBtn.textContent = '+ Add Item';
-        addItemBtn.style.cssText = `
+        const catBtnStyle = `
             padding: 6px 14px; background: rgba(var(--color-mint-rgb), 0.1);
             border: 1px solid rgba(var(--color-mint-rgb), 0.25); border-radius: 6px;
             color: var(--color-mint); font-family: var(--font-body); font-size: 18px;
             cursor: pointer; transition: all 0.15s ease;
         `;
+        const editCatBtn = document.createElement('button');
+        editCatBtn.type = 'button';
+        editCatBtn.textContent = 'Edit';
+        editCatBtn.style.cssText = catBtnStyle;
+        editCatBtn.addEventListener('mouseenter', () => editCatBtn.style.background = 'rgba(var(--color-mint-rgb), 0.2)');
+        editCatBtn.addEventListener('mouseleave', () => editCatBtn.style.background = 'rgba(var(--color-mint-rgb), 0.1)');
+        editCatBtn.addEventListener('click', () => openEditCategoryModal(cat));
+        catHeader.appendChild(editCatBtn);
+
+        const addItemBtn = document.createElement('button');
+        addItemBtn.type = 'button';
+        addItemBtn.textContent = '+ Add Item';
+        addItemBtn.style.cssText = catBtnStyle;
         addItemBtn.addEventListener('mouseenter', () => addItemBtn.style.background = 'rgba(var(--color-mint-rgb), 0.2)');
         addItemBtn.addEventListener('mouseleave', () => addItemBtn.style.background = 'rgba(var(--color-mint-rgb), 0.1)');
         addItemBtn.addEventListener('click', () => openAddModal(cat.id));
@@ -998,6 +1009,83 @@ function openAddCategoryModal() {
             showToast(`Category "${name}" created`);
         });
         footerBtns.appendChild(createBtn);
+        content.appendChild(footerBtns);
+    });
+}
+
+/* ------------------------------------------
+   MODAL: EDIT CATEGORY
+------------------------------------------ */
+function openEditCategoryModal(cat) {
+    openModal(`Edit Category: ${cat.name}`, (content) => {
+        const nameField = buildFormField(content, 'Category Name', 'text', cat.name, { required: true, fieldName: 'name' });
+
+        let selectedColor = cat.color || '#fcbe40';
+        const colorLabel = document.createElement('div');
+        colorLabel.style.cssText = 'font-size: 20px; color: var(--color-mint); margin: 12px 0 8px 0; font-family: var(--font-body);';
+        colorLabel.textContent = 'Color';
+        content.appendChild(colorLabel);
+
+        const colorGrid = document.createElement('div');
+        colorGrid.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;';
+        CATEGORY_COLORS.forEach(hex => {
+            const swatch = document.createElement('button');
+            swatch.type = 'button';
+            swatch.style.cssText = `width:36px;height:36px;border-radius:6px;border:2px solid ${hex === selectedColor ? 'var(--color-mint)' : 'transparent'};background:${hex};cursor:pointer;`;
+            swatch.addEventListener('click', () => {
+                selectedColor = hex;
+                colorGrid.querySelectorAll('button').forEach(b => b.style.borderColor = 'transparent');
+                swatch.style.borderColor = 'var(--color-mint)';
+                hexInput.value = hex;
+            });
+            colorGrid.appendChild(swatch);
+        });
+        content.appendChild(colorGrid);
+
+        const hexInput = document.createElement('input');
+        hexInput.type = 'text';
+        hexInput.value = selectedColor;
+        hexInput.className = 'kp-date-input';
+        hexInput.style.cssText += 'width: 120px; font-size: 16px;';
+        hexInput.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value)) selectedColor = hexInput.value; });
+        content.appendChild(hexInput);
+
+        const footerBtns = document.createElement('div');
+        footerBtns.style.cssText = 'display:flex;justify-content:flex-end;gap:12px;margin-top:28px;padding-top:20px;border-top:1px solid rgba(var(--color-mint-rgb),0.1);';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.style.cssText = `padding:12px 28px;background:transparent;border:1px solid ${COLORS.grey};border-radius:8px;color:${COLORS.grey};font-family:var(--font-body);font-size:22px;cursor:pointer;`;
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', () => closeModal());
+        footerBtns.appendChild(cancelBtn);
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.style.cssText = `padding:12px 28px;background:${COLORS.mint};border:none;border-radius:8px;color:${COLORS.dark};font-family:var(--font-body);font-size:22px;font-weight:bold;cursor:pointer;`;
+        saveBtn.textContent = 'Save Category';
+        saveBtn.addEventListener('click', async () => {
+            const name = nameField.input.value.trim();
+            if (!name) { showToast('Category name is required', 'error'); return; }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            const event = {
+                event_type: 'menu.category_updated',
+                payload: { category_id: cat.id, name, display_order: cat.display_order, color: selectedColor },
+            };
+            const result = await pushChanges([event]);
+            if (!result.ok) { saveBtn.disabled = false; saveBtn.textContent = 'Save Category'; showToast('Failed to save', 'error'); return; }
+
+            const idx = menuData.categories.findIndex(c => c.id === cat.id);
+            if (idx !== -1) { menuData.categories[idx].name = name; menuData.categories[idx].color = selectedColor; }
+            closeModal();
+            renderCardGrid();
+            updateFooter();
+            showToast(`Category "${name}" updated`);
+        });
+        footerBtns.appendChild(saveBtn);
         content.appendChild(footerBtns);
     });
 }

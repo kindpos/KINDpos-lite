@@ -1,3 +1,5 @@
+import { pushChanges } from '../services/config-push.js';
+
 /* ============================================
    KINDpos Overseer - Configure Modifiers
    Master Lists, Groups & Assignments
@@ -1429,33 +1431,37 @@ function updateFooter() {
 /* ==========================================
    SAVE: EVENT GENERATION
    ========================================== */
-function handleSaveChanges() {
+async function handleSaveChanges() {
     const events = [];
-    const batch_id = `modifier_batch_${Date.now()}`;
-    const ts = new Date().toISOString();
 
-    // Generate events for each change type
-    Object.entries(pendingChanges).forEach(([key, items]) => {
-        items.forEach(item => {
-            if (item._deleted) {
-                events.push({ event_type: `modifier.${key}_deleted`, batch_id, timestamp: ts, payload: { id: item.id } });
-            } else {
-                const srcKey = key === 'mandatory' ? 'mandatory_assignments' : key === 'universal' ? 'universal_assignments' : key;
-                const exists = (modData[srcKey] || []).some(i => i.id === item.id);
-                events.push({
-                    event_type: `modifier.${key}_${exists ? 'updated' : 'created'}`,
-                    batch_id, timestamp: ts,
-                    payload: item,
-                });
-            }
-        });
+    // Groups → modifier.group_created / modifier.group_updated / modifier.group_deleted
+    (pendingChanges.groups || []).forEach(item => {
+        if (item._deleted) {
+            events.push({ event_type: 'modifier.group_deleted', payload: { group_id: item.id } });
+        } else {
+            const exists = (modData.groups || []).some(g => g.id === item.id);
+            events.push({
+                event_type: exists ? 'modifier.group_updated' : 'modifier.group_created',
+                payload: {
+                    group_id: item.id,
+                    name: item.name,
+                    modifier_ids: item.modifier_ids || [],
+                    modifiers: (item.modifier_ids || []).map(mid => {
+                        const mod = (modData.modifiers || []).find(m => m.id === mid);
+                        return mod ? { modifier_id: mid, name: mod.name, price: mod.base_price || 0 } : { modifier_id: mid, name: mid, price: 0 };
+                    }),
+                },
+            });
+        }
     });
 
-    console.log('%c[KINDpos] Modifier Events Generated', 'background: #333; color: var(--color-gold); font-size: 14px; padding: 2px 8px;');
-    console.log(`Batch contains ${events.length} events:`);
-    events.forEach((evt, i) => {
-        console.log(`  ${i + 1}. ${evt.event_type} — ${JSON.stringify(evt.payload).substring(0, 100)}`);
-    });
+    if (events.length > 0) {
+        const result = await pushChanges(events);
+        if (!result.ok) {
+            showToast('Failed to save changes', 'error');
+            return;
+        }
+    }
 
     // Apply pending to base data
     Object.entries(pendingChanges).forEach(([key, items]) => {
