@@ -200,14 +200,14 @@ export function HexNav(container, opts) {
     var longestWord = '';
     lines.forEach(function(w) { if (w.length > longestWord.length) longestWord = w; });
     // Start with a font size that fills the hex width for the longest word
-    // Hex usable width ≈ r * 1.7, each char ≈ fontSize * 0.52
-    var maxWidth = h.r * 1.7;
+    // Hex usable width ≈ r * 1.6, each char ≈ fontSize * 0.62 (bold)
+    var maxWidth = h.r * 1.6;
     var fontSize = longestWord.length > 0
-      ? Math.round(maxWidth / (longestWord.length * 0.52))
+      ? Math.round(maxWidth / (longestWord.length * 0.62))
       : Math.round(28 * scale);
     // Clamp to reasonable range
-    var maxFont = Math.round(38 * scale);
-    var minFont = Math.round(14 * scale);
+    var maxFont = Math.round(34 * scale);
+    var minFont = Math.round(12 * scale);
     if (fontSize > maxFont) fontSize = maxFont;
     if (fontSize < minFont) fontSize = minFont;
     // Also shrink if too many lines overflow vertically
