@@ -931,6 +931,7 @@ function openAddCategoryModal() {
         colorGrid.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;';
         CATEGORY_COLORS.forEach(hex => {
             const swatch = document.createElement('button');
+            swatch.type = 'button';
             swatch.style.cssText = `
                 width: 36px; height: 36px; border-radius: 6px; border: 2px solid transparent;
                 background: ${hex}; cursor: pointer; transition: border-color 0.15s;
@@ -960,16 +961,18 @@ function openAddCategoryModal() {
         footerBtns.style.cssText = 'display:flex;justify-content:flex-end;gap:12px;margin-top:28px;padding-top:20px;border-top:1px solid rgba(var(--color-mint-rgb),0.1);';
 
         const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
         cancelBtn.style.cssText = `padding:12px 28px;background:transparent;border:1px solid ${COLORS.grey};border-radius:8px;color:${COLORS.grey};font-family:var(--font-body);font-size:22px;cursor:pointer;`;
         cancelBtn.textContent = 'Cancel';
         cancelBtn.addEventListener('click', () => closeModal());
         footerBtns.appendChild(cancelBtn);
 
         const createBtn = document.createElement('button');
+        createBtn.type = 'button';
         createBtn.style.cssText = `padding:12px 28px;background:${COLORS.mint};border:none;border-radius:8px;color:${COLORS.dark};font-family:var(--font-body);font-size:22px;font-weight:bold;cursor:pointer;`;
         createBtn.textContent = 'Create Category';
         createBtn.addEventListener('click', async () => {
-            const name = nameField.getValue().trim();
+            const name = nameField.input.value.trim();
             if (!name) { showToast('Category name is required', 'error'); return; }
 
             createBtn.disabled = true;
