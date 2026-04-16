@@ -155,6 +155,21 @@ class ModifierGroup(BaseModel):
     owner_item_id: Optional[str] = None
     active: bool = True
 
+class MandatoryAssignment(BaseModel):
+    assignment_id: str
+    label: str
+    target_type: str  # "category" | "item"
+    target_id: str
+    target_name: Optional[str] = None
+    modifier_ids: List[str] = []
+    select_mode: str = "single"  # "single" | "multi"
+
+class UniversalAssignment(BaseModel):
+    assignment_id: str
+    category_id: str
+    category_name: Optional[str] = None
+    group_ids: List[str] = []
+
 # Floor Plan Models
 class TableElement(BaseModel):
     id: str

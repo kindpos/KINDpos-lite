@@ -4,6 +4,7 @@ from app.core.events import EventType, Event
 from app.models.config_events import (
     Role, Employee, TipoutRule,
     MenuItem, MenuCategory, ModifierGroup,
+    MandatoryAssignment, UniversalAssignment,
     Section, FloorPlanLayout,
     Terminal, Printer, RoutingMatrix,
     DashboardConfig, CustomReport, AccountsMapping
@@ -191,6 +192,68 @@ class OverseerConfigService:
                 groups[gid] = existing
 
         result = [ModifierGroup(**g) for g in groups.values()]
+        cache.set(seq, result)
+        return result
+
+    async def get_mandatory_assignments(self) -> List[MandatoryAssignment]:
+        cache = self._get_cache("mandatory_assignments")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
+        events = await self.ledger.get_events_by_type(EventType.MODIFIER_MANDATORY_CREATED, limit=5000)
+        events += await self.ledger.get_events_by_type(EventType.MODIFIER_MANDATORY_UPDATED, limit=5000)
+        events += await self.ledger.get_events_by_type(EventType.MODIFIER_MANDATORY_DELETED, limit=5000)
+        events.sort(key=lambda x: x.sequence_number or 0)
+
+        assignments: Dict[str, Dict[str, Any]] = {}
+        for e in events:
+            payload = e.payload
+            aid = payload.get("assignment_id")
+            if not aid:
+                continue
+            if e.event_type == EventType.MODIFIER_MANDATORY_DELETED:
+                assignments.pop(aid, None)
+            elif e.event_type == EventType.MODIFIER_MANDATORY_CREATED:
+                assignments[aid] = dict(payload)
+            else:
+                existing = assignments.get(aid, {})
+                existing.update(payload)
+                assignments[aid] = existing
+
+        result = [MandatoryAssignment(**a) for a in assignments.values()]
+        cache.set(seq, result)
+        return result
+
+    async def get_universal_assignments(self) -> List[UniversalAssignment]:
+        cache = self._get_cache("universal_assignments")
+        seq = await self._max_seq()
+        cached = cache.get(seq)
+        if cached is not None:
+            return cached
+
+        events = await self.ledger.get_events_by_type(EventType.MODIFIER_UNIVERSAL_CREATED, limit=5000)
+        events += await self.ledger.get_events_by_type(EventType.MODIFIER_UNIVERSAL_UPDATED, limit=5000)
+        events += await self.ledger.get_events_by_type(EventType.MODIFIER_UNIVERSAL_DELETED, limit=5000)
+        events.sort(key=lambda x: x.sequence_number or 0)
+
+        assignments: Dict[str, Dict[str, Any]] = {}
+        for e in events:
+            payload = e.payload
+            aid = payload.get("assignment_id")
+            if not aid:
+                continue
+            if e.event_type == EventType.MODIFIER_UNIVERSAL_DELETED:
+                assignments.pop(aid, None)
+            elif e.event_type == EventType.MODIFIER_UNIVERSAL_CREATED:
+                assignments[aid] = dict(payload)
+            else:
+                existing = assignments.get(aid, {})
+                existing.update(payload)
+                assignments[aid] = existing
+
+        result = [UniversalAssignment(**a) for a in assignments.values()]
         cache.set(seq, result)
         return result
 

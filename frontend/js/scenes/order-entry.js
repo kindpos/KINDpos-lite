@@ -149,6 +149,7 @@ function fetchMenuFromAPI() {
         color: catColor,
         textColor: textColor,
         pizzaBuilder: cat.pizza_builder || false,
+        enablePlacement: cat.enable_placement === true,
         subcats: [{ id: cat.category_id + '-items', label: cat.name, items: catItems }],
       };
     });
@@ -1332,7 +1333,7 @@ function endModifierSession() {
 }
 
 // ── MODIFIER PANEL (overlay on hex-canvas) ───────
-function openModifierPanel(item, modConfig, catColor) {
+function openModifierPanel(item, modConfig, catColor, enablePlacement) {
   if (_modPanel) closeModifierPanel();
 
   // Hide bottom bar — panel covers entire right column
@@ -1346,6 +1347,7 @@ function openModifierPanel(item, modConfig, catColor) {
   _modPanel = new ModifierPanel(_mainArea, {
     item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
     catColor: catColor || T.mint,
+    enablePlacement: !!enablePlacement,
     onUpdate: function(outputItem) {
       _modPanelItem = outputItem;
       if (!_building) renderTicket();
@@ -1579,7 +1581,9 @@ function handleItemSelect(item) {
     }
     var catId = hexNav ? hexNav.getCatId() : null;
     var catColor = catId ? T.catColor(catId.toUpperCase()) : T.mint;
-    openModifierPanel(item, effectiveConfig, catColor);
+    var menuCat = catId ? getMenuCat(catId) : null;
+    var enablePlacement = menuCat ? !!menuCat.enablePlacement : false;
+    openModifierPanel(item, effectiveConfig, catColor, enablePlacement);
     return;
   }
 

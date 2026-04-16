@@ -48,6 +48,7 @@ async function fetchMenuData() {
             emoji: '',
             display_order: c.display_order || i + 1,
             color: c.hex_color || c.color || null,
+            enable_placement: c.enable_placement === true,
         }));
 
         // Build name→id lookup so items with category="Pizza" resolve to id="pizza"
@@ -1085,6 +1086,8 @@ function openAddCategoryModal() {
         hexInput.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value)) selectedColor = hexInput.value; });
         content.appendChild(hexInput);
 
+        const placementToggle = buildPlacementToggle(content, false);
+
         // Footer buttons
         const footerBtns = document.createElement('div');
         footerBtns.style.cssText = 'display:flex;justify-content:flex-end;gap:12px;margin-top:28px;padding-top:20px;border-top:1px solid rgba(var(--color-mint-rgb),0.1);';
@@ -1108,9 +1111,10 @@ function openAddCategoryModal() {
             createBtn.textContent = 'Saving...';
 
             const catId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+            const enablePlacement = placementToggle.isChecked();
             const event = {
                 event_type: 'menu.category_created',
-                payload: { category_id: catId, name, display_order: menuData.categories.length + 1, color: selectedColor },
+                payload: { category_id: catId, name, display_order: menuData.categories.length + 1, color: selectedColor, enable_placement: enablePlacement },
             };
             const result = await pushChanges([event]);
             if (!result.ok) {
@@ -1120,7 +1124,7 @@ function openAddCategoryModal() {
                 return;
             }
 
-            menuData.categories.push({ id: catId, name, emoji: '', display_order: menuData.categories.length + 1, color: selectedColor });
+            menuData.categories.push({ id: catId, name, emoji: '', display_order: menuData.categories.length + 1, color: selectedColor, enable_placement: enablePlacement });
             closeModal();
             renderCardGrid();
             updateFooter();
@@ -1129,6 +1133,31 @@ function openAddCategoryModal() {
         footerBtns.appendChild(createBtn);
         content.appendChild(footerBtns);
     });
+}
+
+/* ------------------------------------------
+   FIELD: placement-bar toggle
+------------------------------------------ */
+function buildPlacementToggle(container, initial) {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin:18px 0 6px 0;cursor:pointer;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!initial;
+    cb.style.cssText = 'width:20px;height:20px;accent-color:var(--color-mint);';
+    const label = document.createElement('span');
+    label.style.cssText = 'font-family:var(--font-body);font-size:20px;color:#ddd;';
+    label.textContent = 'Enable placement bar (1st / Whole / 2nd)';
+    wrap.appendChild(cb);
+    wrap.appendChild(label);
+
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-family:var(--font-body);font-size:16px;color:#888;margin-left:30px;margin-bottom:8px;';
+    hint.textContent = 'Shows the half-placement selector on the modifier panel for items in this category (pizza-style).';
+
+    container.appendChild(wrap);
+    container.appendChild(hint);
+    return { isChecked: () => cb.checked };
 }
 
 /* ------------------------------------------
@@ -1168,6 +1197,8 @@ function openEditCategoryModal(cat) {
         hexInput.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value)) selectedColor = hexInput.value; });
         content.appendChild(hexInput);
 
+        const placementToggle = buildPlacementToggle(content, !!cat.enable_placement);
+
         const footerBtns = document.createElement('div');
         footerBtns.style.cssText = 'display:flex;justify-content:flex-end;gap:12px;margin-top:28px;padding-top:20px;border-top:1px solid rgba(var(--color-mint-rgb),0.1);';
 
@@ -1189,15 +1220,20 @@ function openEditCategoryModal(cat) {
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
 
+            const enablePlacement = placementToggle.isChecked();
             const event = {
                 event_type: 'menu.category_updated',
-                payload: { category_id: cat.id, name, display_order: cat.display_order, color: selectedColor },
+                payload: { category_id: cat.id, name, display_order: cat.display_order, color: selectedColor, enable_placement: enablePlacement },
             };
             const result = await pushChanges([event]);
             if (!result.ok) { saveBtn.disabled = false; saveBtn.textContent = 'Save Category'; showToast('Failed to save', 'error'); return; }
 
             const idx = menuData.categories.findIndex(c => c.id === cat.id);
-            if (idx !== -1) { menuData.categories[idx].name = name; menuData.categories[idx].color = selectedColor; }
+            if (idx !== -1) {
+                menuData.categories[idx].name = name;
+                menuData.categories[idx].color = selectedColor;
+                menuData.categories[idx].enable_placement = enablePlacement;
+            }
             closeModal();
             renderCardGrid();
             updateFooter();

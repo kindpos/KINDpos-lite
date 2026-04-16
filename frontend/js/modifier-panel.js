@@ -70,6 +70,7 @@ export function ModifierPanel(container, opts) {
   var onSend = opts.onSend || function() {};
   var onCancel = opts.onCancel || function() {};
   var catColor = opts.catColor || T.mint;
+  var enablePlacement = opts.enablePlacement === true;
 
   // ── Active item state (ephemeral until SEND) ──
   var activeItem = {
@@ -177,8 +178,11 @@ export function ModifierPanel(container, opts) {
     if (optionalContentEl) optionalContentEl.style.display = expandedSection === 'optional' ? '' : 'none';
     // Prefixes: only for optional
     if (prefixBarEl) prefixBarEl.style.display = expandedSection === 'optional' ? 'flex' : 'none';
-    // Placement: optional + included
-    if (placementBarEl) placementBarEl.style.display = (expandedSection === 'optional' || expandedSection === 'included') ? '' : 'none';
+    // Placement: optional + included, only if category has it enabled
+    if (placementBarEl) {
+      var placementVisible = enablePlacement && (expandedSection === 'optional' || expandedSection === 'included');
+      placementBarEl.style.display = placementVisible ? '' : 'none';
+    }
   }
 
   // ── Build the panel ──
@@ -433,7 +437,7 @@ export function ModifierPanel(container, opts) {
   // ═══ PLACEMENT BAR (compact, above action buttons) ═══
   function renderPlacement() {
     placementBarEl.innerHTML = '';
-    if (optionalGroups.length === 0 && mandatoryGroups.length === 0) {
+    if (!enablePlacement || (optionalGroups.length === 0 && mandatoryGroups.length === 0)) {
       placementBarEl.style.display = 'none';
       return;
     }

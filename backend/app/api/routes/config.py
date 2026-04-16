@@ -6,6 +6,7 @@ from app.core.events import EventType, Event, create_event, parse_event_type
 from app.models.config_events import (
     StoreConfigBundle, StoreInfo, CCProcessingRate, PendingChange,
     Role, Employee, TipoutRule, MenuItem, MenuCategory, ModifierGroup,
+    MandatoryAssignment, UniversalAssignment,
     Section, FloorPlanLayout, Terminal, Printer, RoutingMatrix
 )
 from app.config import settings
@@ -81,6 +82,16 @@ async def get_menu_items(ledger: EventLedger = Depends(get_ledger)):
 async def get_modifier_groups(ledger: EventLedger = Depends(get_ledger)):
     service = OverseerConfigService(ledger)
     return await service.get_modifier_groups()
+
+@router.get("/mandatory-assignments", response_model=List[MandatoryAssignment])
+async def get_mandatory_assignments(ledger: EventLedger = Depends(get_ledger)):
+    service = OverseerConfigService(ledger)
+    return await service.get_mandatory_assignments()
+
+@router.get("/universal-assignments", response_model=List[UniversalAssignment])
+async def get_universal_assignments(ledger: EventLedger = Depends(get_ledger)):
+    service = OverseerConfigService(ledger)
+    return await service.get_universal_assignments()
 
 @router.get("/floorplan/sections", response_model=List[Section])
 async def get_floorplan_sections(ledger: EventLedger = Depends(get_ledger)):
@@ -243,7 +254,9 @@ async def get_terminal_bundle(ledger: EventLedger = Depends(get_ledger)):
         "menu": {
             "categories": await overseer_service.get_menu_categories(),
             "items": await overseer_service.get_menu_items(),
-            "modifier_groups": await overseer_service.get_modifier_groups()
+            "modifier_groups": await overseer_service.get_modifier_groups(),
+            "mandatory_assignments": await overseer_service.get_mandatory_assignments(),
+            "universal_assignments": await overseer_service.get_universal_assignments()
         },
         "floor_plan": {
             "sections": await overseer_service.get_floorplan_sections(),
