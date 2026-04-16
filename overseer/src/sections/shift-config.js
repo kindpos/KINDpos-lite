@@ -311,7 +311,7 @@ function buildDailyTimeline(wrapper) {
         const nameCell = document.createElement('div');
         const statusInfo = SHIFT_STATUSES[shift.status] || { label: shift.status, color: C.grey };
         nameCell.innerHTML = `
-            <div style="font-size: 22px; color: ${C.white};">${shift.firstName} ${shift.lastName}</div>
+            <div style="font-size: 22px; color: ${C.white};">${shift.name || ''}</div>
             <div style="font-size: 18px; color: ${statusInfo.color};">${getRoleLabel(shift.role)} · ${statusInfo.label}</div>
         `;
         row.appendChild(nameCell);

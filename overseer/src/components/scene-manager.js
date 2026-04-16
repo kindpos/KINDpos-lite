@@ -188,6 +188,11 @@ function mountWorking(sceneName, params) {
     _unmountWorkingInternal();
   }
 
+  // Clear any orphaned containers from async scenes
+  if (_layerWorking) {
+    while (_layerWorking.firstChild) _layerWorking.removeChild(_layerWorking.firstChild);
+  }
+
   // Build content container
   var container = document.createElement('div');
   container.className = 'layer-content';
