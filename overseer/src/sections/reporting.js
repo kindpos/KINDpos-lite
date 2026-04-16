@@ -794,6 +794,7 @@ function buildAdjustmentsDetail(wrapper) {
 ------------------------------------------ */
 function buildKPICards(container) {
     const data = SAMPLE_DATA.dailyFlash;
+    const isToday = data.date === new Date().toISOString().slice(0, 10);
     const kpis = [
         { label: 'Net Sales',   value: fmt$(data.today.net_sales),       delta: calcDelta(data.today.net_sales, data.yesterday.net_sales) },
         { label: 'Tax',         value: fmt$(data.today.tax_collected),    delta: calcDelta(data.today.tax_collected, data.yesterday.tax_collected) },
@@ -822,19 +823,24 @@ function buildKPICards(container) {
             text-align: center;
         `;
 
-        const arrow = kpi.delta.direction === 'up' ? '▲' : '▼';
-        const deltaColor = kpi.delta.direction === 'up' ? COLORS.mint : COLORS.red;
+        const deltaHtml = isToday
+            ? (() => {
+                const arrow = kpi.delta.direction === 'up' ? '\u25B2' : '\u25BC';
+                const deltaColor = kpi.delta.direction === 'up' ? COLORS.mint : COLORS.red;
+                return `<div style="font-size: 25px; color: ${deltaColor}; margin-top: 6px;">
+                    ${arrow} ${fmtPct(kpi.delta.pct)} vs yesterday
+                </div>`;
+            })()
+            : '';
 
         card.innerHTML = `
-            <div style="font-size: 20px; color: ${deltaColor}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">
+            <div style="font-size: 20px; color: ${COLORS.mint}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">
                 ${kpi.label}
             </div>
             <div style="font-size: 40px; color: ${COLORS.yellow}; font-family: var(--font-display); line-height: 1.1;">
                 ${kpi.value}
             </div>
-            <div style="font-size: 25px; color: ${deltaColor}; margin-top: 6px;">
-                ${arrow} ${fmtPct(kpi.delta.pct)} vs yesterday
-            </div>
+            ${deltaHtml}
         `;
         grid.appendChild(card);
     });
