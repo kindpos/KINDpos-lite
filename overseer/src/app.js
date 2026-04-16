@@ -28,6 +28,8 @@ import { registerPrinterSetup }       from './sections/printer-setup.js';
 // Build-pattern sections (no register wrapper — wrap manually below)
 import { buildStoreInfoScene,     cleanupStoreInfo     } from './sections/store-info.js';
 import { buildOrderSettingsScene, cleanupOrderSettings } from './sections/order-settings.js';
+import { buildCardReadersScene,  cleanupCardReaders  } from './sections/card-readers.js';
+import { buildReceiptSettingsScene, cleanupReceiptSettings } from './sections/receipt-settings.js';
 import { buildPayrollTipsScene,    cleanupPayrollTips    } from './sections/payroll-tips.js';
 import { buildTimeAttendanceScene, cleanupTimeAttendance } from './sections/time-attendance.js';
 import { buildShiftConfigScene,    cleanupShiftConfig    } from './sections/shift-config.js';
@@ -284,6 +286,16 @@ function registerAllSections() {
         mount: (container) => buildOrderSettingsScene(container),
         unmount: (container) => cleanupOrderSettings(container),
     });
+    SceneManager.register({
+        name: 'card-readers',
+        mount: (container) => buildCardReadersScene(container),
+        unmount: (container) => cleanupCardReaders(container),
+    });
+    SceneManager.register({
+        name: 'receipt-settings',
+        mount: (container) => buildReceiptSettingsScene(container),
+        unmount: (container) => cleanupReceiptSettings(container),
+    });
 
     // Placeholder sections for categories documented in CONFIGURABLE_COMPONENTS.md
     registerPlaceholders();
@@ -317,20 +329,6 @@ const PLACEHOLDERS = [
         icon: '\u{1F5FA}\u{FE0F}',
         fields: ['Sections & table layout', 'Seat counts & shapes', 'Walls, barriers, fixtures'],
         api: 'GET /api/v1/config/floorplan',
-    },
-    {
-        name: 'card-readers',
-        title: 'Card Readers',
-        icon: '\u{1F4B3}',
-        fields: ['Device name & type', 'IP address & port', 'Register ID & TPN'],
-        api: 'GET/POST /api/v1/hardware/devices',
-    },
-    {
-        name: 'receipt-settings',
-        title: 'Printing & Receipts',
-        icon: '\u{1F9FE}',
-        fields: ['Print logo toggle', 'Tip suggestion percentages', 'Customer / merchant / itemized copies'],
-        api: 'POST /api/v1/print/receipt/{order_id}',
     },
     {
         name: 'terminal-settings',
