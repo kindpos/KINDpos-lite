@@ -106,15 +106,33 @@ var MENU_DATA = [];
 
 var MOD_DATA = [];
 
+// ── Per-item included-modifier lookup (from hidden "included_<item_id>" groups) ──
+var INCLUDED_BY_ITEM = {};
+
+// ── Overseer-authored modifier wiring (source of truth when present) ──
+var MODIFIER_GROUPS = [];          // raw groups (non-hidden) keyed by group_id
+var MANDATORY_ASSIGNMENTS = [];    // [{ assignment_id, label, target_type, target_id, modifier_ids, select_mode }]
+var UNIVERSAL_ASSIGNMENTS = [];    // [{ assignment_id, category_id, group_ids }]
+var MODIFIER_MASTER = {};          // modifier_id → { name, price }
+var ITEM_TO_CATEGORY = {};         // item_id → category_id
+
 // ── Fetch menu from API and transform to HexNav format ──
 var _menuFetched = false;
 
 function fetchMenuFromAPI() {
-  return fetch(API + '/menu').then(function(r) { return r.json(); }).then(function(menu) {
+  return Promise.all([
+    fetch(API + '/menu').then(function(r) { return r.json(); }),
+    fetch(API + '/config/mandatory-assignments').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+    fetch(API + '/config/universal-assignments').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+  ]).then(function(results) {
+    var menu = results[0];
+    MANDATORY_ASSIGNMENTS = results[1] || [];
+    UNIVERSAL_ASSIGNMENTS = results[2] || [];
     if (!menu.categories || !menu.items) return;
 
     // Build items_by_category keyed by category_id (lowercase)
     var itemsByCatId = {};
+    ITEM_TO_CATEGORY = {};
     menu.categories.forEach(function(cat) { itemsByCatId[cat.category_id] = []; });
     menu.items.forEach(function(item) {
       // Match item.category (name like "Pizza") to category
@@ -124,6 +142,8 @@ function fetchMenuFromAPI() {
       if (cat) {
         if (!itemsByCatId[cat.category_id]) itemsByCatId[cat.category_id] = [];
         itemsByCatId[cat.category_id].push(item);
+        var iid = item.item_id || item.id;
+        if (iid) ITEM_TO_CATEGORY[iid] = cat.category_id;
       }
     });
 
@@ -132,7 +152,7 @@ function fetchMenuFromAPI() {
       var catItems = (itemsByCatId[cat.category_id] || [])
         .sort(function(a, b) { return (a.display_order || 999) - (b.display_order || 999); })
         .map(function(item) {
-          var hexItem = { label: item.name, price: item.price };
+          var hexItem = { label: item.name, price: item.price, id: item.item_id || item.id };
           if (item.pizza_size) hexItem.pizzaSize = true;
           if (item.mods) hexItem.requiredMods = item.mods;
           return hexItem;
@@ -146,8 +166,30 @@ function fetchMenuFromAPI() {
         color: catColor,
         textColor: textColor,
         pizzaBuilder: cat.pizza_builder || false,
+        enablePlacement: cat.enable_placement === true,
         subcats: [{ id: cat.category_id + '-items', label: cat.name, items: catItems }],
       };
+    });
+
+    // Build per-item included-modifier lookup from hidden "included_<item_id>" groups.
+    // Each entry is shape { id, label } — matches ModifierPanel's includedItems contract.
+    INCLUDED_BY_ITEM = {};
+    MODIFIER_GROUPS = [];
+    MODIFIER_MASTER = {};
+    (menu.modifier_groups || []).forEach(function(g) {
+      if (g.hidden) {
+        if (g.owner_item_id) {
+          var mods = (g.modifiers || []).map(function(m) { return { id: m.modifier_id, label: m.name }; });
+          if (mods.length > 0) INCLUDED_BY_ITEM[g.owner_item_id] = mods;
+        }
+        return;
+      }
+      MODIFIER_GROUPS.push(g);
+      (g.modifiers || []).forEach(function(m) {
+        if (m.modifier_id && !MODIFIER_MASTER[m.modifier_id]) {
+          MODIFIER_MASTER[m.modifier_id] = { name: m.name, price: parseFloat(m.price) || 0 };
+        }
+      });
     });
 
     // Extract pizza builder modifier groups
@@ -1318,7 +1360,7 @@ function endModifierSession() {
 }
 
 // ── MODIFIER PANEL (overlay on hex-canvas) ───────
-function openModifierPanel(item, modConfig, catColor) {
+function openModifierPanel(item, modConfig, catColor, enablePlacement) {
   if (_modPanel) closeModifierPanel();
 
   // Hide bottom bar — panel covers entire right column
@@ -1332,6 +1374,7 @@ function openModifierPanel(item, modConfig, catColor) {
   _modPanel = new ModifierPanel(_mainArea, {
     item: { label: item.label, price: item.price || 0, id: item.id, modifierConfig: modConfig },
     catColor: catColor || T.mint,
+    enablePlacement: !!enablePlacement,
     onUpdate: function(outputItem) {
       _modPanelItem = outputItem;
       if (!_building) renderTicket();
@@ -1471,6 +1514,46 @@ function switchTab(tab) {
 }
 
 // ── TICKET ────────────────────────────────────────
+// Build modifier config from Overseer-authored mandatory + universal assignments.
+// Returns null when no assignment matches — caller falls back to hardcoded configs.
+function resolveBackendModifierConfig(itemId, catId) {
+  if (!itemId && !catId) return null;
+
+  var mandatoryGroups = [];
+  MANDATORY_ASSIGNMENTS.forEach(function(asgn) {
+    var hit = (asgn.target_type === 'item' && asgn.target_id === itemId)
+           || (asgn.target_type === 'category' && asgn.target_id === catId);
+    if (!hit) return;
+    mandatoryGroups.push({
+      key: asgn.assignment_id,
+      label: (asgn.label || '').toUpperCase(),
+      options: (asgn.modifier_ids || []).map(function(mid) {
+        var m = MODIFIER_MASTER[mid] || { name: mid, price: 0 };
+        return { key: mid, label: m.name, price: m.price };
+      }),
+    });
+  });
+
+  var optionalGroups = [];
+  UNIVERSAL_ASSIGNMENTS.forEach(function(asgn) {
+    if (asgn.category_id !== catId) return;
+    (asgn.group_ids || []).forEach(function(gid) {
+      var grp = MODIFIER_GROUPS.find(function(g) { return g.group_id === gid; });
+      if (!grp) return;
+      optionalGroups.push({
+        key: grp.group_id,
+        label: (grp.name || '').toUpperCase(),
+        options: (grp.modifiers || []).map(function(m) {
+          return { id: m.modifier_id, label: m.name, price: parseFloat(m.price) || 0 };
+        }),
+      });
+    });
+  });
+
+  if (mandatoryGroups.length === 0 && optionalGroups.length === 0) return null;
+  return { mandatoryGroups: mandatoryGroups, optionalGroups: optionalGroups, includedItems: [] };
+}
+
 function getMenuCat(id) {
   return MENU_DATA.find(function(c) { return c.id === id; });
 }
@@ -1554,12 +1637,25 @@ function handleItemSelect(item) {
     return;
   }
 
-  // ── Modifier panel: item with modifierConfig opens the panel ──
-  var modConfig = getModifierConfig(item.label);
-  if (modConfig) {
-    var catId = hexNav ? hexNav.getCatId() : null;
+  // ── Modifier panel: resolve config from backend assignments, fall back to hardcoded ──
+  var catId = hexNav ? hexNav.getCatId() : null;
+  if (!catId && item.id) catId = ITEM_TO_CATEGORY[item.id] || null;
+
+  var backendConfig = resolveBackendModifierConfig(item.id, catId);
+  var legacyConfig = getModifierConfig(item.label);
+  var overseerIncluded = item.id ? INCLUDED_BY_ITEM[item.id] : null;
+
+  var modConfig = backendConfig || legacyConfig;
+  if (modConfig || (overseerIncluded && overseerIncluded.length > 0)) {
+    var effectiveConfig = modConfig ? Object.assign({}, modConfig) : {};
+    if (overseerIncluded && overseerIncluded.length > 0) {
+      // Overseer-authored included list wins over any hardcoded fallback
+      effectiveConfig.includedItems = overseerIncluded;
+    }
     var catColor = catId ? T.catColor(catId.toUpperCase()) : T.mint;
-    openModifierPanel(item, modConfig, catColor);
+    var menuCat = catId ? getMenuCat(catId) : null;
+    var enablePlacement = menuCat ? !!menuCat.enablePlacement : false;
+    openModifierPanel(item, effectiveConfig, catColor, enablePlacement);
     return;
   }
 

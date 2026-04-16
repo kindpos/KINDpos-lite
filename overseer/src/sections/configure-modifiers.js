@@ -38,18 +38,24 @@ const COLORS = {
 ------------------------------------------ */
 async function fetchModifierData() {
     try {
-        const [menuRes, catRes] = await Promise.all([
+        const [menuRes, catRes, mandRes, univRes] = await Promise.all([
             fetch('/api/v1/menu'),
             fetch('/api/v1/config/menu/categories'),
+            fetch('/api/v1/config/mandatory-assignments'),
+            fetch('/api/v1/config/universal-assignments'),
         ]);
         const menu = menuRes.ok ? await menuRes.json() : { modifier_groups: [] };
         const cats = catRes.ok ? await catRes.json() : [];
+        const mandAssigns = mandRes.ok ? await mandRes.json() : [];
+        const univAssigns = univRes.ok ? await univRes.json() : [];
 
         const allModifiers = [];
         const groups = [];
         const modIdSet = new Set();
 
         for (const grp of (menu.modifier_groups || [])) {
+            // Skip hidden per-item "included" groups — they're managed from item edit
+            if (grp.hidden) continue;
             const mods = grp.modifiers || [];
             const subcatMods = (grp.subcats || []).flatMap(sc => sc.modifiers || []);
             const allGrpMods = [...mods, ...subcatMods];
@@ -97,8 +103,21 @@ async function fetchModifierData() {
                 { id: 'tmpl_simple',   name: 'Simple Add/No',     description: 'Basic add or remove', option_ids: ['opt_add', 'opt_no'], active: true },
             ],
             groups,
-            mandatory_assignments: [],
-            universal_assignments: [],
+            mandatory_assignments: mandAssigns.map(a => ({
+                id: a.assignment_id,
+                label: a.label,
+                target_type: a.target_type,
+                target_id: a.target_id,
+                target_name: a.target_name,
+                modifier_ids: a.modifier_ids || [],
+                select_mode: a.select_mode || 'single',
+            })),
+            universal_assignments: univAssigns.map(a => ({
+                id: a.assignment_id,
+                category_id: a.category_id,
+                category_name: a.category_name,
+                group_ids: a.group_ids || [],
+            })),
             categories: cats.map(c => ({
                 id: c.category_id || c.id,
                 name: c.name || c.label,
@@ -1450,6 +1469,45 @@ async function handleSaveChanges() {
                         const mod = (modData.modifiers || []).find(m => m.id === mid);
                         return mod ? { modifier_id: mid, name: mod.name, price: mod.base_price || 0 } : { modifier_id: mid, name: mid, price: 0 };
                     }),
+                },
+            });
+        }
+    });
+
+    // Mandatory assignments → modifier.mandatory_created / modifier.mandatory_updated / modifier.mandatory_deleted
+    (pendingChanges.mandatory || []).forEach(item => {
+        if (item._deleted) {
+            events.push({ event_type: 'modifier.mandatory_deleted', payload: { assignment_id: item.id } });
+        } else {
+            const exists = (modData.mandatory_assignments || []).some(a => a.id === item.id);
+            events.push({
+                event_type: exists ? 'modifier.mandatory_updated' : 'modifier.mandatory_created',
+                payload: {
+                    assignment_id: item.id,
+                    label: item.label,
+                    target_type: item.target_type,
+                    target_id: item.target_id,
+                    target_name: item.target_name,
+                    modifier_ids: item.modifier_ids || [],
+                    select_mode: item.select_mode || 'single',
+                },
+            });
+        }
+    });
+
+    // Universal assignments → modifier.universal_created / modifier.universal_updated / modifier.universal_deleted
+    (pendingChanges.universal || []).forEach(item => {
+        if (item._deleted) {
+            events.push({ event_type: 'modifier.universal_deleted', payload: { assignment_id: item.id } });
+        } else {
+            const exists = (modData.universal_assignments || []).some(a => a.id === item.id);
+            events.push({
+                event_type: exists ? 'modifier.universal_updated' : 'modifier.universal_created',
+                payload: {
+                    assignment_id: item.id,
+                    category_id: item.category_id,
+                    category_name: item.category_name,
+                    group_ids: item.group_ids || [],
                 },
             });
         }
