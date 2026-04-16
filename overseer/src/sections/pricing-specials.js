@@ -637,7 +637,10 @@ function openSpecialModal(existing) {
         dateStartInput.value = existing?.date_start || '';
         dateStartInput.style.cssText = `padding: 8px; background: rgba(var(--color-mint-rgb),0.08); border: 1px solid rgba(var(--color-mint-rgb),0.25); border-radius: 6px; color: ${COLORS.white}; font-family: var(--font-body); font-size: 18px;`;
         dateRow.appendChild(dateStartInput);
-        dateRow.innerHTML += `<span style="color: ${COLORS.grey};">to</span>`;
+        const dateToLabel = document.createElement('span');
+        dateToLabel.style.color = COLORS.grey;
+        dateToLabel.textContent = 'to';
+        dateRow.appendChild(dateToLabel);
         const dateEndInput = document.createElement('input');
         dateEndInput.type = 'date';
         dateEndInput.value = existing?.date_end || '';
@@ -838,10 +841,17 @@ function openDayPartModal(existing) {
         // Time
         const timeRow = document.createElement('div');
         timeRow.style.cssText = `display: flex; align-items: center; gap: 12px; margin-bottom: 20px;`;
-        timeRow.innerHTML = `<span style="font-family: var(--font-body); font-size: 20px; color: ${COLORS.grey};">From</span>`;
+        const labelStyle = `font-family: var(--font-body); font-size: 20px; color: ${COLORS.grey};`;
+        const fromLabel = document.createElement('span');
+        fromLabel.style.cssText = labelStyle;
+        fromLabel.textContent = 'From';
+        timeRow.appendChild(fromLabel);
         const startInput = buildTimeInput(existing?.time_start || '');
         timeRow.appendChild(startInput);
-        timeRow.innerHTML += `<span style="font-family: var(--font-body); font-size: 20px; color: ${COLORS.grey};">to</span>`;
+        const toLabel = document.createElement('span');
+        toLabel.style.cssText = labelStyle;
+        toLabel.textContent = 'to';
+        timeRow.appendChild(toLabel);
         const endInput = buildTimeInput(existing?.time_end || '');
         timeRow.appendChild(endInput);
         content.appendChild(timeRow);
@@ -863,7 +873,10 @@ function openDayPartModal(existing) {
         let isActive = existing?.active ?? true;
         const activeToggle = buildToggleSwitch(isActive, (v) => { isActive = v; });
         activeRow.appendChild(activeToggle);
-        activeRow.innerHTML += `<span style="font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};">Active</span>`;
+        const activeLbl = document.createElement('span');
+        activeLbl.style.cssText = `font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};`;
+        activeLbl.textContent = 'Active';
+        activeRow.appendChild(activeLbl);
         content.appendChild(activeRow);
 
         buildModalFooter(content, () => {
@@ -1066,7 +1079,10 @@ function openEmployeeModal(existing) {
             dualGroup.style.display = v ? 'flex' : 'none';
         });
         sepGroup.appendChild(sepToggle);
-        sepGroup.innerHTML += `<span style="font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};">Separate on-duty / off-duty rates</span>`;
+        const sepLabel = document.createElement('span');
+        sepLabel.style.cssText = `font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};`;
+        sepLabel.textContent = 'Separate on-duty / off-duty rates';
+        sepGroup.appendChild(sepLabel);
         content.appendChild(sepGroup);
 
         // Single rate
@@ -1107,7 +1123,10 @@ function openEmployeeModal(existing) {
         let reqApproval = existing.requires_approval;
         const approvalToggle = buildToggleSwitch(reqApproval, (v) => { reqApproval = v; });
         approvalGroup.appendChild(approvalToggle);
-        approvalGroup.innerHTML += `<span style="font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};">Requires Manager PIN</span>`;
+        const approvalLbl = document.createElement('span');
+        approvalLbl.style.cssText = `font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};`;
+        approvalLbl.textContent = 'Requires Manager PIN';
+        approvalGroup.appendChild(approvalLbl);
         content.appendChild(approvalGroup);
 
         buildModalFooter(content, () => {
@@ -1187,7 +1206,10 @@ function openCompReasonModal(existing) {
         let reqPin = existing?.requires_pin ?? true;
         const pinToggle = buildToggleSwitch(reqPin, (v) => { reqPin = v; });
         pinGroup.appendChild(pinToggle);
-        pinGroup.innerHTML += `<span style="font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};">Requires Manager PIN</span>`;
+        const pinLbl = document.createElement('span');
+        pinLbl.style.cssText = `font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};`;
+        pinLbl.textContent = 'Requires Manager PIN';
+        pinGroup.appendChild(pinLbl);
         content.appendChild(pinGroup);
 
         // Max amount
