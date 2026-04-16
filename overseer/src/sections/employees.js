@@ -85,7 +85,7 @@ function getFiltered(statusFilter) {
         list = list.filter(e =>
             e.firstName.toLowerCase().includes(q) ||
             e.lastName.toLowerCase().includes(q) ||
-            getRoleLabel(e.role).toLowerCase().includes(q)
+            getRoleLabel(e.roles).toLowerCase().includes(q)
         );
     }
 
@@ -418,7 +418,7 @@ function buildTable(list, isInactive = false) {
                     background: ${C.redFaded}; padding: 2px 6px; border-radius: 4px;
                     margin-left: 8px; vertical-align: middle;">DNR</span>` : ''}
             </div>
-            <div style="color: ${C.mint}; font-size: 22px;">${getRoleLabel(emp.role)}</div>
+            <div style="color: ${C.mint}; font-size: 22px;">${getRoleLabel(emp.roles)}</div>
             <div style="color: ${C.grey}; font-size: 22px; letter-spacing: 2px;">••••</div>
             <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${fmtDate(emp.hireDate)}</div>
             <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">$${emp.payRate.toFixed(2)}</div>
@@ -478,7 +478,7 @@ function showAddEditModal(container, employee) {
 
     // Default values
     const vals = isEdit ? { ...employee } : {
-        firstName: '', lastName: '', role: 'server',
+        firstName: '', lastName: '', roles: ['server'],
         payRate: 15.00, isTipped: true, status: 'active',
         hireDate: new Date().toISOString().split('T')[0],
         termDate: '', termReason: '', notes: '',
@@ -522,10 +522,43 @@ function showAddEditModal(container, employee) {
         buildTextField('Last Name *', 'emp-last', vals.lastName),
     ]));
 
-    // Role dropdown
-    form.appendChild(buildSelectField('Role', 'emp-role', vals.role,
-        ROLES.map(r => ({ value: r.id, label: r.label }))
-    ));
+    // Role checkboxes (multi-select)
+    const roleWrap = document.createElement('div');
+    roleWrap.style.cssText = 'margin-bottom: 16px;';
+    const roleLabel = document.createElement('div');
+    roleLabel.style.cssText = `${fieldLabelStyle}`;
+    roleLabel.textContent = 'Roles';
+    roleWrap.appendChild(roleLabel);
+    const roleGrid = document.createElement('div');
+    roleGrid.id = 'emp-roles';
+    roleGrid.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px;';
+    const currentRoles = vals.roles || [];
+    ROLES.forEach(r => {
+        const chip = document.createElement('label');
+        const checked = currentRoles.includes(r.id);
+        chip.style.cssText = `
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: 6px; cursor: pointer;
+            background: ${checked ? 'rgba(var(--color-mint-rgb), 0.2)' : 'var(--color-bg-dark)'};
+            border: 1px solid ${checked ? 'var(--color-mint)' : 'rgba(var(--color-mint-rgb), 0.15)'};
+            color: var(--color-mint); font-family: var(--font-body); font-size: 20px;
+            transition: all 0.15s ease;
+        `;
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = r.id;
+        cb.checked = checked;
+        cb.style.cssText = 'accent-color: var(--color-mint); width: 18px; height: 18px;';
+        cb.addEventListener('change', () => {
+            chip.style.background = cb.checked ? 'rgba(var(--color-mint-rgb), 0.2)' : 'var(--color-bg-dark)';
+            chip.style.borderColor = cb.checked ? 'var(--color-mint)' : 'rgba(var(--color-mint-rgb), 0.15)';
+        });
+        chip.appendChild(cb);
+        chip.appendChild(document.createTextNode(r.label));
+        roleGrid.appendChild(chip);
+    });
+    roleWrap.appendChild(roleGrid);
+    form.appendChild(roleWrap);
 
     // Pay Rate + Tipped (side by side)
     form.appendChild(buildFieldRow([
@@ -633,7 +666,8 @@ async function handleSave(isEdit, original, backdrop) {
     // Read form values
     const firstName  = (backdrop.querySelector('#emp-first')?.value || '').trim();
     const lastName   = (backdrop.querySelector('#emp-last')?.value || '').trim();
-    const role       = backdrop.querySelector('#emp-role')?.value || 'server';
+    const roles      = [...backdrop.querySelectorAll('#emp-roles input:checked')].map(cb => cb.value);
+    if (roles.length === 0) roles.push('server');
     const payRate    = parseFloat(backdrop.querySelector('#emp-rate')?.value) || 0;
     const isTipped   = backdrop.querySelector('input[name="emp-tipped"]:checked')?.value === 'yes';
     const status     = backdrop.querySelector('input[name="emp-status"]:checked')?.value || 'active';
@@ -665,14 +699,14 @@ async function handleSave(isEdit, original, backdrop) {
         const changedFields = {};
         if (employees[idx].firstName !== firstName) changedFields.firstName = { old: employees[idx].firstName, new: firstName };
         if (employees[idx].lastName !== lastName)   changedFields.lastName  = { old: employees[idx].lastName, new: lastName };
-        if (employees[idx].role !== role)            changedFields.role      = { old: employees[idx].role, new: role };
+        if (JSON.stringify(employees[idx].roles) !== JSON.stringify(roles)) changedFields.roles = { old: employees[idx].roles, new: roles };
         if (employees[idx].payRate !== payRate)      changedFields.payRate   = { old: employees[idx].payRate, new: payRate };
         if (employees[idx].isTipped !== isTipped)    changedFields.isTipped  = { old: employees[idx].isTipped, new: isTipped };
 
         const oldStatus = employees[idx].status;
 
         Object.assign(employees[idx], {
-            firstName, lastName, role, payRate, isTipped,
+            firstName, lastName, roles, payRate, isTipped,
             status, hireDate, termDate: status !== 'active' ? termDate : null,
             termReason: status !== 'active' ? termReason : null, notes,
         });
@@ -683,7 +717,7 @@ async function handleSave(isEdit, original, backdrop) {
             first_name: firstName,
             last_name: lastName,
             display_name: `${firstName} ${lastName}`,
-            role_id: role,
+            role_ids: roles,
             hourly_rate: payRate,
             active: status === 'active',
         });
@@ -693,7 +727,7 @@ async function handleSave(isEdit, original, backdrop) {
         // ── Create new ──
         const newEmp = {
             id: generateEmployeeId(firstName),
-            firstName, lastName, role, pinHash: '••••',
+            firstName, lastName, roles, pinHash: '••••',
             payRate, isTipped, hireDate, status,
             termDate: null, termReason: null, notes,
         };
@@ -704,7 +738,7 @@ async function handleSave(isEdit, original, backdrop) {
             first_name: firstName,
             last_name: lastName,
             display_name: `${firstName} ${lastName}`,
-            role_id: role,
+            role_ids: roles,
             hourly_rate: payRate,
             pin: newPin,
             active: status === 'active',

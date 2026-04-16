@@ -52,7 +52,7 @@ export async function loadEmployeeData() {
                 id: e.employee_id,
                 firstName,
                 lastName,
-                role: (e.role_ids && e.role_ids[0]) || e.role_id || 'server',
+                roles: e.role_ids && e.role_ids.length > 0 ? e.role_ids : (e.role_id ? [e.role_id] : ['server']),
                 status: e.active !== false ? 'active' : 'inactive',
                 hireDate: new Date().toISOString().slice(0, 10),
                 payRate: parseFloat(e.hourly_rate) || 0,
@@ -64,8 +64,11 @@ export async function loadEmployeeData() {
     }
 }
 
-export function getRoleLabel(roleId) {
-    return _rolesMap[roleId] || roleId || '—';
+export function getRoleLabel(roleIdOrArray) {
+    if (Array.isArray(roleIdOrArray)) {
+        return roleIdOrArray.map(id => _rolesMap[id] || id).join(', ') || '—';
+    }
+    return _rolesMap[roleIdOrArray] || roleIdOrArray || '—';
 }
 
 export function getStatusInfo(statusId) {
