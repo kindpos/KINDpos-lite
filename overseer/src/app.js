@@ -41,18 +41,18 @@ const NAV = [
         label: 'MENU',
         subs: [
             { id: 'menu-categories',     label: 'Categories'        },
-            { id: 'configure-modifiers', label: 'Modifiers'         },
+            { id: 'modifier-groups',      label: 'Modifiers'         },
             { id: 'menu-availability',   label: 'Availability'      },
             { id: 'pricing-specials',    label: 'Pricing & Specials' },
             { id: 'display-order',       label: 'Display Order'     },
-            { id: 'menu-import',         label: 'Import Menu'       },
+            { id: 'import-excel',        label: 'Import Menu'       },
         ]
     },
     {
         id: 'employees',
         label: 'EMPLOYEES',
         subs: [
-            { id: 'employee-list',    label: 'Staff List'        },
+            { id: 'employee-management', label: 'Staff List'     },
             { id: 'time-attendance',  label: 'Time & Attendance' },
             { id: 'payroll-tips',     label: 'Payroll & Tips'    },
             { id: 'shift-config',     label: 'Shift Config'      },
@@ -194,12 +194,13 @@ async function setVersionStamp() {
    SceneManager v3 expects register({ name, mount, unmount }).
    This adapter bridges the two without modifying section files.
 ------------------------------------------ */
-function createLegacyAdapter() {
+function createLegacyAdapter(nameOverrides) {
     return {
         register(name, config) {
+            const resolvedName = (nameOverrides && nameOverrides[name]) || name;
             let activeContainer = null;
             SceneManager.register({
-                name: name,
+                name: resolvedName,
                 mount(container, params) {
                     activeContainer = container;
                     if (config.onEnter) config.onEnter(container, params);
@@ -230,7 +231,10 @@ function registerAllSections() {
     registerPricingSpecials(adapter);
     registerDisplayOrder(adapter);
     registerPrinterConfig(adapter);
-    registerPrinterSetup(adapter);
+
+    // printer-setup.js registers as 'printer-config' in source — remap to
+    // 'printer-setup' so it doesn't overwrite the real printer-config scene
+    registerPrinterSetup(createLegacyAdapter({ 'printer-config': 'printer-setup' }));
 
     // Build-pattern sections (already use correct format)
     SceneManager.register({
