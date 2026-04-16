@@ -155,6 +155,13 @@ async def health_check():
         "terminal_id": settings.terminal_id,
     }
 
+overseer_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'overseer')
+if os.path.exists(overseer_path):
+    print(f'Serving Overseer from: {overseer_path}')
+    app.mount('/overseer', StaticFiles(directory=overseer_path, html=True), name='overseer')
+else:
+    print(f'WARNING: Overseer not found at: {overseer_path}')
+
 if os.path.exists(frontend_path):
     print(f'Serving frontend from: {frontend_path}')
     app.mount('/', StaticFiles(directory=frontend_path, html=True), name='frontend')

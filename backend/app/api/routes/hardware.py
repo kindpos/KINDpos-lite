@@ -1,10 +1,11 @@
-"""
+﻿"""
 KINDpos Hardware API
 Network scanning, device persistence (hardware_config.db), test print.
 MAC-as-identity: IPs change, MACs don't.
 """
 
 import asyncio
+import threading
 import json
 import logging
 import os
@@ -27,26 +28,26 @@ logger = logging.getLogger("kindpos.hardware")
 
 router = APIRouter(prefix="/hardware", tags=["hardware"])
 
-# ── DB path ───────────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ DB path ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 HARDWARE_DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))))),
     'hardware_config.db'
 )
 
-# ── Port fingerprinting ───────────────────────────────────────────────────────
+# ΓöÇΓöÇ Port fingerprinting ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 PRINTER_PORTS = [9100, 9101, 9102]
-# Dejavoo SPIn — default port first, then dedicated fallbacks only
+# Dejavoo SPIn ΓÇö default port first, then dedicated fallbacks only
 CARD_READER_PORTS = [9000, 8443, 9443]
 
 ALL_SCAN_PORTS = PRINTER_PORTS + CARD_READER_PORTS
 
-# ── Scan tuning ──────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ Scan tuning ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 PROBE_TIMEOUT  = 2.5  # TCP connect timeout per port
 DIRECT_TIMEOUT = 2.5  # Direct IP probe (user-entered)
 PING_TIMEOUT   = 2    # Seconds to wait for broadcast ping / ARP population
 
-# ── DB bootstrap ──────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ DB bootstrap ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 async def _ensure_db():
     async with aiosqlite.connect(HARDWARE_DB_PATH) as db:
@@ -76,7 +77,7 @@ async def _ensure_db():
             await db.execute("ALTER TABLE devices ADD COLUMN categories TEXT NOT NULL DEFAULT ''")
         await db.commit()
 
-# ── Models ────────────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ Models ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 class DeviceRecord(BaseModel):
     mac:  str
@@ -96,16 +97,16 @@ class TestPrintRequest(BaseModel):
     ip:   str
     port: int = 9100
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  NETWORK SCANNER — ARP-first discovery
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+#  NETWORK SCANNER ΓÇö ARP-first discovery
 #
 #  Instead of brute-forcing TCP on 254 hosts (slow, hammers WiFi), we:
 #    1. Ping the broadcast address to wake up the ARP cache
 #    2. Read `arp -a` to get only the live hosts (usually 3-10)
 #    3. TCP probe just those hosts on our specific ports
 #
-#  This turns 254 × 6 = 1,524 connections into ~5 × 6 = 30.
-# ═══════════════════════════════════════════════════════════════════════════════
+#  This turns 254 ├ù 6 = 1,524 connections into ~5 ├ù 6 = 30.
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 
 def _get_subnet_prefix() -> str:
     """Extract the /24 prefix from settings.default_subnet (e.g. '10.0.0')."""
@@ -123,7 +124,7 @@ def _ports_for_type(device_type: Optional[str]) -> list:
     return ALL_SCAN_PORTS
 
 
-# ── ARP discovery ────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ ARP discovery ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 def _ping_broadcast(prefix: str) -> None:
     """
@@ -203,7 +204,7 @@ def _get_mac(ip: str) -> Optional[str]:
     return None
 
 
-# ── Low-level probes ─────────────────────────────────────────────────────────
+# ΓöÇΓöÇ Low-level probes ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 def _tcp_probe(host: str, port: int, timeout: float) -> bool:
     """Attempt a TCP connect. Returns True if the port is open."""
@@ -243,7 +244,7 @@ async def _probe_spin(ip: str, port: int) -> dict:
     return {}
 
 
-# ── Host probing ─────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ Host probing ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 async def _probe_host(ip: str, mac: Optional[str], ports: list, timeout: float) -> Optional[dict]:
     """
@@ -268,7 +269,7 @@ async def _probe_host(ip: str, mac: Optional[str], ports: list, timeout: float) 
     if not open_ports:
         return None
 
-    # Classify from complete picture — printer ports take priority
+    # Classify from complete picture ΓÇö printer ports take priority
     printer_hits = [p for p in open_ports if p in PRINTER_PORTS]
     reader_hits = [p for p in open_ports if p in CARD_READER_PORTS]
 
@@ -309,7 +310,7 @@ async def _probe_host(ip: str, mac: Optional[str], ports: list, timeout: float) 
     return result
 
 
-# ── Scan endpoints ───────────────────────────────────────────────────────────
+# ΓöÇΓöÇ Scan endpoints ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 @router.get("/scan/stream")
 async def scan_network_stream(
@@ -326,16 +327,16 @@ async def scan_network_stream(
         Much faster and more reliable than brute-force scanning.
 
     Direct IP probe:
-        ?ip=10.0.0.19           → single host
-        ?ip=10.0.0.19,10.0.0.20 → multiple hosts (comma-separated)
+        ?ip=10.0.0.19           ΓåÆ single host
+        ?ip=10.0.0.19,10.0.0.20 ΓåÆ multiple hosts (comma-separated)
 
     Optional: ?type=card_reader|printer to filter ports scanned.
 
     SSE event types:
-        start    — scan started, includes host count and mode
-        device   — a device was found
-        complete — sweep finished
-        error    — something went wrong
+        start    ΓÇö scan started, includes host count and mode
+        device   ΓÇö a device was found
+        complete ΓÇö sweep finished
+        error    ΓÇö something went wrong
     """
     await _ensure_db()
     ports = _ports_for_type(type)
@@ -368,7 +369,7 @@ async def scan_network_stream(
 
         try:
             if mode == 'direct':
-                # ── Direct IP probe ──────────────────────────────────
+                # ΓöÇΓöÇ Direct IP probe ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
                 yield _sse({'type': 'start', 'total': len(direct_ips), 'mode': 'direct'})
 
                 results = await asyncio.gather(
@@ -379,7 +380,7 @@ async def scan_network_stream(
                         yield _sse({**_annotate(r), 'type': 'device'})
 
             else:
-                # ── ARP-first subnet sweep ───────────────────────────
+                # ΓöÇΓöÇ ARP-first subnet sweep ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
                 prefix = _get_subnet_prefix()
 
                 # Step 1: Ping broadcast to populate ARP cache
@@ -442,9 +443,9 @@ async def scan_network_stream(
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 #  DEVICE CRUD
-# ═══════════════════════════════════════════════════════════════════════════════
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 
 @router.get("/devices")
 async def list_devices():
@@ -510,9 +511,9 @@ async def list_kitchen_printers():
             return printers
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  TEST (by MAC — resolves IP from DB)
-# ═══════════════════════════════════════════════════════════════════════════════
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+#  TEST (by MAC ΓÇö resolves IP from DB)
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 
 @router.post("/test")
 async def test_device(req: TestRequest):
@@ -542,9 +543,9 @@ async def test_device(req: TestRequest):
                    else f"Cannot connect to {dev['ip']}:{dev['port']}",
     }
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  TEST PRINT (direct IP — used from settings scene device editor)
-# ═══════════════════════════════════════════════════════════════════════════════
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+#  TEST PRINT (direct IP ΓÇö used from settings scene device editor)
+# ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 
 @router.post("/test-print")
 async def test_print(request: TestPrintRequest):
@@ -585,10 +586,10 @@ async def test_print(request: TestPrintRequest):
                 "timestamp": now}
     except socket.timeout:
         return {"success": False,
-                "message": f"Timed out — {request.ip}:{request.port} not responding"}
+                "message": f"Timed out ΓÇö {request.ip}:{request.port} not responding"}
     except ConnectionRefusedError:
         return {"success": False,
-                "message": f"Refused — {request.ip}:{request.port}"}
+                "message": f"Refused ΓÇö {request.ip}:{request.port}"}
     except Exception as e:
         return {"success": False, "message": f"Print failed: {e}"}
 
@@ -635,3 +636,57 @@ async def test_connection(req: TestConnectionRequest):
     except (socket.timeout, ConnectionRefusedError, OSError):
         status = "unreachable"
     return {"ip": req.ip, "port": req.port, "status": status}
+
+# ── Overseer: Printer Discovery (SSE) ────────────────────────────────────────
+
+from app.scanner.printer_detector import PrinterDiscovery
+
+class ScanRequest(BaseModel):
+    network: Optional[str] = None
+    timeout: Optional[float] = None
+
+
+def _run_scan_in_thread(queue: asyncio.Queue, loop, network: str):
+    scanner = PrinterDiscovery()
+
+    def on_progress(event_type: str, data: dict):
+        event = {"type": event_type, **data}
+        asyncio.run_coroutine_threadsafe(queue.put(event), loop)
+
+    scanner.on_progress = on_progress
+
+    try:
+        printers = scanner.scan_network(network, methods=["port_scan"])
+        for printer in printers:
+            config = printer.to_printer_config_dict()
+            asyncio.run_coroutine_threadsafe(
+                queue.put({"type": "printer_config", **config}), loop)
+    except Exception as e:
+        asyncio.run_coroutine_threadsafe(
+            queue.put({"type": "error", "message": f"Scan failed: {str(e)}"}), loop)
+
+    asyncio.run_coroutine_threadsafe(queue.put({"type": "__DONE__"}), loop)
+
+
+@router.post("/discover-printers")
+async def discover_printers(request: ScanRequest = ScanRequest()):
+    network = request.network or settings.default_subnet
+
+    async def discovery_stream():
+        queue = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+        thread = threading.Thread(
+            target=_run_scan_in_thread, args=(queue, loop, network), daemon=True)
+        thread.start()
+        while True:
+            event = await queue.get()
+            if event.get("type") == "__DONE__":
+                break
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        discovery_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
