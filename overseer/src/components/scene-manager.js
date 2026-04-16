@@ -45,7 +45,19 @@ function register(scene) {
 //  INIT — Build Root Canvas
 // ═══════════════════════════════════════════════════
 
-function init() {
+function init(config) {
+  // Overseer mode — accept pre-resolved layer elements directly
+  if (config && config.layers) {
+    _layerWorking       = config.layers.working       || null;
+    _layerTransactional = config.layers.transactional || null;
+    _layerInterrupt     = config.layers.interrupt     || null;
+    _layerGate          = config.layers.gate          || null;
+    _layerSummary       = config.layers.summary       || null;
+    _headerBar          = config.layers.header        || null;
+    return;
+  }
+
+  // Terminal mode — original init path
   var terminal = document.getElementById('terminal');
   if (!terminal) {
     console.error('SceneManager.init: #terminal not found');

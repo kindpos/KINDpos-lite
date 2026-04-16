@@ -21,7 +21,15 @@ from datetime import datetime
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
+from app.config import settings
+
 router = APIRouter(prefix="/system", tags=["system"])
+
+
+@router.get("/version")
+async def get_version():
+    """Return the current KINDpos version for Overseer header badge."""
+    return {"version": settings.app_version}
 
 # Project root: walk up from system.py until we find a directory containing 'backend' or 'app'
 # Works both locally (deep nesting) and in Docker (/app/app/api/routes/system.py)

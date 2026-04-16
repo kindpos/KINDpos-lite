@@ -187,23 +187,52 @@ async function setVersionStamp() {
 }
 
 /* ------------------------------------------
+   LEGACY REGISTRATION ADAPTER
+
+   Sections use the old sm.register(name, config) format
+   with { onEnter, onExit } callbacks.
+   SceneManager v3 expects register({ name, mount, unmount }).
+   This adapter bridges the two without modifying section files.
+------------------------------------------ */
+function createLegacyAdapter() {
+    return {
+        register(name, config) {
+            let activeContainer = null;
+            SceneManager.register({
+                name: name,
+                mount(container, params) {
+                    activeContainer = container;
+                    if (config.onEnter) config.onEnter(container, params);
+                },
+                unmount() {
+                    if (config.onExit && activeContainer) config.onExit(activeContainer);
+                    activeContainer = null;
+                },
+            });
+        }
+    };
+}
+
+/* ------------------------------------------
    SECTION REGISTRATION
 ------------------------------------------ */
 function registerAllSections() {
-    // Register-pattern sections (pass SceneManager directly)
-    registerSalesReports(SceneManager);
-    registerMenuImport(SceneManager);
-    registerEmployeeSections(SceneManager);
-    registerSystemTesting(SceneManager);
-    registerMenuCategories(SceneManager);
-    registerMenuAvailability(SceneManager);
-    registerConfigureModifiers(SceneManager);
-    registerPricingSpecials(SceneManager);
-    registerDisplayOrder(SceneManager);
-    registerPrinterConfig(SceneManager);
-    registerPrinterSetup(SceneManager);
+    const adapter = createLegacyAdapter();
 
-    // Build-pattern sections (wrap manually)
+    // Register-pattern sections (use adapter to bridge old format)
+    registerSalesReports(adapter);
+    registerMenuImport(adapter);
+    registerEmployeeSections(adapter);
+    registerSystemTesting(adapter);
+    registerMenuCategories(adapter);
+    registerMenuAvailability(adapter);
+    registerConfigureModifiers(adapter);
+    registerPricingSpecials(adapter);
+    registerDisplayOrder(adapter);
+    registerPrinterConfig(adapter);
+    registerPrinterSetup(adapter);
+
+    // Build-pattern sections (already use correct format)
     SceneManager.register({
         name: 'payroll-tips',
         mount: (container) => buildPayrollTipsScene(container),
@@ -227,7 +256,14 @@ function registerAllSections() {
 async function boot() {
     console.log('[Overseer] Booting...');
 
-    SceneManager.init();
+    SceneManager.init({
+        layers: {
+            working:       document.getElementById('working-layer'),
+            transactional: document.getElementById('transactional-layer'),
+            interrupt:     document.getElementById('interrupt-layer'),
+            gate:          document.getElementById('gate-layer'),
+        }
+    });
     buildNav();
     registerAllSections();
 
