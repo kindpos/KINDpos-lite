@@ -25,52 +25,32 @@ const COLORS = {
 };
 
 /* ------------------------------------------
-   TEST DATA
+   MENU DATA (fetched from API)
 ------------------------------------------ */
-const TEST_DATA = {
-    categories: [
-        { id: 'cat_appetizers', name: 'Appetizers', emoji: '🍕', display_order: 1 },
-        { id: 'cat_pasta',      name: 'Pasta',      emoji: '🍝', display_order: 2 },
-        { id: 'cat_entrees',    name: 'Entrees',    emoji: '🥩', display_order: 3 },
-        { id: 'cat_desserts',   name: 'Desserts',   emoji: '🍰', display_order: 4 },
-        { id: 'cat_beverages',  name: 'Beverages',  emoji: '🥤', display_order: 5 },
-    ],
-    items: {
-        'cat_appetizers': [
-            { id: 'item_bruschetta',  name: 'Bruschetta',       price: 9.99,  display_order: 1 },
-            { id: 'item_calamari',    name: 'Fried Calamari',   price: 12.99, display_order: 2 },
-            { id: 'item_caprese',     name: 'Caprese Salad',    price: 10.99, display_order: 3 },
-            { id: 'item_meatballs',   name: 'Meatballs',        price: 11.99, display_order: 4 },
-        ],
-        'cat_pasta': [
-            { id: 'item_spaghetti',   name: 'Spaghetti',        price: 14.99, display_order: 1 },
-            { id: 'item_fettuccine',  name: 'Fettuccine Alfredo',price: 15.99, display_order: 2 },
-            { id: 'item_penne',       name: 'Penne Vodka',      price: 15.99, display_order: 3 },
-            { id: 'item_lasagna',     name: 'Lasagna',           price: 16.99, display_order: 4 },
-            { id: 'item_ravioli',     name: 'Cheese Ravioli',    price: 14.99, display_order: 5 },
-        ],
-        'cat_entrees': [
-            { id: 'item_ribeye',      name: 'Ribeye Steak',     price: 32.99, display_order: 1 },
-            { id: 'item_salmon',      name: 'Atlantic Salmon',  price: 26.99, display_order: 2 },
-            { id: 'item_chicken',     name: 'Chicken Parmesan', price: 19.99, display_order: 3 },
-            { id: 'item_veal',        name: 'Veal Marsala',     price: 28.99, display_order: 4 },
-            { id: 'item_fish',        name: 'Fish & Chips',     price: 18.99, display_order: 5 },
-        ],
-        'cat_desserts': [
-            { id: 'item_tiramisu',    name: 'Tiramisu',          price: 9.99,  display_order: 1 },
-            { id: 'item_cannoli',     name: 'Cannoli',           price: 7.99,  display_order: 2 },
-            { id: 'item_panna',       name: 'Panna Cotta',       price: 8.99,  display_order: 3 },
-        ],
-        'cat_beverages': [
-            { id: 'item_espresso',    name: 'Espresso',          price: 3.99,  display_order: 1 },
-            { id: 'item_cappuccino',  name: 'Cappuccino',        price: 4.99,  display_order: 2 },
-            { id: 'item_soda',        name: 'Soda',              price: 2.99,  display_order: 3 },
-            { id: 'item_water',       name: 'Bottled Water',     price: 1.99,  display_order: 4 },
-            { id: 'item_wine_glass',  name: 'Wine (Glass)',      price: 9.99,  display_order: 5 },
-            { id: 'item_beer',        name: 'Draft Beer',        price: 6.99,  display_order: 6 },
-        ],
-    }
-};
+async function fetchOrderData() {
+    try {
+        const [catRes, itemRes] = await Promise.all([
+            fetch('/api/v1/config/menu/categories'),
+            fetch('/api/v1/config/menu/items'),
+        ]);
+        const categories = catRes.ok ? await catRes.json() : [];
+        const items = itemRes.ok ? await itemRes.json() : [];
+        const cats = categories.map((c, i) => ({
+            id: c.category_id || c.id, name: c.name, emoji: '', display_order: c.display_order || i + 1,
+        }));
+        const nameToId = {};
+        cats.forEach(c => { nameToId[c.name.toLowerCase()] = c.id; nameToId[c.id.toLowerCase()] = c.id; });
+        const itemsByCat = {};
+        cats.forEach(c => { itemsByCat[c.id] = []; });
+        items.forEach((item, i) => {
+            const raw = item.category_id || item.category || '';
+            const catId = nameToId[raw.toLowerCase()] || raw;
+            if (!itemsByCat[catId]) itemsByCat[catId] = [];
+            itemsByCat[catId].push({ id: item.item_id || item.id, name: item.name, price: parseFloat(item.price) || 0, display_order: item.display_order || i + 1 });
+        });
+        return { categories: cats, items: itemsByCat };
+    } catch (e) { console.warn('[DisplayOrder] Failed to fetch:', e); return { categories: [], items: {} }; }
+}
 
 /* ------------------------------------------
    MODULE STATE
@@ -405,8 +385,8 @@ function updateFooter() {
     cancelBtn.addEventListener('mouseenter', () => { cancelBtn.style.borderColor = COLORS.red; cancelBtn.style.color = COLORS.red; });
     cancelBtn.addEventListener('mouseleave', () => { cancelBtn.style.borderColor = COLORS.grey; cancelBtn.style.color = COLORS.grey; });
     cancelBtn.addEventListener('click', () => {
-        showConfirmDialog('Discard Changes?', 'Revert all ordering changes?', 'Discard', () => {
-            orderData = clone(TEST_DATA);
+        showConfirmDialog('Discard Changes?', 'Revert all ordering changes?', 'Discard', async () => {
+            orderData = await fetchOrderData();
             pendingChanges = { categories: false, items: {} };
             buildMainView(currentWrapper);
         });
@@ -533,10 +513,10 @@ export function registerDisplayOrder(sceneManager) {
         type: 'detail',
         title: 'Display Order',
         parent: 'menu-subs',
-        onEnter(container) {
+        async onEnter(container) {
             console.log('[DisplayOrder] Scene loaded — initializing...');
 
-            orderData = clone(TEST_DATA);
+            orderData = await fetchOrderData();
             pendingChanges = { categories: false, items: {} };
             selectedCategoryId = null;
 

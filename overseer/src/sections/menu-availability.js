@@ -42,112 +42,31 @@ const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satu
    Same items as menu-categories.js for
    consistency.
 ------------------------------------------ */
-const TEST_AVAILABILITY_DATA = {
-    categories: [
-        {
-            id: 'cat_appetizers',
-            name: 'Appetizers',
-            emoji: '🍕',
-            display_order: 1,
-            schedule_type: 'always',       // 'always' | 'scheduled' | 'special'
-            time_start: '',
-            time_end: '',
-            grace_minutes: 10,
-            active_days: [true, true, true, true, true, true, true],  // Mon-Sun
-            special_active: false,
-            special_label: '',
-        },
-        {
-            id: 'cat_pasta',
-            name: 'Pasta',
-            emoji: '🍝',
-            display_order: 2,
-            schedule_type: 'always',
-            time_start: '',
-            time_end: '',
-            grace_minutes: 10,
-            active_days: [true, true, true, true, true, true, true],
-            special_active: false,
-            special_label: '',
-        },
-        {
-            id: 'cat_entrees',
-            name: 'Entrees',
-            emoji: '🥩',
-            display_order: 3,
-            schedule_type: 'always',
-            time_start: '',
-            time_end: '',
-            grace_minutes: 10,
-            active_days: [true, true, true, true, true, true, true],
-            special_active: false,
-            special_label: '',
-        },
-        {
-            id: 'cat_desserts',
-            name: 'Desserts',
-            emoji: '🍰',
-            display_order: 4,
-            schedule_type: 'always',
-            time_start: '',
-            time_end: '',
-            grace_minutes: 10,
-            active_days: [true, true, true, true, true, true, true],
-            special_active: false,
-            special_label: '',
-        },
-        {
-            id: 'cat_beverages',
-            name: 'Beverages',
-            emoji: '🥤',
-            display_order: 5,
-            schedule_type: 'always',
-            time_start: '',
-            time_end: '',
-            grace_minutes: 10,
-            active_days: [true, true, true, true, true, true, true],
-            special_active: false,
-            special_label: '',
-        },
-    ],
-
-    items: [
-        // --- Appetizers ---
-        { id: 'item_mozz_sticks',   name: 'Mozzarella Sticks',     price: 8.99,  category_id: 'cat_appetizers', available: true, eightysixed_at: null },
-        { id: 'item_wings',         name: 'Buffalo Wings',          price: 12.99, category_id: 'cat_appetizers', available: true, eightysixed_at: null },
-        { id: 'item_nachos',        name: 'Nachos Supreme',         price: 10.99, category_id: 'cat_appetizers', available: true, eightysixed_at: null },
-        { id: 'item_bruschetta',    name: 'Bruschetta',             price: 9.99,  category_id: 'cat_appetizers', available: true, eightysixed_at: null },
-        { id: 'item_calamari',      name: 'Fried Calamari',         price: 13.99, category_id: 'cat_appetizers', available: true, eightysixed_at: null },
-        { id: 'item_spinach_dip',   name: 'Spinach Artichoke Dip',  price: 11.49, category_id: 'cat_appetizers', available: true, eightysixed_at: null },
-
-        // --- Pasta ---
-        { id: 'item_spaghetti',     name: 'Spaghetti & Meatballs',  price: 15.99, category_id: 'cat_pasta', available: true, eightysixed_at: null },
-        { id: 'item_fettuccine',    name: 'Fettuccine Alfredo',     price: 14.99, category_id: 'cat_pasta', available: true, eightysixed_at: null },
-        { id: 'item_penne_vodka',   name: 'Penne alla Vodka',       price: 16.99, category_id: 'cat_pasta', available: true, eightysixed_at: null },
-        { id: 'item_lasagna',       name: 'Lasagna',                 price: 17.99, category_id: 'cat_pasta', available: true, eightysixed_at: null },
-        { id: 'item_carbonara',     name: 'Carbonara',               price: 16.49, category_id: 'cat_pasta', available: true, eightysixed_at: null },
-
-        // --- Entrees ---
-        { id: 'item_grilled_salmon',name: 'Grilled Salmon',          price: 22.99, category_id: 'cat_entrees', available: true, eightysixed_at: null },
-        { id: 'item_ribeye',        name: '12oz Ribeye Steak',       price: 28.99, category_id: 'cat_entrees', available: true, eightysixed_at: null },
-        { id: 'item_chicken_parm',  name: 'Chicken Parmesan',        price: 18.99, category_id: 'cat_entrees', available: true, eightysixed_at: null },
-        { id: 'item_fish_chips',    name: 'Fish & Chips',            price: 16.99, category_id: 'cat_entrees', available: true, eightysixed_at: null },
-        { id: 'item_burger',        name: 'Classic Burger',           price: 14.99, category_id: 'cat_entrees', available: true, eightysixed_at: null },
-
-        // --- Desserts ---
-        { id: 'item_tiramisu',      name: 'Tiramisu',                price: 9.99,  category_id: 'cat_desserts', available: true, eightysixed_at: null },
-        { id: 'item_cheesecake',    name: 'NY Cheesecake',           price: 10.99, category_id: 'cat_desserts', available: true, eightysixed_at: null },
-        { id: 'item_brownie',       name: 'Brownie Sundae',          price: 8.99,  category_id: 'cat_desserts', available: true, eightysixed_at: null },
-        { id: 'item_cannoli',       name: 'Cannoli',                 price: 7.99,  category_id: 'cat_desserts', available: true, eightysixed_at: null },
-
-        // --- Beverages ---
-        { id: 'item_soda',          name: 'Fountain Soda',           price: 2.99,  category_id: 'cat_beverages', available: true, eightysixed_at: null },
-        { id: 'item_iced_tea',      name: 'Iced Tea',                price: 2.99,  category_id: 'cat_beverages', available: true, eightysixed_at: null },
-        { id: 'item_coffee',        name: 'Coffee',                  price: 3.49,  category_id: 'cat_beverages', available: true, eightysixed_at: null },
-        { id: 'item_juice',         name: 'Fresh Juice',             price: 4.99,  category_id: 'cat_beverages', available: true, eightysixed_at: null },
-        { id: 'item_water',         name: 'Bottled Water',           price: 1.99,  category_id: 'cat_beverages', available: true, eightysixed_at: null },
-    ]
-};
+async function fetchAvailabilityData() {
+    try {
+        const [catRes, itemRes] = await Promise.all([
+            fetch("/api/v1/config/menu/categories"),
+            fetch("/api/v1/config/menu/items"),
+        ]);
+        const categories = catRes.ok ? await catRes.json() : [];
+        const items = itemRes.ok ? await itemRes.json() : [];
+        const nameToId = {};
+        categories.forEach(c => { nameToId[(c.name || "").toLowerCase()] = c.category_id || c.id; });
+        return {
+            categories: categories.map((c, i) => ({
+                id: c.category_id || c.id, name: c.name, emoji: "", display_order: c.display_order || i + 1,
+                schedule_type: "always", time_start: "", time_end: "", grace_minutes: 10,
+                active_days: [true, true, true, true, true, true, true],
+                special_active: false, special_label: "",
+            })),
+            items: items.map(item => ({
+                id: item.item_id || item.id, name: item.name, price: parseFloat(item.price) || 0,
+                category_id: nameToId[(item.category_id || item.category || "").toLowerCase()] || item.category_id || "",
+                available: item.active !== false, eightysixed_at: null,
+            })),
+        };
+    } catch (e) { console.warn("[MenuAvailability] Failed to fetch:", e); return { categories: [], items: [] }; }
+}
 
 /* ------------------------------------------
    MODULE-LEVEL STATE
@@ -1440,13 +1359,13 @@ export function registerMenuAvailability(sceneManager) {
         type: 'detail',
         title: 'Availability',
         parent: 'menu-subs',
-        onEnter(container) {
+        async onEnter(container) {
             console.log('[MenuAvailability] Scene loaded — initializing...');
 
             injectStyles();
 
             // Clone test data
-            availData = clone(TEST_AVAILABILITY_DATA);
+            availData = await fetchAvailabilityData();
             pendingChanges = { categories: [], items: [] };
             displayState = { searchTerm: '', expandedCategories: {} };
 

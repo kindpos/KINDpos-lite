@@ -23,6 +23,7 @@ export let TIP_POOL_CONFIG = {
     enforcementMode: 'suggested',
     eligibleRoles: ['server', 'bartender'],
     excludedRoles: ['manager'],
+    rules: [],
 };
 
 export const EXPORT_FORMATS = [
