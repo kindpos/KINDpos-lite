@@ -19,11 +19,30 @@ async def broadcast_config_update(sections: List[str]):
     print(f"WS BROADCAST: config.updated for {sections}")
 
 @router.get("/pricing")
-async def get_pricing():
-    """Return canonical pricing constants for frontend sync."""
+async def get_pricing(ledger: EventLedger = Depends(get_ledger)):
+    """Return canonical pricing constants from ledger (or env defaults)."""
+    tax_rate = settings.tax_rate
+    cash_discount_rate = settings.cash_discount_rate
+
+    # Check for user-configured tax rules
+    tax_events = await ledger.get_events_by_type(EventType.STORE_TAX_RULE_CREATED, limit=100)
+    tax_events += await ledger.get_events_by_type(EventType.STORE_TAX_RULE_UPDATED, limit=100)
+    tax_events.sort(key=lambda x: x.sequence_number or 0)
+    for e in tax_events:
+        if e.payload.get("applies_to") == "all":
+            tax_rate = e.payload.get("rate_percent", tax_rate) / 100
+
+    # Check for user-configured cash discount
+    cc_events = await ledger.get_events_by_type(EventType.STORE_CC_PROCESSING_RATE_UPDATED, limit=10)
+    cc_events.sort(key=lambda x: x.sequence_number or 0)
+    if cc_events:
+        last = cc_events[-1].payload
+        if "cash_discount_rate" in last:
+            cash_discount_rate = last["cash_discount_rate"]
+
     return {
-        "tax_rate": settings.tax_rate,
-        "cash_discount_rate": settings.cash_discount_rate,
+        "tax_rate": tax_rate,
+        "cash_discount_rate": cash_discount_rate,
     }
 
 

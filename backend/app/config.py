@@ -27,11 +27,11 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
 
-    # Tax rate (default 7%)
-    tax_rate: float = 0.07
+    # Tax rate (0 until configured via Overseer)
+    tax_rate: float = 0.0
 
-    # Cash dual-pricing discount (default 4%)
-    cash_discount_rate: float = 0.04
+    # Cash dual-pricing discount (0 until configured via Overseer)
+    cash_discount_rate: float = 0.0
 
     # Tip-out percentage (default 2%)
     tipout_percent: float = 2.0

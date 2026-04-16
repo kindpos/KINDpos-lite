@@ -35,9 +35,14 @@ function showToast(msg, type = 'success') {
 
 async function loadConfig() {
     try {
-        const res = await fetch('/api/v1/config/store');
-        if (!res.ok) return {};
-        return await res.json();
+        const [storeRes, pricingRes] = await Promise.all([
+            fetch('/api/v1/config/store'),
+            fetch('/api/v1/config/pricing'),
+        ]);
+        const store = storeRes.ok ? await storeRes.json() : {};
+        const pricing = pricingRes.ok ? await pricingRes.json() : {};
+        store._pricing = pricing;
+        return store;
     } catch { return {}; }
 }
 
@@ -87,6 +92,39 @@ async function mount(container) {
         </div>
     `;
     container.appendChild(wrapper);
+
+    // ── TAX & PRICING ──────────────────────────
+    wrapper.appendChild(sectionHeader('TAX & PRICING'));
+    const taxRow = document.createElement('div');
+    taxRow.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin-bottom:12px;';
+
+    const taxWrap = document.createElement('div');
+    taxWrap.innerHTML = `<div style="color:var(--color-mint);font-size:16px;margin-bottom:4px;">Tax Rate (%)</div>`;
+    const taxInput = document.createElement('input');
+    taxInput.type = 'number';
+    taxInput.min = '0';
+    taxInput.max = '25';
+    taxInput.step = '0.01';
+    taxInput.value = config._pricing ? (config._pricing.tax_rate * 100).toFixed(2) : '0';
+    taxInput.className = 'kp-date-input';
+    taxInput.style.cssText += 'width:100px;';
+    taxWrap.appendChild(taxInput);
+    taxRow.appendChild(taxWrap);
+
+    const cashDiscWrap = document.createElement('div');
+    cashDiscWrap.innerHTML = `<div style="color:var(--color-mint);font-size:16px;margin-bottom:4px;">Cash Discount Rate (%)</div>`;
+    const cashDiscInput = document.createElement('input');
+    cashDiscInput.type = 'number';
+    cashDiscInput.min = '0';
+    cashDiscInput.max = '15';
+    cashDiscInput.step = '0.1';
+    cashDiscInput.value = config._pricing ? (config._pricing.cash_discount_rate * 100).toFixed(1) : '0';
+    cashDiscInput.className = 'kp-date-input';
+    cashDiscInput.style.cssText += 'width:100px;';
+    cashDiscWrap.appendChild(cashDiscInput);
+    taxRow.appendChild(cashDiscWrap);
+
+    wrapper.appendChild(taxRow);
 
     // ── ORDER TYPES ────────────────────────────
     wrapper.appendChild(sectionHeader('ORDER TYPES'));
@@ -189,6 +227,20 @@ async function mount(container) {
         saveBtn.textContent = 'Saving...';
 
         const events = [];
+
+        // Tax rule
+        const taxRate = parseFloat(taxInput.value) || 0;
+        events.push({
+            event_type: 'store.tax_rule_created',
+            payload: { tax_rule_id: 'default', name: 'Sales Tax', rate_percent: taxRate, applies_to: 'all' },
+        });
+
+        // Cash discount
+        const cashDisc = (parseFloat(cashDiscInput.value) || 0) / 100;
+        events.push({
+            event_type: 'store.cc_processing_rate_updated',
+            payload: { cash_discount_rate: cashDisc },
+        });
 
         const selectedTypes = Object.entries(typeChips).filter(([, cb]) => cb.checked).map(([id]) => id);
         events.push({ event_type: 'store.order_types_updated', payload: { enabled_types: selectedTypes } });
