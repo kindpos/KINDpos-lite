@@ -73,6 +73,15 @@ async function fetchModifierData() {
                 }
             }
 
+            // Collect per-modifier price overrides keyed by drives_pricing option id
+            const priceByOptionMap = {};
+            allGrpMods.forEach(m => {
+                const mid = m.modifier_id || m.id;
+                if (m.price_by_option && Object.keys(m.price_by_option).length > 0) {
+                    priceByOptionMap[mid] = m.price_by_option;
+                }
+            });
+
             groups.push({
                 id: grp.group_id || grp.id,
                 name: grp.name,
@@ -81,6 +90,7 @@ async function fetchModifierData() {
                 min_selections: 0,
                 max_selections: allGrpMods.length,
                 option_prices: {},
+                price_by_option_map: priceByOptionMap,
                 active: true,
                 color: grp.color || null,
                 category_id: grp.category_id || null,
@@ -111,6 +121,7 @@ async function fetchModifierData() {
                 target_name: a.target_name,
                 modifier_ids: a.modifier_ids || [],
                 select_mode: a.select_mode || 'single',
+                drives_pricing: !!a.drives_pricing,
             })),
             universal_assignments: univAssigns.map(a => ({
                 id: a.assignment_id,
@@ -1171,6 +1182,83 @@ function openGroupModal(existing) {
         tmplSelect.addEventListener('change', renderOptionPricing);
         renderOptionPricing();
 
+        // Size-based pricing matrix (rendered when any drives_pricing mandatory exists)
+        const existingPriceByOptionMap = existing?.price_by_option_map || {};
+        const priceInputMatrix = {}; // { modifier_id: { size_option_id: inputEl } }
+        const sizeOptionIds = new Set();
+        (modData.mandatory_assignments || []).forEach(a => {
+            if (!a.drives_pricing) return;
+            (a.modifier_ids || []).forEach(id => sizeOptionIds.add(id));
+        });
+        if (sizeOptionIds.size > 0) {
+            const sizeOpts = Array.from(sizeOptionIds)
+                .map(id => {
+                    const m = allMods.find(mm => mm.id === id);
+                    return { id, name: m ? m.name : id };
+                })
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            const sizeLabel = document.createElement('div');
+            sizeLabel.style.cssText = `font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint}; margin: 16px 0 6px 0;`;
+            sizeLabel.textContent = 'Size-based pricing (optional)';
+            content.appendChild(sizeLabel);
+
+            const sizeHint = document.createElement('div');
+            sizeHint.style.cssText = `font-family: var(--font-body); font-size: 16px; color: #888; margin-bottom: 10px;`;
+            sizeHint.textContent = 'Per-size price override for each modifier. Leave blank to fall back to the base modifier price.';
+            content.appendChild(sizeHint);
+
+            const gridWrap = document.createElement('div');
+            gridWrap.style.cssText = `
+                overflow-x: auto; max-height: 260px; overflow-y: auto;
+                border: 1px solid rgba(var(--color-mint-rgb), 0.2);
+                border-radius: 8px; padding: 10px; margin-bottom: 20px;
+                background: rgba(var(--color-mint-rgb), 0.04);
+            `;
+            const table = document.createElement('div');
+            table.style.cssText = `display: grid; grid-template-columns: minmax(140px, 1fr) repeat(${sizeOpts.length}, 90px); gap: 6px 10px; align-items: center;`;
+
+            // Header row
+            const blankHead = document.createElement('div');
+            table.appendChild(blankHead);
+            sizeOpts.forEach(s => {
+                const th = document.createElement('div');
+                th.textContent = s.name;
+                th.style.cssText = `font-family: var(--font-body); font-size: 18px; color: ${COLORS.mint}; text-align: center;`;
+                table.appendChild(th);
+            });
+
+            // Render a row per master modifier; save time only keeps rows for selected mods
+            allMods.forEach(mod => {
+                const nameCell = document.createElement('div');
+                nameCell.textContent = mod.name;
+                nameCell.style.cssText = `font-family: var(--font-body); font-size: 20px; color: #ddd;`;
+                table.appendChild(nameCell);
+                priceInputMatrix[mod.id] = {};
+                const rowExisting = existingPriceByOptionMap[mod.id] || {};
+                sizeOpts.forEach(s => {
+                    const inp = document.createElement('input');
+                    inp.type = 'number';
+                    inp.step = '0.01';
+                    inp.placeholder = '—';
+                    const existingVal = rowExisting[s.id];
+                    inp.value = existingVal != null && existingVal !== '' ? existingVal : '';
+                    inp.style.cssText = `
+                        width: 80px; padding: 6px 8px;
+                        background: rgba(var(--color-mint-rgb), 0.08);
+                        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
+                        border-radius: 6px; color: ${COLORS.yellow};
+                        font-family: var(--font-body); font-size: 18px;
+                        text-align: center; outline: none;
+                    `;
+                    priceInputMatrix[mod.id][s.id] = inp;
+                    table.appendChild(inp);
+                });
+            });
+            gridWrap.appendChild(table);
+            content.appendChild(gridWrap);
+        }
+
         // Min / Max
         const minMaxRow = document.createElement('div');
         minMaxRow.style.cssText = `display: flex; gap: 20px; margin-top: 4px;`;
@@ -1197,6 +1285,22 @@ function openGroupModal(existing) {
                 optPrices[inp.dataset.optionId] = parseFloat(inp.value) || 0;
             });
 
+            // Collect size-based pricing for selected modifiers only; drop empty rows
+            const selectedIds = new Set(modCb.getSelected());
+            const priceByOptionMap = {};
+            Object.keys(priceInputMatrix).forEach(modId => {
+                if (!selectedIds.has(modId)) return;
+                const cells = priceInputMatrix[modId];
+                const entries = {};
+                Object.keys(cells).forEach(sizeId => {
+                    const raw = cells[sizeId].value;
+                    if (raw === '' || raw == null) return;
+                    const num = parseFloat(raw);
+                    if (!isNaN(num) && num >= 0) entries[sizeId] = num;
+                });
+                if (Object.keys(entries).length > 0) priceByOptionMap[modId] = entries;
+            });
+
             const item = {
                 id: existing?.id || `grp_${Date.now()}`,
                 name,
@@ -1205,6 +1309,7 @@ function openGroupModal(existing) {
                 min_selections: parseInt(minInput.value) || 0,
                 max_selections: parseInt(maxInput.value) || 10,
                 option_prices: optPrices,
+                price_by_option_map: priceByOptionMap,
                 active: true,
             };
             trackChange('groups', item);
@@ -1317,6 +1422,25 @@ function openMandatoryModal(existing) {
         modeGroup.appendChild(modeRow);
         content.appendChild(modeGroup);
 
+        // Drives pricing toggle
+        const driversWrap = document.createElement('label');
+        driversWrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin:4px 0 4px 0;cursor:pointer;';
+        const driversCb = document.createElement('input');
+        driversCb.type = 'checkbox';
+        driversCb.checked = !!existing?.drives_pricing;
+        driversCb.style.cssText = 'width:20px;height:20px;accent-color:var(--color-mint);';
+        const driversLbl = document.createElement('span');
+        driversLbl.style.cssText = 'font-family: var(--font-body); font-size: 20px; color: #ddd;';
+        driversLbl.textContent = 'This selection drives optional modifier pricing (e.g. pizza size)';
+        driversWrap.appendChild(driversCb);
+        driversWrap.appendChild(driversLbl);
+        content.appendChild(driversWrap);
+
+        const driversHint = document.createElement('div');
+        driversHint.style.cssText = 'font-family: var(--font-body); font-size: 16px; color: #888; margin-left: 30px; margin-bottom: 20px;';
+        driversHint.textContent = 'Optional modifiers (toppings, etc.) reprice based on this group\u2019s selection, and the OPT tab waits until a choice is made.';
+        content.appendChild(driversHint);
+
         buildModalFooter(content, () => {
             const label = labelInput.value.trim();
             if (!label) { labelInput.style.borderColor = COLORS.red; return; }
@@ -1330,6 +1454,7 @@ function openMandatoryModal(existing) {
                 label,
                 modifier_ids: modCb.getSelected(),
                 select_mode: selectedMode,
+                drives_pricing: driversCb.checked,
             };
             trackChange('mandatory', item);
             closeModal();
@@ -1459,6 +1584,7 @@ async function handleSaveChanges() {
             events.push({ event_type: 'modifier.group_deleted', payload: { group_id: item.id } });
         } else {
             const exists = (modData.groups || []).some(g => g.id === item.id);
+            const priceByOptionMap = item.price_by_option_map || {};
             events.push({
                 event_type: exists ? 'modifier.group_updated' : 'modifier.group_created',
                 payload: {
@@ -1467,7 +1593,14 @@ async function handleSaveChanges() {
                     modifier_ids: item.modifier_ids || [],
                     modifiers: (item.modifier_ids || []).map(mid => {
                         const mod = (modData.modifiers || []).find(m => m.id === mid);
-                        return mod ? { modifier_id: mid, name: mod.name, price: mod.base_price || 0 } : { modifier_id: mid, name: mid, price: 0 };
+                        const base = {
+                            modifier_id: mid,
+                            name: mod ? mod.name : mid,
+                            price: mod ? (mod.base_price || 0) : 0,
+                        };
+                        const overrides = priceByOptionMap[mid];
+                        if (overrides && Object.keys(overrides).length > 0) base.price_by_option = overrides;
+                        return base;
                     }),
                 },
             });
@@ -1490,6 +1623,7 @@ async function handleSaveChanges() {
                     target_name: item.target_name,
                     modifier_ids: item.modifier_ids || [],
                     select_mode: item.select_mode || 'single',
+                    drives_pricing: !!item.drives_pricing,
                 },
             });
         }

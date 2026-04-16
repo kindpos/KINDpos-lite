@@ -140,6 +140,10 @@ class ModifierOption(BaseModel):
     modifier_id: str
     name: str
     price: Decimal = Decimal("0")
+    # Price override keyed by the modifier_id of an option in a drives_pricing
+    # mandatory group (e.g. {"size_md": 1.00, "size_xl": 2.00}). Falls back to
+    # `price` when the current driver selection is not in this map.
+    price_by_option: Dict[str, Decimal] = {}
 
 class ModifierGroup(BaseModel):
     group_id: str
@@ -163,6 +167,10 @@ class MandatoryAssignment(BaseModel):
     target_name: Optional[str] = None
     modifier_ids: List[str] = []
     select_mode: str = "single"  # "single" | "multi"
+    # When true, this group's selection drives size-based pricing on optional
+    # modifiers (terminal rerenders optional prices when the selection changes,
+    # and gates the optional tab until one is picked).
+    drives_pricing: bool = False
 
 class UniversalAssignment(BaseModel):
     assignment_id: str
