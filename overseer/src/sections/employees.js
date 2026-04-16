@@ -648,9 +648,10 @@ async function handleSave(isEdit, original, backdrop) {
         return;
     }
 
+    let newPin = '';
     if (!isEdit) {
-        const pin = backdrop.querySelector('#emp-pin')?.value || '';
-        if (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
+        newPin = backdrop.querySelector('#emp-pin')?.value || '';
+        if (newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin)) {
             showToast('PIN must be 4–6 digits.', 'error');
             return;
         }
@@ -705,7 +706,7 @@ async function handleSave(isEdit, original, backdrop) {
             display_name: `${firstName} ${lastName}`,
             role_id: role,
             hourly_rate: payRate,
-            pin: generatePIN(),
+            pin: newPin,
             active: status === 'active',
         });
 
@@ -982,11 +983,12 @@ const fieldLabelStyle = `
 
 const inputStyle = `
     width: 100%; box-sizing: border-box;
-    background: rgba(var(--color-mint-rgb), 0.06);
+    background: var(--color-bg-dark);
     border: 1px solid ${C.mintBorder}; color: ${C.mint};
     padding: 12px 14px; border-radius: 6px; font-size: 25px;
     font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
     outline: none; transition: border-color 0.2s ease;
+    color-scheme: dark;
 `;
 
 function buildTextField(label, id, value, type = 'text') {

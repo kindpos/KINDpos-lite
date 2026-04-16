@@ -909,31 +909,93 @@ function openEditModal(itemId) {
 /* ------------------------------------------
    MODAL: ADD NEW CATEGORY
 ------------------------------------------ */
+const CATEGORY_COLORS = [
+    '#ff4757', '#fcbe40', '#3742fa', '#2ed573', '#ff6348',
+    '#7bed9f', '#70a1ff', '#b48efa', '#ff6b81', '#ffa502',
+    '#1e90ff', '#2f3542', '#a4b0be', '#57606f', '#ff4422',
+    '#C6FFBB', '#33ffff', '#ffff00',
+];
+
 function openAddCategoryModal() {
     openModal('Add New Category', (content) => {
         const nameField = buildFormField(content, 'Category Name', 'text', '', { required: true, fieldName: 'name', placeholder: 'e.g. Pizza, Appetizers, Drinks...' });
-        const colorField = buildFormField(content, 'Color', 'text', '#fcbe40', { fieldName: 'color', placeholder: '#hex color' });
 
-        return () => {
+        // Color grid
+        let selectedColor = '#fcbe40';
+        const colorLabel = document.createElement('div');
+        colorLabel.style.cssText = 'font-size: 20px; color: var(--color-mint); margin: 12px 0 8px 0; font-family: var(--font-body);';
+        colorLabel.textContent = 'Color';
+        content.appendChild(colorLabel);
+
+        const colorGrid = document.createElement('div');
+        colorGrid.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;';
+        CATEGORY_COLORS.forEach(hex => {
+            const swatch = document.createElement('button');
+            swatch.style.cssText = `
+                width: 36px; height: 36px; border-radius: 6px; border: 2px solid transparent;
+                background: ${hex}; cursor: pointer; transition: border-color 0.15s;
+            `;
+            if (hex === selectedColor) swatch.style.borderColor = 'var(--color-mint)';
+            swatch.addEventListener('click', () => {
+                selectedColor = hex;
+                colorGrid.querySelectorAll('button').forEach(b => b.style.borderColor = 'transparent');
+                swatch.style.borderColor = 'var(--color-mint)';
+                hexInput.value = hex;
+            });
+            colorGrid.appendChild(swatch);
+        });
+        content.appendChild(colorGrid);
+
+        const hexInput = document.createElement('input');
+        hexInput.type = 'text';
+        hexInput.value = selectedColor;
+        hexInput.placeholder = '#hex (optional)';
+        hexInput.className = 'kp-date-input';
+        hexInput.style.cssText += 'width: 120px; font-size: 16px;';
+        hexInput.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(hexInput.value)) selectedColor = hexInput.value; });
+        content.appendChild(hexInput);
+
+        // Footer buttons
+        const footerBtns = document.createElement('div');
+        footerBtns.style.cssText = 'display:flex;justify-content:flex-end;gap:12px;margin-top:28px;padding-top:20px;border-top:1px solid rgba(var(--color-mint-rgb),0.1);';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.style.cssText = `padding:12px 28px;background:transparent;border:1px solid ${COLORS.grey};border-radius:8px;color:${COLORS.grey};font-family:var(--font-body);font-size:22px;cursor:pointer;`;
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', () => closeModal());
+        footerBtns.appendChild(cancelBtn);
+
+        const createBtn = document.createElement('button');
+        createBtn.style.cssText = `padding:12px 28px;background:${COLORS.mint};border:none;border-radius:8px;color:${COLORS.dark};font-family:var(--font-body);font-size:22px;font-weight:bold;cursor:pointer;`;
+        createBtn.textContent = 'Create Category';
+        createBtn.addEventListener('click', async () => {
             const name = nameField.getValue().trim();
-            if (!name) { showToast('Category name is required', 'error'); return false; }
+            if (!name) { showToast('Category name is required', 'error'); return; }
+
+            createBtn.disabled = true;
+            createBtn.textContent = 'Saving...';
 
             const catId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-            const newCat = {
-                id: catId,
-                name: name,
-                emoji: '',
-                display_order: menuData.categories.length + 1,
-                color: colorField.getValue() || '#fcbe40',
+            const event = {
+                event_type: 'menu.category_created',
+                payload: { category_id: catId, name, display_order: menuData.categories.length + 1, color: selectedColor },
             };
-            menuData.categories.push(newCat);
+            const result = await pushChanges([event]);
+            if (!result.ok) {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Create Category';
+                showToast('Failed to save category', 'error');
+                return;
+            }
 
-            pendingChanges.new.push({ _isCategory: true, ...newCat });
+            menuData.categories.push({ id: catId, name, emoji: '', display_order: menuData.categories.length + 1, color: selectedColor });
+            closeModal();
             renderCardGrid();
             updateFooter();
             showToast(`Category "${name}" created`);
-            return true;
-        };
+        });
+        footerBtns.appendChild(createBtn);
+        content.appendChild(footerBtns);
     });
 }
 
