@@ -5,6 +5,8 @@
 
 import { SceneManager }              from './components/scene-manager.js';
 import { T }                          from './components/tokens.js';
+import { initThemeBridge, applyTheme, getCurrentThemeId, getThemeCatalog }
+                                      from './theme-bridge.js';
 
 import { registerSalesReports }       from './sections/reporting.js';
 import { registerMenuImport }         from './sections/menu-import.js';
@@ -334,13 +336,6 @@ const PLACEHOLDERS = [
         fields: ['Terminal ID & name', 'Display resolution & brightness', 'WiFi / static IP config'],
         api: 'GET /api/v1/config/terminals',
     },
-    {
-        name: 'system-appearance',
-        title: 'System & Appearance',
-        icon: '\u{1F3A8}',
-        fields: ['Language (English / Espa\u{F1}ol)', 'Theme selection (13 themes)', 'Update channel (Stable / Beta)'],
-        api: null,
-    },
 ];
 
 function mountPlaceholder(container, def) {
@@ -379,6 +374,77 @@ function registerPlaceholders() {
             unmount() {},
         });
     });
+
+    // System Appearance — real theme picker (not a placeholder)
+    SceneManager.register({
+        name: 'system-appearance',
+        mount(container) { mountThemePicker(container); },
+        unmount() {},
+    });
+}
+
+/* ------------------------------------------
+   THEME PICKER SCENE
+------------------------------------------ */
+function mountThemePicker(container) {
+    const themes = getThemeCatalog();
+    const activeId = getCurrentThemeId();
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'max-width:900px;margin:0 auto;padding:30px 24px;';
+
+    wrapper.innerHTML = `
+        <div style="font-family:var(--font-heading);font-size:44px;color:var(--color-gold);margin-bottom:4px;">
+            Appearance
+        </div>
+        <div style="font-size:20px;color:rgba(198,255,187,0.4);margin-bottom:24px;">
+            Select a theme — applies instantly across the Overseer.
+        </div>
+        <div id="theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
+    `;
+    container.appendChild(wrapper);
+
+    const grid = wrapper.querySelector('#theme-grid');
+
+    themes.forEach(entry => {
+        const isActive = entry.id === activeId;
+        const card = document.createElement('button');
+        card.dataset.themeId = entry.id;
+        card.style.cssText = `
+            display:flex;flex-direction:column;align-items:center;gap:8px;
+            padding:16px;background:${isActive ? 'rgba(198,255,187,0.12)' : 'rgba(198,255,187,0.04)'};
+            border:2px solid ${isActive ? 'var(--color-mint)' : 'rgba(198,255,187,0.1)'};
+            border-radius:6px;cursor:pointer;transition:all 0.2s ease;
+            font-family:var(--font-body);color:var(--color-mint);font-size:20px;
+        `;
+        card.innerHTML = `
+            <span style="font-size:24px;font-family:var(--font-heading);color:${isActive ? 'var(--color-gold)' : 'var(--color-mint)'};">
+                ${entry.label}
+            </span>
+            <span style="font-size:14px;color:rgba(198,255,187,0.35);text-transform:uppercase;letter-spacing:1px;">
+                ${isActive ? 'Active' : 'Click to apply'}
+            </span>
+        `;
+        card.addEventListener('mouseenter', () => {
+            if (entry.id !== getCurrentThemeId()) {
+                card.style.background = 'rgba(198,255,187,0.1)';
+                card.style.borderColor = 'rgba(198,255,187,0.3)';
+            }
+        });
+        card.addEventListener('mouseleave', () => {
+            if (entry.id !== getCurrentThemeId()) {
+                card.style.background = 'rgba(198,255,187,0.04)';
+                card.style.borderColor = 'rgba(198,255,187,0.1)';
+            }
+        });
+        card.addEventListener('click', async () => {
+            await applyTheme(entry.id);
+            // Re-render to update active state
+            container.innerHTML = '';
+            mountThemePicker(container);
+        });
+        grid.appendChild(card);
+    });
 }
 
 /* ------------------------------------------
@@ -395,6 +461,7 @@ async function boot() {
             gate:          document.getElementById('gate-layer'),
         }
     });
+    await initThemeBridge();
     buildNav();
     registerAllSections();
 
