@@ -27,6 +27,13 @@
     --color-green:       #39b54a;   /* positive / confirm */
     --color-sage:        #6bc987;   /* axis labels / supporting text */
 
+    /* RGB components — use with rgba(var(--color-mint-rgb), 0.5) */
+    --color-gold-rgb:        252, 190, 64;
+    --color-mint-rgb:        198, 255, 187;
+    --color-vermillion-rgb:  255, 68, 34;
+    --color-bg-rgb:          51, 51, 51;
+    --color-bg-dark-rgb:     26, 26, 26;
+
     /* UI Structure */
     --color-bg:          #333333;   /* scene background */
     --color-bg-dark:     #1a1a1a;   /* chart wells / inset panels */

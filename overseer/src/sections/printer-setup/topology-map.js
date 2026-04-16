@@ -100,7 +100,7 @@ export class TopologyMap {
         const gridLine1 = this._createSVG('path', {
             d: 'M 40 0 L 0 0 0 40',
             fill: 'none',
-            stroke: 'rgba(198, 255, 187, 0.03)',
+            stroke: 'rgba(var(--color-mint-rgb), 0.03)',
             'stroke-width': 1
         });
         pattern.appendChild(gridLine1);
@@ -112,7 +112,7 @@ export class TopologyMap {
             x: 0, y: 0,
             width: this.mapWidth,
             height: this.mapHeight,
-            fill: '#1a1a1a',
+            fill: 'var(--color-bg-dark)',
             rx: 8
         });
         this.svg.appendChild(bg);
@@ -129,7 +129,7 @@ export class TopologyMap {
         // Header label
         const header = this._createSVG('text', {
             x: 20, y: 24,
-            fill: 'rgba(198, 255, 187, 0.4)',
+            fill: 'rgba(var(--color-mint-rgb), 0.4)',
             'font-family': 'Orbitron, monospace',
             'font-size': 11,
             'letter-spacing': '2px'
@@ -185,7 +185,7 @@ export class TopologyMap {
         const label = this._createSVG('text', {
             x: 0, y: 14,
             'text-anchor': 'middle',
-            fill: '#C6FFBB',
+            fill: 'var(--color-mint)',
             'font-family': 'Space Mono, monospace',
             'font-size': 11
         });
@@ -337,7 +337,7 @@ export class TopologyMap {
         const model = this._createSVG('text', {
             y: 6,
             'text-anchor': 'middle',
-            fill: '#C6FFBB',
+            fill: 'var(--color-mint)',
             'font-family': 'Space Mono, monospace',
             'font-size': 9
         });
@@ -373,7 +373,7 @@ export class TopologyMap {
             cx: 28, cy: -28,
             r: 5,
             fill: STATUS_COLORS[printer.status] || STATUS_COLORS.offline,
-            stroke: '#1a1a1a',
+            stroke: 'var(--color-bg-dark)',
             'stroke-width': 2,
             class: 'status-indicator'
         });
@@ -461,7 +461,7 @@ export class TopologyMap {
             border: 1px solid #00E5FF;
             border-radius: 6px;
             padding: 12px 16px;
-            color: #C6FFBB;
+            color: var(--color-mint);
             font-family: 'Space Mono', monospace;
             font-size: 11px;
             line-height: 1.6;
@@ -490,7 +490,7 @@ export class TopologyMap {
         const roleColor = ROLE_COLORS[printer.role] || ROLE_COLORS.unassigned;
 
         this.tooltip.innerHTML = `
-            <div style="color: #FBDE42; font-size: 12px; margin-bottom: 6px; font-weight: bold;">
+            <div style="color: var(--color-gold); font-size: 12px; margin-bottom: 6px; font-weight: bold;">
                 ${printer.model}
             </div>
             <div style="margin-bottom: 4px;">

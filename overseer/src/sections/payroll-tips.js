@@ -25,15 +25,15 @@ import { getRoleLabel } from '../data/sample-employees.js';
    COLOR PALETTE
 ------------------------------------------ */
 const C = {
-    mint:       '#C6FFBB',
-    mintFaded:  'rgba(198, 255, 187, 0.4)',
-    mintGhost:  'rgba(198, 255, 187, 0.15)',
-    mintBorder: 'rgba(198, 255, 187, 0.25)',
-    mintHover:  'rgba(198, 255, 187, 0.12)',
-    yellow:     '#FBDE42',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mint:       'var(--color-mint)',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.4)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.15)',
+    mintBorder: 'rgba(var(--color-mint-rgb), 0.25)',
+    mintHover:  'rgba(var(--color-mint-rgb), 0.12)',
+    yellow:     'var(--color-gold)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     white:      '#FFFFFF',
     green:      '#00FF00',
     orange:     '#FFA500',
@@ -108,8 +108,8 @@ function showToast(message, type = 'success') {
 
     const colors = {
         success: { bg: 'rgba(0, 255, 0, 0.15)', border: C.green, text: C.green },
-        error:   { bg: 'rgba(255, 51, 51, 0.15)', border: C.red, text: C.red },
-        info:    { bg: 'rgba(198, 255, 187, 0.15)', border: C.mint, text: C.mint },
+        error:   { bg: 'rgba(var(--color-vermillion-rgb), 0.15)', border: C.red, text: C.red },
+        info:    { bg: 'rgba(var(--color-mint-rgb), 0.15)', border: C.mint, text: C.mint },
     };
     const tc = colors[type] || colors.info;
 
@@ -233,11 +233,11 @@ function buildPayrollSummary(wrapper) {
                         font-size: 36px; color: ${C.yellow};">
                 Payroll & Tips
             </div>
-            <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+            <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
                 ${fmtDateRange(PAYROLL_SUMMARY.period.start, PAYROLL_SUMMARY.period.end)}
             </div>
         </div>
-        <div style="font-size: 22px; color: rgba(198, 255, 187, 0.3);">
+        <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.3);">
             ⚠ Sample Data
         </div>
     `;
@@ -269,7 +269,7 @@ function buildPayrollSummary(wrapper) {
     // ── Labor Cost % Dashboard ──
     const laborSection = document.createElement('div');
     laborSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 24px; margin-bottom: 20px;
     `;
 
@@ -298,7 +298,7 @@ function buildPayrollSummary(wrapper) {
                         <span style="font-size: 20px; color: ${C.mint};">Labor: ${fmt$(lab.totalLabor)}</span>
                         <span style="font-size: 20px; color: ${C.mint};">Sales: ${fmt$(PAYROLL_SUMMARY.totalSales)}</span>
                     </div>
-                    <div style="background: rgba(198, 255, 187, 0.1); border-radius: 8px; height: 28px; overflow: hidden; position: relative;">
+                    <div style="background: rgba(var(--color-mint-rgb), 0.1); border-radius: 8px; height: 28px; overflow: hidden; position: relative;">
                         <div style="background: ${costColor}; height: 100%; width: ${Math.min(lab.laborCostPct, 100)}%;
                                     border-radius: 8px; transition: width 0.5s ease;"></div>
                     </div>
@@ -331,7 +331,7 @@ function buildPayrollSummary(wrapper) {
     if (tipPoolConfig.enabled) {
         const poolCard = document.createElement('div');
         poolCard.style.cssText = `
-            background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+            background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
             border-radius: 10px; padding: 20px; margin-bottom: 20px;
             display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
         `;
@@ -349,7 +349,7 @@ function buildPayrollSummary(wrapper) {
                 <div style="font-size: 20px; color: ${C.grey};">
                     ${poolRulesHTML}
                 </div>
-                <div style="font-size: 18px; color: rgba(198, 255, 187, 0.4); margin-top: 4px;">
+                <div style="font-size: 18px; color: rgba(var(--color-mint-rgb), 0.4); margin-top: 4px;">
                     Enforcement: ${tipPoolConfig.enforcementMode === 'required' ? 'Required at checkout' : 'Suggested'}
                     · Method: ${tipPoolConfig.calculationMethod}
                 </div>
@@ -375,7 +375,7 @@ function buildPayrollSummary(wrapper) {
     // ── Employee Breakdown Table ──
     const tableSection = document.createElement('div');
     tableSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden;
     `;
 
@@ -409,7 +409,7 @@ function buildEmployeeTable(wrapper) {
         display: grid;
         grid-template-columns: 2fr 1fr 0.9fr 0.9fr 1fr 1fr 1fr 1.1fr;
         padding: 14px 20px; gap: 6px;
-        background: rgba(198, 255, 187, 0.08);
+        background: rgba(var(--color-mint-rgb), 0.08);
         border-bottom: 1px solid ${C.mintBorder};
         font-size: 20px; color: ${C.mintFaded};
         text-transform: uppercase; letter-spacing: 1px;
@@ -441,13 +441,13 @@ function buildEmployeeTable(wrapper) {
     // Data rows
     const sorted = getSortedEmployees();
     sorted.forEach((emp, i) => {
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
         const row = document.createElement('div');
         row.style.cssText = `
             display: grid;
             grid-template-columns: 2fr 1fr 0.9fr 0.9fr 1fr 1fr 1fr 1.1fr;
             padding: 16px 20px; gap: 6px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg}; transition: background 0.15s ease;
             min-width: 950px;
         `;
@@ -464,14 +464,14 @@ function buildEmployeeTable(wrapper) {
                 ${emp.firstName} ${emp.lastName}${otBadge}
             </div>
             <div style="color: ${C.mint}; font-size: 22px;">${getRoleLabel(emp.role)}</div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${fmtHrs(emp.totalHours)}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${fmtHrs(emp.totalHours)}</div>
             <div style="color: ${emp.overtimeHours > 0 ? C.orange : C.grey}; font-size: 22px;">
                 ${emp.overtimeHours > 0 ? fmtHrs(emp.overtimeHours) : '—'}
             </div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${fmt$(emp.grossPay)}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${fmt$(emp.grossPay)}</div>
             <div style="color: ${C.yellow}; font-size: 22px;">${emp.tips > 0 ? fmt$(emp.tips) : '—'}</div>
             <div style="color: ${C.white}; font-size: 25px; font-weight: bold;">${fmt$(emp.totalComp)}</div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px; text-align: center;">${emp.shiftsWorked}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px; text-align: center;">${emp.shiftsWorked}</div>
         `;
         table.appendChild(row);
     });
@@ -483,7 +483,7 @@ function buildEmployeeTable(wrapper) {
         display: grid;
         grid-template-columns: 2fr 1fr 0.9fr 0.9fr 1fr 1fr 1fr 1.1fr;
         padding: 16px 20px; gap: 6px; align-items: center;
-        background: rgba(198, 255, 187, 0.08); border-top: 2px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.08); border-top: 2px solid ${C.mintBorder};
         min-width: 950px;
     `;
     const totalShifts = PAYROLL_SUMMARY.employees.reduce((s, e) => s + e.shiftsWorked, 0);
@@ -496,7 +496,7 @@ function buildEmployeeTable(wrapper) {
         <div style="color: ${C.mint}; font-size: 22px; font-weight: bold;">${fmt$(totals.totalWages)}</div>
         <div style="color: ${C.yellow}; font-size: 22px; font-weight: bold;">${fmt$(totals.totalTips)}</div>
         <div style="color: ${C.white}; font-size: 25px; font-weight: bold;">${fmt$(totals.totalLabor)}</div>
-        <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px; text-align: center;">${totalShifts}</div>
+        <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px; text-align: center;">${totalShifts}</div>
     `;
     table.appendChild(totalRow);
 
@@ -519,7 +519,7 @@ function buildTipPoolConfig(wrapper) {
                     font-size: 36px; color: ${C.yellow}; margin-bottom: 4px;">
             Tip Pool Configuration
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             Set how tips are distributed among your team
         </div>
     `;
@@ -528,7 +528,7 @@ function buildTipPoolConfig(wrapper) {
     // ── Enable/Disable Toggle ──
     const toggleSection = document.createElement('div');
     toggleSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 24px; margin-bottom: 20px;
         display: flex; justify-content: space-between; align-items: center;
     `;
@@ -578,7 +578,7 @@ function buildTipPoolConfig(wrapper) {
     // ── Calculation Method ──
     const methodSection = document.createElement('div');
     methodSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 24px; margin-bottom: 20px;
     `;
     methodSection.innerHTML = `
@@ -603,7 +603,7 @@ function buildTipPoolConfig(wrapper) {
         card.style.cssText = `
             flex: 1; min-width: 200px; padding: 16px 20px; border-radius: 10px; cursor: pointer;
             text-align: left; transition: all 0.2s ease;
-            background: ${isActive ? 'rgba(198, 255, 187, 0.12)' : 'transparent'};
+            background: ${isActive ? 'rgba(var(--color-mint-rgb), 0.12)' : 'transparent'};
             border: 2px solid ${isActive ? C.mint : C.mintBorder};
             color: ${C.mint};
         `;
@@ -626,7 +626,7 @@ function buildTipPoolConfig(wrapper) {
     // ── Role Distribution Rules ──
     const rulesSection = document.createElement('div');
     rulesSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden; margin-bottom: 20px;
     `;
 
@@ -644,7 +644,7 @@ function buildTipPoolConfig(wrapper) {
     ruleColHeader.style.cssText = `
         display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
         padding: 14px 20px; gap: 8px;
-        background: rgba(198, 255, 187, 0.08);
+        background: rgba(var(--color-mint-rgb), 0.08);
         border-bottom: 1px solid ${C.mintBorder};
         font-size: 20px; color: ${C.mintFaded};
         text-transform: uppercase; letter-spacing: 1px;
@@ -658,12 +658,12 @@ function buildTipPoolConfig(wrapper) {
 
     // Rule rows
     tipPoolConfig.rules.forEach((rule, i) => {
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
         const ruleRow = document.createElement('div');
         ruleRow.style.cssText = `
             display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
             padding: 16px 20px; gap: 8px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg};
         `;
 
@@ -686,7 +686,7 @@ function buildTipPoolConfig(wrapper) {
     // ── Enforcement Mode ──
     const enforceSection = document.createElement('div');
     enforceSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 24px; margin-bottom: 20px;
     `;
     enforceSection.innerHTML = `
@@ -711,7 +711,7 @@ function buildTipPoolConfig(wrapper) {
         card.style.cssText = `
             flex: 1; min-width: 200px; padding: 16px 20px; border-radius: 10px; cursor: pointer;
             text-align: left; transition: all 0.2s ease;
-            background: ${isActive ? 'rgba(198, 255, 187, 0.12)' : 'transparent'};
+            background: ${isActive ? 'rgba(var(--color-mint-rgb), 0.12)' : 'transparent'};
             border: 2px solid ${isActive ? C.mint : C.mintBorder};
         `;
         card.innerHTML = `
@@ -734,7 +734,7 @@ function buildTipPoolConfig(wrapper) {
     // ── Audit Notice ──
     const notice = document.createElement('div');
     notice.style.cssText = `
-        padding: 16px 20px; background: rgba(198, 255, 187, 0.06);
+        padding: 16px 20px; background: rgba(var(--color-mint-rgb), 0.06);
         border: 1px solid ${C.mintBorder}; border-radius: 10px;
         color: ${C.grey}; font-size: 20px; line-height: 1.5;
     `;
@@ -823,7 +823,7 @@ function showExportModal() {
             });
             // Select this one
             option.style.borderColor = C.mint;
-            option.style.background = 'rgba(198, 255, 187, 0.12)';
+            option.style.background = 'rgba(var(--color-mint-rgb), 0.12)';
             selectedFormat = fmt;
         });
 
@@ -923,7 +923,7 @@ function buildTab(label, active, onClick) {
 function buildSummaryCard(label, value, color) {
     const card = document.createElement('div');
     card.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 16px 20px; text-align: center;
     `;
     card.innerHTML = `

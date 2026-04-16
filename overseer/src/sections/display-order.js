@@ -12,14 +12,14 @@
    COLORS
 ------------------------------------------ */
 const COLORS = {
-    mint:       '#C6FFBB',
+    mint:       'var(--color-mint)',
     mintHover:  '#d4ffca',
-    mintDim:    'rgba(198, 255, 187, 0.15)',
-    yellow:     '#FBDE42',
-    yellowFaded:'rgba(251, 222, 66, 0.4)',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mintDim:    'rgba(var(--color-mint-rgb), 0.15)',
+    yellow:     'var(--color-gold)',
+    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     grey:       '#999999',
     white:      '#FFFFFF',
 };
@@ -114,7 +114,7 @@ function buildMainView(wrapper) {
     header.style.cssText = `margin-bottom: 28px;`;
     header.innerHTML = `
         <div style="font-family: var(--font-display); font-size: 34px; color: ${COLORS.yellow};">Display Order</div>
-        <div style="font-family: var(--font-body); font-size: 18px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+        <div style="font-family: var(--font-body); font-size: 18px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
             Arrange categories and items — consistent ordering builds spatial memory
         </div>
     `;
@@ -140,7 +140,7 @@ function buildMainView(wrapper) {
 
     // Divider
     const divider = document.createElement('div');
-    divider.style.cssText = `border-bottom: 2px solid rgba(198, 255, 187, 0.1); margin: 32px 0;`;
+    divider.style.cssText = `border-bottom: 2px solid rgba(var(--color-mint-rgb), 0.1); margin: 32px 0;`;
     wrapper.appendChild(divider);
 
     // Section 2: Item Order
@@ -152,8 +152,8 @@ function buildMainView(wrapper) {
     const select = document.createElement('select');
     select.style.cssText = `
         width: 100%; max-width: 400px; padding: 14px 16px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.25);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.25);
         border-radius: 8px; color: ${COLORS.white};
         font-family: var(--font-body); font-size: 22px;
         cursor: pointer; outline: none;
@@ -282,13 +282,13 @@ function buildOrderRow({ position, label, sublabel, isFirst, isLast, onMoveUp, o
     row.style.cssText = `
         display: flex; align-items: center; justify-content: space-between;
         padding: 14px 20px;
-        background: rgba(198, 255, 187, 0.04);
-        border: 1px solid rgba(198, 255, 187, 0.08);
+        background: rgba(var(--color-mint-rgb), 0.04);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.08);
         border-radius: 8px; margin-bottom: 6px;
         transition: all 0.15s ease;
     `;
-    row.addEventListener('mouseenter', () => { row.style.background = 'rgba(198, 255, 187, 0.08)'; });
-    row.addEventListener('mouseleave', () => { row.style.background = 'rgba(198, 255, 187, 0.04)'; });
+    row.addEventListener('mouseenter', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
+    row.addEventListener('mouseleave', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.04)'; });
 
     const left = document.createElement('div');
     left.style.cssText = `display: flex; align-items: center; gap: 18px;`;
@@ -298,7 +298,7 @@ function buildOrderRow({ position, label, sublabel, isFirst, isLast, onMoveUp, o
     posEl.style.cssText = `
         width: 38px; height: 38px;
         background: ${COLORS.mintDim};
-        border: 1px solid rgba(198, 255, 187, 0.3);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.3);
         border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
         font-family: var(--font-display); font-size: 20px; color: ${COLORS.mint};
@@ -340,10 +340,10 @@ function buildArrowButton(symbol, disabled, onClick) {
     const btn = document.createElement('button');
     btn.style.cssText = `
         width: 44px; height: 44px;
-        background: ${disabled ? 'transparent' : 'rgba(198, 255, 187, 0.08)'};
-        border: 1px solid ${disabled ? 'rgba(198, 255, 187, 0.08)' : 'rgba(198, 255, 187, 0.25)'};
+        background: ${disabled ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.08)'};
+        border: 1px solid ${disabled ? 'rgba(var(--color-mint-rgb), 0.08)' : 'rgba(var(--color-mint-rgb), 0.25)'};
         border-radius: 8px;
-        color: ${disabled ? 'rgba(198, 255, 187, 0.15)' : COLORS.mint};
+        color: ${disabled ? 'rgba(var(--color-mint-rgb), 0.15)' : COLORS.mint};
         font-size: 18px;
         cursor: ${disabled ? 'default' : 'pointer'};
         transition: all 0.15s ease;
@@ -356,7 +356,7 @@ function buildArrowButton(symbol, disabled, onClick) {
             btn.style.color = COLORS.dark;
         });
         btn.addEventListener('mouseleave', () => {
-            btn.style.background = 'rgba(198, 255, 187, 0.08)';
+            btn.style.background = 'rgba(var(--color-mint-rgb), 0.08)';
             btn.style.color = COLORS.mint;
         });
         btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
@@ -467,7 +467,7 @@ function handleSaveChanges() {
         items.forEach((item, i) => { item.display_order = i + 1; });
     });
 
-    console.log('%c[KINDpos] Display Order Events Generated', 'background: #333; color: #FBDE42; font-size: 14px; padding: 2px 8px;');
+    console.log('%c[KINDpos] Display Order Events Generated', 'background: #333; color: var(--color-gold); font-size: 14px; padding: 2px 8px;');
     events.forEach((evt, i) => {
         console.log(`  ${i + 1}. ${evt.event_type} — ${evt.payload.order.map(o => o.name).join(', ')}`);
     });

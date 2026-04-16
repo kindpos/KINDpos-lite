@@ -15,16 +15,16 @@
    COLORS
 ------------------------------------------ */
 const COLORS = {
-    mint:       '#C6FFBB',
+    mint:       'var(--color-mint)',
     mintHover:  '#d4ffca',
-    mintFaded:  'rgba(198, 255, 187, 0.8)',
-    mintGhost:  'rgba(198, 255, 187, 0.4)',
-    mintDim:    'rgba(198, 255, 187, 0.15)',
-    yellow:     '#FBDE42',
-    yellowFaded:'rgba(251, 222, 66, 0.4)',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.8)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.4)',
+    mintDim:    'rgba(var(--color-mint-rgb), 0.15)',
+    yellow:     'var(--color-gold)',
+    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     grey:       '#999999',
     white:      '#FFFFFF',
     purple:     '#CE93D8',
@@ -248,7 +248,7 @@ function buildTabBar(wrapper) {
         display: flex;
         gap: 4px;
         margin-bottom: 28px;
-        border-bottom: 2px solid rgba(198, 255, 187, 0.15);
+        border-bottom: 2px solid rgba(var(--color-mint-rgb), 0.15);
         padding-bottom: 0;
     `;
 
@@ -257,7 +257,7 @@ function buildTabBar(wrapper) {
         const isActive = activeTab === tab.id;
         btn.style.cssText = `
             padding: 14px 28px;
-            background: ${isActive ? 'rgba(198, 255, 187, 0.12)' : 'transparent'};
+            background: ${isActive ? 'rgba(var(--color-mint-rgb), 0.12)' : 'transparent'};
             border: none;
             border-bottom: 3px solid ${isActive ? COLORS.yellow : 'transparent'};
             color: ${isActive ? COLORS.mint : COLORS.grey};
@@ -298,7 +298,7 @@ function buildMainView(wrapper) {
         <div style="font-family: var(--font-display); font-size: 34px; color: ${COLORS.yellow};">
             Configure Modifiers
         </div>
-        <div style="font-family: var(--font-body); font-size: 18px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+        <div style="font-family: var(--font-body); font-size: 18px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
             Define modifiers, group them, assign to menu
         </div>
     `;
@@ -358,7 +358,7 @@ function buildMasterListsTab(container) {
 
     // Spacer
     const spacer = document.createElement('div');
-    spacer.style.cssText = `height: 40px; border-bottom: 2px solid rgba(198, 255, 187, 0.1); margin-bottom: 32px;`;
+    spacer.style.cssText = `height: 40px; border-bottom: 2px solid rgba(var(--color-mint-rgb), 0.1); margin-bottom: 32px;`;
     container.appendChild(spacer);
 
     // --- OPTIONS LIBRARY ---
@@ -394,14 +394,14 @@ function renderModifierList() {
             align-items: center;
             justify-content: space-between;
             padding: 14px 20px;
-            background: rgba(198, 255, 187, 0.04);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.08)'};
+            background: rgba(var(--color-mint-rgb), 0.04);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.08)'};
             border-radius: 8px;
             margin-bottom: 6px;
             transition: all 0.2s ease;
         `;
-        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(198, 255, 187, 0.08)'; });
-        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(198, 255, 187, 0.04)'; });
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
+        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.04)'; });
 
         const left = document.createElement('div');
         left.style.cssText = `display: flex; align-items: center; gap: 20px;`;
@@ -440,14 +440,14 @@ function renderOptionList() {
             align-items: center;
             justify-content: space-between;
             padding: 14px 20px;
-            background: rgba(198, 255, 187, 0.04);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.08)'};
+            background: rgba(var(--color-mint-rgb), 0.04);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.08)'};
             border-radius: 8px;
             margin-bottom: 6px;
             transition: all 0.2s ease;
         `;
-        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(198, 255, 187, 0.08)'; });
-        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(198, 255, 187, 0.04)'; });
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.08)'; });
+        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.04)'; });
 
         const left = document.createElement('div');
         left.style.cssText = `display: flex; align-items: center; gap: 16px;`;
@@ -490,7 +490,7 @@ function buildGroupsTab(container) {
 
     // Spacer
     const spacer = document.createElement('div');
-    spacer.style.cssText = `height: 8px; border-bottom: 2px solid rgba(198, 255, 187, 0.1); margin-bottom: 32px;`;
+    spacer.style.cssText = `height: 8px; border-bottom: 2px solid rgba(var(--color-mint-rgb), 0.1); margin-bottom: 32px;`;
     container.appendChild(spacer);
 
     // --- MODIFIER GROUPS ---
@@ -515,8 +515,8 @@ function renderTemplateGrid() {
         const hasPending = pendingChanges.templates.some(p => p.id === tmpl.id);
         const card = document.createElement('div');
         card.style.cssText = `
-            background: rgba(198, 255, 187, 0.06);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)'};
+            background: rgba(var(--color-mint-rgb), 0.06);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)'};
             border-radius: 10px;
             padding: 20px;
             width: calc(50% - 8px);
@@ -524,12 +524,12 @@ function renderTemplateGrid() {
             transition: all 0.2s ease;
         `;
         card.addEventListener('mouseenter', () => {
-            card.style.background = 'rgba(198, 255, 187, 0.1)';
+            card.style.background = 'rgba(var(--color-mint-rgb), 0.1)';
             card.style.borderColor = COLORS.mint;
         });
         card.addEventListener('mouseleave', () => {
-            card.style.background = 'rgba(198, 255, 187, 0.06)';
-            card.style.borderColor = hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)';
+            card.style.background = 'rgba(var(--color-mint-rgb), 0.06)';
+            card.style.borderColor = hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)';
         });
         card.addEventListener('click', () => openTemplateModal(tmpl));
 
@@ -568,8 +568,8 @@ function renderGroupGrid() {
 
         const card = document.createElement('div');
         card.style.cssText = `
-            background: rgba(198, 255, 187, 0.06);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)'};
+            background: rgba(var(--color-mint-rgb), 0.06);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)'};
             border-radius: 10px;
             padding: 20px;
             width: calc(50% - 8px);
@@ -577,12 +577,12 @@ function renderGroupGrid() {
             transition: all 0.2s ease;
         `;
         card.addEventListener('mouseenter', () => {
-            card.style.background = 'rgba(198, 255, 187, 0.1)';
+            card.style.background = 'rgba(var(--color-mint-rgb), 0.1)';
             card.style.borderColor = COLORS.mint;
         });
         card.addEventListener('mouseleave', () => {
-            card.style.background = 'rgba(198, 255, 187, 0.06)';
-            card.style.borderColor = hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)';
+            card.style.background = 'rgba(var(--color-mint-rgb), 0.06)';
+            card.style.borderColor = hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)';
         });
         card.addEventListener('click', () => openGroupModal(grp));
 
@@ -596,7 +596,7 @@ function renderGroupGrid() {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <div style="font-family: var(--font-body); font-size: 25px; font-weight: bold; color: ${COLORS.mint};">${grp.name}</div>
                 <div style="display: flex; gap: 8px;">
-                    <span style="padding: 4px 10px; background: ${isRequired ? COLORS.mintDim : 'rgba(198, 255, 187, 0.05)'}; border-radius: 6px; font-family: var(--font-body); font-size: 16px; color: ${isRequired ? COLORS.mint : COLORS.grey};">${isRequired ? 'Required' : 'Optional'}</span>
+                    <span style="padding: 4px 10px; background: ${isRequired ? COLORS.mintDim : 'rgba(var(--color-mint-rgb), 0.05)'}; border-radius: 6px; font-family: var(--font-body); font-size: 16px; color: ${isRequired ? COLORS.mint : COLORS.grey};">${isRequired ? 'Required' : 'Optional'}</span>
                     <span style="padding: 4px 10px; background: ${COLORS.yellowFaded}; border-radius: 6px; font-family: var(--font-body); font-size: 16px; color: ${COLORS.yellow};">${ruleText}</span>
                 </div>
             </div>
@@ -610,7 +610,7 @@ function renderGroupGrid() {
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;">
                     ${Object.entries(grp.option_prices).map(([optId, price]) => {
                         const opt = getAllWorking('options').find(o => o.id === optId);
-                        return opt ? `<span style="padding: 3px 8px; background: rgba(251, 222, 66, 0.1); border-radius: 4px; font-family: var(--font-body); font-size: 16px; color: ${COLORS.yellow};">${opt.name} ${formatPrice(price)}</span>` : '';
+                        return opt ? `<span style="padding: 3px 8px; background: rgba(var(--color-gold-rgb), 0.1); border-radius: 4px; font-family: var(--font-body); font-size: 16px; color: ${COLORS.yellow};">${opt.name} ${formatPrice(price)}</span>` : '';
                     }).join('')}
                 </div>
             ` : ''}
@@ -635,7 +635,7 @@ function buildAssignmentsTab(container) {
 
     // Spacer
     const spacer = document.createElement('div');
-    spacer.style.cssText = `height: 40px; border-bottom: 2px solid rgba(198, 255, 187, 0.1); margin-bottom: 32px;`;
+    spacer.style.cssText = `height: 40px; border-bottom: 2px solid rgba(var(--color-mint-rgb), 0.1); margin-bottom: 32px;`;
     container.appendChild(spacer);
 
     // --- UNIVERSAL ASSIGNMENTS ---
@@ -669,16 +669,16 @@ function renderMandatoryList() {
 
         const card = document.createElement('div');
         card.style.cssText = `
-            background: rgba(198, 255, 187, 0.06);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)'};
+            background: rgba(var(--color-mint-rgb), 0.06);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)'};
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 12px;
             cursor: pointer;
             transition: all 0.2s ease;
         `;
-        card.addEventListener('mouseenter', () => { card.style.background = 'rgba(198, 255, 187, 0.1)'; });
-        card.addEventListener('mouseleave', () => { card.style.background = 'rgba(198, 255, 187, 0.06)'; });
+        card.addEventListener('mouseenter', () => { card.style.background = 'rgba(var(--color-mint-rgb), 0.1)'; });
+        card.addEventListener('mouseleave', () => { card.style.background = 'rgba(var(--color-mint-rgb), 0.06)'; });
         card.addEventListener('click', () => openMandatoryModal(asgn));
 
         card.innerHTML = `
@@ -691,7 +691,7 @@ function renderMandatoryList() {
                     <span style="padding: 4px 12px; background: ${COLORS.yellowFaded}; border-radius: 6px; font-family: var(--font-body); font-size: 18px; color: ${COLORS.yellow};">
                         ${asgn.target_type === 'category' ? '📂' : '📄'} ${asgn.target_name}
                     </span>
-                    <span style="padding: 4px 12px; background: rgba(198, 255, 187, 0.05); border-radius: 6px; font-family: var(--font-body); font-size: 18px; color: ${COLORS.grey};">
+                    <span style="padding: 4px 12px; background: rgba(var(--color-mint-rgb), 0.05); border-radius: 6px; font-family: var(--font-body); font-size: 18px; color: ${COLORS.grey};">
                         ${asgn.select_mode === 'single' ? 'Pick 1' : 'Pick Many'}
                     </span>
                 </div>
@@ -729,16 +729,16 @@ function renderUniversalList() {
 
         const card = document.createElement('div');
         card.style.cssText = `
-            background: rgba(198, 255, 187, 0.06);
-            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(198, 255, 187, 0.15)'};
+            background: rgba(var(--color-mint-rgb), 0.06);
+            border: 1px solid ${hasPending ? COLORS.yellow : 'rgba(var(--color-mint-rgb), 0.15)'};
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 12px;
             cursor: pointer;
             transition: all 0.2s ease;
         `;
-        card.addEventListener('mouseenter', () => { card.style.background = 'rgba(198, 255, 187, 0.1)'; });
-        card.addEventListener('mouseleave', () => { card.style.background = 'rgba(198, 255, 187, 0.06)'; });
+        card.addEventListener('mouseenter', () => { card.style.background = 'rgba(var(--color-mint-rgb), 0.1)'; });
+        card.addEventListener('mouseleave', () => { card.style.background = 'rgba(var(--color-mint-rgb), 0.06)'; });
         card.addEventListener('click', () => openUniversalModal(asgn));
 
         const cat = modData.categories.find(c => c.id === asgn.category_id);
@@ -755,7 +755,7 @@ function renderUniversalList() {
                 Available through MOD action on the check for all items in this category
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                ${grpNames.map(n => `<span style="padding: 6px 14px; background: rgba(198, 255, 187, 0.06); border: 1px solid rgba(198, 255, 187, 0.2); border-radius: 8px; font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};">${n}</span>`).join('')}
+                ${grpNames.map(n => `<span style="padding: 6px 14px; background: rgba(var(--color-mint-rgb), 0.06); border: 1px solid rgba(var(--color-mint-rgb), 0.2); border-radius: 8px; font-family: var(--font-body); font-size: 20px; color: ${COLORS.mint};">${n}</span>`).join('')}
             </div>
         `;
         container.appendChild(card);
@@ -811,8 +811,8 @@ function buildSearchInput(container, value, onChange) {
     input.style.cssText = `
         width: 100%;
         padding: 12px 16px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.2);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
         border-radius: 8px;
         color: ${COLORS.mint};
         font-family: var(--font-body);
@@ -823,7 +823,7 @@ function buildSearchInput(container, value, onChange) {
         transition: border-color 0.2s ease;
     `;
     input.addEventListener('focus', () => { input.style.borderColor = COLORS.mint; });
-    input.addEventListener('blur', () => { input.style.borderColor = 'rgba(198, 255, 187, 0.2)'; });
+    input.addEventListener('blur', () => { input.style.borderColor = 'rgba(var(--color-mint-rgb), 0.2)'; });
     input.addEventListener('input', (e) => onChange(e.target.value));
     container.appendChild(input);
     return input;
@@ -833,8 +833,8 @@ function buildSmallButton(label, onClick, isDanger = false) {
     const btn = document.createElement('button');
     btn.style.cssText = `
         padding: 6px 16px;
-        background: ${isDanger ? COLORS.redFaded : 'rgba(198, 255, 187, 0.08)'};
-        border: 1px solid ${isDanger ? COLORS.red : 'rgba(198, 255, 187, 0.2)'};
+        background: ${isDanger ? COLORS.redFaded : 'rgba(var(--color-mint-rgb), 0.08)'};
+        border: 1px solid ${isDanger ? COLORS.red : 'rgba(var(--color-mint-rgb), 0.2)'};
         border-radius: 6px;
         color: ${isDanger ? COLORS.red : COLORS.mint};
         font-family: var(--font-body);
@@ -844,10 +844,10 @@ function buildSmallButton(label, onClick, isDanger = false) {
     `;
     btn.textContent = label;
     btn.addEventListener('mouseenter', () => {
-        btn.style.background = isDanger ? 'rgba(255,51,51,0.4)' : 'rgba(198,255,187,0.15)';
+        btn.style.background = isDanger ? 'rgba(255,51,51,0.4)' : 'rgba(var(--color-mint-rgb),0.15)';
     });
     btn.addEventListener('mouseleave', () => {
-        btn.style.background = isDanger ? COLORS.redFaded : 'rgba(198,255,187,0.08)';
+        btn.style.background = isDanger ? COLORS.redFaded : 'rgba(var(--color-mint-rgb),0.08)';
     });
     btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
     return btn;
@@ -887,7 +887,7 @@ function openModal(titleText, contentBuilder) {
         justify-content: space-between;
         align-items: center;
         padding: 20px 24px;
-        border-bottom: 1px solid rgba(198, 255, 187, 0.15);
+        border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.15);
     `;
     header.innerHTML = `<div style="font-family: var(--font-display); font-size: 28px; color: ${COLORS.yellow};">${titleText}</div>`;
 
@@ -930,8 +930,8 @@ function buildModalField(container, label, type, value, opts = {}) {
 
     const inputStyle = `
         width: 100%; padding: 12px 14px;
-        background: rgba(198, 255, 187, 0.08);
-        border: 1px solid rgba(198, 255, 187, 0.25);
+        background: rgba(var(--color-mint-rgb), 0.08);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.25);
         border-radius: 8px; color: ${COLORS.white};
         font-family: var(--font-body); font-size: 25px;
         outline: none; box-sizing: border-box;
@@ -951,7 +951,7 @@ function buildModalField(container, label, type, value, opts = {}) {
     input.value = value || '';
     if (opts.placeholder) input.placeholder = opts.placeholder;
     input.addEventListener('focus', () => { input.style.borderColor = COLORS.mint; });
-    input.addEventListener('blur', () => { input.style.borderColor = 'rgba(198, 255, 187, 0.25)'; });
+    input.addEventListener('blur', () => { input.style.borderColor = 'rgba(var(--color-mint-rgb), 0.25)'; });
 
     group.appendChild(input);
     container.appendChild(group);
@@ -963,7 +963,7 @@ function buildModalFooter(container, onSave, saveLabel = 'Save') {
     footer.style.cssText = `
         display: flex; justify-content: flex-end; gap: 12px;
         margin-top: 28px; padding-top: 20px;
-        border-top: 1px solid rgba(198, 255, 187, 0.1);
+        border-top: 1px solid rgba(var(--color-mint-rgb), 0.1);
     `;
 
     const cancelBtn = document.createElement('button');
@@ -997,7 +997,7 @@ function buildCheckboxList(container, label, items, selectedIds, opts = {}) {
     listBox.style.cssText = `
         max-height: 240px;
         overflow-y: auto;
-        border: 1px solid rgba(198, 255, 187, 0.15);
+        border: 1px solid rgba(var(--color-mint-rgb), 0.15);
         border-radius: 8px;
         padding: 8px;
     `;
@@ -1011,7 +1011,7 @@ function buildCheckboxList(container, label, items, selectedIds, opts = {}) {
             padding: 8px 12px; cursor: pointer; border-radius: 6px;
             transition: background 0.15s ease;
         `;
-        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(198, 255, 187, 0.06)'; });
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(var(--color-mint-rgb), 0.06)'; });
         row.addEventListener('mouseleave', () => { row.style.background = 'transparent'; });
 
         const cb = document.createElement('input');
@@ -1143,8 +1143,8 @@ function openGroupModal(existing) {
         const tmplSelect = document.createElement('select');
         tmplSelect.style.cssText = `
             width: 100%; padding: 12px 14px;
-            background: rgba(198, 255, 187, 0.08);
-            border: 1px solid rgba(198, 255, 187, 0.25);
+            background: rgba(var(--color-mint-rgb), 0.08);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.25);
             border-radius: 8px; color: ${COLORS.white};
             font-family: var(--font-body); font-size: 22px;
             cursor: pointer; outline: none;
@@ -1187,7 +1187,7 @@ function openGroupModal(existing) {
                 row.style.cssText = `
                     display: flex; align-items: center; gap: 14px;
                     margin-bottom: 8px; padding: 8px 12px;
-                    background: rgba(198, 255, 187, 0.04);
+                    background: rgba(var(--color-mint-rgb), 0.04);
                     border-radius: 6px;
                 `;
 
@@ -1204,8 +1204,8 @@ function openGroupModal(existing) {
                 priceInput.className = 'opt-price-input';
                 priceInput.style.cssText = `
                     width: 120px; padding: 8px 12px;
-                    background: rgba(198, 255, 187, 0.08);
-                    border: 1px solid rgba(198, 255, 187, 0.25);
+                    background: rgba(var(--color-mint-rgb), 0.08);
+                    border: 1px solid rgba(var(--color-mint-rgb), 0.25);
                     border-radius: 6px; color: ${COLORS.yellow};
                     font-family: var(--font-body); font-size: 22px;
                     text-align: center; outline: none;
@@ -1284,7 +1284,7 @@ function openMandatoryModal(existing) {
             btn.style.cssText = `
                 flex: 1; padding: 12px;
                 background: ${selectedType === type ? COLORS.mintDim : 'transparent'};
-                border: 2px solid ${selectedType === type ? COLORS.mint : 'rgba(198, 255, 187, 0.15)'};
+                border: 2px solid ${selectedType === type ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.15)'};
                 border-radius: 8px;
                 color: ${selectedType === type ? COLORS.mint : COLORS.grey};
                 font-family: var(--font-body); font-size: 22px;
@@ -1296,7 +1296,7 @@ function openMandatoryModal(existing) {
                 typeRow.querySelectorAll('button').forEach(b => {
                     const isActive = b.textContent.includes(type === 'category' ? 'Category' : 'Item');
                     b.style.background = isActive ? COLORS.mintDim : 'transparent';
-                    b.style.borderColor = isActive ? COLORS.mint : 'rgba(198, 255, 187, 0.15)';
+                    b.style.borderColor = isActive ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.15)';
                     b.style.color = isActive ? COLORS.mint : COLORS.grey;
                 });
             });
@@ -1308,8 +1308,8 @@ function openMandatoryModal(existing) {
         const targetSelect = document.createElement('select');
         targetSelect.style.cssText = `
             width: 100%; padding: 12px 14px;
-            background: rgba(198, 255, 187, 0.08);
-            border: 1px solid rgba(198, 255, 187, 0.25);
+            background: rgba(var(--color-mint-rgb), 0.08);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.25);
             border-radius: 8px; color: ${COLORS.white};
             font-family: var(--font-body); font-size: 22px;
             cursor: pointer; outline: none;
@@ -1343,7 +1343,7 @@ function openMandatoryModal(existing) {
             btn.style.cssText = `
                 flex: 1; padding: 12px;
                 background: ${selectedMode === mode ? COLORS.mintDim : 'transparent'};
-                border: 2px solid ${selectedMode === mode ? COLORS.mint : 'rgba(198, 255, 187, 0.15)'};
+                border: 2px solid ${selectedMode === mode ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.15)'};
                 border-radius: 8px;
                 color: ${selectedMode === mode ? COLORS.mint : COLORS.grey};
                 font-family: var(--font-body); font-size: 22px;
@@ -1356,7 +1356,7 @@ function openMandatoryModal(existing) {
                     const isActive = (mode === 'single' && b.textContent.includes('Pick 1')) ||
                                      (mode === 'multi' && b.textContent.includes('Pick Many'));
                     b.style.background = isActive ? COLORS.mintDim : 'transparent';
-                    b.style.borderColor = isActive ? COLORS.mint : 'rgba(198, 255, 187, 0.15)';
+                    b.style.borderColor = isActive ? COLORS.mint : 'rgba(var(--color-mint-rgb), 0.15)';
                     b.style.color = isActive ? COLORS.mint : COLORS.grey;
                 });
             });
@@ -1399,8 +1399,8 @@ function openUniversalModal(existing) {
         const catSelect = document.createElement('select');
         catSelect.style.cssText = `
             width: 100%; padding: 12px 14px;
-            background: rgba(198, 255, 187, 0.08);
-            border: 1px solid rgba(198, 255, 187, 0.25);
+            background: rgba(var(--color-mint-rgb), 0.08);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.25);
             border-radius: 8px; color: ${COLORS.white};
             font-family: var(--font-body); font-size: 22px;
             cursor: pointer; outline: none;
@@ -1520,7 +1520,7 @@ function handleSaveChanges() {
         });
     });
 
-    console.log('%c[KINDpos] Modifier Events Generated', 'background: #333; color: #FBDE42; font-size: 14px; padding: 2px 8px;');
+    console.log('%c[KINDpos] Modifier Events Generated', 'background: #333; color: var(--color-gold); font-size: 14px; padding: 2px 8px;');
     console.log(`Batch contains ${events.length} events:`);
     events.forEach((evt, i) => {
         console.log(`  ${i + 1}. ${evt.event_type} — ${JSON.stringify(evt.payload).substring(0, 100)}`);

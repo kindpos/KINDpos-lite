@@ -25,15 +25,15 @@ import { getRoleLabel, fmtDate } from '../data/sample-employees.js';
    COLOR PALETTE (matches employees.js / reporting.js)
 ------------------------------------------ */
 const C = {
-    mint:       '#C6FFBB',
-    mintFaded:  'rgba(198, 255, 187, 0.4)',
-    mintGhost:  'rgba(198, 255, 187, 0.15)',
-    mintBorder: 'rgba(198, 255, 187, 0.25)',
-    mintHover:  'rgba(198, 255, 187, 0.12)',
-    yellow:     '#FBDE42',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mint:       'var(--color-mint)',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.4)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.15)',
+    mintBorder: 'rgba(var(--color-mint-rgb), 0.25)',
+    mintHover:  'rgba(var(--color-mint-rgb), 0.12)',
+    yellow:     'var(--color-gold)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     darkCard:   '#2a2a2a',
     white:      '#FFFFFF',
     green:      '#00FF00',
@@ -109,8 +109,8 @@ function showToast(message, type = 'success') {
 
     const colors = {
         success: { bg: 'rgba(0, 255, 0, 0.15)', border: C.green, text: C.green },
-        error:   { bg: 'rgba(255, 51, 51, 0.15)', border: C.red, text: C.red },
-        info:    { bg: 'rgba(198, 255, 187, 0.15)', border: C.mint, text: C.mint },
+        error:   { bg: 'rgba(var(--color-vermillion-rgb), 0.15)', border: C.red, text: C.red },
+        info:    { bg: 'rgba(var(--color-mint-rgb), 0.15)', border: C.mint, text: C.mint },
         warning: { bg: 'rgba(255, 165, 0, 0.15)', border: C.orange, text: C.orange },
     };
     const tc = colors[type] || colors.info;
@@ -195,12 +195,12 @@ function buildLiveDashboard(wrapper) {
                         font-size: 36px; color: ${C.yellow};">
                 Time & Attendance
             </div>
-            <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+            <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
                 ${dateStr}
             </div>
         </div>
         <div style="text-align: right;">
-            <div style="font-size: 22px; color: rgba(198, 255, 187, 0.3);">
+            <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.3);">
                 ⚠ Sample Data
             </div>
             <div id="ta-clock" style="font-family: var(--font-display, 'Alien Encounters', monospace);
@@ -244,7 +244,7 @@ function buildLiveDashboard(wrapper) {
     // ── Active Shifts Table ──
     const section = document.createElement('div');
     section.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden;
     `;
 
@@ -267,7 +267,7 @@ function buildLiveDashboard(wrapper) {
         display: grid;
         grid-template-columns: 2fr 1fr 1.2fr 1fr 0.8fr 0.8fr 0.8fr;
         padding: 14px 20px; gap: 8px;
-        background: rgba(198, 255, 187, 0.08);
+        background: rgba(var(--color-mint-rgb), 0.08);
         border-bottom: 1px solid ${C.mintBorder};
         font-size: 20px; color: ${C.mintFaded};
         text-transform: uppercase; letter-spacing: 1px;
@@ -283,14 +283,14 @@ function buildLiveDashboard(wrapper) {
     ACTIVE_SHIFTS.forEach((shift, i) => {
         const dur = calcDuration(shift.clockIn);
         const durColor = durationColor(dur.totalHrs);
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
 
         const row = document.createElement('div');
         row.style.cssText = `
             display: grid;
             grid-template-columns: 2fr 1fr 1.2fr 1fr 0.8fr 0.8fr 0.8fr;
             padding: 16px 20px; gap: 8px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg}; transition: background 0.15s ease;
         `;
         row.addEventListener('mouseenter', () => row.style.background = C.mintHover);
@@ -313,12 +313,12 @@ function buildLiveDashboard(wrapper) {
                 ${shift.firstName} ${shift.lastName}${breakBadge}${otWarning}
             </div>
             <div style="color: ${C.mint}; font-size: 22px;">${getRoleLabel(shift.role)}</div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${fmtTimeISO(shift.clockIn)}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${fmtTimeISO(shift.clockIn)}</div>
             <div style="color: ${durColor}; font-size: 25px; font-family: var(--font-display, monospace);">
                 ${dur.text}
             </div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${shift.tables || '—'}</div>
-            <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${shift.sales ? fmt$(shift.sales) : '—'}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${shift.tables || '—'}</div>
+            <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${shift.sales ? fmt$(shift.sales) : '—'}</div>
             <div style="color: ${C.yellow}; font-size: 22px;">${shift.tips ? fmt$(shift.tips) : '—'}</div>
         `;
         section.appendChild(row);
@@ -397,7 +397,7 @@ function buildWeekGrid(wrapper) {
                     font-size: 36px; color: ${C.yellow}; margin-bottom: 4px;">
             Weekly Time Cards
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             Week of ${fmtWeekDate(weekStart)} – ${fmtWeekDate(weekEnd)}
         </div>
     `;
@@ -406,7 +406,7 @@ function buildWeekGrid(wrapper) {
     // ── Grid Container ──
     const gridContainer = document.createElement('div');
     gridContainer.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow-x: auto;
     `;
 
@@ -416,7 +416,7 @@ function buildWeekGrid(wrapper) {
         display: grid;
         grid-template-columns: 2fr repeat(7, 1fr) 1.2fr;
         padding: 14px 16px; gap: 4px;
-        background: rgba(198, 255, 187, 0.08);
+        background: rgba(var(--color-mint-rgb), 0.08);
         border-bottom: 1px solid ${C.mintBorder};
         font-size: 20px; color: ${C.mintFaded};
         text-transform: uppercase; letter-spacing: 1px;
@@ -434,14 +434,14 @@ function buildWeekGrid(wrapper) {
     // Data rows
     WEEKLY_TIMECARDS.forEach((tc, i) => {
         const totals = getWeeklyTotals(tc);
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
 
         const row = document.createElement('div');
         row.style.cssText = `
             display: grid;
             grid-template-columns: 2fr repeat(7, 1fr) 1.2fr;
             padding: 14px 16px; gap: 4px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg};
             min-width: 900px;
         `;
@@ -515,7 +515,7 @@ function buildWeekGrid(wrapper) {
                     }
                 });
             } else {
-                cell.style.color = 'rgba(198, 255, 187, 0.15)';
+                cell.style.color = 'rgba(var(--color-mint-rgb), 0.15)';
                 cell.style.fontSize = '16px';
                 cell.textContent = '—';
             }
@@ -594,7 +594,7 @@ function buildShiftDetail(wrapper, shift) {
                     font-size: 36px; color: ${C.yellow}; margin-bottom: 4px;">
             ${shift.firstName} ${shift.lastName}
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             ${getRoleLabel(shift.role)} — ${dateDisplay}
         </div>
     `;
@@ -603,7 +603,7 @@ function buildShiftDetail(wrapper, shift) {
     // ── Shift Time Card ──
     const timeCard = document.createElement('div');
     timeCard.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 24px; margin-bottom: 20px;
     `;
 
@@ -616,7 +616,7 @@ function buildShiftDetail(wrapper, shift) {
             ${shift.originalClockOut ? `<div style="color: ${C.grey}; font-size: 20px; margin-bottom: 4px;">
                 Original Clock Out: ${fmtTime12(shift.originalClockOut)} → Adjusted: ${fmtTime12(shift.clockOut)}
             </div>` : ''}
-            ${shift.editReason ? `<div style="color: rgba(198, 255, 187, 0.6); font-size: 20px;">
+            ${shift.editReason ? `<div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 20px;">
                 Reason: ${shift.editReason}
             </div>` : ''}
         </div>
@@ -660,7 +660,7 @@ function buildShiftDetail(wrapper, shift) {
     if (shift.breaks && shift.breaks.length > 0) {
         const breakSection = document.createElement('div');
         breakSection.style.cssText = `
-            background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+            background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
             border-radius: 10px; overflow: hidden; margin-bottom: 20px;
         `;
 
@@ -675,11 +675,11 @@ function buildShiftDetail(wrapper, shift) {
 
         shift.breaks.forEach((brk, i) => {
             const brkRow = document.createElement('div');
-            const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+            const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
             brkRow.style.cssText = `
                 display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
                 padding: 14px 20px; gap: 8px; background: ${stripeBg};
-                border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             `;
 
             const typeColor = brk.type === 'meal' ? C.orange : C.mint;
@@ -689,7 +689,7 @@ function buildShiftDetail(wrapper, shift) {
 
             brkRow.innerHTML = `
                 <div style="color: ${typeColor}; font-size: 22px;">${typeLabel}</div>
-                <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">
+                <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">
                     ${fmtTime12(brk.start)} – ${fmtTime12(brk.end)}
                 </div>
                 <div style="color: ${C.mint}; font-size: 22px;">${brk.duration} min (${paidLabel})</div>
@@ -722,7 +722,7 @@ function buildShiftDetail(wrapper, shift) {
     if (shift.orders && shift.orders.length > 0) {
         const orderSection = document.createElement('div');
         orderSection.style.cssText = `
-            background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+            background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
             border-radius: 10px; overflow: hidden;
         `;
 
@@ -740,7 +740,7 @@ function buildShiftDetail(wrapper, shift) {
         orderColHeader.style.cssText = `
             display: grid; grid-template-columns: 1fr 1fr 0.8fr 1fr;
             padding: 12px 20px; gap: 8px;
-            background: rgba(198, 255, 187, 0.08);
+            background: rgba(var(--color-mint-rgb), 0.08);
             border-bottom: 1px solid ${C.mintBorder};
             font-size: 20px; color: ${C.mintFaded};
             text-transform: uppercase; letter-spacing: 1px;
@@ -754,16 +754,16 @@ function buildShiftDetail(wrapper, shift) {
 
         shift.orders.forEach((order, i) => {
             const oRow = document.createElement('div');
-            const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+            const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
             oRow.style.cssText = `
                 display: grid; grid-template-columns: 1fr 1fr 0.8fr 1fr;
                 padding: 12px 20px; gap: 8px; background: ${stripeBg};
-                border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+                border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             `;
             oRow.innerHTML = `
-                <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${fmtTime12(order.time)}</div>
+                <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${fmtTime12(order.time)}</div>
                 <div style="color: ${C.mint}; font-size: 22px;">${order.table}</div>
-                <div style="color: rgba(198, 255, 187, 0.6); font-size: 22px;">${order.items}</div>
+                <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${order.items}</div>
                 <div style="color: ${C.white}; font-size: 22px;">${fmt$(order.amount)}</div>
             `;
             orderSection.appendChild(oRow);
@@ -816,7 +816,7 @@ function showTimeEditModal(shift) {
             ORIGINAL TIMES
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
-                    padding: 14px 16px; background: rgba(198, 255, 187, 0.06);
+                    padding: 14px 16px; background: rgba(var(--color-mint-rgb), 0.06);
                     border: 1px solid ${C.mintBorder}; border-radius: 8px; margin-bottom: 24px;">
             <div>
                 <div style="font-size: 18px; color: ${C.grey};">Clock In</div>
@@ -858,7 +858,7 @@ function showTimeEditModal(shift) {
     const reasonSelect = document.createElement('select');
     reasonSelect.id = 'edit-reason';
     reasonSelect.style.cssText = `
-        width: 100%; background: rgba(198, 255, 187, 0.06);
+        width: 100%; background: rgba(var(--color-mint-rgb), 0.06);
         border: 1px solid ${C.mintBorder}; color: ${C.mint};
         padding: 12px 14px; border-radius: 6px; font-size: 25px;
         font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
@@ -878,7 +878,7 @@ function showTimeEditModal(shift) {
         </div>
         <textarea id="edit-notes" rows="2" style="
             width: 100%; box-sizing: border-box;
-            background: rgba(198, 255, 187, 0.06);
+            background: rgba(var(--color-mint-rgb), 0.06);
             border: 1px solid ${C.mintBorder}; color: ${C.mint};
             padding: 12px 14px; border-radius: 6px; font-size: 25px;
             font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
@@ -896,7 +896,7 @@ function showTimeEditModal(shift) {
         </div>
         <input type="password" id="edit-manager-pin" maxlength="6" placeholder="Enter manager PIN"
                style="width: 200px; box-sizing: border-box;
-                      background: rgba(198, 255, 187, 0.06);
+                      background: rgba(var(--color-mint-rgb), 0.06);
                       border: 1px solid ${C.mintBorder}; color: ${C.mint};
                       padding: 12px 14px; border-radius: 6px; font-size: 25px;
                       font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
@@ -907,7 +907,7 @@ function showTimeEditModal(shift) {
     // Audit trail notice
     const notice = document.createElement('div');
     notice.style.cssText = `
-        padding: 12px 16px; background: rgba(198, 255, 187, 0.06);
+        padding: 12px 16px; background: rgba(var(--color-mint-rgb), 0.06);
         border: 1px solid ${C.mintBorder}; border-radius: 8px;
         color: ${C.grey}; font-size: 20px; line-height: 1.5;
     `;
@@ -1006,7 +1006,7 @@ function buildTab(label, active, onClick) {
 function buildSummaryCard(label, value, color) {
     const card = document.createElement('div');
     card.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 16px 20px; text-align: center;
     `;
     card.innerHTML = `
@@ -1025,7 +1025,7 @@ function buildTimeInput(label, id, value) {
         <div style="font-size: 18px; color: ${C.grey}; margin-bottom: 6px;">${label}</div>
         <input type="time" id="${id}" value="${value || ''}"
                style="width: 100%; box-sizing: border-box;
-                      background: rgba(198, 255, 187, 0.06);
+                      background: rgba(var(--color-mint-rgb), 0.06);
                       border: 1px solid ${C.mintBorder}; color: ${C.mint};
                       padding: 12px 14px; border-radius: 6px; font-size: 25px;
                       font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);" />

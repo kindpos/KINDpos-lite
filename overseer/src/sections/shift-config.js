@@ -25,15 +25,15 @@ import { getRoleLabel } from '../data/sample-employees.js';
    COLOR PALETTE
 ------------------------------------------ */
 const C = {
-    mint:       '#C6FFBB',
-    mintFaded:  'rgba(198, 255, 187, 0.4)',
-    mintGhost:  'rgba(198, 255, 187, 0.15)',
-    mintBorder: 'rgba(198, 255, 187, 0.25)',
-    mintHover:  'rgba(198, 255, 187, 0.12)',
-    yellow:     '#FBDE42',
-    red:        '#FF3333',
-    redFaded:   'rgba(255, 51, 51, 0.3)',
-    dark:       '#333333',
+    mint:       'var(--color-mint)',
+    mintFaded:  'rgba(var(--color-mint-rgb), 0.4)',
+    mintGhost:  'rgba(var(--color-mint-rgb), 0.15)',
+    mintBorder: 'rgba(var(--color-mint-rgb), 0.25)',
+    mintHover:  'rgba(var(--color-mint-rgb), 0.12)',
+    yellow:     'var(--color-gold)',
+    red:        'var(--color-vermillion)',
+    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
+    dark:       'var(--color-bg)',
     darkCard:   '#2a2a2a',
     white:      '#FFFFFF',
     green:      '#00FF00',
@@ -109,8 +109,8 @@ function showToast(message, type = 'success') {
 
     const colors = {
         success: { bg: 'rgba(0, 255, 0, 0.15)', border: C.green, text: C.green },
-        error:   { bg: 'rgba(255, 51, 51, 0.15)', border: C.red, text: C.red },
-        info:    { bg: 'rgba(198, 255, 187, 0.15)', border: C.mint, text: C.mint },
+        error:   { bg: 'rgba(var(--color-vermillion-rgb), 0.15)', border: C.red, text: C.red },
+        info:    { bg: 'rgba(var(--color-mint-rgb), 0.15)', border: C.mint, text: C.mint },
         warning: { bg: 'rgba(255, 165, 0, 0.15)', border: C.orange, text: C.orange },
     };
     const tc = colors[type] || colors.info;
@@ -198,11 +198,11 @@ function buildDailyTimeline(wrapper) {
                         font-size: 36px; color: ${C.yellow};">
                 Shift Configuration
             </div>
-            <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5); margin-top: 4px;">
+            <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5); margin-top: 4px;">
                 ${todayDate}
             </div>
         </div>
-        <div style="font-size: 22px; color: rgba(198, 255, 187, 0.3);">
+        <div style="font-size: 22px; color: rgba(var(--color-mint-rgb), 0.3);">
             ⚠ Sample Data
         </div>
     `;
@@ -246,7 +246,7 @@ function buildDailyTimeline(wrapper) {
     // ── Gantt Chart ──
     const ganttSection = document.createElement('div');
     ganttSection.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden; margin-bottom: 20px;
     `;
 
@@ -268,7 +268,7 @@ function buildDailyTimeline(wrapper) {
     axisRow.style.cssText = `
         display: grid; grid-template-columns: 180px 1fr;
         padding: 10px 20px; gap: 12px;
-        background: rgba(198, 255, 187, 0.06);
+        background: rgba(var(--color-mint-rgb), 0.06);
         border-bottom: 1px solid ${C.mintBorder};
     `;
     const axisLabel = document.createElement('div');
@@ -304,12 +304,12 @@ function buildDailyTimeline(wrapper) {
 
     // Employee rows
     TODAYS_SCHEDULE.forEach((shift, i) => {
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
         const row = document.createElement('div');
         row.style.cssText = `
             display: grid; grid-template-columns: 180px 1fr;
             padding: 14px 20px; gap: 12px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg};
         `;
 
@@ -324,7 +324,7 @@ function buildDailyTimeline(wrapper) {
 
         // Gantt cell
         const ganttCell = document.createElement('div');
-        ganttCell.style.cssText = 'position: relative; height: 44px; background: rgba(198, 255, 187, 0.04); border-radius: 6px; overflow: hidden;';
+        ganttCell.style.cssText = 'position: relative; height: 44px; background: rgba(var(--color-mint-rgb), 0.04); border-radius: 6px; overflow: hidden;';
 
         // Hour gridlines
         for (let h = GANTT_CONFIG.startHour; h <= GANTT_CONFIG.endHour; h += 2) {
@@ -332,7 +332,7 @@ function buildDailyTimeline(wrapper) {
             const line = document.createElement('div');
             line.style.cssText = `
                 position: absolute; left: ${pct}%; top: 0; bottom: 0; width: 1px;
-                background: rgba(198, 255, 187, 0.08);
+                background: rgba(var(--color-mint-rgb), 0.08);
             `;
             ganttCell.appendChild(line);
         }
@@ -435,7 +435,7 @@ function buildDailyTimeline(wrapper) {
 function buildCoverageAnalysis(wrapper) {
     const section = document.createElement('div');
     section.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden;
     `;
 
@@ -453,7 +453,7 @@ function buildCoverageAnalysis(wrapper) {
     colHeader.style.cssText = `
         display: grid; grid-template-columns: 1.5fr repeat(5, 1fr) 0.8fr;
         padding: 14px 20px; gap: 8px;
-        background: rgba(198, 255, 187, 0.08);
+        background: rgba(var(--color-mint-rgb), 0.08);
         border-bottom: 1px solid ${C.mintBorder};
         font-size: 20px; color: ${C.mintFaded};
         text-transform: uppercase; letter-spacing: 1px;
@@ -472,7 +472,7 @@ function buildCoverageAnalysis(wrapper) {
     const currentHour = now.getHours();
 
     COVERAGE_REQUIREMENTS.dayparts.forEach((dp, i) => {
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
 
         // Count scheduled staff for this daypart
         const scheduled = { manager: 0, server: 0, bartender: 0, host: 0, busser: 0 };
@@ -503,7 +503,7 @@ function buildCoverageAnalysis(wrapper) {
         row.style.cssText = `
             display: grid; grid-template-columns: 1.5fr repeat(5, 1fr) 0.8fr;
             padding: 16px 20px; gap: 8px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg};
         `;
 
@@ -573,7 +573,7 @@ function buildShiftTemplates(wrapper) {
                     font-size: 36px; color: ${C.yellow}; margin-bottom: 4px;">
             Shift Templates
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             Reusable shift patterns for scheduling
         </div>
     `;
@@ -604,17 +604,17 @@ function buildShiftTemplates(wrapper) {
     SHIFT_TEMPLATES.forEach(tmpl => {
         const card = document.createElement('div');
         card.style.cssText = `
-            background: rgba(198, 255, 187, 0.04);
+            background: rgba(var(--color-mint-rgb), 0.04);
             border: 1px solid ${C.mintBorder};
             border-left: 4px solid ${tmpl.color};
             border-radius: 10px; padding: 24px;
             transition: all 0.2s ease;
         `;
         card.addEventListener('mouseenter', () => card.style.background = C.mintHover);
-        card.addEventListener('mouseleave', () => card.style.background = 'rgba(198, 255, 187, 0.04)');
+        card.addEventListener('mouseleave', () => card.style.background = 'rgba(var(--color-mint-rgb), 0.04)');
 
         const rolesHTML = tmpl.roles.map(r =>
-            `<span style="font-size: 18px; color: ${C.mint}; background: rgba(198, 255, 187, 0.1);
+            `<span style="font-size: 18px; color: ${C.mint}; background: rgba(var(--color-mint-rgb), 0.1);
                           padding: 4px 10px; border-radius: 4px;">${getRoleLabel(r)}</span>`
         ).join(' ');
 
@@ -644,7 +644,7 @@ function buildShiftTemplates(wrapper) {
     // ── Visual timeline preview ──
     const previewSection = document.createElement('div');
     previewSection.style.cssText = `
-        margin-top: 24px; background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        margin-top: 24px; background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; overflow: hidden;
     `;
 
@@ -661,7 +661,7 @@ function buildShiftTemplates(wrapper) {
     const previewAxis = document.createElement('div');
     previewAxis.style.cssText = `
         padding: 10px 20px; position: relative; height: 28px;
-        background: rgba(198, 255, 187, 0.06); border-bottom: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.06); border-bottom: 1px solid ${C.mintBorder};
     `;
     for (let h = GANTT_CONFIG.startHour; h <= GANTT_CONFIG.endHour; h += 2) {
         const displayH = h > 24 ? h - 24 : h;
@@ -681,11 +681,11 @@ function buildShiftTemplates(wrapper) {
     // Template bars
     SHIFT_TEMPLATES.forEach((tmpl, i) => {
         const row = document.createElement('div');
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(198, 255, 187, 0.03)';
+        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
         row.style.cssText = `
             display: grid; grid-template-columns: 160px 1fr;
             padding: 10px 20px; gap: 12px; align-items: center;
-            border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
             background: ${stripeBg};
         `;
 
@@ -736,7 +736,7 @@ function buildSwapQueue(wrapper) {
                     font-size: 36px; color: ${C.yellow}; margin-bottom: 4px;">
             Shift Swap Queue
         </div>
-        <div style="font-size: 25px; color: rgba(198, 255, 187, 0.5);">
+        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             ${pending.length} pending · ${resolved.length} resolved
         </div>
     `;
@@ -746,7 +746,7 @@ function buildSwapQueue(wrapper) {
     if (pending.length > 0) {
         const pendingSection = document.createElement('div');
         pendingSection.style.cssText = `
-            background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+            background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
             border-radius: 10px; overflow: hidden; margin-bottom: 24px;
         `;
 
@@ -779,7 +779,7 @@ function buildSwapQueue(wrapper) {
     if (resolved.length > 0) {
         const resolvedSection = document.createElement('div');
         resolvedSection.style.cssText = `
-            background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+            background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
             border-radius: 10px; overflow: hidden;
         `;
 
@@ -805,7 +805,7 @@ function buildSwapQueue(wrapper) {
 function buildSwapCard(swap, showActions) {
     const card = document.createElement('div');
     card.style.cssText = `
-        padding: 20px; border-bottom: 1px solid rgba(198, 255, 187, 0.08);
+        padding: 20px; border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
     `;
 
     const statusInfo = SWAP_STATUSES[swap.status] || { label: swap.status, color: C.grey };
@@ -844,7 +844,7 @@ function buildSwapCard(swap, showActions) {
     `;
 
     shiftRow.innerHTML = `
-        <div style="padding: 14px; background: rgba(198, 255, 187, 0.06);
+        <div style="padding: 14px; background: rgba(var(--color-mint-rgb), 0.06);
                     border-radius: 8px; border: 1px solid ${C.mintBorder};">
             <div style="font-size: 18px; color: ${C.mintFaded}; text-transform: uppercase; margin-bottom: 4px;">
                 ${swap.requestedBy.name.split(' ')[0]}'s Shift
@@ -856,7 +856,7 @@ function buildSwapCard(swap, showActions) {
         </div>
         <div style="font-size: 28px; color: ${C.yellow};">⇄</div>
         ${swap.swapShift ? `
-            <div style="padding: 14px; background: rgba(198, 255, 187, 0.06);
+            <div style="padding: 14px; background: rgba(var(--color-mint-rgb), 0.06);
                         border-radius: 8px; border: 1px solid ${C.mintBorder};">
                 <div style="font-size: 18px; color: ${C.mintFaded}; text-transform: uppercase; margin-bottom: 4px;">
                     ${swap.swapWith ? swap.swapWith.name.split(' ')[0] + "'s Shift" : 'Swap Shift'}
@@ -880,8 +880,8 @@ function buildSwapCard(swap, showActions) {
     // Reason
     const reasonRow = document.createElement('div');
     reasonRow.style.cssText = `
-        font-size: 22px; color: rgba(198, 255, 187, 0.6); margin-bottom: 14px;
-        padding: 10px 14px; background: rgba(198, 255, 187, 0.04); border-radius: 6px;
+        font-size: 22px; color: rgba(var(--color-mint-rgb), 0.6); margin-bottom: 14px;
+        padding: 10px 14px; background: rgba(var(--color-mint-rgb), 0.04); border-radius: 6px;
     `;
     reasonRow.innerHTML = `<span style="color: ${C.grey};">Reason:</span> ${swap.reason}`;
     card.appendChild(reasonRow);
@@ -901,7 +901,7 @@ function buildSwapCard(swap, showActions) {
         const denyRow = document.createElement('div');
         denyRow.style.cssText = `
             font-size: 20px; color: ${C.red}; padding: 10px 14px;
-            background: rgba(255, 51, 51, 0.06); border-radius: 6px; margin-bottom: 14px;
+            background: rgba(var(--color-vermillion-rgb), 0.06); border-radius: 6px; margin-bottom: 14px;
         `;
         denyRow.innerHTML = `<span style="font-weight: bold;">Denied:</span> ${swap.denyReason}`;
         card.appendChild(denyRow);
@@ -1006,7 +1006,7 @@ function buildTab(label, active, onClick) {
 function buildSummaryCard(label, value, color) {
     const card = document.createElement('div');
     card.style.cssText = `
-        background: rgba(198, 255, 187, 0.04); border: 1px solid ${C.mintBorder};
+        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
         border-radius: 10px; padding: 16px 20px; text-align: center;
     `;
     card.innerHTML = `

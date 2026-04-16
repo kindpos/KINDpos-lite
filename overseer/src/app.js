@@ -340,23 +340,23 @@ const PLACEHOLDERS = [
 
 function mountPlaceholder(container, def) {
     const fieldListHtml = def.fields
-        .map(f => `<div style="padding:6px 0;border-bottom:1px solid rgba(198,255,187,0.06);color:rgba(198,255,187,0.7);font-size:22px;">${f}</div>`)
+        .map(f => `<div style="padding:6px 0;border-bottom:1px solid rgba(var(--color-mint-rgb),0.06);color:rgba(var(--color-mint-rgb),0.7);font-size:22px;">${f}</div>`)
         .join('');
 
     const apiLine = def.api
-        ? `<div style="margin-top:16px;padding:10px 14px;background:rgba(198,255,187,0.04);border:1px solid rgba(198,255,187,0.1);border-radius:4px;font-family:var(--font-mono,monospace);font-size:18px;color:rgba(198,255,187,0.4);">API: ${def.api}</div>`
+        ? `<div style="margin-top:16px;padding:10px 14px;background:rgba(var(--color-mint-rgb),0.04);border:1px solid rgba(var(--color-mint-rgb),0.1);border-radius:4px;font-family:var(--font-mono,monospace);font-size:18px;color:rgba(var(--color-mint-rgb),0.4);">API: ${def.api}</div>`
         : '';
 
     container.innerHTML = `
         <div style="max-width:700px;margin:0 auto;padding:40px 24px;">
-            <div style="font-family:var(--font-display);font-size:44px;color:#FBDE42;margin-bottom:4px;">
+            <div style="font-family:var(--font-display);font-size:44px;color:var(--color-gold);margin-bottom:4px;">
                 ${def.icon} ${def.title}
             </div>
-            <div style="font-size:20px;color:rgba(198,255,187,0.35);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase;">
+            <div style="font-size:20px;color:rgba(var(--color-mint-rgb),0.35);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase;">
                 Coming Soon
             </div>
-            <div style="background:rgba(198,255,187,0.06);border:1px solid rgba(198,255,187,0.15);border-radius:6px;padding:20px;">
-                <div style="font-size:18px;color:rgba(198,255,187,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+            <div style="background:rgba(var(--color-mint-rgb),0.06);border:1px solid rgba(var(--color-mint-rgb),0.15);border-radius:6px;padding:20px;">
+                <div style="font-size:18px;color:rgba(var(--color-mint-rgb),0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
                     Planned Features
                 </div>
                 ${fieldListHtml}
@@ -397,7 +397,7 @@ function mountThemePicker(container) {
         <div style="font-family:var(--font-heading);font-size:44px;color:var(--color-gold);margin-bottom:4px;">
             Appearance
         </div>
-        <div style="font-size:20px;color:rgba(198,255,187,0.4);margin-bottom:24px;">
+        <div style="font-size:20px;color:rgba(var(--color-mint-rgb),0.4);margin-bottom:24px;">
             Select a theme — applies instantly across the Overseer.
         </div>
         <div id="theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
@@ -412,8 +412,8 @@ function mountThemePicker(container) {
         card.dataset.themeId = entry.id;
         card.style.cssText = `
             display:flex;flex-direction:column;align-items:center;gap:8px;
-            padding:16px;background:${isActive ? 'rgba(198,255,187,0.12)' : 'rgba(198,255,187,0.04)'};
-            border:2px solid ${isActive ? 'var(--color-mint)' : 'rgba(198,255,187,0.1)'};
+            padding:16px;background:${isActive ? 'rgba(var(--color-mint-rgb),0.12)' : 'rgba(var(--color-mint-rgb),0.04)'};
+            border:2px solid ${isActive ? 'var(--color-mint)' : 'rgba(var(--color-mint-rgb),0.1)'};
             border-radius:6px;cursor:pointer;transition:all 0.2s ease;
             font-family:var(--font-body);color:var(--color-mint);font-size:20px;
         `;
@@ -421,20 +421,20 @@ function mountThemePicker(container) {
             <span style="font-size:24px;font-family:var(--font-heading);color:${isActive ? 'var(--color-gold)' : 'var(--color-mint)'};">
                 ${entry.label}
             </span>
-            <span style="font-size:14px;color:rgba(198,255,187,0.35);text-transform:uppercase;letter-spacing:1px;">
+            <span style="font-size:14px;color:rgba(var(--color-mint-rgb),0.35);text-transform:uppercase;letter-spacing:1px;">
                 ${isActive ? 'Active' : 'Click to apply'}
             </span>
         `;
         card.addEventListener('mouseenter', () => {
             if (entry.id !== getCurrentThemeId()) {
-                card.style.background = 'rgba(198,255,187,0.1)';
-                card.style.borderColor = 'rgba(198,255,187,0.3)';
+                card.style.background = 'rgba(var(--color-mint-rgb),0.1)';
+                card.style.borderColor = 'rgba(var(--color-mint-rgb),0.3)';
             }
         });
         card.addEventListener('mouseleave', () => {
             if (entry.id !== getCurrentThemeId()) {
-                card.style.background = 'rgba(198,255,187,0.04)';
-                card.style.borderColor = 'rgba(198,255,187,0.1)';
+                card.style.background = 'rgba(var(--color-mint-rgb),0.04)';
+                card.style.borderColor = 'rgba(var(--color-mint-rgb),0.1)';
             }
         });
         card.addEventListener('click', async () => {
