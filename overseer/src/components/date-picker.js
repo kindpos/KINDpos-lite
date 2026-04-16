@@ -100,11 +100,11 @@ export function buildDatePicker({ value, onChange }) {
     nextBtn.textContent = '\u25B6';
     nextBtn.className = 'kp-date-btn';
 
-    function update(newDate) {
+    function update(newDate, fireChange = true) {
         current = newDate;
         label.textContent = display(current);
         nextBtn.disabled = current >= fmt(new Date());
-        if (onChange) onChange(current);
+        if (fireChange && onChange) onChange(current);
     }
 
     prevBtn.addEventListener('click', () => update(shiftDate(current, -1)));
@@ -128,7 +128,7 @@ export function buildDatePicker({ value, onChange }) {
     wrapper.appendChild(label);
     wrapper.appendChild(nextBtn);
 
-    update(current);
+    update(current, false);
     return wrapper;
 }
 
