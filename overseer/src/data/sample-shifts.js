@@ -64,9 +64,11 @@ export async function loadShiftData() {
             return {
                 employeeId: emp.id,
                 name: `${emp.firstName} ${emp.lastName}`,
-                role: emp.role,
-                start: template.start,
-                end: template.end,
+                role: emp.roles || [],
+                scheduledStart: template.start,
+                scheduledEnd: template.end,
+                actualStart: null,
+                actualEnd: null,
                 status: 'scheduled',
                 template: template.id,
             };
