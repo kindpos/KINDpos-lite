@@ -7,6 +7,7 @@
    ============================================ */
 
 import { parseMenuTemplate, getSummary } from '../services/excel-parser.js';
+import { pushChanges } from '../services/config-push.js';
 
 /* ------------------------------------------
    COLOR PALETTE (shared with reporting.js)
@@ -32,6 +33,66 @@ const COLORS = {
 ------------------------------------------ */
 let viewHistory = [];
 let currentWrapper = null;
+
+function showToast(msg, type = 'success') {
+    const toast = document.createElement('div');
+    const color = type === 'error' ? 'var(--color-vermillion)' : 'var(--color-green)';
+    toast.style.cssText = `position:fixed;top:24px;right:24px;z-index:10000;background:rgba(0,0,0,0.85);border:1px solid ${color};color:${color};padding:14px 24px;border-radius:8px;font-family:var(--font-body);font-size:22px;`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function convertParsedDataToEvents(data) {
+    const events = [];
+    if (!data) return events;
+
+    // Store info
+    if (data.restaurant_info && data.restaurant_info.name) {
+        events.push({
+            event_type: 'store.info_updated',
+            payload: {
+                restaurant_name: data.restaurant_info.name,
+                address: data.restaurant_info.address || '',
+                phone: data.restaurant_info.phone || '',
+                website: data.restaurant_info.website || '',
+            },
+        });
+    }
+
+    // Categories
+    (data.categories || []).forEach((cat, i) => {
+        const catId = cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+        events.push({
+            event_type: 'menu.category_created',
+            payload: {
+                category_id: catId,
+                name: cat.name,
+                display_order: cat.display_order || i + 1,
+                color: cat.color || '#fcbe40',
+            },
+        });
+    });
+
+    // Items
+    (data.items || []).forEach((item, i) => {
+        const catId = (item.category || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+        events.push({
+            event_type: 'menu.item_created',
+            payload: {
+                item_id: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '') || `import_item_${i}`,
+                name: item.name,
+                price: parseFloat(item.price) || 0,
+                description: item.description || '',
+                category: catId || item.category || '',
+                active: item.active !== false,
+                display_order: i + 1,
+            },
+        });
+    });
+
+    return events;
+}
 
 /** Parsed data flows between views */
 let parsedData = null;
@@ -804,8 +865,20 @@ function buildPreview(wrapper) {
     confirmBtn.textContent = 'Confirm Import →';
     confirmBtn.addEventListener('mouseenter', () => { confirmBtn.style.background = COLORS.yellow; });
     confirmBtn.addEventListener('mouseleave', () => { confirmBtn.style.background = COLORS.mint; });
-    confirmBtn.addEventListener('click', () => {
-        pushView('success');
+    confirmBtn.addEventListener('click', async () => {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Importing...';
+
+        const events = convertParsedDataToEvents(parsedData);
+        const result = await pushChanges(events);
+
+        if (result.ok) {
+            pushView('success');
+        } else {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirm Import →';
+            showToast('Import failed — try again', 'error');
+        }
     });
     wrapper.appendChild(confirmBtn);
 
