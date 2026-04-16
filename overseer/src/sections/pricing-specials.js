@@ -22,7 +22,7 @@ const COLORS = {
     red:        'var(--color-vermillion)',
     redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
     dark:       'var(--color-bg)',
-    grey:       '#999999',
+    grey:       '#f5f0e8',
     white:      '#FFFFFF',
     green:      '#4CAF50',
     greenFaded: 'rgba(76, 175, 80, 0.3)',
@@ -797,6 +797,7 @@ function renderDayPartList() {
             </div>
             <div style="display: flex; align-items: center; gap: 16px;">
                 <span style="font-family: var(--font-body); font-size: 22px; font-weight: bold; color: ${adjustColor};">${adjustText}</span>
+                <span style="font-family: var(--font-body); font-size: 18px; color: ${COLORS.mint}; opacity: 0.7;">✎ Edit</span>
             </div>
         `;
         container.appendChild(row);
