@@ -130,7 +130,7 @@ export class TopologyMap {
         const header = this._createSVG('text', {
             x: 20, y: 24,
             fill: 'rgba(var(--color-mint-rgb), 0.4)',
-            'font-family': 'Orbitron, monospace',
+            'font-family': 'var(--font-heading)',
             'font-size': 11,
             'letter-spacing': '2px'
         });
@@ -186,7 +186,7 @@ export class TopologyMap {
             x: 0, y: 14,
             'text-anchor': 'middle',
             fill: 'var(--color-mint)',
-            'font-family': 'Space Mono, monospace',
+            'font-family': 'var(--font-body)',
             'font-size': 11
         });
         label.textContent = 'Router';
@@ -197,7 +197,7 @@ export class TopologyMap {
             x: 0, y: 26,
             'text-anchor': 'middle',
             fill: '#888',
-            'font-family': 'Space Mono, monospace',
+            'font-family': 'var(--font-body)',
             'font-size': 9
         });
         ip.textContent = this.network.gateway ? this.network.gateway.ip : '192.168.1.1';
@@ -338,7 +338,7 @@ export class TopologyMap {
             y: 6,
             'text-anchor': 'middle',
             fill: 'var(--color-mint)',
-            'font-family': 'Space Mono, monospace',
+            'font-family': 'var(--font-body)',
             'font-size': 9
         });
         model.textContent = this._truncateModel(printer.model);
@@ -349,7 +349,7 @@ export class TopologyMap {
             y: 18,
             'text-anchor': 'middle',
             fill: color,
-            'font-family': 'Space Mono, monospace',
+            'font-family': 'var(--font-body)',
             'font-size': 8,
             'font-weight': 'bold',
             'letter-spacing': '1px'
@@ -362,7 +362,7 @@ export class TopologyMap {
             y: 30,
             'text-anchor': 'middle',
             fill: '#888',
-            'font-family': 'Space Mono, monospace',
+            'font-family': 'var(--font-body)',
             'font-size': 8
         });
         ip.textContent = this._getShortIP(printer.ip_address);
@@ -394,7 +394,7 @@ export class TopologyMap {
             x: 0, y: 0,
             'text-anchor': 'middle',
             fill: '#666',
-            'font-family': 'Space Mono, monospace',
+            'font-family': 'var(--font-body)',
             'font-size': 14
         });
         text1.textContent = 'No printers discovered';
@@ -404,7 +404,7 @@ export class TopologyMap {
             x: 0, y: 24,
             'text-anchor': 'middle',
             fill: '#555',
-            'font-family': 'Space Mono, monospace',
+            'font-family': 'var(--font-body)',
             'font-size': 11
         });
         text2.textContent = 'Click "Scan Network" or "Add Manually" to get started';
@@ -462,7 +462,7 @@ export class TopologyMap {
             border-radius: 6px;
             padding: 12px 16px;
             color: var(--color-mint);
-            font-family: 'Space Mono', monospace;
+            font-family: var(--font-body);
             font-size: 11px;
             line-height: 1.6;
             z-index: 100;
@@ -560,7 +560,7 @@ export class TopologyMap {
             const label = this._createSVG('text', {
                 x: xOffset + 16, y: 4,
                 fill: '#888',
-                'font-family': 'Space Mono, monospace',
+                'font-family': 'var(--font-body)',
                 'font-size': 9
             });
             label.textContent = item.label;
@@ -585,7 +585,7 @@ export class TopologyMap {
             const label = this._createSVG('text', {
                 x: xOffset + 16, y: 4,
                 fill: '#888',
-                'font-family': 'Space Mono, monospace',
+                'font-family': 'var(--font-body)',
                 'font-size': 9
             });
             label.textContent = role.charAt(0).toUpperCase() + role.slice(1);

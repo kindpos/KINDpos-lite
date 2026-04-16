@@ -32,6 +32,12 @@ const TOKEN_TO_CSS = {
     fb:         '--font-body',
 };
 
+// These also mirror fh/fb for compatibility with sections using --font-display / --font-mono
+const FONT_ALIAS_MAP = {
+    fh: ['--font-display'],
+    fb: ['--font-mono'],
+};
+
 const TOKEN_TO_CSS_RGB = {
     gold:       '--color-gold-rgb',
     mint:       '--color-mint-rgb',
@@ -50,6 +56,8 @@ function syncCSSVars() {
     for (const [tokenKey, cssVar] of Object.entries(TOKEN_TO_CSS)) {
         if (T[tokenKey] != null) {
             root.setProperty(cssVar, T[tokenKey]);
+            const aliases = FONT_ALIAS_MAP[tokenKey];
+            if (aliases) aliases.forEach(a => root.setProperty(a, T[tokenKey]));
         }
     }
     for (const [tokenKey, cssVar] of Object.entries(TOKEN_TO_CSS_RGB)) {

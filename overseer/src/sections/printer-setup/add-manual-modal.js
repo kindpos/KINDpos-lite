@@ -97,7 +97,7 @@ export class AddManualModal {
                 border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.1);
             ">
                 <div style="
-                    font-family: 'Orbitron', monospace;
+                    font-family: var(--font-heading);
                     font-size: 14px;
                     color: var(--color-gold);
                     letter-spacing: 1px;
@@ -109,7 +109,7 @@ export class AddManualModal {
                 <div style="margin-bottom: 16px;">
                     <label style="
                         display: block;
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 11px;
                         color: #888;
                         margin-bottom: 6px;
@@ -124,14 +124,14 @@ export class AddManualModal {
                                border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                border-radius: 4px;
                                color: var(--color-mint);
-                               font-family: 'Space Mono', monospace;
+                               font-family: var(--font-body);
                                font-size: 14px;
                                outline: none;
                                box-sizing: border-box;
                                transition: border-color 0.15s ease;
                            ">
                     <div id="add-ip-error" style="
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 10px;
                         color: #FF4444;
                         margin-top: 4px;
@@ -143,7 +143,7 @@ export class AddManualModal {
                 <div style="margin-bottom: 16px;">
                     <label style="
                         display: block;
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 11px;
                         color: #888;
                         margin-bottom: 6px;
@@ -158,14 +158,14 @@ export class AddManualModal {
                                border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                border-radius: 4px;
                                color: var(--color-mint);
-                               font-family: 'Space Mono', monospace;
+                               font-family: var(--font-body);
                                font-size: 14px;
                                outline: none;
                                box-sizing: border-box;
                                transition: border-color 0.15s ease;
                            ">
                     <div style="
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 10px;
                         color: #555;
                         margin-top: 4px;
@@ -174,7 +174,7 @@ export class AddManualModal {
 
                 <!-- Optional fields -->
                 <div style="
-                    font-family: 'Space Mono', monospace;
+                    font-family: var(--font-body);
                     font-size: 10px;
                     color: #666;
                     margin-bottom: 10px;
@@ -185,7 +185,7 @@ export class AddManualModal {
                     <div style="flex: 1;">
                         <label style="
                             display: block;
-                            font-family: 'Space Mono', monospace;
+                            font-family: var(--font-body);
                             font-size: 10px;
                             color: #666;
                             margin-bottom: 4px;
@@ -199,7 +199,7 @@ export class AddManualModal {
                                    border: 1px solid rgba(var(--color-mint-rgb), 0.15);
                                    border-radius: 4px;
                                    color: var(--color-mint);
-                                   font-family: 'Space Mono', monospace;
+                                   font-family: var(--font-body);
                                    font-size: 12px;
                                    outline: none;
                                    box-sizing: border-box;
@@ -208,7 +208,7 @@ export class AddManualModal {
                     <div style="flex: 1;">
                         <label style="
                             display: block;
-                            font-family: 'Space Mono', monospace;
+                            font-family: var(--font-body);
                             font-size: 10px;
                             color: #666;
                             margin-bottom: 4px;
@@ -222,7 +222,7 @@ export class AddManualModal {
                                    border: 1px solid rgba(var(--color-mint-rgb), 0.15);
                                    border-radius: 4px;
                                    color: var(--color-mint);
-                                   font-family: 'Space Mono', monospace;
+                                   font-family: var(--font-body);
                                    font-size: 12px;
                                    outline: none;
                                    box-sizing: border-box;
@@ -232,7 +232,7 @@ export class AddManualModal {
 
                 <!-- Status message area -->
                 <div id="add-status-msg" style="
-                    font-family: 'Space Mono', monospace;
+                    font-family: var(--font-body);
                     font-size: 11px;
                     min-height: 20px;
                     text-align: center;
@@ -254,7 +254,7 @@ export class AddManualModal {
                     border: 1px solid #666;
                     border-radius: 4px;
                     color: #888;
-                    font-family: 'Space Mono', monospace;
+                    font-family: var(--font-body);
                     font-size: 12px;
                     cursor: pointer;
                     transition: all 0.15s ease;
@@ -265,7 +265,7 @@ export class AddManualModal {
                     border: none;
                     border-radius: 4px;
                     color: var(--color-bg-dark);
-                    font-family: 'Space Mono', monospace;
+                    font-family: var(--font-body);
                     font-size: 12px;
                     font-weight: bold;
                     cursor: pointer;

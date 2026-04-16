@@ -44,6 +44,8 @@
     /* Typography */
     --font-heading: 'Chakra Petch', 'Impact', sans-serif;
     --font-body:    'B612 Mono', 'Courier New', monospace;
+    --font-display: 'Chakra Petch', 'Impact', sans-serif;
+    --font-mono:    'B612 Mono', 'Courier New', monospace;
 
     /* Font Sizes */
     --text-title:    36px;

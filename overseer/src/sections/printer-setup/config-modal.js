@@ -107,14 +107,14 @@ export class ConfigModal {
                 border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.1);
             ">
                 <div style="
-                    font-family: 'Orbitron', monospace;
+                    font-family: var(--font-heading);
                     font-size: 14px;
                     color: var(--color-gold);
                     letter-spacing: 1px;
                     margin-bottom: 4px;
                 ">CONFIGURE PRINTER</div>
                 <div style="
-                    font-family: 'Space Mono', monospace;
+                    font-family: var(--font-body);
                     font-size: 16px;
                     color: var(--color-mint);
                 ">${this.printer.model}</div>
@@ -151,7 +151,7 @@ export class ConfigModal {
                 <div class="config-section" style="margin-bottom: 16px;">
                     <label class="config-field-label" style="
                         display: block;
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 11px;
                         color: #888;
                         margin-bottom: 6px;
@@ -167,7 +167,7 @@ export class ConfigModal {
                                         border-radius: 4px;
                                         background: ${this.printer.role === opt.value ? opt.color : 'transparent'};
                                         color: ${this.printer.role === opt.value ? 'var(--color-bg-dark)' : opt.color};
-                                        font-family: 'Space Mono', monospace;
+                                        font-family: var(--font-body);
                                         font-size: 11px;
                                         font-weight: bold;
                                         cursor: pointer;
@@ -184,7 +184,7 @@ export class ConfigModal {
                 <div class="config-section" style="margin-bottom: 16px;">
                     <label class="config-field-label" style="
                         display: block;
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 11px;
                         color: #888;
                         margin-bottom: 6px;
@@ -199,7 +199,7 @@ export class ConfigModal {
                                border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                border-radius: 4px;
                                color: var(--color-mint);
-                               font-family: 'Space Mono', monospace;
+                               font-family: var(--font-body);
                                font-size: 13px;
                                outline: none;
                                box-sizing: border-box;
@@ -215,7 +215,7 @@ export class ConfigModal {
                 <!-- Settings -->
                 <div class="config-section" style="margin-bottom: 16px;">
                     <div class="config-field-label" style="
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 11px;
                         color: #888;
                         margin-bottom: 10px;
@@ -232,7 +232,7 @@ export class ConfigModal {
                                        cursor: pointer;
                                    ">
                             <span style="
-                                font-family: 'Space Mono', monospace;
+                                font-family: var(--font-body);
                                 font-size: 12px;
                                 color: var(--color-mint);
                             ">Auto-cut paper</span>
@@ -243,7 +243,7 @@ export class ConfigModal {
                         <div style="flex: 1;">
                             <label style="
                                 display: block;
-                                font-family: 'Space Mono', monospace;
+                                font-family: var(--font-body);
                                 font-size: 10px;
                                 color: #666;
                                 margin-bottom: 4px;
@@ -255,7 +255,7 @@ export class ConfigModal {
                                 border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                 border-radius: 4px;
                                 color: var(--color-mint);
-                                font-family: 'Space Mono', monospace;
+                                font-family: var(--font-body);
                                 font-size: 12px;
                                 cursor: pointer;
                             ">
@@ -266,7 +266,7 @@ export class ConfigModal {
                         <div style="flex: 1;">
                             <label style="
                                 display: block;
-                                font-family: 'Space Mono', monospace;
+                                font-family: var(--font-body);
                                 font-size: 10px;
                                 color: #666;
                                 margin-bottom: 4px;
@@ -278,7 +278,7 @@ export class ConfigModal {
                                 border: 1px solid rgba(var(--color-mint-rgb), 0.2);
                                 border-radius: 4px;
                                 color: var(--color-mint);
-                                font-family: 'Space Mono', monospace;
+                                font-family: var(--font-body);
                                 font-size: 12px;
                                 cursor: pointer;
                             ">
@@ -305,7 +305,7 @@ export class ConfigModal {
                         border: 1px solid #FFA500;
                         border-radius: 4px;
                         color: #FFA500;
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 12px;
                         cursor: pointer;
                         transition: all 0.15s ease;
@@ -316,7 +316,7 @@ export class ConfigModal {
                         border: 1px solid #FF4444;
                         border-radius: 4px;
                         color: #FF4444;
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 12px;
                         cursor: pointer;
                         transition: all 0.15s ease;
@@ -329,7 +329,7 @@ export class ConfigModal {
                         border: 1px solid #666;
                         border-radius: 4px;
                         color: #888;
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 12px;
                         cursor: pointer;
                         transition: all 0.15s ease;
@@ -340,7 +340,7 @@ export class ConfigModal {
                         border: none;
                         border-radius: 4px;
                         color: var(--color-bg-dark);
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-body);
                         font-size: 12px;
                         font-weight: bold;
                         cursor: pointer;
