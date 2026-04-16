@@ -91,26 +91,40 @@ class TipoutRule(BaseModel):
 class MenuItem(BaseModel):
     item_id: str
     name: str
-    category_id: str
+    category_id: Optional[str] = None
+    category: Optional[str] = None
     price: Decimal = Decimal("0")
     description: Optional[str] = None
     kitchen_name: Optional[str] = None
     tax_rule_id: Optional[str] = None
-    revenue_category: str # Food, Beverage, Alcohol
+    revenue_category: str = "Food"
     prep_time: int = 0
     print_station: Optional[str] = None
     allergens: List[str] = []
     active: bool = True
+    display_order: int = 0
+
+    def __init__(self, **data):
+        if 'category_id' not in data and 'category' in data:
+            data['category_id'] = data['category']
+        super().__init__(**data)
 
 class MenuCategory(BaseModel):
     category_id: str
     name: str
-    display_order: int
-    hex_color: str
+    display_order: int = 0
+    hex_color: str = "#888888"
+    color: Optional[str] = None
     tax_rule_id: Optional[str] = None
     enable_placement: bool = False
     half_placement: bool = False
+    pizza_builder: bool = False
     active: bool = True
+
+    def __init__(self, **data):
+        if 'hex_color' not in data and 'color' in data:
+            data['hex_color'] = data['color']
+        super().__init__(**data)
 
 # Floor Plan Models
 class TableElement(BaseModel):
