@@ -30,6 +30,10 @@ import { buildStoreInfoScene,     cleanupStoreInfo     } from './sections/store-
 import { buildOrderSettingsScene, cleanupOrderSettings } from './sections/order-settings.js';
 import { buildCardReadersScene,  cleanupCardReaders  } from './sections/card-readers.js';
 import { buildReceiptSettingsScene, cleanupReceiptSettings } from './sections/receipt-settings.js';
+import { buildTerminalSettingsScene, cleanupTerminalSettings } from './sections/terminal-settings.js';
+import { buildLaborReportsScene,  cleanupLaborReports  } from './sections/labor-reports.js';
+import { buildMenuPerformanceScene, cleanupMenuPerformance } from './sections/menu-performance.js';
+import { buildFloorPlanScene,    cleanupFloorPlan    } from './sections/floor-plan.js';
 import { buildPayrollTipsScene,    cleanupPayrollTips    } from './sections/payroll-tips.js';
 import { buildTimeAttendanceScene, cleanupTimeAttendance } from './sections/time-attendance.js';
 import { buildShiftConfigScene,    cleanupShiftConfig    } from './sections/shift-config.js';
@@ -296,87 +300,34 @@ function registerAllSections() {
         mount: (container) => buildReceiptSettingsScene(container),
         unmount: (container) => cleanupReceiptSettings(container),
     });
+    SceneManager.register({
+        name: 'terminal-settings',
+        mount: (container) => buildTerminalSettingsScene(container),
+        unmount: (container) => cleanupTerminalSettings(container),
+    });
+    SceneManager.register({
+        name: 'labor-reports',
+        mount: (container) => buildLaborReportsScene(container),
+        unmount: (container) => cleanupLaborReports(container),
+    });
+    SceneManager.register({
+        name: 'menu-performance',
+        mount: (container) => buildMenuPerformanceScene(container),
+        unmount: (container) => cleanupMenuPerformance(container),
+    });
+    SceneManager.register({
+        name: 'floor-plan',
+        mount: (container) => buildFloorPlanScene(container),
+        unmount: (container) => cleanupFloorPlan(container),
+    });
 
-    // Placeholder sections for categories documented in CONFIGURABLE_COMPONENTS.md
-    registerPlaceholders();
+    registerSystemAppearance();
 }
 
 /* ------------------------------------------
-   PLACEHOLDER SCENE BUILDER
-
-   Renders a consistent "coming soon" card for
-   sections documented in CONFIGURABLE_COMPONENTS.md
-   that don't have full implementations yet.
+   SYSTEM APPEARANCE (theme picker scene)
 ------------------------------------------ */
-const PLACEHOLDERS = [
-    {
-        name: 'labor-reports',
-        title: 'Labor Reports',
-        icon: '\u{1F4CA}',
-        fields: ['Staff hours & overtime', 'Labor cost vs. revenue', 'Schedule adherence'],
-        api: '/api/v1/reporting/labor',
-    },
-    {
-        name: 'menu-performance',
-        title: 'Menu Performance',
-        icon: '\u{1F4C8}',
-        fields: ['Item sales velocity', 'Profitability per item', 'Waste & 86 tracking'],
-        api: '/api/v1/reporting/menu-performance',
-    },
-    {
-        name: 'floor-plan',
-        title: 'Floor Plan & Sections',
-        icon: '\u{1F5FA}\u{FE0F}',
-        fields: ['Sections & table layout', 'Seat counts & shapes', 'Walls, barriers, fixtures'],
-        api: 'GET /api/v1/config/floorplan',
-    },
-    {
-        name: 'terminal-settings',
-        title: 'Terminal Settings',
-        icon: '\u{1F5A5}\u{FE0F}',
-        fields: ['Terminal ID & name', 'Display resolution & brightness', 'WiFi / static IP config'],
-        api: 'GET /api/v1/config/terminals',
-    },
-];
-
-function mountPlaceholder(container, def) {
-    const fieldListHtml = def.fields
-        .map(f => `<div style="padding:6px 0;border-bottom:1px solid rgba(var(--color-mint-rgb),0.06);color:rgba(var(--color-mint-rgb),0.7);font-size:22px;">${f}</div>`)
-        .join('');
-
-    const apiLine = def.api
-        ? `<div style="margin-top:16px;padding:10px 14px;background:rgba(var(--color-mint-rgb),0.04);border:1px solid rgba(var(--color-mint-rgb),0.1);border-radius:4px;font-family:var(--font-mono,monospace);font-size:18px;color:rgba(var(--color-mint-rgb),0.4);">API: ${def.api}</div>`
-        : '';
-
-    container.innerHTML = `
-        <div style="max-width:700px;margin:0 auto;padding:40px 24px;">
-            <div style="font-family:var(--font-display);font-size:44px;color:var(--color-gold);margin-bottom:4px;">
-                ${def.icon} ${def.title}
-            </div>
-            <div style="font-size:20px;color:rgba(var(--color-mint-rgb),0.35);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase;">
-                Coming Soon
-            </div>
-            <div style="background:rgba(var(--color-mint-rgb),0.06);border:1px solid rgba(var(--color-mint-rgb),0.15);border-radius:6px;padding:20px;">
-                <div style="font-size:18px;color:rgba(var(--color-mint-rgb),0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-                    Planned Features
-                </div>
-                ${fieldListHtml}
-            </div>
-            ${apiLine}
-        </div>
-    `;
-}
-
-function registerPlaceholders() {
-    PLACEHOLDERS.forEach(def => {
-        SceneManager.register({
-            name: def.name,
-            mount(container) { mountPlaceholder(container, def); },
-            unmount() {},
-        });
-    });
-
-    // System Appearance — real theme picker (not a placeholder)
+function registerSystemAppearance() {
     SceneManager.register({
         name: 'system-appearance',
         mount(container) { mountThemePicker(container); },
