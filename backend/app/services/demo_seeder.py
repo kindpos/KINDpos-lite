@@ -20,17 +20,17 @@ _SEED_PATH = os.path.join(
 
 
 async def seed_demo_data_if_empty(ledger: EventLedger) -> None:
-    existing = await ledger.get_events_by_type(EventType.EMPLOYEE_CREATED, limit=1)
-    if existing:
-        # Employees exist — but check if menu or sample orders need seeding
-        await seed_menu_if_empty(ledger)
-        await seed_sample_orders_if_empty(ledger)
-        await ensure_test_charge_item(ledger)
-        return
-
     seed_path = os.path.normpath(_SEED_PATH)
     if not os.path.exists(seed_path):
         print(f"Demo seed file not found at {seed_path} — skipping auto-seed")
+        return
+
+    existing = await ledger.get_events_by_type(EventType.EMPLOYEE_CREATED, limit=1)
+    if existing:
+        # Employees exist — check if menu or sample orders need seeding
+        await seed_menu_if_empty(ledger)
+        await seed_sample_orders_if_empty(ledger)
+        await ensure_test_charge_item(ledger)
         return
 
     with open(seed_path, 'r') as f:
