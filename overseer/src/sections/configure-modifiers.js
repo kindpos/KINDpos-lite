@@ -32,154 +32,85 @@ const COLORS = {
 };
 
 /* ------------------------------------------
-   TEST DATA
+   MENU DATA (fetched from API)
 ------------------------------------------ */
-const TEST_DATA = {
-    modifiers: [
-        { id: 'mod_cheese',     name: 'Cheese',       base_price: 0.00, active: true },
-        { id: 'mod_lettuce',    name: 'Lettuce',      base_price: 0.00, active: true },
-        { id: 'mod_tomato',     name: 'Tomato',       base_price: 0.00, active: true },
-        { id: 'mod_onion',      name: 'Onion',        base_price: 0.00, active: true },
-        { id: 'mod_bacon',      name: 'Bacon',        base_price: 2.00, active: true },
-        { id: 'mod_avocado',    name: 'Avocado',      base_price: 1.50, active: true },
-        { id: 'mod_ranch',      name: 'Ranch',        base_price: 0.00, active: true },
-        { id: 'mod_italian',    name: 'Italian',      base_price: 0.00, active: true },
-        { id: 'mod_bluecheese', name: 'Blue Cheese',  base_price: 0.00, active: true },
-        { id: 'mod_vinaigrette',name: 'Vinaigrette',  base_price: 0.00, active: true },
-        { id: 'mod_rare',       name: 'Rare',         base_price: 0.00, active: true },
-        { id: 'mod_medrare',    name: 'Medium Rare',  base_price: 0.00, active: true },
-        { id: 'mod_medium',     name: 'Medium',       base_price: 0.00, active: true },
-        { id: 'mod_medwell',    name: 'Medium Well',  base_price: 0.00, active: true },
-        { id: 'mod_welldone',   name: 'Well Done',    base_price: 0.00, active: true },
-        { id: 'mod_chicken',    name: 'Chicken',      base_price: 3.00, active: true },
-        { id: 'mod_shrimp',     name: 'Shrimp',       base_price: 4.00, active: true },
-        { id: 'mod_salad',      name: 'Side Salad',   base_price: 0.00, active: true },
-        { id: 'mod_fries',      name: 'Side Fries',   base_price: 0.00, active: true },
-        { id: 'mod_rice',       name: 'Side Rice',    base_price: 0.00, active: true },
-    ],
+async function fetchModifierData() {
+    try {
+        const [menuRes, catRes] = await Promise.all([
+            fetch('/api/v1/menu'),
+            fetch('/api/v1/config/menu/categories'),
+        ]);
+        const menu = menuRes.ok ? await menuRes.json() : { modifier_groups: [] };
+        const cats = catRes.ok ? await catRes.json() : [];
 
-    options: [
-        { id: 'opt_add',     name: 'Add',      is_default: true,  active: true },
-        { id: 'opt_extra',   name: 'Extra',     is_default: false, active: true },
-        { id: 'opt_light',   name: 'Light',     is_default: false, active: true },
-        { id: 'opt_no',      name: 'No',        is_default: false, active: true },
-        { id: 'opt_sub',     name: 'Sub',       is_default: false, active: true },
-        { id: 'opt_onside',  name: 'On Side',   is_default: false, active: true },
-    ],
+        const allModifiers = [];
+        const groups = [];
+        const modIdSet = new Set();
 
-    templates: [
-        {
-            id: 'tmpl_standard',
-            name: 'Standard Quantity',
-            description: 'For toppings with quantity variations',
-            option_ids: ['opt_add', 'opt_extra', 'opt_light', 'opt_no', 'opt_onside'],
-            active: true,
-        },
-        {
-            id: 'tmpl_protein',
-            name: 'Protein Options',
-            description: 'For protein add-ons',
-            option_ids: ['opt_add', 'opt_extra', 'opt_no'],
-            active: true,
-        },
-        {
-            id: 'tmpl_simple',
-            name: 'Simple Add/No',
-            description: 'Basic add or remove',
-            option_ids: ['opt_add', 'opt_no'],
-            active: true,
-        },
-    ],
+        for (const grp of (menu.modifier_groups || [])) {
+            const mods = grp.modifiers || [];
+            const subcatMods = (grp.subcats || []).flatMap(sc => sc.modifiers || []);
+            const allGrpMods = [...mods, ...subcatMods];
 
-    groups: [
-        {
-            id: 'grp_toppings',
-            name: 'Burger Toppings',
-            modifier_ids: ['mod_cheese', 'mod_lettuce', 'mod_tomato', 'mod_onion', 'mod_bacon', 'mod_avocado'],
-            template_id: 'tmpl_standard',
-            min_selections: 0,
-            max_selections: 10,
-            option_prices: {
-                'opt_add': 0.00, 'opt_extra': 1.50, 'opt_light': 0.00,
-                'opt_no': 0.00, 'opt_onside': 0.00,
-            },
-            active: true,
-        },
-        {
-            id: 'grp_dressing',
-            name: 'Dressing Choice',
-            modifier_ids: ['mod_ranch', 'mod_italian', 'mod_bluecheese', 'mod_vinaigrette'],
-            template_id: 'tmpl_simple',
-            min_selections: 0,
-            max_selections: 1,
-            option_prices: { 'opt_add': 0.00, 'opt_no': 0.00 },
-            active: true,
-        },
-        {
-            id: 'grp_protein',
-            name: 'Protein Add-Ons',
-            modifier_ids: ['mod_chicken', 'mod_shrimp'],
-            template_id: 'tmpl_protein',
-            min_selections: 0,
-            max_selections: 3,
-            option_prices: { 'opt_add': 0.00, 'opt_extra': 3.00, 'opt_no': 0.00 },
-            active: true,
-        },
-    ],
+            for (const m of allGrpMods) {
+                const mid = m.modifier_id || m.id;
+                if (!modIdSet.has(mid)) {
+                    modIdSet.add(mid);
+                    allModifiers.push({
+                        id: mid,
+                        name: m.name,
+                        base_price: parseFloat(m.price) || 0,
+                        active: true,
+                    });
+                }
+            }
 
-    // Mandatory: direct mod attachments (no template/options)
-    mandatory_assignments: [
-        {
-            id: 'mand_steak_temp',
-            target_type: 'category',     // 'category' or 'item'
-            target_id: 'cat_entrees',
-            target_name: 'Entrees',
-            label: 'Cooking Temperature',
-            modifier_ids: ['mod_rare', 'mod_medrare', 'mod_medium', 'mod_medwell', 'mod_welldone'],
-            select_mode: 'single',       // 'single' or 'multi'
-        },
-        {
-            id: 'mand_entree_side',
-            target_type: 'category',
-            target_id: 'cat_entrees',
-            target_name: 'Entrees',
-            label: 'Side Choice',
-            modifier_ids: ['mod_salad', 'mod_fries', 'mod_rice'],
-            select_mode: 'single',
-        },
-    ],
+            groups.push({
+                id: grp.group_id || grp.id,
+                name: grp.name,
+                modifier_ids: allGrpMods.map(m => m.modifier_id || m.id),
+                template_id: 'tmpl_standard',
+                min_selections: 0,
+                max_selections: allGrpMods.length,
+                option_prices: {},
+                active: true,
+                color: grp.color || null,
+                category_id: grp.category_id || null,
+            });
+        }
 
-    // Universal: group assignments to categories
-    universal_assignments: [
-        {
-            id: 'univ_app_toppings',
-            category_id: 'cat_appetizers',
-            category_name: 'Appetizers',
-            group_ids: ['grp_toppings'],
-        },
-        {
-            id: 'univ_entree_toppings',
-            category_id: 'cat_entrees',
-            category_name: 'Entrees',
-            group_ids: ['grp_toppings', 'grp_protein'],
-        },
-        {
-            id: 'univ_pasta_protein',
-            category_id: 'cat_pasta',
-            category_name: 'Pasta',
-            group_ids: ['grp_protein'],
-        },
-    ],
+        return {
+            modifiers: allModifiers,
+            options: [
+                { id: 'opt_add',     name: 'Add',      is_default: true,  active: true },
+                { id: 'opt_extra',   name: 'Extra',     is_default: false, active: true },
+                { id: 'opt_light',   name: 'Light',     is_default: false, active: true },
+                { id: 'opt_no',      name: 'No',        is_default: false, active: true },
+                { id: 'opt_sub',     name: 'Sub',       is_default: false, active: true },
+                { id: 'opt_onside',  name: 'On Side',   is_default: false, active: true },
+            ],
+            templates: [
+                { id: 'tmpl_standard', name: 'Standard Quantity', description: 'For toppings with quantity variations', option_ids: ['opt_add', 'opt_extra', 'opt_light', 'opt_no', 'opt_onside'], active: true },
+                { id: 'tmpl_protein',  name: 'Protein Options',   description: 'For protein add-ons', option_ids: ['opt_add', 'opt_extra', 'opt_no'], active: true },
+                { id: 'tmpl_simple',   name: 'Simple Add/No',     description: 'Basic add or remove', option_ids: ['opt_add', 'opt_no'], active: true },
+            ],
+            groups,
+            mandatory_assignments: [],
+            universal_assignments: [],
+            categories: cats.map(c => ({
+                id: c.category_id || c.id,
+                name: c.name || c.label,
+                emoji: '',
+            })),
+        };
+    } catch (e) {
+        console.warn('[ConfigureModifiers] Failed to fetch data:', e);
+        return { modifiers: [], options: [], templates: [], groups: [], mandatory_assignments: [], universal_assignments: [], categories: [] };
+    }
+}
 
-    // Reference categories (same as other scenes)
-    categories: [
-        { id: 'cat_appetizers', name: 'Appetizers', emoji: '🍕' },
-        { id: 'cat_pasta',      name: 'Pasta',      emoji: '🍝' },
-        { id: 'cat_entrees',    name: 'Entrees',    emoji: '🥩' },
-        { id: 'cat_desserts',   name: 'Desserts',   emoji: '🍰' },
-        { id: 'cat_beverages',  name: 'Beverages',  emoji: '🥤' },
-    ],
-};
+// Fallback empty data (used before async load completes)
+const EMPTY_DATA = { modifiers: [], options: [], templates: [], groups: [], mandatory_assignments: [], universal_assignments: [], categories: [] };
 
 /* ------------------------------------------
    MODULE STATE
@@ -1479,8 +1410,7 @@ function updateFooter() {
     cancelBtn.addEventListener('click', () => {
         showConfirmDialog('Discard Changes?', `You have ${count} unsaved change${count !== 1 ? 's' : ''}. This cannot be undone.`, 'Discard', () => {
             pendingChanges = { modifiers: [], options: [], templates: [], groups: [], mandatory: [], universal: [] };
-            modData = clone(TEST_DATA);
-            buildMainView(currentWrapper);
+            fetchModifierData().then(data => { modData = data; buildMainView(currentWrapper); });
         });
     });
     btnGroup.appendChild(cancelBtn);
@@ -1510,7 +1440,8 @@ function handleSaveChanges() {
             if (item._deleted) {
                 events.push({ event_type: `modifier.${key}_deleted`, batch_id, timestamp: ts, payload: { id: item.id } });
             } else {
-                const exists = TEST_DATA[key === 'mandatory' ? 'mandatory_assignments' : key === 'universal' ? 'universal_assignments' : key]?.some(i => i.id === item.id);
+                const srcKey = key === 'mandatory' ? 'mandatory_assignments' : key === 'universal' ? 'universal_assignments' : key;
+                const exists = (modData[srcKey] || []).some(i => i.id === item.id);
                 events.push({
                     event_type: `modifier.${key}_${exists ? 'updated' : 'created'}`,
                     batch_id, timestamp: ts,
@@ -1620,10 +1551,10 @@ export function registerConfigureModifiers(sceneManager) {
         type: 'detail',
         title: 'Configure Modifiers',
         parent: 'menu-subs',
-        onEnter(container) {
+        async onEnter(container) {
             console.log('[ConfigureModifiers] Scene loaded — initializing...');
 
-            modData = clone(TEST_DATA);
+            modData = await fetchModifierData();
             pendingChanges = { modifiers: [], options: [], templates: [], groups: [], mandatory: [], universal: [] };
             activeTab = 'master';
             searchState = { modifiers: '', options: '' };

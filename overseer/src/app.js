@@ -260,17 +260,17 @@ function registerAllSections() {
     SceneManager.register({
         name: 'payroll-tips',
         mount: (container) => buildPayrollTipsScene(container),
-        unmount: (container) => cleanupPayrollTips(container),
+        unmount: () => cleanupPayrollTips(),
     });
     SceneManager.register({
         name: 'time-attendance',
         mount: (container) => buildTimeAttendanceScene(container),
-        unmount: (container) => cleanupTimeAttendance(container),
+        unmount: () => cleanupTimeAttendance(),
     });
     SceneManager.register({
         name: 'shift-config',
         mount: (container) => buildShiftConfigScene(container),
-        unmount: (container) => cleanupShiftConfig(container),
+        unmount: () => cleanupShiftConfig(),
     });
 
     // Placeholder sections for categories documented in CONFIGURABLE_COMPONENTS.md

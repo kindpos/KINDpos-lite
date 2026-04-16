@@ -1051,7 +1051,7 @@ export function buildTimeAttendanceScene(container) {
 
 export function cleanupTimeAttendance(container) {
     stopClockRefresh();
-    container.innerHTML = '';
+    if (container) container.innerHTML = '';
     viewHistory = [];
     currentContainer = null;
 }

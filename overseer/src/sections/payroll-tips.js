@@ -955,7 +955,7 @@ export function buildPayrollTipsScene(container) {
 }
 
 export function cleanupPayrollTips(container) {
-    container.innerHTML = '';
+    if (container) container.innerHTML = '';
     viewHistory = [];
     currentContainer = null;
     tipPoolConfig = null;

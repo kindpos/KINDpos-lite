@@ -1036,7 +1036,7 @@ export function buildShiftConfigScene(container) {
 }
 
 export function cleanupShiftConfig(container) {
-    container.innerHTML = '';
+    if (container) container.innerHTML = '';
     viewHistory = [];
     currentContainer = null;
     swapRequests = null;
