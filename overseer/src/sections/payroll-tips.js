@@ -152,9 +152,9 @@ function emitEvent(eventType, payload) {
 /* ------------------------------------------
    FORMAT HELPERS
 ------------------------------------------ */
-function fmt$(val) { return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function fmtHrs(val) { return val.toFixed(2) + 'h'; }
-function fmtPct(val) { return val.toFixed(1) + '%'; }
+function fmt$(val) { return '$' + (val ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtHrs(val) { return (val ?? 0).toFixed(2) + 'h'; }
+function fmtPct(val) { return (val ?? 0).toFixed(1) + '%'; }
 
 function fmtDateRange(start, end) {
     const s = new Date(start + 'T12:00:00');
@@ -164,18 +164,18 @@ function fmtDateRange(start, end) {
 }
 
 function laborCostColor(pct) {
-    if (pct <= LABOR_BENCHMARKS.excellent) return C.green;
-    if (pct <= LABOR_BENCHMARKS.good) return C.mint;
-    if (pct <= LABOR_BENCHMARKS.warning) return C.yellow;
-    if (pct <= LABOR_BENCHMARKS.danger) return C.orange;
+    const p = pct ?? 0;
+    if (p <= (LABOR_BENCHMARKS.targetLaborPct || 30)) return C.green;
+    if (p <= (LABOR_BENCHMARKS.warningLaborPct || 35)) return C.yellow;
+    if (p <= (LABOR_BENCHMARKS.criticalLaborPct || 40)) return C.orange;
     return C.red;
 }
 
 function laborCostLabel(pct) {
-    if (pct <= LABOR_BENCHMARKS.excellent) return 'Excellent';
-    if (pct <= LABOR_BENCHMARKS.good) return 'Good';
-    if (pct <= LABOR_BENCHMARKS.warning) return 'Watch';
-    if (pct <= LABOR_BENCHMARKS.danger) return 'High';
+    const p = pct ?? 0;
+    if (p <= (LABOR_BENCHMARKS.targetLaborPct || 30)) return 'On Target';
+    if (p <= (LABOR_BENCHMARKS.warningLaborPct || 35)) return 'Watch';
+    if (p <= (LABOR_BENCHMARKS.criticalLaborPct || 40)) return 'High';
     return 'Critical';
 }
 
