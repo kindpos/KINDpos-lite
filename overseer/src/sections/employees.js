@@ -686,7 +686,6 @@ async function handleSave(isEdit, original, backdrop) {
             hourly_rate: payRate,
             active: status === 'active',
         });
-        }
 
         showToast(`${firstName} ${lastName} updated successfully`, 'success');
     } else {
