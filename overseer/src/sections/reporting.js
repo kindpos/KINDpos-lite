@@ -6,7 +6,8 @@
    every total is verifiable.
    ============================================ */
 
-import { SAMPLE_DATA, calcDelta, fmt$, fmtPct } from '../data/sample-reports.js';
+import { SAMPLE_DATA, calcDelta, fmt$, fmtPct, loadReportData } from '../data/sample-reports.js';
+import { buildDatePicker } from '../components/date-picker.js';
 
 /* ------------------------------------------
    CHART COLOR PALETTE (Retro 80s)
@@ -1248,6 +1249,45 @@ function buildAdjustmentsSummary(container) {
 }
 
 /* ------------------------------------------
+   CSV EXPORT
+------------------------------------------ */
+function exportReportCSV() {
+    const d = SAMPLE_DATA.dailyFlash;
+    const rows = [
+        ['KINDpos Daily Flash Report'],
+        ['Date', d.date],
+        [''],
+        ['Metric', 'Today', 'Yesterday'],
+        ['Net Sales', d.today.net_sales, d.yesterday.net_sales],
+        ['Tax Collected', d.today.tax_collected, d.yesterday.tax_collected],
+        ['Tips', d.today.tips, d.yesterday.tips],
+        ['Total Collected', d.today.total_collected, d.yesterday.total_collected],
+        ['Orders', d.today.orders, d.yesterday.orders],
+        ['Guests', d.today.guests, d.yesterday.guests],
+        ['Avg Check', d.today.avg_check, d.yesterday.avg_check],
+    ];
+
+    if (SAMPLE_DATA.salesByCategory.length) {
+        rows.push([''], ['Sales by Category'], ['Category', 'Net Sales', 'Items Sold', '%']);
+        SAMPLE_DATA.salesByCategory.forEach(c => rows.push([c.category, c.net_sales, c.items_sold, c.pct]));
+    }
+
+    if (SAMPLE_DATA.hourlySales.today.length) {
+        rows.push([''], ['Hourly Sales'], ['Hour', 'Sales']);
+        SAMPLE_DATA.hourlySales.today.forEach(h => rows.push([h.hour, h.sales]));
+    }
+
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kindpos-report-${d.date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* ------------------------------------------
    DATE HEADER (Daily Flash full header)
 ------------------------------------------ */
 function buildDateHeader(container) {
@@ -1294,8 +1334,40 @@ export function registerSalesReports(sceneManager) {
         type: 'detail',
         title: 'Sales Reports',
         parent: 'reporting-subs',
-        onEnter(container) {
+        async onEnter(container) {
             hasCharts = applyChartDefaults();
+
+            // Toolbar: date picker + export button
+            const toolbar = document.createElement('div');
+            toolbar.style.cssText = `
+                max-width: 900px; margin: 0 auto;
+                padding: 12px 20px 0 20px;
+                display: flex; align-items: center; justify-content: space-between;
+            `;
+            const datePicker = buildDatePicker({
+                value: SAMPLE_DATA.dailyFlash.date,
+                onChange: async (date) => {
+                    await loadReportData(date);
+                    if (currentWrapper) {
+                        viewHistory = [];
+                        pushView('daily-flash');
+                    }
+                },
+            });
+            toolbar.appendChild(datePicker);
+
+            const exportBtn = document.createElement('button');
+            exportBtn.textContent = 'Export CSV';
+            exportBtn.style.cssText = `
+                background: rgba(var(--color-mint-rgb), 0.1);
+                border: 1px solid rgba(var(--color-mint-rgb), 0.25);
+                border-radius: 6px; padding: 6px 16px;
+                color: var(--color-mint); font-family: var(--font-body);
+                font-size: 18px; cursor: pointer;
+            `;
+            exportBtn.addEventListener('click', () => exportReportCSV());
+            toolbar.appendChild(exportBtn);
+            container.appendChild(toolbar);
 
             currentWrapper = document.createElement('div');
             currentWrapper.style.cssText = `
@@ -1305,7 +1377,6 @@ export function registerSalesReports(sceneManager) {
             `;
             container.appendChild(currentWrapper);
 
-            // Start at the Daily Flash — the home view
             pushView('daily-flash');
         },
         onExit(container) {

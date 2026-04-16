@@ -62,10 +62,13 @@ export let SAMPLE_DATA = {
     adjustmentDetails: { discounts: [], comps: [], voids: [] },
 };
 
-export async function loadReportData() {
+export async function loadReportData(date) {
+    const targetDate = date || todayStr();
+    const prevDate = (() => { const d = new Date(targetDate + 'T12:00:00'); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
+
     const [today, yesterday] = await Promise.all([
-        fetchSummary(todayStr()),
-        fetchSummary(yesterdayStr()),
+        fetchSummary(targetDate),
+        fetchSummary(prevDate),
     ]);
 
     const todayFlash = buildFlash(today);
@@ -100,7 +103,7 @@ export async function loadReportData() {
 
     SAMPLE_DATA = {
         dailyFlash: {
-            date: todayStr(),
+            date: targetDate,
             today: todayFlash,
             yesterday: yesterdayFlash,
         },
