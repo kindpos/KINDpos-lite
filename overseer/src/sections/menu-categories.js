@@ -32,52 +32,37 @@ const COLORS = {
    browsing. Will be replaced by API call
    when backend integration happens.
 ------------------------------------------ */
-const TEST_MENU_DATA = {
-    categories: [
-        { id: 'cat_appetizers',  name: 'Appetizers',  emoji: '🍕', display_order: 1 },
-        { id: 'cat_pasta',       name: 'Pasta',       emoji: '🍝', display_order: 2 },
-        { id: 'cat_entrees',     name: 'Entrees',     emoji: '🥩', display_order: 3 },
-        { id: 'cat_desserts',    name: 'Desserts',    emoji: '🍰', display_order: 4 },
-        { id: 'cat_beverages',   name: 'Beverages',   emoji: '🥤', display_order: 5 },
-    ],
-
-    items: [
-        // --- Appetizers ---
-        { id: 'item_mozz_sticks',   name: 'Mozzarella Sticks',  price: 8.99,  description: '6 breaded mozzarella sticks served with marinara sauce',                       category_id: 'cat_appetizers', active: true, display_order: 1 },
-        { id: 'item_wings',         name: 'Buffalo Wings',       price: 12.99, description: '10pc wings with choice of sauce: buffalo, BBQ, or honey mustard',              category_id: 'cat_appetizers', active: true, display_order: 2 },
-        { id: 'item_nachos',        name: 'Nachos Supreme',      price: 10.99, description: 'Tortilla chips with cheese, jalapeños, sour cream, salsa',                     category_id: 'cat_appetizers', active: true, display_order: 3 },
-        { id: 'item_bruschetta',    name: 'Bruschetta',          price: 9.99,  description: 'Toasted bread with fresh tomatoes, basil, garlic, olive oil',                   category_id: 'cat_appetizers', active: true, display_order: 4 },
-        { id: 'item_calamari',      name: 'Fried Calamari',      price: 13.99, description: 'Lightly breaded calamari rings with lemon aioli',                               category_id: 'cat_appetizers', active: true, display_order: 5 },
-        { id: 'item_spinach_dip',   name: 'Spinach Artichoke Dip', price: 11.49, description: 'Creamy spinach and artichoke dip with tortilla chips',                        category_id: 'cat_appetizers', active: true, display_order: 6 },
-
-        // --- Pasta ---
-        { id: 'item_spaghetti',     name: 'Spaghetti & Meatballs', price: 15.99, description: 'House-made meatballs with marinara over spaghetti',                          category_id: 'cat_pasta', active: true, display_order: 1 },
-        { id: 'item_fettuccine',    name: 'Fettuccine Alfredo',    price: 14.99, description: 'Creamy parmesan alfredo sauce over fettuccine',                                category_id: 'cat_pasta', active: true, display_order: 2 },
-        { id: 'item_penne_vodka',   name: 'Penne alla Vodka',      price: 16.99, description: 'Penne in a creamy tomato vodka sauce with fresh basil',                        category_id: 'cat_pasta', active: true, display_order: 3 },
-        { id: 'item_lasagna',       name: 'Lasagna',                price: 17.99, description: 'Layered pasta with beef, ricotta, mozzarella, and marinara',                   category_id: 'cat_pasta', active: true, display_order: 4 },
-        { id: 'item_carbonara',     name: 'Carbonara',              price: 16.49, description: 'Spaghetti with pancetta, egg, parmesan, black pepper',                         category_id: 'cat_pasta', active: true, display_order: 5 },
-
-        // --- Entrees ---
-        { id: 'item_grilled_salmon',name: 'Grilled Salmon',         price: 22.99, description: 'Atlantic salmon with lemon dill butter, seasonal vegetables',                  category_id: 'cat_entrees', active: true, display_order: 1 },
-        { id: 'item_ribeye',        name: '12oz Ribeye Steak',      price: 28.99, description: 'USDA Choice ribeye, grilled to order with garlic butter',                      category_id: 'cat_entrees', active: true, display_order: 2 },
-        { id: 'item_chicken_parm',  name: 'Chicken Parmesan',       price: 18.99, description: 'Breaded chicken cutlet with marinara and melted mozzarella',                    category_id: 'cat_entrees', active: true, display_order: 3 },
-        { id: 'item_fish_chips',    name: 'Fish & Chips',           price: 16.99, description: 'Beer-battered cod with fries, coleslaw, tartar sauce',                          category_id: 'cat_entrees', active: true, display_order: 4 },
-        { id: 'item_burger',        name: 'Classic Burger',          price: 14.99, description: 'Half-pound Angus beef, lettuce, tomato, onion, pickle, brioche bun',            category_id: 'cat_entrees', active: true, display_order: 5 },
-
-        // --- Desserts ---
-        { id: 'item_tiramisu',      name: 'Tiramisu',               price: 9.99,  description: 'Classic Italian tiramisu with espresso-soaked ladyfingers',                      category_id: 'cat_desserts', active: true, display_order: 1 },
-        { id: 'item_cheesecake',    name: 'NY Cheesecake',          price: 10.99, description: 'New York-style cheesecake with strawberry compote',                              category_id: 'cat_desserts', active: true, display_order: 2 },
-        { id: 'item_brownie',       name: 'Brownie Sundae',         price: 8.99,  description: 'Warm chocolate brownie with vanilla ice cream and hot fudge',                    category_id: 'cat_desserts', active: true, display_order: 3 },
-        { id: 'item_cannoli',       name: 'Cannoli',                price: 7.99,  description: 'Crispy shell filled with sweet ricotta, chocolate chips',                        category_id: 'cat_desserts', active: true, display_order: 4 },
-
-        // --- Beverages ---
-        { id: 'item_soda',          name: 'Fountain Soda',          price: 2.99,  description: 'Coke, Diet Coke, Sprite, Dr Pepper, Lemonade',                                  category_id: 'cat_beverages', active: true, display_order: 1 },
-        { id: 'item_iced_tea',      name: 'Iced Tea',               price: 2.99,  description: 'Fresh-brewed, sweetened or unsweetened',                                          category_id: 'cat_beverages', active: true, display_order: 2 },
-        { id: 'item_coffee',        name: 'Coffee',                 price: 3.49,  description: 'Regular or decaf, served with cream and sugar',                                   category_id: 'cat_beverages', active: true, display_order: 3 },
-        { id: 'item_juice',         name: 'Fresh Juice',            price: 4.99,  description: 'Orange, apple, or cranberry',                                                     category_id: 'cat_beverages', active: true, display_order: 4 },
-        { id: 'item_water',         name: 'Bottled Water',          price: 1.99,  description: 'Still or sparkling',                                                               category_id: 'cat_beverages', active: true, display_order: 5 },
-    ]
-};
+async function fetchMenuData() {
+    try {
+        const [catRes, itemRes] = await Promise.all([
+            fetch('/api/v1/config/menu/categories'),
+            fetch('/api/v1/config/menu/items'),
+        ]);
+        const categories = catRes.ok ? await catRes.json() : [];
+        const items = itemRes.ok ? await itemRes.json() : [];
+        return {
+            categories: categories.map((c, i) => ({
+                id: c.category_id || c.id || `cat_${i}`,
+                name: c.name || c.label,
+                emoji: '',
+                display_order: c.display_order || i + 1,
+                color: c.color || null,
+            })),
+            items: items.map((item, i) => ({
+                id: item.item_id || item.id || `item_${i}`,
+                name: item.name,
+                price: parseFloat(item.price) || 0,
+                description: item.description || '',
+                category_id: item.category_id || item.category || '',
+                active: item.active !== false,
+                display_order: item.display_order || i + 1,
+            })),
+        };
+    } catch (e) {
+        console.warn('[MenuCategories] Failed to fetch menu data:', e);
+        return { categories: [], items: [] };
+    }
+}
 
 /* ------------------------------------------
    MODULE-LEVEL STATE
@@ -1392,14 +1377,14 @@ export function registerMenuCategories(sceneManager) {
         type: 'detail',
         title: 'Categories & Items',
         parent: 'menu-subs',
-        onEnter(container) {
+        async onEnter(container) {
             console.log('[MenuCategories] Scene loaded — initializing...');
 
             // Inject CSS animations
             injectAnimations();
 
-            // Clone test data into working copy
-            menuData = clone(TEST_MENU_DATA);
+            // Fetch menu data from API
+            menuData = await fetchMenuData();
             pendingChanges = { new: [], edited: [], deleted: [] };
             displayState = { searchTerm: '', filterCategory: 'all' };
 

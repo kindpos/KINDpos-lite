@@ -52,11 +52,11 @@ export async function loadTimeData() {
         const res = await fetch('/api/v1/servers/clocked-in');
         if (!res.ok) return;
         const data = await res.json();
-        const clocked = data.clocked_in || data || [];
+        const clocked = data.staff || data.clocked_in || [];
 
         ACTIVE_SHIFTS = clocked.map(s => ({
             employeeId: s.employee_id,
-            name: s.name || s.employee_id,
+            name: s.employee_name || s.name || s.employee_id,
             role: s.role || 'server',
             clockIn: s.clocked_in_at || s.clock_in,
             onBreak: s.on_break || false,
