@@ -476,9 +476,8 @@ function buildCoverageAnalysis(wrapper) {
             let endH = eh < sh ? eh + 24 : eh;
 
             if (sh <= dp.endHour && endH >= dp.startHour) {
-                if (scheduled[shift.role] !== undefined) {
-                    scheduled[shift.role]++;
-                }
+                const roles = Array.isArray(shift.role) ? shift.role : [shift.role];
+                roles.forEach(r => { if (scheduled[r] !== undefined) scheduled[r]++; });
             }
         });
 

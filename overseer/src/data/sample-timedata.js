@@ -71,7 +71,7 @@ export async function loadTimeData() {
     WEEKLY_TIMECARDS = EMPLOYEES.map(emp => ({
         employeeId: emp.id,
         name: `${emp.firstName} ${emp.lastName}`,
-        role: emp.role,
+        role: emp.roles || [],
         days: DAY_LABELS.map(() => ({ hours: 0, breakMinutes: 0 })),
     }));
 }
