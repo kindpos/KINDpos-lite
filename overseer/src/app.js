@@ -9,6 +9,9 @@ import { initThemeBridge, applyTheme, getCurrentThemeId, getThemeCatalog }
                                       from './theme-bridge.js';
 import { loadEmployeeData }           from './data/sample-employees.js';
 import { loadReportData }             from './data/sample-reports.js';
+import { loadTimeData }               from './data/sample-timedata.js';
+import { loadPayrollData }            from './data/sample-payroll.js';
+import { loadShiftData }              from './data/sample-shifts.js';
 
 import { registerSalesReports }       from './sections/reporting.js';
 import { registerMenuImport }         from './sections/menu-import.js';
@@ -464,7 +467,8 @@ async function boot() {
         }
     });
     await initThemeBridge();
-    await Promise.all([loadEmployeeData(), loadReportData()]);
+    await loadEmployeeData();
+    await Promise.all([loadReportData(), loadTimeData(), loadPayrollData(), loadShiftData()]);
     buildNav();
     registerAllSections();
 
