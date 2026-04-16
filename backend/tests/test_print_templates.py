@@ -198,8 +198,8 @@ class TestKitchenTicket:
         text_contents = [c['content'] for c in commands if c.get('type') == 'text']
         joined = '\n'.join(text_contents)
 
-        # Item line present
-        assert '1x Combo Pulled Pork' in joined
+        # Item line present (truncated to WIDE_MAX at double_width)
+        assert '1x Combo Pulled' in joined
         # Modifiers with prefixes derived from 'action' field
         assert '[ADD] Extra Cheese' in joined
         assert '[NO] Pickles' in joined
