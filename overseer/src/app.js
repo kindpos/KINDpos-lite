@@ -26,6 +26,8 @@ import { registerPrinterConfig }      from './sections/printer-config.js';
 import { registerPrinterSetup }       from './sections/printer-setup.js';
 
 // Build-pattern sections (no register wrapper — wrap manually below)
+import { buildStoreInfoScene,     cleanupStoreInfo     } from './sections/store-info.js';
+import { buildOrderSettingsScene, cleanupOrderSettings } from './sections/order-settings.js';
 import { buildPayrollTipsScene,    cleanupPayrollTips    } from './sections/payroll-tips.js';
 import { buildTimeAttendanceScene, cleanupTimeAttendance } from './sections/time-attendance.js';
 import { buildShiftConfigScene,    cleanupShiftConfig    } from './sections/shift-config.js';
@@ -272,6 +274,16 @@ function registerAllSections() {
         mount: (container) => buildShiftConfigScene(container),
         unmount: () => cleanupShiftConfig(),
     });
+    SceneManager.register({
+        name: 'store-info',
+        mount: (container) => buildStoreInfoScene(container),
+        unmount: (container) => cleanupStoreInfo(container),
+    });
+    SceneManager.register({
+        name: 'order-settings',
+        mount: (container) => buildOrderSettingsScene(container),
+        unmount: (container) => cleanupOrderSettings(container),
+    });
 
     // Placeholder sections for categories documented in CONFIGURABLE_COMPONENTS.md
     registerPlaceholders();
@@ -300,25 +312,11 @@ const PLACEHOLDERS = [
         api: '/api/v1/reporting/menu-performance',
     },
     {
-        name: 'store-info',
-        title: 'Store Information',
-        icon: '\u{1F3EA}',
-        fields: ['Restaurant name & legal entity', 'Address, phone, email, website', 'Receipt header & footer text'],
-        api: 'GET/POST /api/v1/config/store/info',
-    },
-    {
         name: 'floor-plan',
         title: 'Floor Plan & Sections',
         icon: '\u{1F5FA}\u{FE0F}',
         fields: ['Sections & table layout', 'Seat counts & shapes', 'Walls, barriers, fixtures'],
         api: 'GET /api/v1/config/floorplan',
-    },
-    {
-        name: 'order-settings',
-        title: 'Order & Service Settings',
-        icon: '\u{1F4CB}',
-        fields: ['Dine-in, takeout, delivery toggles', 'Operating hours per day', 'Auto-gratuity rules'],
-        api: 'GET /api/v1/config/store',
     },
     {
         name: 'card-readers',
