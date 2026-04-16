@@ -304,7 +304,7 @@ function buildLiveDashboard(wrapper) {
 
         row.innerHTML = `
             <div style="color: ${C.white}; font-size: 25px;">
-                ${shift.firstName} ${shift.lastName}${breakBadge}${otWarning}
+                ${shift.name.split(' ')[0]} ${shift.name.split(' ').slice(1).join(' ')}${breakBadge}${otWarning}
             </div>
             <div style="color: ${C.mint}; font-size: 22px;">${getRoleLabel(shift.role)}</div>
             <div style="color: rgba(var(--color-mint-rgb), 0.6); font-size: 22px;">${fmtTimeISO(shift.clockIn)}</div>
@@ -454,7 +454,7 @@ function buildWeekGrid(wrapper) {
                  padding: 2px 6px; border-radius: 4px; vertical-align: middle;">EDITED</span>`
             : '';
 
-        nameCell.innerHTML = `${tc.firstName} ${tc.lastName}${otBadge}${editBadge}`;
+        nameCell.innerHTML = `${tc.name.split(' ')[0]} ${tc.name.split(' ').slice(1).join(' ')}${otBadge}${editBadge}`;
         row.appendChild(nameCell);
 
         // Day cells (Mon–Sun)
@@ -489,8 +489,8 @@ function buildWeekGrid(wrapper) {
                         pushView('shift-detail', {
                             shift_id: shift.shift_id,
                             employee_id: tc.employee_id,
-                            firstName: tc.firstName,
-                            lastName: tc.lastName,
+                            firstName: tc.name.split(' ')[0],
+                            lastName: tc.name.split(' ').slice(1).join(' '),
                             role: tc.role,
                             date: shift.date,
                             clockIn: shift.clockIn,
@@ -586,7 +586,7 @@ function buildShiftDetail(wrapper, shift) {
     header.innerHTML = `
         <div style="font-family: var(--font-display, 'Alien Encounters', monospace);
                     font-size: 36px; color: ${C.yellow}; margin-bottom: 4px;">
-            ${shift.firstName} ${shift.lastName}
+            ${shift.name.split(' ')[0]} ${shift.name.split(' ').slice(1).join(' ')}
         </div>
         <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
             ${getRoleLabel(shift.role)} — ${dateDisplay}
@@ -797,7 +797,7 @@ function showTimeEditModal(shift) {
         font-family: var(--font-display, 'Alien Encounters', monospace);
         font-size: 26px; color: ${C.yellow}; letter-spacing: 1px;
     `;
-    header.textContent = `EDIT SHIFT: ${shift.firstName} ${shift.lastName}`;
+    header.textContent = `EDIT SHIFT: ${shift.name.split(' ')[0]} ${shift.name.split(' ').slice(1).join(' ')}`;
     modal.appendChild(header);
 
     // Body
@@ -957,7 +957,7 @@ function showTimeEditModal(shift) {
         });
 
         backdrop.remove();
-        showToast(`Shift times adjusted for ${shift.firstName} ${shift.lastName}`, 'success');
+        showToast(`Shift times adjusted for ${shift.name.split(' ')[0]} ${shift.name.split(' ').slice(1).join(' ')}`, 'success');
     });
 
     footer.appendChild(cancelBtn);
