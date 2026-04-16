@@ -7,7 +7,7 @@
    ============================================ */
 
 import { SAMPLE_DATA, calcDelta, fmt$, fmtPct, loadReportData } from '../data/sample-reports.js';
-import { buildDatePicker } from '../components/date-picker.js';
+import { buildDatePicker, buildDateRangePicker } from '../components/date-picker.js';
 
 /* ------------------------------------------
    CHART COLOR PALETTE (Retro 80s)
@@ -1343,34 +1343,73 @@ export function registerSalesReports(sceneManager) {
         async onEnter(container) {
             hasCharts = applyChartDefaults();
 
-            // Toolbar: date picker + export button
+            // Toolbar: mode toggle + date picker + export
             const toolbar = document.createElement('div');
             toolbar.style.cssText = `
                 max-width: 900px; margin: 0 auto;
                 padding: 12px 20px 0 20px;
-                display: flex; align-items: center; justify-content: space-between;
+                display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
             `;
-            const datePicker = buildDatePicker({
-                value: SAMPLE_DATA.dailyFlash.date,
-                onChange: async (date) => {
-                    await loadReportData(date);
-                    if (currentWrapper) {
-                        viewHistory = [];
-                        pushView('daily-flash');
-                    }
-                },
-            });
-            toolbar.appendChild(datePicker);
+
+            // Day / Range toggle
+            let mode = 'day';
+            const toggleWrap = document.createElement('div');
+            toggleWrap.style.cssText = 'display: flex; border: 1px solid rgba(var(--color-mint-rgb), 0.2); border-radius: 6px; overflow: hidden;';
+            const dayBtn = document.createElement('button');
+            dayBtn.textContent = 'Day';
+            const rangeBtn = document.createElement('button');
+            rangeBtn.textContent = 'Range';
+            const toggleStyle = (active) => `
+                padding: 5px 14px; border: none; font-family: var(--font-body); font-size: 16px; cursor: pointer;
+                background: ${active ? 'rgba(var(--color-mint-rgb), 0.2)' : 'transparent'};
+                color: ${active ? 'var(--color-gold)' : 'var(--color-mint)'};
+            `;
+            dayBtn.style.cssText = toggleStyle(true);
+            rangeBtn.style.cssText = toggleStyle(false);
+
+            const pickerSlot = document.createElement('div');
+            pickerSlot.style.cssText = 'flex: 1;';
+
+            function reloadReport(date) {
+                loadReportData(date).then(() => {
+                    if (currentWrapper) { viewHistory = []; pushView('daily-flash'); }
+                });
+            }
+
+            function showDayPicker() {
+                mode = 'day';
+                dayBtn.style.cssText = toggleStyle(true);
+                rangeBtn.style.cssText = toggleStyle(false);
+                pickerSlot.innerHTML = '';
+                pickerSlot.appendChild(buildDatePicker({
+                    value: SAMPLE_DATA.dailyFlash.date,
+                    onChange: reloadReport,
+                }));
+            }
+
+            function showRangePicker() {
+                mode = 'range';
+                dayBtn.style.cssText = toggleStyle(false);
+                rangeBtn.style.cssText = toggleStyle(true);
+                pickerSlot.innerHTML = '';
+                pickerSlot.appendChild(buildDateRangePicker({
+                    end: SAMPLE_DATA.dailyFlash.date,
+                    onChange: ({ end }) => reloadReport(end),
+                }));
+            }
+
+            dayBtn.addEventListener('click', showDayPicker);
+            rangeBtn.addEventListener('click', showRangePicker);
+            toggleWrap.appendChild(dayBtn);
+            toggleWrap.appendChild(rangeBtn);
+            toolbar.appendChild(toggleWrap);
+            toolbar.appendChild(pickerSlot);
+            showDayPicker();
 
             const exportBtn = document.createElement('button');
             exportBtn.textContent = 'Export CSV';
-            exportBtn.style.cssText = `
-                background: rgba(var(--color-mint-rgb), 0.1);
-                border: 1px solid rgba(var(--color-mint-rgb), 0.25);
-                border-radius: 6px; padding: 6px 16px;
-                color: var(--color-mint); font-family: var(--font-body);
-                font-size: 18px; cursor: pointer;
-            `;
+            exportBtn.className = 'kp-preset-btn';
+            exportBtn.style.cssText += 'font-size: 18px; padding: 5px 16px;';
             exportBtn.addEventListener('click', () => exportReportCSV());
             toolbar.appendChild(exportBtn);
             container.appendChild(toolbar);

@@ -1,8 +1,66 @@
 /* ============================================
    KINDpos Overseer — Date Picker Component
    Single date + date range selector.
-   Styled to match Overseer theme variables.
+   Themed with CSS custom properties.
    ============================================ */
+
+let _stylesInjected = false;
+function injectDatePickerStyles() {
+    if (_stylesInjected) return;
+    _stylesInjected = true;
+    const style = document.createElement('style');
+    style.textContent = `
+        .kp-date-input {
+            background: var(--color-bg-dark) !important;
+            color: var(--color-mint) !important;
+            border: 1px solid rgba(var(--color-mint-rgb), 0.25) !important;
+            border-radius: 4px;
+            font-family: var(--font-body);
+            font-size: 18px;
+            padding: 5px 10px;
+            cursor: pointer;
+            outline: none;
+            color-scheme: dark;
+        }
+        .kp-date-input:focus {
+            border-color: var(--color-mint) !important;
+            box-shadow: 0 0 0 2px rgba(var(--color-mint-rgb), 0.15);
+        }
+        .kp-date-input::-webkit-calendar-picker-indicator {
+            filter: invert(0.8) sepia(1) hue-rotate(90deg);
+            cursor: pointer;
+        }
+        .kp-date-btn {
+            background: none; border: none;
+            color: var(--color-mint);
+            font-size: 18px; cursor: pointer;
+            padding: 4px 8px; border-radius: 4px;
+            transition: background 0.15s ease;
+        }
+        .kp-date-btn:hover { background: rgba(var(--color-mint-rgb), 0.12); }
+        .kp-date-btn:disabled { opacity: 0.3; cursor: default; }
+        .kp-date-btn:disabled:hover { background: none; }
+        .kp-preset-btn {
+            background: rgba(var(--color-mint-rgb), 0.08);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.15);
+            border-radius: 4px; color: var(--color-mint);
+            font-family: var(--font-body); font-size: 16px;
+            padding: 3px 10px; cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .kp-preset-btn:hover {
+            background: rgba(var(--color-mint-rgb), 0.2);
+            border-color: rgba(var(--color-mint-rgb), 0.4);
+        }
+        .kp-date-wrapper {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(var(--color-mint-rgb), 0.04);
+            border: 1px solid rgba(var(--color-mint-rgb), 0.15);
+            border-radius: 6px; padding: 6px 12px;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 function fmt(date) {
     return date.toISOString().slice(0, 10);
@@ -20,46 +78,32 @@ function shiftDate(dateStr, days) {
     return fmt(d);
 }
 
-/**
- * Build a single-date picker with prev/next arrows.
- * @param {object} opts
- * @param {string} opts.value - initial date (YYYY-MM-DD)
- * @param {function} opts.onChange - called with new date string
- * @returns {HTMLElement}
- */
 export function buildDatePicker({ value, onChange }) {
+    injectDatePickerStyles();
     let current = value || fmt(new Date());
 
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = `
-        display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(var(--color-mint-rgb), 0.06);
-        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
-        border-radius: 6px; padding: 6px 12px;
-    `;
+    wrapper.className = 'kp-date-wrapper';
 
     const prevBtn = document.createElement('button');
     prevBtn.textContent = '\u25C0';
-    prevBtn.style.cssText = `
-        background: none; border: none; color: var(--color-mint);
-        font-size: 18px; cursor: pointer; padding: 4px 8px;
-    `;
+    prevBtn.className = 'kp-date-btn';
 
     const label = document.createElement('span');
     label.style.cssText = `
         font-family: var(--font-body); font-size: 20px;
         color: var(--color-gold); min-width: 160px; text-align: center;
+        cursor: pointer;
     `;
 
     const nextBtn = document.createElement('button');
     nextBtn.textContent = '\u25B6';
-    nextBtn.style.cssText = prevBtn.style.cssText;
+    nextBtn.className = 'kp-date-btn';
 
     function update(newDate) {
         current = newDate;
         label.textContent = display(current);
         nextBtn.disabled = current >= fmt(new Date());
-        nextBtn.style.opacity = nextBtn.disabled ? '0.3' : '1';
         if (onChange) onChange(current);
     }
 
@@ -70,11 +114,7 @@ export function buildDatePicker({ value, onChange }) {
         input.type = 'date';
         input.value = current;
         input.max = fmt(new Date());
-        input.style.cssText = `
-            background: var(--color-bg-dark); color: var(--color-mint);
-            border: 1px solid var(--color-mint); border-radius: 4px;
-            font-family: var(--font-body); font-size: 18px; padding: 4px 8px;
-        `;
+        input.className = 'kp-date-input';
         input.addEventListener('change', () => {
             if (input.value) update(input.value);
             input.replaceWith(label);
@@ -92,37 +132,20 @@ export function buildDatePicker({ value, onChange }) {
     return wrapper;
 }
 
-/**
- * Build a date range picker (start + end).
- * @param {object} opts
- * @param {string} opts.start - initial start date
- * @param {string} opts.end - initial end date
- * @param {function} opts.onChange - called with { start, end }
- * @returns {HTMLElement}
- */
 export function buildDateRangePicker({ start, end, onChange }) {
+    injectDatePickerStyles();
     let currentStart = start || shiftDate(fmt(new Date()), -7);
     let currentEnd = end || fmt(new Date());
 
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = `
-        display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(var(--color-mint-rgb), 0.06);
-        border: 1px solid rgba(var(--color-mint-rgb), 0.2);
-        border-radius: 6px; padding: 6px 12px;
-    `;
+    wrapper.className = 'kp-date-wrapper';
 
     function makeInput(val, max, onSet) {
         const input = document.createElement('input');
         input.type = 'date';
         input.value = val;
         if (max) input.max = max;
-        input.style.cssText = `
-            background: var(--color-bg-dark); color: var(--color-mint);
-            border: 1px solid rgba(var(--color-mint-rgb), 0.2);
-            border-radius: 4px; font-family: var(--font-body);
-            font-size: 18px; padding: 4px 8px; cursor: pointer;
-        `;
+        input.className = 'kp-date-input';
         input.addEventListener('change', () => {
             if (input.value) onSet(input.value);
         });
@@ -140,7 +163,7 @@ export function buildDateRangePicker({ start, end, onChange }) {
 
     const sep = document.createElement('span');
     sep.textContent = '\u2192';
-    sep.style.cssText = 'color: rgba(var(--color-mint-rgb), 0.5); font-size: 20px; padding: 0 4px;';
+    sep.style.cssText = 'color: rgba(var(--color-mint-rgb), 0.4); font-size: 20px; padding: 0 4px;';
 
     const endInput = makeInput(currentEnd, fmt(new Date()), (v) => {
         currentEnd = v;
@@ -151,24 +174,13 @@ export function buildDateRangePicker({ start, end, onChange }) {
         if (onChange) onChange({ start: currentStart, end: currentEnd });
     });
 
-    // Quick presets
     const presets = document.createElement('div');
     presets.style.cssText = 'display: flex; gap: 4px; margin-left: 8px;';
 
-    const presetDefs = [
-        { label: '7d', days: 7 },
-        { label: '14d', days: 14 },
-        { label: '30d', days: 30 },
-    ];
-
-    presetDefs.forEach(p => {
+    [{ label: '7d', days: 7 }, { label: '14d', days: 14 }, { label: '30d', days: 30 }].forEach(p => {
         const btn = document.createElement('button');
         btn.textContent = p.label;
-        btn.style.cssText = `
-            background: rgba(var(--color-mint-rgb), 0.1); border: 1px solid rgba(var(--color-mint-rgb), 0.15);
-            border-radius: 4px; color: var(--color-mint); font-family: var(--font-body);
-            font-size: 16px; padding: 2px 8px; cursor: pointer;
-        `;
+        btn.className = 'kp-preset-btn';
         btn.addEventListener('click', () => {
             currentEnd = fmt(new Date());
             currentStart = shiftDate(currentEnd, -p.days);
