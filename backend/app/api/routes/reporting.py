@@ -87,6 +87,7 @@ def _aggregate_orders(orders, tip_map):
     void_total = _ZERO
     discount_total = _ZERO
     refund_total = _ZERO
+    tax_total = _ZERO
     cash_total = _ZERO
     card_total = _ZERO
     total_tips = _ZERO
@@ -118,6 +119,7 @@ def _aggregate_orders(orders, tip_map):
         gross_sales += Decimal(str(order.subtotal))
         discount_total += Decimal(str(order.discount_total))
         refund_total += Decimal(str(order.refund_total))
+        tax_total += Decimal(str(order.tax))
         guest_count += order.guest_count
         if order.table:
             table_set.add(order.table)
@@ -179,6 +181,11 @@ def _aggregate_orders(orders, tip_map):
 
     return {
         "net_sales": net_sales,
+        "gross_sales": gross_sales,
+        "void_total": void_total,
+        "discount_total": discount_total,
+        "refund_total": refund_total,
+        "tax_total": tax_total,
         "total_checks": total_checks,
         "cash_total": cash_total,
         "card_total": card_total,
@@ -329,9 +336,19 @@ async def get_sales_summary(
     tip_buckets = _build_tip_buckets(agg["tip_amounts"])
     tip_avg = money_round(sum(agg["tip_amounts"]) / len(agg["tip_amounts"])) if agg["tip_amounts"] else 0.0
 
+    tax_total_f = money_round(float(agg["tax_total"]))
+    tips_total_f = money_round(float(agg["total_tips"]))
+
     base = {
         "date": date,
         "net_sales": money_round(net),
+        "gross_sales": money_round(float(agg["gross_sales"])),
+        "voids_total": money_round(float(agg["void_total"])),
+        "discounts_total": money_round(float(agg["discount_total"])),
+        "refunds_total": money_round(float(agg["refund_total"])),
+        "tax_collected": tax_total_f,
+        "tips_collected": tips_total_f,
+        "total_guests": agg["guest_count"],
         "total_checks": checks,
         "check_avg": check_avg,
         "cash_total": money_round(float(agg["cash_total"])),
