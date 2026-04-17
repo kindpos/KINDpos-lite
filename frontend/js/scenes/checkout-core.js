@@ -88,29 +88,29 @@ export function buildCardTile(def, idx, opts) {
 
   // Chrome header bar
   var hdr = document.createElement('div');
-  hdr.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
+  hdr.style.cssText = 'background:' + CHROME + ';padding:3px 8px;flex-shrink:0;';
   var hdrTxt = document.createElement('div');
-  hdrTxt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;';
+  hdrTxt.style.cssText = 'font-family:' + T.fh + ';font-size:13px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;';
   hdrTxt.textContent = def.title;
   hdr.appendChild(hdrTxt);
   card.appendChild(hdr);
 
   // Body
   var body = document.createElement('div');
-  body.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 8px;gap:2px;';
+  body.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 8px;gap:1px;';
 
   var hero = document.createElement('div');
-  hero.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsBtn + ';color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;';
+  hero.style.cssText = 'font-family:' + T.fb + ';font-size:26px;color:' + (def.heroColor || T.gold) + ';font-weight:bold;text-align:center;';
   hero.textContent = def.hero;
   body.appendChild(hero);
 
   var sub = document.createElement('div');
-  sub.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;';
+  sub.style.cssText = 'font-family:' + T.fb + ';font-size:16px;color:' + T.mint + ';text-align:center;';
   sub.textContent = def.subtitle;
   body.appendChild(sub);
 
   var hint = document.createElement('div');
-  hint.style.cssText = 'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';color:' + T.mint + ';text-align:center;margin-top:1px;';
+  hint.style.cssText = 'font-family:' + T.fb + ';font-size:14px;color:' + T.mint + ';text-align:center;margin-top:1px;';
   hint.textContent = '\u25B8';
   body.appendChild(hint);
 

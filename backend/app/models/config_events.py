@@ -63,17 +63,26 @@ class Role(BaseModel):
 
 class Employee(BaseModel):
     employee_id: str
-    first_name: str
-    last_name: str
-    display_name: str
+    first_name: str = ""
+    last_name: str = ""
+    display_name: str = ""
+    name: Optional[str] = None
     role_ids: List[str] = []
-    role_id: Optional[str] = None  # backward compat — migrated to role_ids
-    pin: str
+    role_id: Optional[str] = None
+    pin: str = ""
     hourly_rate: Decimal = Decimal("0")
     permissions_override: Optional[Dict[str, bool]] = None
     active: bool = True
 
     def __init__(self, **data):
+        # Migrate legacy "name" field to first_name/last_name/display_name
+        if 'name' in data and 'first_name' not in data:
+            parts = data['name'].split(' ', 1)
+            data['first_name'] = parts[0]
+            data['last_name'] = parts[1] if len(parts) > 1 else ''
+            data.setdefault('display_name', data['name'])
+        if 'display_name' not in data or not data.get('display_name'):
+            data['display_name'] = f"{data.get('first_name', '')} {data.get('last_name', '')}".strip()
         # Migrate legacy single role_id to role_ids list
         if 'role_id' in data and 'role_ids' not in data:
             rid = data.pop('role_id')
@@ -91,26 +100,83 @@ class TipoutRule(BaseModel):
 class MenuItem(BaseModel):
     item_id: str
     name: str
-    category_id: str
+    category_id: Optional[str] = None
+    category: Optional[str] = None
     price: Decimal = Decimal("0")
     description: Optional[str] = None
     kitchen_name: Optional[str] = None
     tax_rule_id: Optional[str] = None
-    revenue_category: str # Food, Beverage, Alcohol
+    revenue_category: str = "Food"
     prep_time: int = 0
     print_station: Optional[str] = None
     allergens: List[str] = []
     active: bool = True
+    display_order: int = 0
+
+    def __init__(self, **data):
+        if 'category_id' not in data and 'category' in data:
+            data['category_id'] = data['category']
+        super().__init__(**data)
 
 class MenuCategory(BaseModel):
     category_id: str
     name: str
-    display_order: int
-    hex_color: str
+    display_order: int = 0
+    hex_color: str = "#888888"
+    color: Optional[str] = None
     tax_rule_id: Optional[str] = None
     enable_placement: bool = False
     half_placement: bool = False
+    pizza_builder: bool = False
     active: bool = True
+
+    def __init__(self, **data):
+        if 'hex_color' not in data and 'color' in data:
+            data['hex_color'] = data['color']
+        super().__init__(**data)
+
+# Modifier Models
+class ModifierOption(BaseModel):
+    modifier_id: str
+    name: str
+    price: Decimal = Decimal("0")
+    # Price override keyed by the modifier_id of an option in a drives_pricing
+    # mandatory group (e.g. {"size_md": 1.00, "size_xl": 2.00}). Falls back to
+    # `price` when the current driver selection is not in this map.
+    price_by_option: Dict[str, Decimal] = {}
+
+class ModifierGroup(BaseModel):
+    group_id: str
+    name: str
+    modifier_ids: List[str] = []
+    modifiers: List[ModifierOption] = []
+    template_id: Optional[str] = None
+    min_selections: int = 0
+    max_selections: Optional[int] = None
+    color: Optional[str] = None
+    category_id: Optional[str] = None
+    hidden: bool = False
+    owner_item_id: Optional[str] = None
+    active: bool = True
+
+class MandatoryAssignment(BaseModel):
+    assignment_id: str
+    label: str
+    target_type: str  # "category" | "item"
+    target_id: str
+    target_name: Optional[str] = None
+    modifier_ids: List[str] = []
+    select_mode: str = "single"  # "single" | "multi"
+    # When true, this group's selection drives size-based pricing on optional
+    # modifiers (terminal rerenders optional prices when the selection changes,
+    # and gates the optional tab until one is picked).
+    drives_pricing: bool = False
+
+class UniversalAssignment(BaseModel):
+    assignment_id: str
+    category_id: str
+    category_name: Optional[str] = None
+    group_ids: List[str] = []
 
 # Floor Plan Models
 class TableElement(BaseModel):

@@ -9,6 +9,8 @@ __pycache__/
 !kindpos-desktop/src-tauri/resources/backend/data/**
 !kindpos-desktop/src-tauri/resources/frontend/js/data/
 !kindpos-desktop/src-tauri/resources/frontend/js/data/**
+!overseer/src/data/
+!overseer/src/data/**
 hardware_config.db
 *.db
 .env

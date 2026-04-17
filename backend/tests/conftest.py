@@ -13,6 +13,8 @@ Fixtures:
 """
 
 import os
+os.environ.setdefault('KINDPOS_TAX_RATE', '0.07')
+os.environ.setdefault('KINDPOS_CASH_DISCOUNT_RATE', '0.04')
 import pytest
 import pytest_asyncio
 from pathlib import Path

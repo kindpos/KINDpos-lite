@@ -578,8 +578,8 @@ async def get_labor_summary(
         })
 
     tipout_percent = app_settings.tipout_percent
-    total_tips_all = sum(Decimal(str(emp.get("tips", 0))) for emp in employees)
-    tipout_deducted = money_round(total_tips_all * Decimal(str(tipout_percent)) / 100)
+    total_tips_all = float(sum(Decimal(str(emp.get("tips", 0))) for emp in employees))
+    tipout_deducted = money_round(total_tips_all * tipout_percent / 100)
     tip_pool = money_round(total_tips_all - tipout_deducted)
 
     # OT alerts: anyone at or over 35 weekly hours

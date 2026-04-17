@@ -70,6 +70,7 @@ export function ModifierPanel(container, opts) {
   var onSend = opts.onSend || function() {};
   var onCancel = opts.onCancel || function() {};
   var catColor = opts.catColor || T.mint;
+  var enablePlacement = opts.enablePlacement === true;
 
   // ── Active item state (ephemeral until SEND) ──
   var activeItem = {
@@ -97,6 +98,9 @@ export function ModifierPanel(container, opts) {
 
   var includedItems = config.includedItems || [];
   var optionalGroups = config.optionalGroups || [];
+  // Mandatory group key whose selection drives optional-modifier pricing.
+  // When set AND unchosen, the OPT tab is gated until a selection is made.
+  var pricingDriverKey = config.pricingDriverKey || null;
 
   var activeOptPrefix = 'ADD';
   var activePlacement = 'whole';
@@ -171,14 +175,32 @@ export function ModifierPanel(container, opts) {
       _mainCard.style.borderBottom = '5px solid ' + _darkenHex(activeColor, 0.3);
       _mainCard.style.borderRight = '5px solid ' + _darkenHex(activeColor, 0.3);
     }
+    // Gate OPT tab until the pricing-driver mandatory has a selection
+    var optGated = _isOptionalGated();
+    var optTab = _tabEls['optional'];
+    if (optTab) {
+      optTab.style.opacity = optGated ? '0.35' : '';
+      optTab.style.cursor = optGated ? 'not-allowed' : 'pointer';
+    }
+    if (optGated && expandedSection === 'optional') {
+      expandedSection = mandatoryGroups.length > 0 ? 'mandatory' : (includedItems.length > 0 ? 'included' : null);
+    }
+
     // Show/hide content panels
     if (mandatoryContentEl) mandatoryContentEl.style.display = expandedSection === 'mandatory' ? '' : 'none';
     if (includedContentEl) includedContentEl.style.display = expandedSection === 'included' ? '' : 'none';
     if (optionalContentEl) optionalContentEl.style.display = expandedSection === 'optional' ? '' : 'none';
     // Prefixes: only for optional
     if (prefixBarEl) prefixBarEl.style.display = expandedSection === 'optional' ? 'flex' : 'none';
-    // Placement: optional + included
-    if (placementBarEl) placementBarEl.style.display = (expandedSection === 'optional' || expandedSection === 'included') ? '' : 'none';
+    // Placement: optional + included, only if category has it enabled
+    if (placementBarEl) {
+      var placementVisible = enablePlacement && (expandedSection === 'optional' || expandedSection === 'included');
+      placementBarEl.style.display = placementVisible ? '' : 'none';
+    }
+  }
+
+  function _isOptionalGated() {
+    return !!pricingDriverKey && !activeItem.mandatorySelections[pricingDriverKey];
   }
 
   // ── Build the panel ──
@@ -239,6 +261,7 @@ export function ModifierPanel(container, opts) {
       ].join('');
       tab.textContent = label;
       tab.addEventListener('pointerup', function() {
+        if (key === 'optional' && _isOptionalGated()) return;
         expandedSection = key;
         _renderTabs();
       });
@@ -433,7 +456,7 @@ export function ModifierPanel(container, opts) {
   // ═══ PLACEMENT BAR (compact, above action buttons) ═══
   function renderPlacement() {
     placementBarEl.innerHTML = '';
-    if (optionalGroups.length === 0 && mandatoryGroups.length === 0) {
+    if (!enablePlacement || (optionalGroups.length === 0 && mandatoryGroups.length === 0)) {
       placementBarEl.style.display = 'none';
       return;
     }
@@ -653,6 +676,20 @@ export function ModifierPanel(container, opts) {
 
     // Reprice optional modifiers against ALL mandatory selections
     activeItem.optionalModifiers = activeItem.optionalModifiers.map(function(mod) {
+      // Backend-authored size-based pricing (priceByOption) — track the driver
+      if (mod.priceByOption) {
+        var driverSel = pricingDriverKey && activeItem.mandatorySelections[pricingDriverKey]
+          ? activeItem.mandatorySelections[pricingDriverKey].key
+          : null;
+        if (driverSel == null) {
+          var mKeys = Object.keys(activeItem.mandatorySelections);
+          if (mKeys.length > 0) driverSel = activeItem.mandatorySelections[mKeys[0]].key;
+        }
+        var override = driverSel != null ? mod.priceByOption[driverSel] : undefined;
+        var nextPrice = override !== undefined ? override : (mod.basePrice != null ? mod.basePrice : mod.price);
+        return Object.assign({}, mod, { price: nextPrice });
+      }
+      // Legacy priceMap path
       if (mod.priceMap) {
         var resolved;
         var mandKeys = Object.keys(activeItem.mandatorySelections);
@@ -822,7 +859,9 @@ export function ModifierPanel(container, opts) {
       modifierId: modId,
       label: opt.label,
       price: price,
+      basePrice: opt.price || 0,
       priceMap: opt.priceMap || null,
+      priceByOption: opt.priceByOption || null,
       groupKey: groupKey,
       placement: activePlacement || 'whole',
     };
@@ -878,12 +917,20 @@ export function ModifierPanel(container, opts) {
   // ═══ HELPERS ═══
 
   function _currentMandatoryKey() {
+    // Prefer the pricing-driver group when set, so optional prices track size.
+    if (pricingDriverKey && activeItem.mandatorySelections[pricingDriverKey]) {
+      return activeItem.mandatorySelections[pricingDriverKey].key;
+    }
     var keys = Object.keys(activeItem.mandatorySelections);
     if (keys.length > 0) return activeItem.mandatorySelections[keys[0]].key;
     return 'default';
   }
 
   function _resolvePrice(opt, mandKey) {
+    // Backend-authored size-based pricing wins over the legacy priceMap path.
+    if (opt.priceByOption && mandKey && opt.priceByOption[mandKey] !== undefined) {
+      return opt.priceByOption[mandKey];
+    }
     if (opt.priceMap) {
       var p = opt.priceMap[mandKey];
       if (p !== undefined) return p;

@@ -6,7 +6,7 @@ primary_region = 'ord'
 [env]
   KINDPOS_DATABASE_PATH = '/data/event_ledger.db'
   KINDPOS_DEBUG = 'false'
-  KINDPOS_STORE_MODE = 'demo'
+  KINDPOS_STORE_MODE = 'live'
 
 [http_service]
   internal_port = 8080

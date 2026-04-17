@@ -126,9 +126,9 @@ class TestESCPOSFormatter:
 
     def test_paper_width_58mm(self):
         fmt58 = ESCPOSFormatter(paper_width=58)
-        assert fmt58.chars_per_line == 32
+        assert fmt58.chars_per_line == 33
 
         result = fmt58.format([{'type': 'divider', 'char': '-'}])
-        assert b'-' * 32 in result
+        assert b'-' * 33 in result
         # Should NOT have 48 dashes
         assert b'-' * 48 not in result

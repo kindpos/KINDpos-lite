@@ -5,8 +5,9 @@ from app.core.event_ledger import EventLedger
 from app.core.events import EventType, Event, create_event, parse_event_type
 from app.models.config_events import (
     StoreConfigBundle, StoreInfo, CCProcessingRate, PendingChange,
-    Role, Employee, TipoutRule, MenuItem, MenuCategory, Section, FloorPlanLayout,
-    Terminal, Printer, RoutingMatrix
+    Role, Employee, TipoutRule, MenuItem, MenuCategory, ModifierGroup,
+    MandatoryAssignment, UniversalAssignment,
+    Section, FloorPlanLayout, Terminal, Printer, RoutingMatrix
 )
 from app.config import settings
 from app.services.store_config_service import StoreConfigService
@@ -19,11 +20,30 @@ async def broadcast_config_update(sections: List[str]):
     print(f"WS BROADCAST: config.updated for {sections}")
 
 @router.get("/pricing")
-async def get_pricing():
-    """Return canonical pricing constants for frontend sync."""
+async def get_pricing(ledger: EventLedger = Depends(get_ledger)):
+    """Return canonical pricing constants from ledger (or env defaults)."""
+    tax_rate = settings.tax_rate
+    cash_discount_rate = settings.cash_discount_rate
+
+    # Check for user-configured tax rules
+    tax_events = await ledger.get_events_by_type(EventType.STORE_TAX_RULE_CREATED, limit=100)
+    tax_events += await ledger.get_events_by_type(EventType.STORE_TAX_RULE_UPDATED, limit=100)
+    tax_events.sort(key=lambda x: x.sequence_number or 0)
+    for e in tax_events:
+        if e.payload.get("applies_to") == "all":
+            tax_rate = e.payload.get("rate_percent", tax_rate) / 100
+
+    # Check for user-configured cash discount
+    cc_events = await ledger.get_events_by_type(EventType.STORE_CC_PROCESSING_RATE_UPDATED, limit=10)
+    cc_events.sort(key=lambda x: x.sequence_number or 0)
+    if cc_events:
+        last = cc_events[-1].payload
+        if "cash_discount_rate" in last:
+            cash_discount_rate = last["cash_discount_rate"]
+
     return {
-        "tax_rate": settings.tax_rate,
-        "cash_discount_rate": settings.cash_discount_rate,
+        "tax_rate": tax_rate,
+        "cash_discount_rate": cash_discount_rate,
     }
 
 
@@ -57,6 +77,21 @@ async def get_menu_categories(ledger: EventLedger = Depends(get_ledger)):
 async def get_menu_items(ledger: EventLedger = Depends(get_ledger)):
     service = OverseerConfigService(ledger)
     return await service.get_menu_items()
+
+@router.get("/modifier-groups", response_model=List[ModifierGroup])
+async def get_modifier_groups(ledger: EventLedger = Depends(get_ledger)):
+    service = OverseerConfigService(ledger)
+    return await service.get_modifier_groups()
+
+@router.get("/mandatory-assignments", response_model=List[MandatoryAssignment])
+async def get_mandatory_assignments(ledger: EventLedger = Depends(get_ledger)):
+    service = OverseerConfigService(ledger)
+    return await service.get_mandatory_assignments()
+
+@router.get("/universal-assignments", response_model=List[UniversalAssignment])
+async def get_universal_assignments(ledger: EventLedger = Depends(get_ledger)):
+    service = OverseerConfigService(ledger)
+    return await service.get_universal_assignments()
 
 @router.get("/floorplan/sections", response_model=List[Section])
 async def get_floorplan_sections(ledger: EventLedger = Depends(get_ledger)):
@@ -120,6 +155,8 @@ async def push_changes(changes: List[PendingChange], background_tasks: Backgroun
             sections.add("employees")
         elif etype.startswith("menu.") or etype.startswith("category."):
             sections.add("menu")
+        elif etype.startswith("modifier."):
+            sections.add("modifiers")
         elif etype.startswith("floorplan."):
             sections.add("floor_plan")
         elif etype.startswith("terminal.") or etype.startswith("routing."):
@@ -216,7 +253,10 @@ async def get_terminal_bundle(ledger: EventLedger = Depends(get_ledger)):
         "roles": await overseer_service.get_roles(),
         "menu": {
             "categories": await overseer_service.get_menu_categories(),
-            "items": await overseer_service.get_menu_items()
+            "items": await overseer_service.get_menu_items(),
+            "modifier_groups": await overseer_service.get_modifier_groups(),
+            "mandatory_assignments": await overseer_service.get_mandatory_assignments(),
+            "universal_assignments": await overseer_service.get_universal_assignments()
         },
         "floor_plan": {
             "sections": await overseer_service.get_floorplan_sections(),
