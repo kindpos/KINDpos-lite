@@ -24,11 +24,14 @@ Canonical identities (from SALES_CALC_AUDIT.md):
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Iterable, Mapping, Optional
 
 from app.core.money import money_round
+
+_logger = logging.getLogger("kindpos.financial_invariants")
 
 # Default tolerance: a single cent. All checks allow drift within this
 # window so ROUND_HALF_UP differences at the aggregation boundary don't
@@ -366,3 +369,54 @@ def assert_day_close(**kwargs) -> None:
     for r in check_day_close(**kwargs):
         if not r.ok:
             raise InvariantViolation(r.name, r.message, r.diff)
+
+
+# ── gate: the runtime entry point for aggregators ──────────────────────────
+
+def gate(
+    results: Iterable[InvariantResult],
+    *,
+    context: str = "",
+    strict: Optional[bool] = None,
+) -> list[InvariantResult]:
+    """Consume a batch of check results: always log failures, optionally raise.
+
+    Aggregation paths (get_day_summary, close_batch, close_day,
+    _aggregate_orders, print context builders) call this after
+    computing totals so drift surfaces immediately.
+
+    `strict` defaults to `settings.strict_invariants`. pytest flips that
+    to True via conftest so tests fail loudly on any regression; in
+    production the default False logs a warning and lets the caller
+    decide what to do with the returned result list (e.g. attach a
+    `reconciliation_diff` to the response).
+    """
+    results = list(results)
+
+    if strict is None:
+        try:
+            from app.config import settings
+            strict = bool(settings.strict_invariants)
+        except Exception:
+            strict = False
+
+    failures = [r for r in results if not r.ok]
+    if failures:
+        prefix = f"[{context}] " if context else ""
+        for r in failures:
+            _logger.warning("%s%s failed: %s", prefix, r.name, r.message)
+        if strict:
+            first = failures[0]
+            raise InvariantViolation(first.name, first.message, first.diff)
+
+    return results
+
+
+def max_abs_diff(results: Iterable[InvariantResult]) -> float:
+    """Largest absolute diff across a batch of results (for reconciliation_diff)."""
+    best = 0.0
+    for r in results:
+        v = abs(r.diff)
+        if v > best:
+            best = v
+    return best

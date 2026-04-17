@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     default_subnet: str = "10.0.0.0/24"
     scan_timeout: float = 2.0
 
+    # Financial invariants. When True, aggregation paths raise
+    # InvariantViolation if any P&L / tender / tips identity drifts
+    # outside tolerance. When False (production default), the mismatch
+    # is logged at WARN level and a `reconciliation_diff` field is
+    # surfaced on the response so operators can see the drift without
+    # the API call failing. pytest flips this to True via conftest.
+    strict_invariants: bool = False
+
     class Config:
         env_file = ".env"
         env_prefix = "KINDPOS_"

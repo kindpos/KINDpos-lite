@@ -16,6 +16,11 @@ from app.core.event_ledger import EventLedger
 from app.core.events import EventType
 from app.core.projections import project_orders
 from app.core.money import money_round
+from app.core.financial_invariants import (
+    check_day_close,
+    gate as invariant_gate,
+    max_abs_diff,
+)
 from app.config import settings as app_settings
 
 router = APIRouter(prefix="/reports", tags=["reporting"])
@@ -194,6 +199,26 @@ def _aggregate_orders(orders, tip_map):
                 card_count += 1
 
     net_sales = gross_sales - void_total - discount_total - refund_total
+
+    # Gate the aggregation behind the canonical invariants. In production
+    # (strict_invariants=False) any drift just logs WARN; in tests the
+    # conftest flips strict=True so regressions fail loudly.
+    invariant_gate(
+        check_day_close(
+            gross_sales=float(gross_sales),
+            void_total=float(void_total),
+            discount_total=float(discount_total),
+            refund_total=float(refund_total),
+            net_sales=float(net_sales),
+            tax_collected=float(tax_total),
+            cash_total=float(cash_total),
+            card_total=float(card_total),
+            total_tips=float(total_tips),
+            card_tips=float(card_tips),
+            cash_tips=float(cash_tips),
+        ),
+        context="_aggregate_orders",
+    )
 
     return {
         "net_sales": net_sales,

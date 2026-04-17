@@ -58,6 +58,11 @@ from app.core.events import (
 from app.core.projections import project_order, project_orders, Order
 from decimal import Decimal
 from app.core.money import money_round
+from app.core.financial_invariants import (
+    check_day_close,
+    gate as invariant_gate,
+    max_abs_diff,
+)
 
 _ZERO = Decimal('0')
 from app.core.event_ledger import get_open_orders
@@ -571,6 +576,27 @@ async def get_day_summary(
     avg_check = money_round(net_sales / closed_count) if closed_count > 0 else 0.0
     unadjusted = sum(1 for c in checks_list if not c["adjusted"])
 
+    # Gate the aggregation behind the canonical invariants (P&L, tender
+    # reconciliation, tips partition). Strict mode raises in tests; prod
+    # logs WARN and surfaces `reconciliation_diff` on the response.
+    _invariant_results = invariant_gate(
+        check_day_close(
+            gross_sales=float(gross_sales),
+            void_total=float(void_total),
+            discount_total=float(discount_total),
+            refund_total=float(refund_total),
+            net_sales=net_sales,
+            tax_collected=float(tax_total),
+            cash_total=float(cash_total),
+            card_total=float(card_total),
+            total_tips=float(total_tips),
+            card_tips=float(card_tips),
+            cash_tips=float(cash_tips),
+        ),
+        context="get_day_summary",
+    )
+    reconciliation_diff = max_abs_diff(_invariant_results)
+
     # Build daypart breakdown from hourly buckets
     dayparts = []
     am_net, am_chk = _ZERO, 0
@@ -621,6 +647,7 @@ async def get_day_summary(
         "payments": payments_list,
         "checks": checks_list,
         "closed_order_ids": closed_order_ids,
+        "reconciliation_diff": reconciliation_diff,
     }
 
 
@@ -1585,13 +1612,17 @@ async def close_day(
     # First event timestamp = when the day started
     opened_at = all_events[0].timestamp.isoformat() if all_events else None
 
-    # Card settlement = card sales + card tips
+    # Card settlement = card sales + card tips. Keep the raw card sales
+    # amount separately so the tender-reconciliation invariant (which
+    # expects Cash + Card = Net + Tax) compares like values, not a
+    # settlement total that's inflated by card tips.
     card_settlement = card_total + card_tips_total
 
     # Convert Decimal accumulators to float for event factories and output
     total_sales_f = money_round(float(total_sales))
     total_tips_f = money_round(float(total_tips))
     cash_total_f = money_round(float(cash_total))
+    card_sales_f = money_round(float(card_total))
     card_total_f = money_round(float(card_settlement))
 
     # Emit BATCH_SUBMITTED (settlement record)
@@ -1621,15 +1652,6 @@ async def close_day(
     )
     await ledger.append(close_evt)
 
-    # Tender reconciliation check
-    tender_sum = cash_total_f + card_total_f
-    recon_diff = money_round(abs(total_sales_f - tender_sum))
-    if recon_diff > 0.01:
-        _logger.warning(
-            "Day close reconciliation mismatch: total_sales=%.2f, cash+card=%.2f, diff=%.2f",
-            total_sales_f, tender_sum, recon_diff,
-        )
-
     # Over/Short: Cash Expected = Cash Sales − Card Tips
     cash_sales_only = money_round(float(cash_total))
     card_tips_f = money_round(float(card_tips_total))
@@ -1640,6 +1662,33 @@ async def close_day(
     if body and body.actual_cash_counted is not None:
         actual_cash = money_round(body.actual_cash_counted)
         over_short = money_round(actual_cash - cash_expected)
+
+    # Gate the close-day payload against the canonical invariants. We
+    # don't have gross/voids/discounts/refunds separately here (close_day
+    # works off order.total = subtotal − discount + tax), so pass them
+    # as zero against a synthetic gross equal to net + tax: the P&L check
+    # is then vacuously true while the tender and tips checks still bite.
+    cash_tips_f = money_round(float(total_tips) - float(card_tips_total))
+    _close_results = invariant_gate(
+        check_day_close(
+            gross_sales=total_sales_f,
+            void_total=0.0,
+            discount_total=0.0,
+            refund_total=0.0,
+            net_sales=total_sales_f,
+            tax_collected=0.0,
+            cash_total=cash_total_f,
+            card_total=card_sales_f,
+            total_tips=total_tips_f,
+            card_tips=money_round(float(card_tips_total)),
+            cash_tips=cash_tips_f,
+            cash_expected=cash_expected,
+            actual_cash_counted=actual_cash,
+            over_short=over_short,
+        ),
+        context="close_day",
+    )
+    recon_diff = max_abs_diff(_close_results)
 
     summary = {
         "date": today,

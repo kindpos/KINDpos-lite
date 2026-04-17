@@ -15,6 +15,11 @@ Fixtures:
 import os
 os.environ.setdefault('KINDPOS_TAX_RATE', '0.07')
 os.environ.setdefault('KINDPOS_CASH_DISCOUNT_RATE', '0.04')
+# Every test runs under strict financial-invariants mode so any P&L /
+# tender / tips identity that drifts out of tolerance fails the test
+# the moment it happens, rather than silently logging and moving on
+# like the production default.
+os.environ.setdefault('KINDPOS_STRICT_INVARIANTS', 'true')
 import pytest
 import pytest_asyncio
 from pathlib import Path
