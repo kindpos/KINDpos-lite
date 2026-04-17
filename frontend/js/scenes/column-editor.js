@@ -180,6 +180,23 @@ defineScene({
     opsBody.appendChild(doneBtn.wrap);
 
     opsBody.appendChild(statusEl);
+
+    // Rebuild the ops panel for the current mode:
+    //  - split: CANCEL + CONFIRM (explicit confirm after picking targets)
+    //  - move:  CANCEL only (mode persists across moves)
+    //  - idle:  the full ops list
+    function renderOps() {
+      while (opsBody.firstChild) opsBody.removeChild(opsBody.firstChild);
+      var list;
+      if (state.mode === 'split') list = ['CANCEL', 'CONFIRM'];
+      else if (state.mode === 'move') list = ['CANCEL'];
+      else list = ops;
+      for (var ri = 0; ri < list.length; ri++) {
+        opsBody.appendChild(buildOpBtn(list[ri]).wrap);
+      }
+      opsBody.appendChild(doneBtn.wrap);
+      opsBody.appendChild(statusEl);
+    }
     opsCard.appendChild(opsBody);
     root.appendChild(opsCard);
 
@@ -291,6 +308,11 @@ defineScene({
         return function() { handleColumnTap(idx); };
       })(colIdx));
 
+      // Reapply split-target highlight if this column is a chosen target.
+      if (state.mode === 'split' && state.splitTargets.indexOf(colIdx) >= 0) {
+        hdr.style.background = T.gold;
+      }
+
       colEl.appendChild(hdr);
 
       // Item list (vertical scroll)
@@ -318,12 +340,26 @@ defineScene({
           borderBottom: '1px solid ' + T.border,
         });
 
+        // Reapply selection highlight if this item is still selected
+        // (selection survives re-renders during move/split).
+        var isSelected = false;
+        for (var si = 0; si < state.selectedItems.length; si++) {
+          if (state.selectedItems[si].colIdx === colIdx && state.selectedItems[si].itemIdx === ii) {
+            isSelected = true;
+            break;
+          }
+        }
+        if (isSelected) {
+          row.style.background = T.gold;
+          row.style.color = T.bgDark;
+        }
+
         var nameEl = document.createElement('span');
         nameEl.textContent = (item.qty > 1 ? item.qty + 'x ' : '') + item.name;
         row.appendChild(nameEl);
 
         var priceEl = document.createElement('span');
-        priceEl.style.color = T.gold;
+        priceEl.style.color = isSelected ? T.bgDark : T.gold;
         priceEl.textContent = fmt(item.qty * item.price);
         row.appendChild(priceEl);
 
@@ -378,11 +414,24 @@ defineScene({
       state.selectedItems = [];
       state.splitTargets = [];
       setStatus('');
+      renderOps();
+      renderColumns();
+    }
+
+    // Clear pending selection/targets but keep the current mode active.
+    // Used so MOVE persists across moves until the user cancels.
+    function clearSelection() {
+      state.selectedItems = [];
+      state.splitTargets = [];
       renderColumns();
     }
 
     function cancelMode() {
       clearMode();
+    }
+
+    function confirmAction() {
+      if (state.mode === 'split') doSplit();
     }
 
     // ── MERGE ──
@@ -402,7 +451,8 @@ defineScene({
     function enterMoveMode() {
       state.mode = 'move';
       state.selectedItems = [];
-      setStatus('Select items to move, then tap a column header or +');
+      setStatus('Select items, then tap a column header or + (CANCEL to exit)');
+      renderOps();
       renderColumns();
     }
 
@@ -411,7 +461,8 @@ defineScene({
       state.mode = 'split';
       state.selectedItems = [];
       state.splitTargets = [];
-      setStatus('Select items, then tap destination columns or +');
+      setStatus('Select items and destination columns, then tap CONFIRM');
+      renderOps();
       renderColumns();
     }
 
@@ -451,20 +502,19 @@ defineScene({
       var newCol = { id: 'NEW-' + nextNum, label: 'S-' + String(nextNum).padStart(3, '0'), items: [] };
 
       if (state.mode === 'move' && state.selectedItems.length > 0) {
-        // Move selected items into the new column
+        // Move selected items into the new column; keep move mode active
+        // so the user can continue moving without re-tapping MOVE.
         var moved = extractSelectedItems();
         newCol.items = moved;
         state.columns.push(newCol);
-        clearMode();
-      } else if (state.mode === 'split' && state.selectedItems.length > 0) {
-        // Add new column as split target and execute
+        clearSelection();
+      } else if (state.mode === 'split') {
+        // Add new column as an extra split target; wait for CONFIRM to
+        // actually execute the split.
         state.columns.push(newCol);
         state.splitTargets.push(state.columns.length - 1);
-        if (state.splitTargets.length >= 2 || state.selectedItems.length > 0) {
-          doSplit();
-        } else {
-          renderColumns();
-        }
+        setStatus('Select items and destination columns, then tap CONFIRM  (' + state.splitTargets.length + ' targets)');
+        renderColumns();
       } else {
         state.columns.push(newCol);
         renderColumns();
@@ -492,7 +542,9 @@ defineScene({
       for (var i = 0; i < moved.length; i++) {
         state.columns[targetColIdx].items.push(moved[i]);
       }
-      clearMode();
+      // Keep MOVE mode active so the user can move again without
+      // re-tapping MOVE. CANCEL exits.
+      clearSelection();
     }
 
     function toggleSplitTarget(colIdx) {
@@ -504,7 +556,7 @@ defineScene({
         state.splitTargets.push(colIdx);
         if (state.colEls[colIdx]) state.colEls[colIdx].hdr.style.background = T.gold;
       }
-      setStatus('Select items, then tap destination columns or +  (' + state.splitTargets.length + ' targets)');
+      setStatus('Select items and destination columns, then tap CONFIRM  (' + state.splitTargets.length + ' targets)');
     }
 
     function doSplit() {
