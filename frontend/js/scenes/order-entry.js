@@ -847,8 +847,8 @@ function rebuildBottomBar() {
     return;
   }
 
-  // ── Default: FINALIZE / SEND ──
-  var finalizeBtn = buildButton('FINALIZE', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
+  // ── Default: SAVE / SEND ──
+  var finalizeBtn = buildButton('SAVE', { fill: T.darkBtn, color: T.goGreen, fontSize: '26px', fontFamily: T.fh,
     onTap: function() {
       if (!hasUnsent) { handleClose(); return; }
       assignSeatsIfNeeded(async function() {
