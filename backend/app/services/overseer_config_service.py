@@ -129,13 +129,17 @@ class OverseerConfigService:
 
         events = await self.ledger.get_events_by_type(EventType.MENU_CATEGORY_CREATED, limit=1000)
         events += await self.ledger.get_events_by_type(EventType.MENU_CATEGORY_UPDATED, limit=1000)
+        events += await self.ledger.get_events_by_type(EventType.MENU_CATEGORY_DELETED, limit=1000)
         events.sort(key=lambda x: x.sequence_number or 0)
 
         cats = {}
         for e in events:
             payload = e.payload
             cid = payload["category_id"]
-            cats[cid] = MenuCategory(**payload)
+            if e.event_type == EventType.MENU_CATEGORY_DELETED:
+                cats.pop(cid, None)
+            else:
+                cats[cid] = MenuCategory(**payload)
         result = list(cats.values())
         cache.set(seq, result)
         return result
@@ -147,9 +151,16 @@ class OverseerConfigService:
         if cached is not None:
             return cached
 
+        # CREATED / UPDATED / DELETED handle the item's lifecycle.
+        # 86D / RESTORED toggle the temporary `is_86ed` stockout flag
+        # without removing the item from the projection — an 86'd item
+        # stays on the menu so the POS can show it greyed out, but
+        # order-entry must refuse to add one.
         events = await self.ledger.get_events_by_type(EventType.MENU_ITEM_CREATED, limit=5000)
         events += await self.ledger.get_events_by_type(EventType.MENU_ITEM_UPDATED, limit=5000)
         events += await self.ledger.get_events_by_type(EventType.MENU_ITEM_DELETED, limit=5000)
+        events += await self.ledger.get_events_by_type(EventType.MENU_ITEM_86D, limit=5000)
+        events += await self.ledger.get_events_by_type(EventType.MENU_ITEM_RESTORED, limit=5000)
         events.sort(key=lambda x: x.sequence_number or 0)
 
         items = {}
@@ -158,6 +169,14 @@ class OverseerConfigService:
             iid = payload["item_id"]
             if e.event_type == EventType.MENU_ITEM_DELETED:
                 items.pop(iid, None)
+            elif e.event_type == EventType.MENU_ITEM_86D:
+                existing = items.get(iid)
+                if existing is not None:
+                    items[iid] = existing.model_copy(update={"is_86ed": True})
+            elif e.event_type == EventType.MENU_ITEM_RESTORED:
+                existing = items.get(iid)
+                if existing is not None:
+                    items[iid] = existing.model_copy(update={"is_86ed": False})
             else:
                 items[iid] = MenuItem(**payload)
         result = list(items.values())

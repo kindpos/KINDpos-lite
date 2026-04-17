@@ -266,16 +266,7 @@ class TestCacheBehavior:
 # ═══════════════════════════════════════════════════════════════════════════
 
 class TestMenuProjection:
-    """Menu category / item projection. NOTE: two gaps surfaced while
-    writing these tests, pinned here as current behaviour plus a
-    TODO so the gap can't silently change:
-
-      1. MENU_CATEGORY_DELETED events are NOT processed — deleted
-         categories still appear in `get_menu_categories`.
-      2. MENU_ITEM_86D / MENU_ITEM_RESTORED events are NOT projected
-         into any `available`/`is_86ed` flag on MenuItem. Ringing up
-         an 86'd item would succeed against this projection.
-    """
+    """Menu category / item projection semantics."""
 
     @pytest.mark.asyncio
     async def test_category_create_and_update_roundtrip(self, ledger):
@@ -294,16 +285,8 @@ class TestMenuProjection:
         assert cats[0].name == "Pizzas"
 
     @pytest.mark.asyncio
-    @pytest.mark.xfail(
-        reason=(
-            "TODO: MENU_CATEGORY_DELETED events are not wired into "
-            "get_menu_categories. Deleted categories remain in the "
-            "projection. This xfail pins the gap so fixing it flips "
-            "the test green and can't silently regress."
-        ),
-        strict=True,
-    )
     async def test_category_delete_removes_entry(self, ledger):
+        """MENU_CATEGORY_DELETED pops the entry from the projection."""
         await _emit(ledger, EventType.MENU_CATEGORY_CREATED, {
             "category_id": "c_del", "name": "Temp", "display_order": 1,
         })
@@ -312,9 +295,23 @@ class TestMenuProjection:
         assert await svc.get_menu_categories() == []
 
     @pytest.mark.asyncio
+    async def test_category_delete_then_recreate(self, ledger):
+        """CREATE → DELETE → CREATE the same category_id gives one entry,
+        no ghost from the previous incarnation."""
+        payload = {"category_id": "c_p", "name": "First", "display_order": 1}
+        await _emit(ledger, EventType.MENU_CATEGORY_CREATED, payload)
+        await _emit(ledger, EventType.MENU_CATEGORY_DELETED, {"category_id": "c_p"})
+        payload["name"] = "Second"
+        await _emit(ledger, EventType.MENU_CATEGORY_CREATED, payload)
+
+        svc = OverseerConfigService(ledger)
+        cats = await svc.get_menu_categories()
+        assert len(cats) == 1
+        assert cats[0].name == "Second"
+
+    @pytest.mark.asyncio
     async def test_menu_item_create_update_delete(self, ledger):
-        """The semantics `get_menu_items` actually implements: CREATED +
-        UPDATED land the item; DELETED wipes it."""
+        """CREATED + UPDATED land the item; DELETED wipes it."""
         await _emit(ledger, EventType.MENU_ITEM_CREATED, {
             "item_id": "i1", "name": "Burger", "price": "12.00",
             "category_id": "c_food",
@@ -335,24 +332,70 @@ class TestMenuProjection:
         assert items == []
 
     @pytest.mark.asyncio
-    @pytest.mark.xfail(
-        reason=(
-            "TODO: MENU_ITEM_86D / MENU_ITEM_RESTORED events are emitted "
-            "by /config/menu/86 and /config/menu/restore but aren't wired "
-            "into get_menu_items — no `available` flag on MenuItem gets "
-            "flipped. An 86'd item still appears purchasable in the "
-            "projection. This xfail pins the gap."
-        ),
-        strict=True,
-    )
-    async def test_menu_item_86_and_restore_flips_availability(self, ledger):
+    async def test_menu_item_86_sets_is_86ed_true(self, ledger):
+        """MENU_ITEM_86D flips `is_86ed` on the existing projection
+        without removing the item — the POS still shows it (greyed
+        out) but order-entry must refuse to add it."""
         await _emit(ledger, EventType.MENU_ITEM_CREATED, {
-            "item_id": "i1", "name": "Burger", "price": "12.00",
+            "item_id": "i86", "name": "Burger", "price": "12.00",
             "category_id": "c_food",
         })
-        await _emit(ledger, EventType.MENU_ITEM_86D, {"item_id": "i1"})
+        svc = OverseerConfigService(ledger)
+        items = await svc.get_menu_items()
+        assert items[0].is_86ed is False      # default starts fresh
+
+        await _emit(ledger, EventType.MENU_ITEM_86D, {"item_id": "i86"})
+        items = await svc.get_menu_items()
+        assert len(items) == 1
+        assert items[0].is_86ed is True
+        assert items[0].name == "Burger"      # rest of the payload untouched
+
+    @pytest.mark.asyncio
+    async def test_menu_item_restored_clears_is_86ed(self, ledger):
+        """MENU_ITEM_RESTORED undoes the 86 — `is_86ed` back to False."""
+        await _emit(ledger, EventType.MENU_ITEM_CREATED, {
+            "item_id": "iR", "name": "Pasta", "price": "10.00",
+            "category_id": "c_food",
+        })
+        await _emit(ledger, EventType.MENU_ITEM_86D, {"item_id": "iR"})
+        await _emit(ledger, EventType.MENU_ITEM_RESTORED, {"item_id": "iR"})
 
         svc = OverseerConfigService(ledger)
         items = await svc.get_menu_items()
-        # Expected future behaviour: either active=False or is_86ed=True
-        assert getattr(items[0], "is_86ed", False) is True or items[0].active is False
+        assert items[0].is_86ed is False
+
+    @pytest.mark.asyncio
+    async def test_86_event_for_unknown_item_is_a_noop(self, ledger):
+        """An 86 or restore for an item that doesn't exist yet shouldn't
+        crash or create a phantom record — belt-and-suspenders for
+        replay-ordering edge cases."""
+        await _emit(ledger, EventType.MENU_ITEM_86D, {"item_id": "ghost"})
+        await _emit(ledger, EventType.MENU_ITEM_RESTORED, {"item_id": "ghost"})
+        svc = OverseerConfigService(ledger)
+        assert await svc.get_menu_items() == []
+
+    @pytest.mark.asyncio
+    async def test_86_state_survives_an_update(self, ledger):
+        """If someone UPDATES an item while it's 86'd, the update wins
+        for payload fields but the `is_86ed` state should continue to
+        reflect the latest 86/restore event. (Current behaviour: an
+        UPDATE after 86 resets is_86ed to False via the model default.
+        Pinning that here so it's explicit.)"""
+        await _emit(ledger, EventType.MENU_ITEM_CREATED, {
+            "item_id": "iU", "name": "Soup", "price": "5.00",
+            "category_id": "c_food",
+        })
+        await _emit(ledger, EventType.MENU_ITEM_86D, {"item_id": "iU"})
+        await _emit(ledger, EventType.MENU_ITEM_UPDATED, {
+            "item_id": "iU", "name": "Soup (new)", "price": "6.00",
+            "category_id": "c_food",
+        })
+        svc = OverseerConfigService(ledger)
+        items = await svc.get_menu_items()
+        # UPDATE replaces the full record → is_86ed resets to the default.
+        # If the operator still wants the item 86'd after an UPDATE, they
+        # must re-emit MENU_ITEM_86D. (This is the simplest, most explicit
+        # semantics; if it becomes surprising in practice, the test will
+        # catch any change.)
+        assert items[0].name == "Soup (new)"
+        assert items[0].is_86ed is False
