@@ -60,7 +60,7 @@ impl ServerManager {
                 &port.to_string(),
             ])
             .current_dir(&backend_dir)
-            .env("KINDPOS_STORE_MODE", env::var("KINDPOS_STORE_MODE").unwrap_or_else(|_| "demo".into()))
+            .env("KINDPOS_STORE_MODE", env::var("KINDPOS_STORE_MODE").unwrap_or_else(|_| "production".into()))
             .env("KINDPOS_DATABASE_PATH", &db_path)
             .env("KINDPOS_HARDWARE_DB_PATH", &hw_db_path)
             .env("KINDPOS_HOST", "127.0.0.1")
