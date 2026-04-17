@@ -1,0 +1,188 @@
+/* ============================================
+   KINDpos Overseer — Page Layout
+   Header | Sidebar Nav | Working Area
+   ============================================ */
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--color-bg);
+    font-family: var(--font-body);
+    color: var(--color-mint);
+}
+
+/* --- App Container --- */
+#app {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* --- Header Bar --- */
+#overseer-header {
+    height: var(--header-height);
+    min-height: var(--header-height);
+    background: var(--color-bg-dark);
+    border-bottom: 2px solid var(--color-mint);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0;
+    z-index: var(--z-gate);
+}
+.header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+.header-wordmark {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    color: var(--color-gold);
+    letter-spacing: 2px;
+}
+.header-product {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    color: var(--color-mint);
+    letter-spacing: 4px;
+    opacity: 0.8;
+}
+.header-badges {
+    display: flex;
+    gap: 20px;
+}
+.header-badge {
+    font-family: var(--font-body);
+    font-size: var(--text-badge);
+    color: var(--color-mint);
+    opacity: 0.6;
+    letter-spacing: 1px;
+}
+.header-right {
+    min-width: 180px;
+    text-align: right;
+}
+.header-version {
+    font-family: var(--font-body);
+    font-size: var(--text-stamp);
+    color: var(--color-gold);
+    opacity: 0.4;
+    letter-spacing: 1px;
+}
+
+/* --- Body (sidebar + content) --- */
+#overseer-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- Sidebar Nav --- */
+#overseer-nav {
+    width: var(--nav-width);
+    min-width: var(--nav-width);
+    background: var(--color-bg-dark);
+    border-right: 2px solid rgba(198, 255, 187, 0.15);
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+    z-index: var(--z-working);
+}
+#nav-sections {
+    padding: 12px 0;
+}
+.nav-section-header {
+    font-family: var(--font-heading);
+    font-size: 11px;
+    color: var(--color-mint);
+    letter-spacing: 3px;
+    padding: 10px 16px 8px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity var(--transition-fast);
+    user-select: none;
+    border-left: 3px solid transparent;
+}
+.nav-section-header:hover {
+    opacity: 0.9;
+}
+.nav-section-header.active {
+    opacity: 1;
+    color: var(--color-mint);
+    border-left-color: var(--color-mint);
+}
+.nav-section-subs {
+    display: none;
+    flex-direction: column;
+}
+.nav-section-subs.open {
+    display: flex;
+}
+.nav-sub-item {
+    font-family: var(--font-body);
+    font-size: var(--text-label);
+    color: var(--color-mint);
+    opacity: 0.55;
+    padding: 7px 16px 7px 24px;
+    cursor: pointer;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
+    border-left: 3px solid transparent;
+    letter-spacing: 0.5px;
+    user-select: none;
+}
+.nav-sub-item:hover {
+    opacity: 0.9;
+    background: rgba(198, 255, 187, 0.05);
+}
+.nav-sub-item.active {
+    opacity: 1;
+    color: var(--color-gold);
+    border-left-color: var(--color-gold);
+    background: rgba(252, 190, 64, 0.06);
+}
+
+/* --- Working Layer --- */
+#working-layer {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--color-bg);
+    position: relative;
+    z-index: var(--z-working);
+}
+
+/* --- Transactional Layer (modals) --- */
+#transactional-layer {
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-transactional);
+    background: rgba(51, 51, 51, 0.6);
+}
+
+/* --- Interrupt Layer --- */
+#interrupt-layer {
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-interrupt);
+    background: rgba(51, 51, 51, 0.85);
+}
+
+/* --- Gate Layer --- */
+#gate-layer {
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-gate);
+    background: var(--color-bg);
+}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1280, height=800, initial-scale=1.0">
+    <title>KINDpos Overseer</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Stylesheets (order matters: variables first — fonts defined in variables.css) -->
+    <link rel="stylesheet" href="styles/variables.css">
+    <link rel="stylesheet" href="styles/overseer-layout.css">
+    <link rel="stylesheet" href="styles/overseer-details.css">
+    <link rel="stylesheet" href="styles/printer-setup.css">
+</head>
+<body>
+    <div id="app">
+
+        <!-- Header Bar -->
+        <header id="overseer-header">
+            <div class="header-left">
+                <span class="header-wordmark">KINDpos</span>
+                <span class="header-product">OVERSEER</span>
+            </div>
+            <div class="header-badges">
+                <span class="header-badge" id="badge-employees">Employees: --</span>
+                <span class="header-badge" id="badge-menu-items">Menu Items: --</span>
+                <span class="header-badge" id="badge-terminals">Terminals: --</span>
+                <span class="header-badge" id="badge-sync">Last Sync: --</span>
+            </div>
+            <div class="header-right">
+                <span class="header-version" id="version-stamp"></span>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div id="overseer-body">
+
+            <!-- Sidebar Navigation -->
+            <nav id="overseer-nav">
+                <div id="nav-sections"></div>
+            </nav>
+
+            <!-- Working Layer — section content mounts here -->
+            <main id="working-layer"></main>
+
+            <!-- Transactional Layer — modals mount here -->
+            <div id="transactional-layer" style="display:none;"></div>
+
+            <!-- Interrupt Layer — blocking dialogs mount here -->
+            <div id="interrupt-layer" style="display:none;"></div>
+
+            <!-- Gate Layer — login/auth mounts here -->
+            <div id="gate-layer" style="display:none;"></div>
+
+        </div>
+
+    </div>
+
+    <!-- Libraries (offline-first: local copies) -->
+    <script src="assets/js/chart.min.js"></script>
+    <script src="assets/js/xlsx.mini.min.js"></script>
+
+    <!-- Boot -->
+    <script type="module" src="src/app.js"></script>
+</body>
+</html>

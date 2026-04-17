@@ -35,8 +35,7 @@ fn ensure_resources_extracted(app_dir: &PathBuf, resource_dir: &PathBuf) {
         return;
     }
 
-    // Copy resource sub-directories into app_dir.
-    for dir_name in &["python", "backend", "frontend"] {
+    for dir_name in &["python", "backend", "frontend", "overseer"] {
         let src = resource_dir.join(dir_name);
         let dst = app_dir.join(dir_name);
         if src.exists() {
@@ -67,16 +66,40 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::
     Ok(())
 }
 
+/// Detect whether we're running as the Overseer app.
+fn is_overseer_mode() -> bool {
+    // Check CLI args first.
+    if std::env::args().any(|a| a == "--overseer") {
+        return true;
+    }
+    // Check executable name (for the renamed copy).
+    if let Some(exe) = std::env::current_exe().ok().and_then(|p| {
+        p.file_stem().map(|s| s.to_string_lossy().to_lowercase())
+    }) {
+        return exe.contains("overseer");
+    }
+    false
+}
+
+fn show_error(app: &tauri::App, msg: &str) {
+    let window = app.get_window("main").expect("No main window");
+    window.eval(&format!(
+        "document.body.innerHTML = '<div style=\"padding:2rem;font-family:sans-serif;color:#ff6b6b\"><h1>Startup Error</h1><p>{}</p></div>'",
+        msg.replace('\'', "\\'")
+    )).ok();
+}
+
 fn main() {
+    let overseer = is_overseer_mode();
     let app_dir = app_data_dir();
     fs::create_dir_all(app_dir.join("data"))
         .expect("Failed to create KINDpos data directory");
 
-    // --- Find an available port ---
     let port = port::find_available_port(8000, 8099)
         .expect("No available port in range 8000-8099");
 
-    // --- Build and run the Tauri application ---
+    let url_path = if overseer { "/overseer" } else { "/" };
+
     tauri::Builder::default()
         .manage(Mutex::new(Option::<ServerManager>::None))
         .setup(move |app| {
@@ -85,20 +108,25 @@ fn main() {
                 .resolve_resource("resources")
                 .expect("Failed to resolve bundled resources directory");
 
-            // Extract resources on first run / version change.
             ensure_resources_extracted(&app_dir, &resource_dir);
 
-            // Start the backend server.
+            let window = app.get_window("main").expect("No main window");
+
+            // Overseer runs windowed; POS runs fullscreen kiosk.
+            if overseer {
+                window.set_title("KINDpos Overseer").ok();
+                window.set_fullscreen(false).ok();
+                window.set_decorations(true).ok();
+                window.set_resizable(true).ok();
+                let _ = window.set_size(tauri::LogicalSize::new(1280.0, 800.0));
+                window.center().ok();
+            }
+
             let srv = match ServerManager::start(&app_dir, port) {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("KINDpos startup error: {e}");
-                    // Show error visibly in the webview instead of crashing.
-                    let window = app.get_window("main").expect("No main window");
-                    window.eval(&format!(
-                        "document.body.innerHTML = '<div style=\"padding:2rem;font-family:sans-serif;color:#ff6b6b\"><h1>Startup Error</h1><p>{}</p></div>'",
-                        e.replace('\'', "\\'")
-                    )).ok();
+                    show_error(app, &e);
                     return Ok(());
                 }
             };
@@ -107,24 +135,17 @@ fn main() {
                 Ok(()) => {}
                 Err(e) => {
                     eprintln!("KINDpos health-check error: {e}");
-                    let window = app.get_window("main").expect("No main window");
-                    window.eval(&format!(
-                        "document.body.innerHTML = '<div style=\"padding:2rem;font-family:sans-serif;color:#ff6b6b\"><h1>Startup Error</h1><p>{}</p></div>'",
-                        e.replace('\'', "\\'")
-                    )).ok();
+                    show_error(app, &e);
                     return Ok(());
                 }
             }
 
-            // Store the server handle so we can shut it down on exit.
             let state = app.state::<Mutex<Option<ServerManager>>>();
             *state.lock().unwrap() = Some(srv);
 
-            // Point the webview at the running backend.
-            let window = app.get_window("main").expect("No main window");
             window
                 .eval(&format!(
-                    "window.location.replace('http://127.0.0.1:{port}')"
+                    "window.location.replace('http://127.0.0.1:{port}{url_path}')"
                 ))
                 .ok();
 
