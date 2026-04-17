@@ -14,18 +14,18 @@ export const STORAGE_KEY = 'kindpos-custom-themes';
 // Each slot is one color the user picks. Edge tokens
 // (e.g. numpadChassisL/D) are derived at apply time.
 export const THEME_SLOTS = [
-  { key: 'bg',            group: 'Card',       label: 'Scene background',  hint: 'Main terminal background behind all cards.' },
-  { key: 'numpadChassis', group: 'Card',       label: 'Card border',       hint: 'Bevel color on every beveled card (login, numpad, panels).' },
-  { key: 'gold',          group: 'Card',       label: 'Header accent',     hint: 'Scene titles, section headings, money labels.' },
-  { key: 'headerBg',      group: 'Headers',    label: 'Header background', hint: 'Main shell header bar and card header strips (e.g. SALES OVERVIEW).' },
-  { key: 'headerText',    group: 'Headers',    label: 'Header text',       hint: 'Text inside the shell header and card header strips.' },
-  { key: 'mint',          group: 'Accents',    label: 'Primary accent',    hint: 'Structural — chassis, transactional overlay frame.' },
-  { key: 'cyan',          group: 'Accents',    label: 'Secondary accent',  hint: 'Info / cool counterpoint to the primary accent.' },
-  { key: 'textPrimary',   group: 'Typography', label: 'Title text',        hint: 'Primary body/heading color.' },
-  { key: 'textSecondary', group: 'Typography', label: 'Subtitle text',     hint: 'Secondary captions and supporting labels.' },
-  { key: 'mutedText',     group: 'Typography', label: 'Data / muted',      hint: 'Metadata, axis labels, dim content.' },
-  { key: 'goGreen',       group: 'Typography', label: 'Money / positive',  hint: 'Totals, confirms, positive deltas.' },
-  { key: 'red',           group: 'Typography', label: 'Warning / negative',hint: 'Voids, alerts, destructive actions.' },
+  { key: 'bg',            group: 'Cards & Background', label: 'Screen background', hint: 'The big color behind everything on the screen.' },
+  { key: 'numpadChassis', group: 'Cards & Background', label: 'Card border',       hint: 'The frame around each box of buttons or info.' },
+  { key: 'gold',          group: 'Cards & Background', label: 'Highlight color',   hint: 'Used for important labels like prices and titles.' },
+  { key: 'headerBg',      group: 'Top Bar & Titles',   label: 'Top bar color',     hint: 'The strip across the very top of the screen, and the little title strip on each box.' },
+  { key: 'headerText',    group: 'Top Bar & Titles',   label: 'Top bar writing',   hint: 'The letters and numbers printed inside those bars.' },
+  { key: 'mint',          group: 'Pop Colors',         label: 'Main pop color',    hint: 'The standout color — shows up on buttons and things you can tap to confirm.' },
+  { key: 'cyan',          group: 'Pop Colors',         label: 'Second pop color',  hint: 'A cooler splash used when we need a different tone than the main one.' },
+  { key: 'textPrimary',   group: 'Text Colors',        label: 'Main writing',      hint: 'Most of the writing you read — item names, descriptions, numbers.' },
+  { key: 'textSecondary', group: 'Text Colors',        label: 'Smaller writing',   hint: 'The lighter writing underneath, like a second line of detail.' },
+  { key: 'mutedText',     group: 'Text Colors',        label: 'Quiet writing',     hint: 'Extra-faded writing for little things like timestamps and labels off to the side.' },
+  { key: 'goGreen',       group: 'Text Colors',        label: 'Money color',       hint: 'Used for totals and anything "good" — like the amount paid.' },
+  { key: 'red',           group: 'Text Colors',        label: 'Warning color',     hint: 'Heads-up color for things like voids, deletes, and alerts.' },
 ];
 
 // Fallback slot values used when creating a new theme
