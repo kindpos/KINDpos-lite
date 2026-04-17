@@ -293,16 +293,16 @@ async def process_cash_payment(
     # Apply cash dual-pricing discount only on the FIRST cash payment
     # (no prior confirmed payments). Applying on every partial payment
     # would incorrectly reduce order.total and break split-tender flows.
+    # Skip entirely when the rate is out of (0, 1) — otherwise partial
+    # seat payments get discounted to cover unpaid seats, auto-closing
+    # the order before other seats can pay.
     existing_confirmed = [p for p in order.payments if p.status == "confirmed"]
-    if not existing_confirmed and request.payment_method == "cash":
+    rate = settings.cash_discount_rate
+    if not existing_confirmed and request.payment_method == "cash" and 0 < rate < 1:
         # Cap the discount so partial (seat-level) payments don't inflate
         # the discount to include unpaid seats' value.
-        rate = settings.cash_discount_rate
         naive_discount = money_round(order.total - request.amount)
-        if rate > 0 and rate < 1:
-            max_discount = money_round(request.amount * rate / (1 - rate))
-        else:
-            max_discount = naive_discount
+        max_discount = money_round(request.amount * rate / (1 - rate))
         cash_discount = max(0, min(naive_discount, max_discount))
         if cash_discount > 0:
             discount_evt = create_event(
