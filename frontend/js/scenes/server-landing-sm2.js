@@ -22,7 +22,9 @@ var CHROME = T.numpadChassis;
 // ── Pure Helpers ─────────────────────────────────
 
 function fmt(n) {
-  return '$' + Math.abs(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  n = n || 0;
+  var abs = Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (n < 0 ? '\u2212$' : '$') + abs;
 }
 
 function checkNum(order) {

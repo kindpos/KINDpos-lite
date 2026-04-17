@@ -29,7 +29,9 @@ export var RED       = T.vermillion;
 // ─────────────────────────────────────────────────
 
 export function fmt(n) {
-  return '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  n = n || 0;
+  var abs = Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (n < 0 ? '\u2212$' : '$') + abs;
 }
 
 export function detailRow(label, value, valueColor) {
