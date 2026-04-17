@@ -609,7 +609,10 @@ function buildEditorControls(state, render) {
 
 function buildSlotRow(slot, state, render) {
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:6px 0;';
+    row.dataset.themeSlot = slot.key;
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:4px;transition:background 0.12s ease;';
+    row.addEventListener('mouseenter', () => highlightSlot(slot.key, true, row));
+    row.addEventListener('mouseleave', () => highlightSlot(slot.key, false, row));
 
     const color = document.createElement('input');
     color.type = 'color';
@@ -660,9 +663,34 @@ function refreshPreview(slots) {
     old.parentElement.replaceChild(fresh, old);
 }
 
+// Hover a slot row → pulse every preview element tagged with that slot.
+// Also glow the slot row itself so the connection reads in both directions.
+function highlightSlot(key, on, rowEl) {
+    const pane = document.querySelector('#theme-preview-pane');
+    if (!pane) return;
+    const targets = pane.querySelectorAll(`[data-theme-slot="${key}"]`);
+    targets.forEach(el => {
+        if (on) {
+            el._prevOutline = el.style.outline;
+            el._prevOffset  = el.style.outlineOffset;
+            el.style.outline = '2px dashed var(--color-gold)';
+            el.style.outlineOffset = '2px';
+        } else {
+            el.style.outline       = el._prevOutline || '';
+            el.style.outlineOffset = el._prevOffset  || '';
+        }
+    });
+    if (rowEl) {
+        rowEl.style.background = on ? 'rgba(var(--color-gold-rgb),0.08)' : '';
+    }
+}
+
+function tag(el, slot) {
+    el.dataset.themeSlot = slot;
+    return el;
+}
+
 function buildPreview(slots) {
-    // Expand the 10 slots into the full token set so the mocked card
-    // matches how the terminal will render.
     const full = expandOverrides(slots);
 
     const pane = document.createElement('div');
@@ -671,79 +699,108 @@ function buildPreview(slots) {
 
     const label = document.createElement('div');
     label.style.cssText = 'font-size:13px;color:var(--color-gold);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;';
-    label.textContent = 'Preview';
+    label.textContent = 'Preview — hover a slot on the left to highlight';
     pane.appendChild(label);
 
-    // Scene-background frame
-    const scene = document.createElement('div');
+    const scene = tag(document.createElement('div'), 'bg');
     scene.id = 'theme-preview-inner';
     scene.style.cssText = `
-        background:${full.bg};padding:20px;border-radius:4px;
-        min-height:360px;font-family:var(--font-body);
+        background:${full.bg};padding:0;border-radius:4px;
+        min-height:360px;font-family:var(--font-body);overflow:hidden;
     `;
 
-    // Header row
+    // Shell header strip (mirrors the terminal's #header)
+    const shellHeader = tag(document.createElement('div'), 'headerBg');
+    shellHeader.style.cssText = `
+        display:flex;justify-content:space-between;align-items:center;
+        background:${full.headerBg};padding:6px 12px;
+        border-top:4px solid ${full.headerBgL};border-left:4px solid ${full.headerBgL};
+        border-bottom:4px solid ${full.headerBgD};border-right:4px solid ${full.headerBgD};
+    `;
+    const shellTime = tag(document.createElement('span'), 'headerText');
+    shellTime.style.cssText = `color:${full.headerText};font-family:var(--font-mono);font-size:14px;`;
+    shellTime.textContent = '04/17/26 || 5:04pm // NEW ORDER';
+    shellHeader.appendChild(shellTime);
+    scene.appendChild(shellHeader);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:18px;';
+
+    // Sub-header row inside scene
     const header = document.createElement('div');
-    header.style.cssText = `
-        display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;
-        color:${full.gold};font-family:var(--font-heading);font-size:24px;
-    `;
-    header.innerHTML = `<span>Order #1042</span><span style="color:${full.mutedText};font-size:13px;">Table 7 · 9:42 PM</span>`;
-    scene.appendChild(header);
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;';
+    const orderLabel = tag(document.createElement('span'), 'gold');
+    orderLabel.style.cssText = `color:${full.gold};font-family:var(--font-heading);font-size:22px;`;
+    orderLabel.textContent = 'Order #1042';
+    const tableLabel = tag(document.createElement('span'), 'mutedText');
+    tableLabel.style.cssText = `color:${full.mutedText};font-size:13px;`;
+    tableLabel.textContent = 'Table 7 · 9:42 PM';
+    header.appendChild(orderLabel);
+    header.appendChild(tableLabel);
+    body.appendChild(header);
 
-    // Beveled card
-    const cardWrap = document.createElement('div');
+    // Beveled card with its own header strip
+    const cardWrap = tag(document.createElement('div'), 'numpadChassis');
     cardWrap.style.cssText = `
         background:${full.bgDark};
         border-top:7px solid ${full.numpadChassisL};
         border-left:7px solid ${full.numpadChassisL};
         border-bottom:7px solid ${full.numpadChassisD};
         border-right:7px solid ${full.numpadChassisD};
-        padding:18px;clip-path:polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);
+        clip-path:polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);
     `;
 
-    // Title / subtitle
-    const title = document.createElement('div');
+    // Card header strip (mirrors buildCardHeader)
+    const cardHeader = tag(document.createElement('div'), 'headerBg');
+    cardHeader.style.cssText = `background:${full.headerBg};padding:5px 12px;`;
+    const cardHeaderText = tag(document.createElement('div'), 'headerText');
+    cardHeaderText.style.cssText = `color:${full.headerText};font-family:var(--font-heading);font-size:14px;letter-spacing:1.5px;`;
+    cardHeaderText.textContent = 'ORDER RECAP';
+    cardHeader.appendChild(cardHeaderText);
+    cardWrap.appendChild(cardHeader);
+
+    const cardBody = document.createElement('div');
+    cardBody.style.cssText = 'padding:14px 16px;';
+
+    const title = tag(document.createElement('div'), 'textPrimary');
     title.style.cssText = `color:${full.textPrimary};font-size:22px;font-family:var(--font-heading);margin-bottom:2px;`;
     title.textContent = 'Margherita Pizza';
-    cardWrap.appendChild(title);
+    cardBody.appendChild(title);
 
-    const sub = document.createElement('div');
+    const sub = tag(document.createElement('div'), 'textSecondary');
     sub.style.cssText = `color:${full.textSecondary};font-size:14px;margin-bottom:14px;`;
     sub.textContent = 'Large · Extra basil · No garlic';
-    cardWrap.appendChild(sub);
+    cardBody.appendChild(sub);
 
-    // Data rows
-    const rowStyle = (colorFg) => `display:flex;justify-content:space-between;padding:4px 0;font-size:15px;color:${colorFg};`;
-    const row = (l, r, fg) => {
-        const d = document.createElement('div');
-        d.style.cssText = rowStyle(fg);
+    const lineRow = (l, r, fg, slot) => {
+        const d = tag(document.createElement('div'), slot);
+        d.style.cssText = `display:flex;justify-content:space-between;padding:4px 0;font-size:15px;color:${fg};`;
         d.innerHTML = `<span>${l}</span><span>${r}</span>`;
         return d;
     };
-    cardWrap.appendChild(row('Subtotal', '$18.00', full.textPrimary));
-    cardWrap.appendChild(row('Tax', '$1.48', full.mutedText));
-    const totalRow = row('Total', '$19.48', full.goGreen);
+    cardBody.appendChild(lineRow('Subtotal', '$18.00', full.textPrimary, 'textPrimary'));
+    cardBody.appendChild(lineRow('Tax',      '$1.48',  full.mutedText,   'mutedText'));
+    const totalRow = lineRow('Total', '$19.48', full.goGreen, 'goGreen');
     totalRow.style.cssText += 'font-family:var(--font-heading);font-size:20px;margin-top:6px;';
-    cardWrap.appendChild(totalRow);
+    cardBody.appendChild(totalRow);
 
-    // Warning line
-    const warn = document.createElement('div');
+    const warn = tag(document.createElement('div'), 'red');
     warn.style.cssText = `color:${full.red};font-size:13px;margin-top:10px;text-transform:uppercase;letter-spacing:1px;`;
     warn.textContent = '⚠ Void requires manager';
-    cardWrap.appendChild(warn);
+    cardBody.appendChild(warn);
 
-    scene.appendChild(cardWrap);
+    cardWrap.appendChild(cardBody);
+    body.appendChild(cardWrap);
 
     // Accent swatches
     const accents = document.createElement('div');
     accents.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
     [
-        { c: full.mint, lbl: 'Primary' },
-        { c: full.cyan, lbl: 'Secondary' },
-        { c: full.gold, lbl: 'Header' },
+        { c: full.mint, lbl: 'Main',      slot: 'mint' },
+        { c: full.cyan, lbl: 'Secondary', slot: 'cyan' },
+        { c: full.gold, lbl: 'Highlight', slot: 'gold' },
     ].forEach(a => {
-        const chip = document.createElement('div');
+        const chip = tag(document.createElement('div'), a.slot);
         chip.style.cssText = `
             flex:1;padding:8px 10px;background:${a.c};color:${full.bg};
             font-family:var(--font-heading);font-size:13px;text-align:center;
@@ -752,8 +809,9 @@ function buildPreview(slots) {
         chip.textContent = a.lbl;
         accents.appendChild(chip);
     });
-    scene.appendChild(accents);
+    body.appendChild(accents);
 
+    scene.appendChild(body);
     pane.appendChild(scene);
 
     // Active-theme note

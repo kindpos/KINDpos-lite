@@ -14,18 +14,18 @@ export const STORAGE_KEY = 'kindpos-custom-themes';
 // Each slot is one color the user picks. Edge tokens
 // (e.g. numpadChassisL/D) are derived at apply time.
 export const THEME_SLOTS = [
-  { key: 'bg',            group: 'Cards & Background', label: 'Screen background', hint: 'The big color behind everything on the screen.' },
-  { key: 'numpadChassis', group: 'Cards & Background', label: 'Card border',       hint: 'The frame around each box of buttons or info.' },
-  { key: 'gold',          group: 'Cards & Background', label: 'Highlight color',   hint: 'Used for important labels like prices and titles.' },
-  { key: 'headerBg',      group: 'Top Bar & Titles',   label: 'Top bar color',     hint: 'The strip across the very top of the screen, and the little title strip on each box.' },
-  { key: 'headerText',    group: 'Top Bar & Titles',   label: 'Top bar writing',   hint: 'The letters and numbers printed inside those bars.' },
-  { key: 'mint',          group: 'Pop Colors',         label: 'Main pop color',    hint: 'The standout color — shows up on buttons and things you can tap to confirm.' },
-  { key: 'cyan',          group: 'Pop Colors',         label: 'Second pop color',  hint: 'A cooler splash used when we need a different tone than the main one.' },
-  { key: 'textPrimary',   group: 'Text Colors',        label: 'Main writing',      hint: 'Most of the writing you read — item names, descriptions, numbers.' },
-  { key: 'textSecondary', group: 'Text Colors',        label: 'Smaller writing',   hint: 'The lighter writing underneath, like a second line of detail.' },
-  { key: 'mutedText',     group: 'Text Colors',        label: 'Quiet writing',     hint: 'Extra-faded writing for little things like timestamps and labels off to the side.' },
-  { key: 'goGreen',       group: 'Text Colors',        label: 'Money color',       hint: 'Used for totals and anything "good" — like the amount paid.' },
-  { key: 'red',           group: 'Text Colors',        label: 'Warning color',     hint: 'Heads-up color for things like voids, deletes, and alerts.' },
+  { key: 'bg',            group: 'Cards & Background', label: 'Screen background', hint: 'The color behind everything on screen.' },
+  { key: 'numpadChassis', group: 'Cards & Background', label: 'Card border',       hint: 'The frame around each card.' },
+  { key: 'gold',          group: 'Cards & Background', label: 'Highlight',         hint: 'Prices, titles, and important labels.' },
+  { key: 'headerBg',      group: 'Headers',            label: 'Header bar',        hint: 'The strip at the top of the screen and on each card.' },
+  { key: 'headerText',    group: 'Headers',            label: 'Header text',       hint: 'Text inside those strips.' },
+  { key: 'mint',          group: 'Accents',            label: 'Main accent',       hint: 'Confirm buttons and structural highlights.' },
+  { key: 'cyan',          group: 'Accents',            label: 'Secondary accent',  hint: 'A cooler secondary tone.' },
+  { key: 'textPrimary',   group: 'Text',               label: 'Body text',         hint: 'Item names, descriptions, numbers.' },
+  { key: 'textSecondary', group: 'Text',               label: 'Secondary text',    hint: 'Captions under the body text.' },
+  { key: 'mutedText',     group: 'Text',               label: 'Muted text',        hint: 'Timestamps and subtle labels.' },
+  { key: 'goGreen',       group: 'Text',               label: 'Money',             hint: 'Totals and paid amounts.' },
+  { key: 'red',           group: 'Text',               label: 'Warning',           hint: 'Voids, alerts, destructive actions.' },
 ];
 
 // Fallback slot values used when creating a new theme
