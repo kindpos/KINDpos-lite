@@ -24,3 +24,5 @@ printer_size_diagnostic.py
 node_modules/
 package.json
 package-lock.json
+.coverage
+htmlcov/
