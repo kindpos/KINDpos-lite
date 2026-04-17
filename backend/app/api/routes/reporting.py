@@ -111,8 +111,12 @@ def _aggregate_orders(orders, tip_map):
             continue
         # Skip open orders from financial totals — they have no
         # confirmed payments yet and would inflate net_sales.
+        # Guests and tables still count toward coverage metrics
+        # so that guests_per_table uses matching cohorts.
         if order.status == "open":
             guest_count += order.guest_count
+            if order.table:
+                table_set.add(order.table)
             continue
 
         total_checks += 1
