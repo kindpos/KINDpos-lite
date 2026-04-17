@@ -64,11 +64,17 @@ export async function loadEmployeeData() {
     }
 }
 
+function _labelFor(id) {
+    if (_rolesMap[id]) return _rolesMap[id];
+    const match = ROLES.find(r => r.id === id);
+    return (match && match.label) || id;
+}
+
 export function getRoleLabel(roleIdOrArray) {
     if (Array.isArray(roleIdOrArray)) {
-        return roleIdOrArray.map(id => _rolesMap[id] || id).join(', ') || '—';
+        return roleIdOrArray.map(_labelFor).join(', ') || '—';
     }
-    return _rolesMap[roleIdOrArray] || roleIdOrArray || '—';
+    return _labelFor(roleIdOrArray) || '—';
 }
 
 export function getStatusInfo(statusId) {
