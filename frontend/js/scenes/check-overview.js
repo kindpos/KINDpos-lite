@@ -337,7 +337,7 @@ defineScene({
     // ── Build a seat button (embossed + chamfered) ──
 
     function seatVariant(seat) {
-      if (state.paidSeats[seat.id]) return 'mint';
+      if (state.paidSeats[seat.id]) return 'gold';
       if (state.selected[seat.id]) return 'mint';
       return 'dark';
     }
@@ -348,7 +348,10 @@ defineScene({
       var total = seatTotal(seat);
       var variant = seatVariant(seat);
 
-      var btn = buildStyledButton({ variant: variant, disabled: isPaid });
+      // Paid seats must stay vibrant (gold) and still receive pointer events
+      // so long-press can open the payment summary. Tap is gated inside
+      // toggleSeat() via state.paidSeats.
+      var btn = buildStyledButton({ variant: variant, disabled: false });
       var wrap = btn.wrap;
       var inner = btn.inner;
 
@@ -486,20 +489,28 @@ defineScene({
       SceneManager.interrupt('seat-payment', {
         params: { seatId: seatId, payments: seatPayments },
         onConfirm: function(paymentId) {
-          // Void the selected payment
-          fetch('/api/v1/orders/' + state.orderId + '/payments/' + paymentId + '/void', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason: 'Payment voided from check overview' }),
-          }).then(function(r) {
-            if (r.ok) {
-              showToast(seatId + ' payment voided', { bg: T.gold, duration: 2000 });
-              refreshOrder();
-            } else {
-              showToast('Failed to void payment', { bg: T.red });
-            }
-          }).catch(function() {
-            showToast('Failed to void payment', { bg: T.red });
+          // Manager PIN gate — reversing a confirmed payment needs authorization
+          SceneManager.interrupt('disc-pin', {
+            onConfirm: function(approverId) {
+              fetch('/api/v1/orders/' + state.orderId + '/payments/' + paymentId + '/void', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  reason: 'Payment voided from check overview',
+                  approved_by: approverId,
+                }),
+              }).then(function(r) {
+                if (r.ok) {
+                  showToast(seatId + ' payment voided', { bg: T.gold, duration: 2000 });
+                  refreshOrder();
+                } else {
+                  showToast('Failed to void payment', { bg: T.red });
+                }
+              }).catch(function() {
+                showToast('Failed to void payment', { bg: T.red });
+              });
+            },
+            onCancel: function() {},
           });
         },
         onCancel: function() {},

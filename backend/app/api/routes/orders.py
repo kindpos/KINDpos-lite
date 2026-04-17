@@ -945,20 +945,30 @@ async def confirm_payment(
     return OrderResponse.from_order(order)
 
 
+class VoidPaymentRequest(BaseModel):
+    reason: Optional[str] = None
+    approved_by: Optional[str] = None
+
+
 @router.post("/{order_id}/payments/{payment_id}/void", response_model=OrderResponse)
 async def void_payment(
         order_id: str,
         payment_id: str,
-        reason: Optional[str] = None,
+        body: Optional[VoidPaymentRequest] = None,
         ledger: EventLedger = Depends(get_ledger),
 ):
-    """Void a specific confirmed payment, reopening the seat(s) it covered."""
-    order = await get_order_or_404(ledger, order_id)
+    """Void a specific confirmed payment, reopening the seat(s) it covered.
 
-    if order.status in ("closed", "voided"):
+    If the order auto-closed because this payment completed the balance,
+    reopen it first so the freed seat can be re-paid.
+    """
+    order = await get_order_or_404(ledger, order_id)
+    body = body or VoidPaymentRequest()
+
+    if order.status == "voided":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot void payments on a {order.status} order"
+            detail="Cannot void payments on a voided order"
         )
 
     target = None
@@ -977,6 +987,12 @@ async def void_payment(
             detail=f"Payment {payment_id} is {target.status}, not confirmed"
         )
 
+    if order.status == "closed":
+        await ledger.append(order_reopened(
+            terminal_id=settings.terminal_id,
+            order_id=order_id,
+        ))
+
     event = create_event(
         event_type=EventType.PAYMENT_CANCELLED,
         terminal_id=settings.terminal_id,
@@ -984,7 +1000,8 @@ async def void_payment(
         payload={
             "order_id": order_id,
             "payment_id": payment_id,
-            "error": reason or "Payment voided",
+            "error": body.reason or "Payment voided",
+            "approved_by": body.approved_by,
         },
     )
     await ledger.append(event)
