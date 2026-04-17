@@ -62,6 +62,11 @@ export const T = {
   numpadChassis: '#87f79c',
   numpadChassisL:'#b8ffd0',
   numpadChassisD:'#2e8040',
+  // Header chrome — main shell header + card header strips
+  headerBg:     '#87f79c',
+  headerBgL:    '#b8ffd0',
+  headerBgD:    '#2e8040',
+  headerText:   '#1a1a1a',
   pinFieldBg:'#1a1a1a',
   pinDot:    '#fbb03b',
   digitColor:'#fbb03b',

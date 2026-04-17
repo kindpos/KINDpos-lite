@@ -11,7 +11,8 @@ import { setSceneName, setHeaderBack } from '../app.js';
 import { buildNumpad } from '../numpad.js';
 import { buildCard } from '../theme-manager.js';
 
-var CHROME = T.numpadChassis;
+// Resolved at call time — captured default would never re-theme.
+function CHROME() { return T.headerBg || T.numpadChassis; }
 
 // ── Layout constants ─────────────────────────────
 export var CARD_GAP  = 8;
@@ -90,9 +91,9 @@ export function buildCardTile(def, idx, opts) {
 
   // Chrome header bar
   var hdr = document.createElement('div');
-  hdr.style.cssText = 'background:' + CHROME + ';padding:3px 8px;flex-shrink:0;';
+  hdr.style.cssText = 'background:' + CHROME() + ';padding:3px 8px;flex-shrink:0;';
   var hdrTxt = document.createElement('div');
-  hdrTxt.style.cssText = 'font-family:' + T.fh + ';font-size:13px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;';
+  hdrTxt.style.cssText = 'font-family:' + T.fh + ';font-size:13px;color:' + (T.headerText || T.bgDark) + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;';
   hdrTxt.textContent = def.title;
   hdr.appendChild(hdrTxt);
   card.appendChild(hdr);
@@ -224,7 +225,7 @@ export function buildExpandedCard(defs, idx, opts) {
   // Chrome header bar (tappable to collapse)
   var hdr = document.createElement('div');
   hdr.style.cssText = [
-    'background:' + CHROME + ';padding:5px 14px;flex-shrink:0;',
+    'background:' + CHROME() + ';padding:5px 14px;flex-shrink:0;',
     'display:flex;justify-content:space-between;align-items:center;',
     'cursor:pointer;user-select:none;-webkit-user-select:none;',
   ].join('');

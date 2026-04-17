@@ -18,7 +18,9 @@ import { DATA } from '../chart-colors.js';
 import { computeTotals } from '../pricing.js';
 
 // ── Constants ────────────────────────────────────
-var CHROME = T.numpadChassis;
+// CHROME is a function so it reads T.headerBg at call time and
+// repaints after setTheme. A captured value would never update.
+function CHROME() { return T.headerBg || T.numpadChassis; }
 
 // ── Pure Helpers ─────────────────────────────────
 
@@ -83,9 +85,9 @@ function ordersByTab(state) {
 
 function buildCardHeader(label) {
   var bar = document.createElement('div');
-  bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
+  bar.style.cssText = 'background:' + CHROME() + ';padding:5px 10px;flex-shrink:0;';
   var txt = document.createElement('div');
-  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + (T.headerText || T.bgDark) + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
   txt.textContent = label;
   bar.appendChild(txt);
   return bar;
@@ -785,7 +787,7 @@ defineScene({
           col.style.cssText = 'flex:1;min-width:180px;background:' + T.bgDark + ';display:flex;flex-direction:column;overflow-y:auto;border:2px solid ' + T.mint + ';clip-path:' + chamfer(6) + ';';
 
           var colHeader = document.createElement('div');
-          colHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + CHROME + ';padding:6px 8px;border-bottom:1px solid ' + T.border + ';';
+          colHeader.style.cssText = 'font-family:' + T.fh + ';font-size:18px;color:' + CHROME() + ';padding:6px 8px;border-bottom:1px solid ' + T.border + ';';
           colHeader.textContent = checkNum(order);
           col.appendChild(colHeader);
 
@@ -800,9 +802,9 @@ defineScene({
         }
 
         var newCol = document.createElement('div');
-        newCol.style.cssText = 'flex:1;min-width:180px;border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;clip-path:' + chamfer(6) + ';';
+        newCol.style.cssText = 'flex:1;min-width:180px;border:2px dashed ' + CHROME() + ';display:flex;align-items:center;justify-content:center;clip-path:' + chamfer(6) + ';';
         var newLabel = document.createElement('div');
-        newLabel.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + CHROME + ';';
+        newLabel.style.cssText = 'font-family:' + T.fb + ';font-size:30px;color:' + CHROME() + ';';
         newLabel.textContent = '+ NEW CHECK';
         newCol.appendChild(newLabel);
         body.appendChild(newCol);
@@ -1157,9 +1159,9 @@ function renderCheckGrid(state) {
   // + NEW CHECK tile (open tab only)
   if (state.activeTab === 'open') {
     var newTile = document.createElement('div');
-    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:60px;cursor:pointer;user-select:none;box-sizing:border-box;';
+    newTile.style.cssText = 'border:2px dashed ' + CHROME() + ';display:flex;align-items:center;justify-content:center;min-height:60px;cursor:pointer;user-select:none;box-sizing:border-box;';
     var plus = document.createElement('div');
-    plus.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + CHROME + ';';
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:32px;color:' + CHROME() + ';';
     plus.textContent = '+';
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {

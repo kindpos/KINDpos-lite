@@ -6,7 +6,7 @@
 //  through setTheme() on boot.
 // ═══════════════════════════════════════════════════
 
-import { setTheme, resetTheme } from '../tokens.js';
+import { T, setTheme, resetTheme, onThemeChange } from '../tokens.js';
 
 export const STORAGE_KEY = 'kindpos-custom-themes';
 
@@ -17,6 +17,8 @@ export const THEME_SLOTS = [
   { key: 'bg',            group: 'Card',       label: 'Scene background',  hint: 'Main terminal background behind all cards.' },
   { key: 'numpadChassis', group: 'Card',       label: 'Card border',       hint: 'Bevel color on every beveled card (login, numpad, panels).' },
   { key: 'gold',          group: 'Card',       label: 'Header accent',     hint: 'Scene titles, section headings, money labels.' },
+  { key: 'headerBg',      group: 'Headers',    label: 'Header background', hint: 'Main shell header bar and card header strips (e.g. SALES OVERVIEW).' },
+  { key: 'headerText',    group: 'Headers',    label: 'Header text',       hint: 'Text inside the shell header and card header strips.' },
   { key: 'mint',          group: 'Accents',    label: 'Primary accent',    hint: 'Structural — chassis, transactional overlay frame.' },
   { key: 'cyan',          group: 'Accents',    label: 'Secondary accent',  hint: 'Info / cool counterpoint to the primary accent.' },
   { key: 'textPrimary',   group: 'Typography', label: 'Title text',        hint: 'Primary body/heading color.' },
@@ -32,6 +34,8 @@ export const DEFAULT_SLOTS = {
   bg:            '#333333',
   numpadChassis: '#87f79c',
   gold:          '#fcbe40',
+  headerBg:      '#87f79c',
+  headerText:    '#1a1a1a',
   mint:          '#C6FFBB',
   cyan:          '#33ffff',
   textPrimary:   '#f5f0e8',
@@ -85,6 +89,11 @@ export function expandOverrides(slots) {
     gold:           s.gold,
     goldL:          _lighten(s.gold, 0.2),
     goldD:          _darken(s.gold, 0.3),
+
+    headerBg:       s.headerBg,
+    headerBgL:      _lighten(s.headerBg, 0.2),
+    headerBgD:      _darken(s.headerBg, 0.3),
+    headerText:     s.headerText,
 
     goGreen:        s.goGreen,
     greenL:         _lighten(s.goGreen, 0.2),
@@ -166,20 +175,38 @@ export function setActiveTheme(id) {
   }
 }
 
+// Mirror the subset of T that stylesheets (base.css) read via
+// CSS custom properties. Must be called after setTheme/resetTheme
+// so the shell header and other CSS-driven surfaces repaint.
+function _syncCssVars() {
+  if (typeof document === 'undefined') return;
+  var root = document.documentElement.style;
+  root.setProperty('--header-bg',    T.headerBg   || T.numpadChassis);
+  root.setProperty('--header-bg-l',  T.headerBgL  || T.numpadChassisL);
+  root.setProperty('--header-bg-d',  T.headerBgD  || T.numpadChassisD);
+  root.setProperty('--header-text',  T.headerText || T.bgDark);
+}
+
+// Register once so any setTheme/resetTheme call repaints CSS surfaces.
+onThemeChange(_syncCssVars);
+
 // Apply the currently active theme to T. Called by terminal boot
 // and by the Overseer editor after Save.
 export function applyActiveTheme() {
   var store = _readStore();
   if (store.activeId === 'terminal-glow') {
     resetTheme();
+    _syncCssVars();
     return;
   }
   var entry = store.themes[store.activeId];
   if (!entry) {
     resetTheme();
+    _syncCssVars();
     return;
   }
   setTheme(expandOverrides(entry.slots));
+  _syncCssVars();
 }
 
 // Built-in theme catalog — Terminal Glow only.

@@ -16,7 +16,9 @@ import { computeTotals } from '../pricing.js';
 
 // ── Constants (immutable) ────────────────────────
 
-var CHROME = T.numpadChassis;
+// CHROME is resolved at call time — reading T.headerBg here would
+// capture the pre-theme default and never re-apply after setTheme.
+function CHROME() { return T.headerBg || T.numpadChassis; }
 var TIP_ADJ_THRESHOLD = 5;
 var COB_WARNING = 30;
 var COB_CRITICAL = 35;
@@ -69,9 +71,9 @@ function checkNum(order) {
 
 function buildCardHeader(label) {
   var bar = document.createElement('div');
-  bar.style.cssText = 'background:' + CHROME + ';padding:5px 10px;flex-shrink:0;';
+  bar.style.cssText = 'background:' + CHROME() + ';padding:5px 10px;flex-shrink:0;';
   var txt = document.createElement('div');
-  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  txt.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + (T.headerText || T.bgDark) + ';letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
   txt.textContent = label;
   bar.appendChild(txt);
   return bar;
@@ -1830,10 +1832,10 @@ function renderCheckGrid(state) {
   // + NEW CHECK tile (OPEN tab only)
   if (isOpen) {
     var newTile = document.createElement('div');
-    newTile.style.cssText = 'border:2px dashed ' + CHROME + ';display:flex;align-items:center;justify-content:center;min-height:60px;cursor:pointer;user-select:none;';
+    newTile.style.cssText = 'border:2px dashed ' + CHROME() + ';display:flex;align-items:center;justify-content:center;min-height:60px;cursor:pointer;user-select:none;';
     newTile.style.clipPath = chamfer(6);
     var plus = document.createElement('div');
-    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + CHROME + ';';
+    plus.style.cssText = 'font-family:' + T.fb + ';font-size:40px;color:' + CHROME() + ';';
     plus.textContent = '+';
     newTile.appendChild(plus);
     newTile.addEventListener('pointerup', function() {
