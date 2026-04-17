@@ -574,6 +574,18 @@ async def get_labor_summary(
     # Manager view — aggregate all employees
     all_eids = set(list(clock_ins.keys()) + list(clock_outs.keys()))
 
+    # Load configured hourly rates for wage calculations. Missing rates
+    # resolve to 0 rather than a fabricated default so the Overseer's
+    # Total Labor/Labor% KPIs reflect only employees with a rate on file.
+    from app.services.overseer_config_service import OverseerConfigService
+    emp_rates: dict[str, float] = {}
+    try:
+        cfg_service = OverseerConfigService(ledger)
+        for emp in await cfg_service.get_employees():
+            emp_rates[emp.employee_id] = float(emp.hourly_rate or 0)
+    except Exception:
+        pass
+
     # Compute per-server tips from orders
     server_tips = {}
     for order in all_orders.values():
@@ -601,6 +613,9 @@ async def get_labor_summary(
         total_hours += Decimal(str(hours))
         card_tips_total += Decimal(str(tips))
 
+        rate = emp_rates.get(eid, 0.0)
+        gross_pay = money_round(hours * rate)
+
         employees.append({
             "id": eid,
             "name": emp_names.get(eid, "Unknown"),
@@ -609,6 +624,8 @@ async def get_labor_summary(
             "clock_out": _format_time(clock_outs.get(eid)) if not _is_clocked_in(eid) else None,
             "tips": money_round(tips),
             "weekly_hours": weekly_hours,
+            "hourly_rate": rate,
+            "gross_pay": gross_pay,
         })
 
     tipout_percent = app_settings.tipout_percent
@@ -629,6 +646,10 @@ async def get_labor_summary(
             })
 
     # ── COB trend (past 7 days) ───────────────────────────────────────────
+    # Labor cost uses the configured per-employee `hourly_rate` loaded
+    # above (emp_rates). Employees without a configured rate contribute
+    # 0 — the percentage is intentionally low rather than fabricated
+    # from a flat $15/hr estimate.
     cob_trend = []
     try:
         day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -643,8 +664,8 @@ async def get_labor_summary(
             d_agg = _aggregate_orders(list(d_orders.values()), d_tip_map)
             d_sales = float(d_agg["net_sales"])
 
-            # Get labor hours and cost for the day
-            d_labor_hours = 0.0
+            # Get labor cost per employee using their configured rate
+            d_labor_cost = 0.0
             d_logins = {}
             d_logouts = {}
             for e in d_events:
@@ -656,11 +677,10 @@ async def get_labor_summary(
                 logout_ev = d_logouts.get(eid)
                 start = login_ev.timestamp
                 end = logout_ev.timestamp if (logout_ev and logout_ev.timestamp > start) else start + timedelta(hours=8)
-                d_labor_hours += (end - start).total_seconds() / 3600.0
+                emp_hours = (end - start).total_seconds() / 3600.0
+                d_labor_cost += emp_hours * emp_rates.get(eid, 0.0)
 
-            # Estimate labor cost at $15/hr average
-            labor_cost = d_labor_hours * 15.0
-            cob_pct = round(labor_cost / d_sales * 100, 1) if d_sales > 0 else 0.0
+            cob_pct = round(d_labor_cost / d_sales * 100, 1) if d_sales > 0 else 0.0
             cob_trend.append({
                 "day": day_names[d.weekday()],
                 "percent": cob_pct,
@@ -668,9 +688,20 @@ async def get_labor_summary(
     except Exception:
         pass
 
+    # Surface net_sales so the Overseer's Labor % KPI has a denominator
+    # without having to fetch sales-summary separately.
+    today_agg = _aggregate_orders(list(all_orders.values()), tip_map)
+    net_sales_today = money_round(float(today_agg["net_sales"]))
+
+    total_labor_cost = money_round(
+        float(sum(Decimal(str(e["gross_pay"])) for e in employees))
+    )
+
     return {
         "date": date,
+        "net_sales": net_sales_today,
         "total_hours": money_round(float(total_hours)),
+        "total_labor": total_labor_cost,
         "tip_pool": tip_pool,
         "card_tips_total": money_round(float(card_tips_total)),
         "tipout_percent": tipout_percent,
@@ -731,7 +762,16 @@ async def _hourly_for_date(ledger: EventLedger, date_str: str, open_hour: int = 
             h = ts.hour if hasattr(ts, 'hour') else 0
         else:
             h = 0
-        hourly[h] += Decimal(str(order.subtotal or 0))
+        # Match the hourly bucket math used by _aggregate_orders:
+        # net per order is subtotal − discounts − refunds. Previously
+        # this returned bare subtotal as "net_sales", inflating the
+        # Manager Landing sparkline against the rest of the UI.
+        net = (
+            Decimal(str(order.subtotal or 0))
+            - Decimal(str(order.discount_total or 0))
+            - Decimal(str(order.refund_total or 0))
+        )
+        hourly[h] += net
 
     result = []
     for h in range(open_hour, close_hour + 1):

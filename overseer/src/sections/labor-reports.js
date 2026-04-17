@@ -71,7 +71,10 @@ async function render(container) {
 
     const totalHours = (data.employees || []).reduce((s, e) => s + (e.hours || 0), 0);
     const totalLabor = (data.employees || []).reduce((s, e) => s + (e.gross_pay || (e.hours || 0) * (e.hourly_rate || 0)), 0);
-    const overtimeHours = (data.employees || []).reduce((s, e) => s + Math.max(0, (e.hours || 0) - 40), 0);
+    // Federal overtime kicks in beyond 40 *weekly* hours. Using the
+    // daily `hours` field meant OT only triggered on 40-hour shifts —
+    // practically never, so the KPI read 0h regardless of schedule.
+    const overtimeHours = (data.employees || []).reduce((s, e) => s + Math.max(0, (e.weekly_hours || 0) - 40), 0);
     const netSales = data.net_sales || data.total_sales || 0;
     const laborPct = netSales > 0 ? (totalLabor / netSales) * 100 : 0;
 
