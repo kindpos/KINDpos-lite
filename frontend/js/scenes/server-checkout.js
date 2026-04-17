@@ -27,16 +27,28 @@ function isBlocked(state) {
   return state.openChecks > 0 || state.unadjustedTips > 0;
 }
 
+function _basisFor(basisName, state) {
+  // TipoutRule.calculation_base supports "Net Sales", "Gross Tips",
+  // "Net Tips" (see backend/app/models/config_events.py). Legacy
+  // "Liquor Sales" config is kept for backward compatibility.
+  var b = basisName || 'Net Sales';
+  if (b === 'Gross Tips' || b === 'Net Tips') {
+    return (state.cardTips || 0) + (state.cashTips || 0);
+  }
+  if (b === 'Liquor Sales') return state.liquorSales || 0;
+  return state.netSales || 0;
+}
+
 function recalcTipOut(state) {
   var total = 0;
   state.tipOutRoles.forEach(function(r) {
-    var basis = r.basis === 'Liquor Sales' ? state.liquorSales : state.netSales;
+    var basis = _basisFor(r.basis, state);
     r.basisAmt = basis;
     r.amount   = parseFloat((basis * r.percent / 100).toFixed(2));
     total += r.amount;
   });
   if (state.oneTimeRole && state.oneTimeRole.percent > 0) {
-    var otb = state.oneTimeRole.basis === 'Liquor Sales' ? state.liquorSales : state.netSales;
+    var otb = _basisFor(state.oneTimeRole.basis, state);
     state.oneTimeRole.basisAmt = otb;
     state.oneTimeRole.amount   = parseFloat((otb * state.oneTimeRole.percent / 100).toFixed(2));
     total += state.oneTimeRole.amount;

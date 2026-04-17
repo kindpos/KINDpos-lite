@@ -43,10 +43,20 @@ function fetchDayState(params) {
 
     var totalTipOut = 0;
     var cardTips = d.card_tips || 0;
+    var cashTips = d.cash_tips || 0;
     var netSales = d.net_sales || 0;
+    var grossTips = cardTips + cashTips;
     if (Array.isArray(rules)) {
       rules.forEach(function(r) {
-        var basis = r.calculation_base === 'Net Sales' ? netSales : cardTips;
+        // TipoutRule.calculation_base supports "Net Sales", "Gross Tips",
+        // "Net Tips" (see backend/app/models/config_events.py). The old
+        // branch treated anything non-"Net Sales" as card-tips — so a
+        // rule based on Gross Tips silently used card tips only, miss-
+        // counting cash tips.
+        var b = r.calculation_base || 'Net Sales';
+        var basis;
+        if (b === 'Gross Tips' || b === 'Net Tips') basis = grossTips;
+        else basis = netSales;
         totalTipOut += basis * (r.percentage || 0) / 100;
       });
     }
