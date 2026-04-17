@@ -399,7 +399,15 @@ async def get_day_summary(
     """Full day aggregation for all reporting scenes.
 
     Optional ?server_id= filter for server checkout view.
+
+    The monetary/count totals come from the shared `_aggregate_orders`
+    helper in reporting.py — the single source of truth for day
+    aggregation. This route only adds the presentation layer that the
+    POS scenes need (per-check list, per-payment list, AM/PM/Late
+    dayparts) so both endpoints can never again disagree on the math.
     """
+    from app.api.routes.reporting import _aggregate_orders
+
     all_events = await get_current_day_events(ledger)
     all_orders = project_orders(all_events)
 
@@ -410,49 +418,31 @@ async def get_day_summary(
             tip_map[e.payload.get("payment_id")] = e.payload.get("tip_amount", 0.0)
 
     # Filter orders by server if requested
-    orders = all_orders.values()
+    orders = list(all_orders.values())
     if server_id:
         orders = [o for o in orders if o.server_id == server_id]
 
-    open_count = 0
-    closed_count = 0
-    voided_count = 0
-    gross_sales = _ZERO
-    void_total = _ZERO
-    discount_total = _ZERO
-    refund_total = _ZERO
-    discount_count = 0
-    tax_total = _ZERO
-    cash_total = _ZERO
-    card_total = _ZERO
-    cash_count = 0
-    card_count = 0
-    total_tips = _ZERO
-    card_tips = _ZERO
-    cash_tips = _ZERO
-    guest_count = 0
-    categories = {}
-    payments_list = []
-    checks_list = []
-    closed_order_ids = []
-    hourly = {}
+    # All monetary and count aggregation — runs the canonical identities
+    # and (under strict_invariants) raises if anything drifts.
+    agg = _aggregate_orders(orders, tip_map)
 
+    # Presentation pass: per-check entries and per-payment entries, built
+    # only for the day-summary endpoint. No math here beyond laying out
+    # existing projection values.
+    checks_list = []
+    payments_list = []
     for order in orders:
+        check_label = order.check_number if order.check_number else order.order_id
+        time_str = (
+            order.created_at.strftime("%I:%M%p").lstrip("0").lower()
+            if order.created_at else ""
+        )
         if order.status == "voided":
-            voided_count += 1
-            # Include voided subtotals in gross so that the canonical
-            # P&L identity holds: Net = Gross − Voids − Discounts − Refunds.
-            # Previously gross skipped voided orders, causing net to be
-            # reduced by the void amount a second time.
-            void_total += Decimal(str(order.subtotal))
-            gross_sales += Decimal(str(order.subtotal))
-            # Add voided orders to checks list for the Void tab
-            check_label = order.check_number if order.check_number else order.order_id
             checks_list.append({
                 "checkId": order.order_id,
                 "checkLabel": check_label,
                 "paymentId": None,
-                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                "time": time_str,
                 "amount": money_round(order.subtotal),
                 "tip": 0,
                 "adjusted": True,
@@ -461,22 +451,11 @@ async def get_day_summary(
             })
             continue
         if order.status == "open":
-            open_count += 1
-        elif order.status in ("closed", "paid"):
-            closed_count += 1
-            closed_order_ids.append(order.order_id)
-
-        # Only include closed/paid orders in financial totals so that
-        # net_sales stays consistent with cash_total + card_total.
-        # Open orders have no confirmed payments yet.
-        if order.status == "open":
-            guest_count += order.guest_count
-            check_label = order.check_number if order.check_number else order.order_id
             checks_list.append({
                 "checkId": order.order_id,
                 "checkLabel": check_label,
                 "paymentId": None,
-                "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
+                "time": time_str,
                 "amount": money_round(order.subtotal),
                 "tip": 0,
                 "adjusted": False,
@@ -485,38 +464,13 @@ async def get_day_summary(
             })
             continue
 
-        gross_sales += Decimal(str(order.subtotal))
-        order_disc = Decimal(str(order.discount_total))
-        order_refund = Decimal(str(order.refund_total))
-        discount_total += order_disc
-        refund_total += order_refund
-        if order_disc > 0:
-            discount_count += 1
-        tax_total += Decimal(str(order.tax))
-        guest_count += order.guest_count
-
-        # Hourly bucket for daypart breakdown
-        if order.created_at:
-            h = order.created_at.hour
-            if h not in hourly:
-                hourly[h] = {"net": _ZERO, "checks": 0}
-            hourly[h]["net"] += Decimal(str(order.subtotal)) - order_disc - order_refund
-            hourly[h]["checks"] += 1
-
-        # Category breakdown from items
-        for item in order.items:
-            cat = item.category or "Uncategorized"
-            if cat not in categories:
-                categories[cat] = {"name": cat, "total": _ZERO, "count": 0}
-            categories[cat]["total"] += Decimal(str(item.subtotal))
-            categories[cat]["count"] += 1
-
-        # Payment breakdown
-        order_tip = _ZERO
+        # closed/paid — gather per-payment rows and the check's tip total
+        order_tip = Decimal("0")
         for p in order.payments:
             if p.status != "confirmed":
                 continue
             tip = Decimal(str(tip_map.get(p.payment_id, p.tip_amount)))
+            order_tip += tip
             payments_list.append({
                 "order_id": order.order_id,
                 "payment_id": p.payment_id,
@@ -524,85 +478,61 @@ async def get_day_summary(
                 "method": p.method,
                 "tip": float(tip),
             })
-            total_tips += tip
-            order_tip += tip
-            if p.method == "cash":
-                cash_total += Decimal(str(p.amount))
-                cash_count += 1
-                cash_tips += tip
-            else:
-                card_total += Decimal(str(p.amount))
-                card_count += 1
-                card_tips += tip
 
-        # Build check entry for tip-adjustment view
-        if order.status in ("closed", "paid"):
-            has_card = any(p.method != "cash" and p.status == "confirmed" for p in order.payments)
-            if has_card:
-                # Find the first confirmed card payment for tip-adjust
-                card_payment = next(
-                    (p for p in order.payments if p.method != "cash" and p.status == "confirmed"),
-                    None,
-                )
-                check_label = order.check_number if order.check_number else order.order_id
-                checks_list.append({
-                    "checkId": order.order_id,
-                    "checkLabel": check_label,
-                    "paymentId": card_payment.payment_id if card_payment else None,
-                    "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
-                    "amount": money_round(order.total),
-                    "tip": float(order_tip),
-                    "adjusted": any(tip_map.get(p.payment_id) is not None for p in order.payments),
-                    "method": "card",
-                    "status": "closed",
-                })
-            else:
-                # Cash-only closed orders — no tip adjustment needed
-                check_label = order.check_number if order.check_number else order.order_id
-                checks_list.append({
-                    "checkId": order.order_id,
-                    "checkLabel": check_label,
-                    "paymentId": None,
-                    "time": order.created_at.strftime("%I:%M%p").lstrip("0").lower() if order.created_at else "",
-                    "amount": money_round(order.total),
-                    "tip": 0,
-                    "adjusted": True,
-                    "method": "cash",
-                    "status": "closed",
-                })
+        has_card = any(
+            p.method != "cash" and p.status == "confirmed" for p in order.payments
+        )
+        if has_card:
+            card_payment = next(
+                (p for p in order.payments if p.method != "cash" and p.status == "confirmed"),
+                None,
+            )
+            checks_list.append({
+                "checkId": order.order_id,
+                "checkLabel": check_label,
+                "paymentId": card_payment.payment_id if card_payment else None,
+                "time": time_str,
+                "amount": money_round(order.total),
+                "tip": float(order_tip),
+                "adjusted": any(
+                    tip_map.get(p.payment_id) is not None for p in order.payments
+                ),
+                "method": "card",
+                "status": "closed",
+            })
+        else:
+            # Cash-only closed orders — no tip adjustment needed
+            checks_list.append({
+                "checkId": order.order_id,
+                "checkLabel": check_label,
+                "paymentId": None,
+                "time": time_str,
+                "amount": money_round(order.total),
+                "tip": 0,
+                "adjusted": True,
+                "method": "cash",
+                "status": "closed",
+            })
 
-    net_sales = float(gross_sales - void_total - discount_total - refund_total)
-    total_checks = closed_count + open_count
-    avg_check = money_round(net_sales / closed_count) if closed_count > 0 else 0.0
     unadjusted = sum(1 for c in checks_list if not c["adjusted"])
 
-    # Gate the aggregation behind the canonical invariants (P&L, tender
-    # reconciliation, tips partition). Strict mode raises in tests; prod
-    # logs WARN and surfaces `reconciliation_diff` on the response.
-    _invariant_results = invariant_gate(
-        check_day_close(
-            gross_sales=float(gross_sales),
-            void_total=float(void_total),
-            discount_total=float(discount_total),
-            refund_total=float(refund_total),
-            net_sales=net_sales,
-            tax_collected=float(tax_total),
-            cash_total=float(cash_total),
-            card_total=float(card_total),
-            total_tips=float(total_tips),
-            card_tips=float(card_tips),
-            cash_tips=float(cash_tips),
-        ),
-        context="get_day_summary",
+    # Derived figures from the aggregator
+    net_sales_f = money_round(float(agg["net_sales"]))
+    tax_total_f = money_round(float(agg["tax_total"]))
+    closed_count = agg["closed_count"]
+    open_count = agg["open_count"]
+    voided_count = agg["voided_count"]
+    avg_check = (
+        money_round(float(agg["net_sales"]) / closed_count)
+        if closed_count > 0 else 0.0
     )
-    reconciliation_diff = max_abs_diff(_invariant_results)
 
-    # Build daypart breakdown from hourly buckets
+    # AM / PM / Late dayparts from the aggregator's hourly buckets.
     dayparts = []
-    am_net, am_chk = _ZERO, 0
-    pm_net, pm_chk = _ZERO, 0
-    late_net, late_chk = _ZERO, 0
-    for h, bucket in hourly.items():
+    am_net, am_chk = Decimal("0"), 0
+    pm_net, pm_chk = Decimal("0"), 0
+    late_net, late_chk = Decimal("0"), 0
+    for h, bucket in agg["hourly"].items():
         if h < 12:
             am_net += bucket["net"]; am_chk += bucket["checks"]
         elif h < 17:
@@ -616,37 +546,66 @@ async def get_day_summary(
     if late_chk:
         dayparts.append({"name": "Late", "sales": money_round(float(late_net)), "checks": late_chk})
 
+    # Reshape the aggregator's category_totals for frontend consumption.
+    categories_list = [
+        {
+            "name": name,
+            "total": money_round(float(data["revenue"])),
+            "count": data["items_sold"],
+        }
+        for name, data in agg["category_totals"].items()
+    ]
+
+    # Re-run the gate here so the response carries `reconciliation_diff`
+    # even though _aggregate_orders already gated. Cheap because all
+    # values are already computed.
+    _invariant_results = invariant_gate(
+        check_day_close(
+            gross_sales=float(agg["gross_sales"]),
+            void_total=float(agg["void_total"]),
+            discount_total=float(agg["discount_total"]),
+            refund_total=float(agg["refund_total"]),
+            net_sales=float(agg["net_sales"]),
+            tax_collected=float(agg["tax_total"]),
+            cash_total=float(agg["cash_total"]),
+            card_total=float(agg["card_total"]),
+            total_tips=float(agg["total_tips"]),
+            card_tips=float(agg["card_tips"]),
+            cash_tips=float(agg["cash_tips"]),
+        ),
+        context="get_day_summary",
+    )
+    reconciliation_diff = max_abs_diff(_invariant_results)
+
     return {
         "date": __import__("datetime").date.today().isoformat(),
         "open_orders": open_count,
         "closed_orders": closed_count,
         "voided_orders": voided_count,
-        "gross_sales": money_round(float(gross_sales)),
-        "void_total": money_round(float(void_total)),
+        "gross_sales": money_round(float(agg["gross_sales"])),
+        "void_total": money_round(float(agg["void_total"])),
         "void_count": voided_count,
-        "discount_total": money_round(float(discount_total)),
-        "discount_count": discount_count,
-        "net_sales": money_round(net_sales),
-        "tax_total": money_round(float(tax_total)),
-        "cash_total": money_round(float(cash_total)),
-        "cash_count": cash_count,
-        "card_total": money_round(float(card_total)),
-        "card_count": card_count,
-        "total_sales": money_round(net_sales + float(tax_total)),
-        "total_tips": money_round(float(total_tips)),
-        "card_tips": money_round(float(card_tips)),
-        "cash_tips": money_round(float(cash_tips)),
-        "total_checks": total_checks,
+        "discount_total": money_round(float(agg["discount_total"])),
+        "discount_count": agg["discount_count"],
+        "net_sales": net_sales_f,
+        "tax_total": tax_total_f,
+        "cash_total": money_round(float(agg["cash_total"])),
+        "cash_count": agg["cash_count"],
+        "card_total": money_round(float(agg["card_total"])),
+        "card_count": agg["card_count"],
+        "total_sales": money_round(float(agg["net_sales"]) + float(agg["tax_total"])),
+        "total_tips": money_round(float(agg["total_tips"])),
+        "card_tips": money_round(float(agg["card_tips"])),
+        "cash_tips": money_round(float(agg["cash_tips"])),
+        "total_checks": closed_count + open_count,
         "avg_check": avg_check,
-        "guest_count": guest_count,
+        "guest_count": agg["guest_count"],
         "unadjusted_tips": unadjusted,
         "dayparts": dayparts,
-        "categories": [
-            {**c, "total": money_round(float(c["total"]))} for c in categories.values()
-        ],
+        "categories": categories_list,
         "payments": payments_list,
         "checks": checks_list,
-        "closed_order_ids": closed_order_ids,
+        "closed_order_ids": list(agg["closed_order_ids"]),
         "reconciliation_diff": reconciliation_diff,
     }
 

@@ -101,11 +101,16 @@ def _aggregate_orders(orders, tip_map):
     card_tips = _ZERO
     cash_tips = _ZERO
     total_checks = 0
+    voided_count = 0
+    open_count = 0
+    closed_count = 0
+    discount_count = 0
     guest_count = 0
     table_set = set()
     hourly = {}          # hour -> {net, checks, tables, food, drink, other}
     item_revenue = {}    # item_name -> {revenue, category, count}
     category_totals = {} # category_name -> {revenue, items_sold}
+    closed_order_ids = []
     tip_amounts = []     # list of individual tip values
 
     for order in orders:
@@ -114,6 +119,7 @@ def _aggregate_orders(orders, tip_map):
             # P&L identity holds: Net = Gross − Voids − Discounts − Refunds.
             # Previously gross skipped voided orders, causing net to be
             # reduced by the void amount a second time.
+            voided_count += 1
             void_total += Decimal(str(order.subtotal))
             gross_sales += Decimal(str(order.subtotal))
             continue
@@ -122,14 +128,22 @@ def _aggregate_orders(orders, tip_map):
         # Guests and tables still count toward coverage metrics
         # so that guests_per_table uses matching cohorts.
         if order.status == "open":
+            open_count += 1
             guest_count += order.guest_count
             if order.table:
                 table_set.add(order.table)
             continue
 
+        # closed/paid from here on
+        closed_count += 1
+        closed_order_ids.append(order.order_id)
+
         total_checks += 1
         gross_sales += Decimal(str(order.subtotal))
-        discount_total += Decimal(str(order.discount_total))
+        order_discount = Decimal(str(order.discount_total))
+        if order_discount > 0:
+            discount_count += 1
+        discount_total += order_discount
         refund_total += Decimal(str(order.refund_total))
         tax_total += Decimal(str(order.tax))
         guest_count += order.guest_count
@@ -228,6 +242,11 @@ def _aggregate_orders(orders, tip_map):
         "refund_total": refund_total,
         "tax_total": tax_total,
         "total_checks": total_checks,
+        "voided_count": voided_count,
+        "open_count": open_count,
+        "closed_count": closed_count,
+        "discount_count": discount_count,
+        "closed_order_ids": closed_order_ids,
         "cash_total": cash_total,
         "card_total": card_total,
         "cash_count": cash_count,
