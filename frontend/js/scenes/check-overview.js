@@ -76,7 +76,17 @@ function orderToSeats(order, minSeats) {
     var key = 'S-' + String(sn).padStart(3, '0');
     if (!seatMap[key]) seatMap[key] = { id: key, items: [] };
     var mods = (item.modifiers || []).map(function(m) {
-      return { name: m.name || '', price: m.price || 0, charged: (m.price || 0) > 0, prefix: m.prefix || null, children: m.children || [] };
+      return {
+        // Preserve modifier_id so onSave can target specific mods for
+        // removal when an item's mod state changes (e.g. mods stripped
+        // during SPLIT).
+        modifier_id: m.modifier_id || null,
+        name: m.name || '',
+        price: m.price || 0,
+        charged: (m.price || 0) > 0,
+        prefix: m.prefix || null,
+        children: m.children || [],
+      };
     });
     var modTotal = mods.reduce(function(s, m) { return s + (m.price || 0); }, 0);
     seatMap[key].items.push({
@@ -1134,13 +1144,28 @@ defineScene({
         if (state.selected[state.seats[si].id]) selectedSeats.push(state.seats[si]);
       }
       if (selectedSeats.length === 0) selectedSeats = state.seats.slice();
-      // Snapshot original item_ids so onSave can DELETE any that
-      // disappeared (e.g. merged duplicates that collapsed into one).
-      var originalItemIds = {};
+      // Snapshot the original state of every item the editor can touch.
+      // onSave uses this to decide PATCH vs. DELETE+POST (only DELETE+POST
+      // can change an item's modifiers, since the PATCH endpoint doesn't
+      // accept modifier changes) and which item_ids fell off entirely.
+      var originalByItemId = {};
+      function _modSig(mods) {
+        if (!Array.isArray(mods) || mods.length === 0) return '';
+        return mods.map(function(m) {
+          return (m.name || '') + '|' + (m.price || 0) + '|' + (m.prefix || '');
+        }).sort().join(';');
+      }
       for (var osi = 0; osi < selectedSeats.length; osi++) {
         var srcItems = selectedSeats[osi].items || [];
         for (var oi = 0; oi < srcItems.length; oi++) {
-          if (srcItems[oi].item_id) originalItemIds[srcItems[oi].item_id] = true;
+          var sit = srcItems[oi];
+          if (sit.item_id) {
+            originalByItemId[sit.item_id] = {
+              price: sit.price,
+              mods: sit.mods || [],
+              modSig: _modSig(sit.mods),
+            };
+          }
         }
       }
 
@@ -1185,22 +1210,34 @@ defineScene({
                 });
             }
 
-            // Build the set of item_ids still present after editing so we
-            // can DELETE anything that was removed or merged into another.
-            var finalItemIds = {};
-            for (var fci = 0; fci < columns.length; fci++) {
-              var fcItems = columns[fci].items || [];
-              for (var fii = 0; fii < fcItems.length; fii++) {
-                if (fcItems[fii].item_id) finalItemIds[fcItems[fii].item_id] = true;
-              }
+            function _postItem(seatNum, it) {
+              return fetch('/api/v1/orders/' + state.orderId + '/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  menu_item_id: it.menu_item_id || '',
+                  name: it.name,
+                  price: it.price,
+                  quantity: it.qty || 1,
+                  category: it.category || null,
+                  notes: it.notes || null,
+                  seat_number: seatNum,
+                  modifiers: (it.mods || []).map(function(m) {
+                    return {
+                      name: m.name || '',
+                      price: m.price || 0,
+                      charged: m.charged !== false,
+                      prefix: m.prefix || null,
+                    };
+                  }),
+                }),
+              });
             }
-            Object.keys(originalItemIds).forEach(function(iid) {
-              if (!finalItemIds[iid]) {
-                _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + iid, {
-                  method: 'DELETE',
-                }));
-              }
-            });
+
+            // Any item_id we touched to PATCH or DELETE during this save —
+            // used to skip a "disappeared" DELETE when we've already
+            // handled it as a rebuild.
+            var handledIds = {};
 
             for (var pi = 0; pi < columns.length; pi++) {
               // Derive seat number from the seat id ("S-003" → 3) so we
@@ -1211,30 +1248,55 @@ defineScene({
               for (var qi = 0; qi < colItems.length; qi++) {
                 var it = colItems[qi];
                 if (it.item_id) {
-                  _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + it.item_id, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seat_number: seatNum, price: it.price }),
-                  }));
+                  // If the mods on the edited item differ from what was in
+                  // the backend, we can't patch our way there — the PATCH
+                  // endpoint doesn't touch modifiers. Rebuild the line:
+                  // DELETE the existing item, POST a fresh one.
+                  var orig = originalByItemId[it.item_id];
+                  var curSig = _modSig(it.mods);
+                  if (orig && orig.modSig !== curSig) {
+                    handledIds[it.item_id] = true;
+                    (function(iid, seat, item) {
+                      _ceTrack(
+                        fetch('/api/v1/orders/' + state.orderId + '/items/' + iid, { method: 'DELETE' })
+                          .then(function(r) {
+                            // Chain the POST so the rebuild is atomic-ish
+                            // from the UI's perspective. Any DELETE failure
+                            // still counts in _ceFailed.
+                            return _postItem(seat, item);
+                          })
+                      );
+                    })(it.item_id, seatNum, it);
+                  } else {
+                    _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + it.item_id, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ seat_number: seatNum, price: it.price }),
+                    }));
+                  }
                 } else {
-                  // POST new item — include menu_item_id (backend requires it).
-                  // Empty string is accepted; the 86-guard just becomes a no-op.
-                  _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      menu_item_id: it.menu_item_id || '',
-                      name: it.name,
-                      price: it.price,
-                      quantity: it.qty || 1,
-                      category: it.category || null,
-                      notes: it.notes || null,
-                      seat_number: seatNum,
-                    }),
-                  }));
+                  _ceTrack(_postItem(seatNum, it));
                 }
               }
             }
+
+            // DELETE any original item_ids that didn't make it into the
+            // final state (removed or merged into another line) and
+            // haven't already been rebuilt above.
+            var finalItemIds = {};
+            for (var fci = 0; fci < columns.length; fci++) {
+              var fcItems = columns[fci].items || [];
+              for (var fii = 0; fii < fcItems.length; fii++) {
+                if (fcItems[fii].item_id) finalItemIds[fcItems[fii].item_id] = true;
+              }
+            }
+            Object.keys(originalByItemId).forEach(function(iid) {
+              if (!finalItemIds[iid] && !handledIds[iid]) {
+                _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + iid, {
+                  method: 'DELETE',
+                }));
+              }
+            });
           }
         },
       });

@@ -172,6 +172,13 @@ function fetchMenuFromAPI() {
     MODIFIER_GROUPS = [];
     MODIFIER_MASTER = {};
     (menu.modifier_groups || []).forEach(function(g) {
+      // Always index modifiers into MODIFIER_MASTER so mandatory-assignment
+      // lookups resolve names for modifiers that live in hidden groups too.
+      (g.modifiers || []).forEach(function(m) {
+        if (m.modifier_id && !MODIFIER_MASTER[m.modifier_id]) {
+          MODIFIER_MASTER[m.modifier_id] = { name: m.name, price: parseFloat(m.price) || 0 };
+        }
+      });
       if (g.hidden) {
         if (g.owner_item_id) {
           var mods = (g.modifiers || []).map(function(m) { return { id: m.modifier_id, label: m.name }; });
@@ -180,11 +187,6 @@ function fetchMenuFromAPI() {
         return;
       }
       MODIFIER_GROUPS.push(g);
-      (g.modifiers || []).forEach(function(m) {
-        if (m.modifier_id && !MODIFIER_MASTER[m.modifier_id]) {
-          MODIFIER_MASTER[m.modifier_id] = { name: m.name, price: parseFloat(m.price) || 0 };
-        }
-      });
     });
 
     // Extract pizza builder modifier groups

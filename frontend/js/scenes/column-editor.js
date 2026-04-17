@@ -661,8 +661,18 @@ defineScene({
         var targets = Object.keys(destSet).map(Number);
         var targetCount = targets.length;
 
-        var splitPrice = Math.round(item.price / targetCount * 100) / 100;
-        var remainder = Math.round((item.price - splitPrice * targetCount) * 100) / 100;
+        // Divide the EFFECTIVE price (base + modifier total) so the
+        // customer's total stays the same after a split. Mods are
+        // stripped from each split copy — their cost is rolled into
+        // the new base. onSave detects the mods changed vs. the
+        // original backend record and DELETE+POSTs instead of PATCHing,
+        // which is the only way to strip mods from an existing line.
+        var modTotal = Array.isArray(item.mods)
+          ? item.mods.reduce(function(s, m) { return s + (m.price || 0); }, 0)
+          : 0;
+        var effective = (item.price || 0) + modTotal;
+        var splitPrice = Math.round(effective / targetCount * 100) / 100;
+        var remainder = Math.round((effective - splitPrice * targetCount) * 100) / 100;
 
         for (var t = 0; t < targetCount; t++) {
           var tIdx = targets[t];
@@ -672,16 +682,13 @@ defineScene({
             name: item.name,
             qty: item.qty,
             price: price,
-            // Preserve catalog metadata so onSave's POST has the
-            // backend-required menu_item_id (and modifiers/notes
-            // survive to the new line).
             menu_item_id: item.menu_item_id,
             category: item.category,
-            mods: item.mods,
+            mods: [],
             notes: item.notes,
           };
-          // First copy keeps original item_id so the backend item
-          // gets its price PATCHed; extra copies are POSTed as new items.
+          // First copy keeps item_id so onSave can DELETE that exact
+          // backend record before POSTing the rebuilt line.
           if (t === 0 && item.item_id) {
             splitItem.item_id = item.item_id;
           }
