@@ -223,22 +223,74 @@ export function ModifierPanel(container, opts) {
     ].join('');
     card.style.clipPath = chamfer(8);
 
-    // ── Header: "Item Name: Modifiers" (compact) ──
+    // ── Header: "Item Name: Modifiers" + ALRG/NOTE buttons ──
     var headerEl = document.createElement('div');
     headerEl.style.cssText = [
-      'flex-shrink:0;padding:4px 10px;',
+      'flex-shrink:0;padding:4px 6px 4px 10px;',
       'font-family:' + T.fh + ';font-size:18px;',
       'border-bottom:2px solid ' + _darkenHex(T.numpadChassis, 0.3) + ';',
       'background:' + T.bgDark + ';',
+      'display:flex;align-items:center;gap:6px;',
     ].join('');
+
+    var titleEl = document.createElement('div');
+    titleEl.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
     var nameSpan = document.createElement('span');
     nameSpan.style.color = catColor;
     nameSpan.textContent = activeItem.itemLabel;
     var modSpan = document.createElement('span');
     modSpan.style.color = T.textPrimary;
     modSpan.textContent = ': Modifiers';
-    headerEl.appendChild(nameSpan);
-    headerEl.appendChild(modSpan);
+    titleEl.appendChild(nameSpan);
+    titleEl.appendChild(modSpan);
+    headerEl.appendChild(titleEl);
+
+    // ALRG button (header)
+    _alrgPairRef = buildStyledButton({ label: 'ALRG', variant: 'vermillion', size: 'sm', onClick: function() {
+      SceneManager.interrupt('allergen-select', {
+        onConfirm: function() {
+          fireUpdate();
+          _refreshAlrgBtn();
+        },
+        onCancel: function() {
+          fireUpdate();
+          _refreshAlrgBtn();
+        },
+        params: { activeItem: activeItem, fireUpdate: fireUpdate },
+      });
+    }});
+    _alrgPairRef.wrap.style.minWidth = '0';
+    _alrgPairRef.wrap.style.width = '72px';
+    _alrgPairRef.wrap.style.height = '32px';
+    _alrgPairRef.inner.style.padding = '2px 8px';
+    _alrgPairRef.inner.style.fontSize = '15px';
+    _alrgPairRef.inner.style.color = '#ffffff';
+    headerEl.appendChild(_alrgPairRef.wrap);
+    _refreshAlrgBtn();
+
+    // NOTE button (header)
+    _notePairRef = buildStyledButton({ label: 'NOTE', variant: 'gold', size: 'sm', onClick: function() {
+      showKeyboard({
+        placeholder: 'Special instructions...',
+        initialValue: activeItem.note,
+        maxLength: 100,
+        onDone: function(val) {
+          activeItem.note = val || '';
+          fireUpdate();
+          _refreshNoteBtn();
+        },
+        onDismiss: function() {},
+        dismissOnDone: true,
+      });
+    }});
+    _notePairRef.wrap.style.minWidth = '0';
+    _notePairRef.wrap.style.width = '72px';
+    _notePairRef.wrap.style.height = '32px';
+    _notePairRef.inner.style.padding = '2px 8px';
+    _notePairRef.inner.style.fontSize = '15px';
+    headerEl.appendChild(_notePairRef.wrap);
+    _refreshNoteBtn();
+
     card.appendChild(headerEl);
 
     // ── Tab bar ──
@@ -381,49 +433,11 @@ export function ModifierPanel(container, opts) {
       holdFill.style.width = '0';
     });
 
-    // NOTE button
-    _notePairRef = buildStyledButton({ label: 'NOTE', variant: 'gold', size: 'sm', onClick: function() {
-      showKeyboard({
-        placeholder: 'Special instructions...',
-        initialValue: activeItem.note,
-        maxLength: 100,
-        onDone: function(val) {
-          activeItem.note = val || '';
-          fireUpdate();
-          _refreshNoteBtn();
-        },
-        onDismiss: function() {},
-        dismissOnDone: true,
-      });
-    }});
-    _notePairRef.wrap.style.flex = '0.7';
-    _refreshNoteBtn();
-
-    // ALRG button
-    _alrgPairRef = buildStyledButton({ label: 'ALRG', variant: 'vermillion', size: 'sm', onClick: function() {
-      SceneManager.interrupt('allergen-select', {
-        onConfirm: function() {
-          fireUpdate();
-          _refreshAlrgBtn();
-        },
-        onCancel: function() {
-          fireUpdate();
-          _refreshAlrgBtn();
-        },
-        params: { activeItem: activeItem, fireUpdate: fireUpdate },
-      });
-    }});
-    _alrgPairRef.wrap.style.flex = '0.7';
-    _alrgPairRef.inner.style.color = '#ffffff';
-    _refreshAlrgBtn();
-
     // CONFIRM button
     var confirmPair = buildStyledButton({ label: 'CONFIRM', variant: 'mint', size: 'sm', onClick: function() { handleSend(); } });
-    confirmPair.wrap.style.flex = '2';
+    confirmPair.wrap.style.flex = '3';
 
     actionBar.appendChild(undoPair.wrap);
-    actionBar.appendChild(_notePairRef.wrap);
-    actionBar.appendChild(_alrgPairRef.wrap);
     actionBar.appendChild(confirmPair.wrap);
     bottomCard.appendChild(actionBar);
 

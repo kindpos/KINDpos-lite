@@ -15,7 +15,6 @@ import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
 import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../menu-data/universal-modifiers.js';
 import { ModifierPanel } from '../modifier-panel.js';
-import { getModifierConfig } from '../menu-data/modifier-configs.js';
 
 // ── Beveled depth card helpers (match clock-in card pattern) ──
 function _lightenHex(hex, pct) {
@@ -1380,7 +1379,7 @@ function openModifierPanel(item, modConfig, catColor, enablePlacement) {
       if (!_building) renderTicket();
     },
     onSend: function(activeItem) {
-      commitModifierPanelItem(item, activeItem);
+      commitModifierPanelItem(item, activeItem, modConfig);
     },
     onCancel: function() {
       closeModifierPanel();
@@ -1408,7 +1407,8 @@ function closeModifierPanel() {
   });
 }
 
-function commitModifierPanelItem(originalItem, activeItem) {
+function commitModifierPanelItem(originalItem, activeItem, modConfig) {
+  modConfig = modConfig || {};
   // Build ticket item from modifier panel state
   var mands = activeItem.mandatorySelections;
   var mandPrice = 0;
@@ -1418,7 +1418,6 @@ function commitModifierPanelItem(originalItem, activeItem) {
 
   // Mandatory selections as modifier lines
   var mods = [];
-  var modConfig = originalItem.modifierConfig || getModifierConfig(originalItem.label) || {};
   var mandGroups = modConfig.mandatoryGroups || [];
   mandGroups.forEach(function(g) {
     if (mands[g.key]) {
@@ -1452,7 +1451,6 @@ function commitModifierPanelItem(originalItem, activeItem) {
   });
 
   // Included removals
-  var modConfig = originalItem.modifierConfig || getModifierConfig(originalItem.label) || {};
   var includedItems = modConfig.includedItems || [];
   activeItem.includedRemovals.forEach(function(rid) {
     var incl = includedItems.find(function(i) { return i.id === rid; });
@@ -1652,19 +1650,16 @@ function handleItemSelect(item) {
     return;
   }
 
-  // ── Modifier panel: resolve config from backend assignments, fall back to hardcoded ──
+  // ── Modifier panel: resolve config from backend assignments ──
   var catId = hexNav ? hexNav.getCatId() : null;
   if (!catId && item.id) catId = ITEM_TO_CATEGORY[item.id] || null;
 
   var backendConfig = resolveBackendModifierConfig(item.id, catId);
-  var legacyConfig = getModifierConfig(item.label);
   var overseerIncluded = item.id ? INCLUDED_BY_ITEM[item.id] : null;
 
-  var modConfig = backendConfig || legacyConfig;
-  if (modConfig || (overseerIncluded && overseerIncluded.length > 0)) {
-    var effectiveConfig = modConfig ? Object.assign({}, modConfig) : {};
+  if (backendConfig || (overseerIncluded && overseerIncluded.length > 0)) {
+    var effectiveConfig = backendConfig ? Object.assign({}, backendConfig) : {};
     if (overseerIncluded && overseerIncluded.length > 0) {
-      // Overseer-authored included list wins over any hardcoded fallback
       effectiveConfig.includedItems = overseerIncluded;
     }
     var catColor = catId ? T.catColor(catId.toUpperCase()) : T.mint;
