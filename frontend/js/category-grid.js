@@ -7,6 +7,23 @@
 import { T, chamfer } from './tokens.js';
 import { applyCardBevel, hexToRgba } from './theme-manager.js';
 
+// Shrink label font until it fits the tile width, clamped to a
+// minimum floor. Runs after first paint so clientWidth is valid.
+function _fitLabel(tile, lbl) {
+  requestAnimationFrame(function() {
+    var max = 26;
+    var min = 12;
+    var size = max;
+    lbl.style.fontSize = size + 'px';
+    var avail = tile.clientWidth - 20;
+    if (avail <= 0) return;
+    while (size > min && (lbl.scrollWidth > avail || lbl.scrollHeight > tile.clientHeight - 16)) {
+      size -= 1;
+      lbl.style.fontSize = size + 'px';
+    }
+  });
+}
+
 // ═══════════════════════════════════════════════════
 //  CategoryGrid
 //  Usage:
@@ -66,12 +83,12 @@ export function CategoryGrid(container, opts) {
       'transition:transform 60ms, filter 60ms;',
     ].join('');
 
-    // Style D bevel: chassis edges for idle tiles, color-derived for solid parent.
-    applyCardBevel(tile, mode === 'solid' ? color : undefined, 7);
+    // Style D bevel derived from the category color — light top/left,
+    // dark bottom/right — same helper used by the rest of the chassis.
+    applyCardBevel(tile, color, 7);
 
     if (mode === 'border') {
-      // Category stroke + glow — outline inset sits inside the bevel frame.
-      tile.style.boxShadow = '0 0 8px ' + hexToRgba(color, 0.33) + ', inset 0 0 0 2px ' + color;
+      tile.style.boxShadow = '0 0 8px ' + hexToRgba(color, 0.33);
     } else {
       // Inner bevel for depth on the solid parent back tile.
       tile.style.boxShadow = 'inset 0 2px 0 ' + hexToRgba(T.bgLight, 0.5)
@@ -85,10 +102,11 @@ export function CategoryGrid(container, opts) {
       'font-weight:bold;font-size:26px;line-height:1.1;',
       'color:' + labelClr + ';',
       'text-align:center;pointer-events:none;',
-      'word-break:break-word;',
+      'word-break:break-word;max-width:100%;',
     ].join('');
     lbl.textContent = label;
     tile.appendChild(lbl);
+    _fitLabel(tile, lbl);
 
     // Price (gold) if provided
     if (price !== undefined && price !== null && price !== '') {
