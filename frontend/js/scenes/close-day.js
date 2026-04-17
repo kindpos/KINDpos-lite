@@ -46,17 +46,30 @@ function fetchDayState(params) {
     var cashTips = d.cash_tips || 0;
     var netSales = d.net_sales || 0;
     var grossTips = cardTips + cashTips;
+    // Store-wide category totals from day-summary (no server_id filter).
+    var catTotals = {};
+    (d.categories || []).forEach(function(c) {
+      if (c && c.name) catTotals[c.name] = c.total || 0;
+    });
     if (Array.isArray(rules)) {
       rules.forEach(function(r) {
         // TipoutRule.calculation_base supports "Net Sales", "Gross Tips",
         // "Net Tips" (see backend/app/models/config_events.py). The old
         // branch treated anything non-"Net Sales" as card-tips — so a
         // rule based on Gross Tips silently used card tips only, miss-
-        // counting cash tips.
+        // counting cash tips. When `categories` is set on a Net Sales
+        // rule, the basis narrows to those categories only.
         var b = r.calculation_base || 'Net Sales';
         var basis;
-        if (b === 'Gross Tips' || b === 'Net Tips') basis = grossTips;
-        else basis = netSales;
+        if (b === 'Gross Tips' || b === 'Net Tips') {
+          basis = grossTips;
+        } else if (Array.isArray(r.categories) && r.categories.length) {
+          basis = r.categories.reduce(function(sum, cat) {
+            return sum + (catTotals[cat] || 0);
+          }, 0);
+        } else {
+          basis = netSales;
+        }
         totalTipOut += basis * (r.percentage || 0) / 100;
       });
     }

@@ -84,6 +84,11 @@ class TipoutRule(BaseModel):
     role_to: str
     percentage: float
     calculation_base: str # Net Sales, Gross Tips, Net Tips
+    # Optional category filter. When non-empty and calculation_base is
+    # "Net Sales", the basis is the sum of net sales for items in these
+    # categories only (typically applied per-server, e.g. "2% of
+    # alcohol net sales to bar"). Empty list → full net sales.
+    categories: List[str] = []
 
 # Menu Models
 class MenuItem(BaseModel):

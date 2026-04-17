@@ -27,28 +27,40 @@ function isBlocked(state) {
   return state.openChecks > 0 || state.unadjustedTips > 0;
 }
 
-function _basisFor(basisName, state) {
+function _netSalesInCategories(state, cats) {
+  if (!cats || !cats.length) return state.netSales || 0;
+  var byName = state.categoryTotals || {};
+  var total = 0;
+  for (var i = 0; i < cats.length; i++) {
+    total += byName[cats[i]] || 0;
+  }
+  return total;
+}
+
+function _basisFor(rule, state) {
   // TipoutRule.calculation_base supports "Net Sales", "Gross Tips",
   // "Net Tips" (see backend/app/models/config_events.py). Legacy
   // "Liquor Sales" config is kept for backward compatibility.
-  var b = basisName || 'Net Sales';
+  // When a rule has `categories` set, "Net Sales" is narrowed to
+  // the server's net sales in just those categories.
+  var b = rule.basis || 'Net Sales';
   if (b === 'Gross Tips' || b === 'Net Tips') {
     return (state.cardTips || 0) + (state.cashTips || 0);
   }
   if (b === 'Liquor Sales') return state.liquorSales || 0;
-  return state.netSales || 0;
+  return _netSalesInCategories(state, rule.categories);
 }
 
 function recalcTipOut(state) {
   var total = 0;
   state.tipOutRoles.forEach(function(r) {
-    var basis = _basisFor(r.basis, state);
+    var basis = _basisFor(r, state);
     r.basisAmt = basis;
     r.amount   = parseFloat((basis * r.percent / 100).toFixed(2));
     total += r.amount;
   });
   if (state.oneTimeRole && state.oneTimeRole.percent > 0) {
-    var otb = _basisFor(state.oneTimeRole.basis, state);
+    var otb = _basisFor(state.oneTimeRole, state);
     state.oneTimeRole.basisAmt = otb;
     state.oneTimeRole.amount   = parseFloat((otb * state.oneTimeRole.percent / 100).toFixed(2));
     total += state.oneTimeRole.amount;
@@ -82,15 +94,25 @@ function fetchServerState(params) {
           label: r.role_to || r.role_from || 'Tipout',
           percent: r.percentage || 0,
           basis: r.calculation_base || 'Net Sales',
+          categories: Array.isArray(r.categories) ? r.categories : [],
         };
       });
     }
+
+    // Build a name→total lookup for fast category-scoped tipout math.
+    // d.categories is the server's own item sales when the day-summary
+    // endpoint is called with ?server_id=… (see orders.py get_day_summary).
+    var categoryTotals = {};
+    (d.categories || []).forEach(function(c) {
+      if (c && c.name) categoryTotals[c.name] = c.total || 0;
+    });
 
     var state = {
       employeeId:    params.employeeId   || '',
       employeeName:  params.employeeName || '',
       date: (today.getMonth()+1) + '/' + today.getDate() + '/' + String(today.getFullYear()).slice(2),
       netSales:      d.net_sales    || 0,
+      categoryTotals: categoryTotals,
       liquorSales:   0,
       cashSales:     d.cash_total   || 0,
       cardSales:     d.card_total   || 0,
