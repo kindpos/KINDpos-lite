@@ -56,14 +56,14 @@ function _build() {
   var header = document.createElement('div');
   header.style.cssText = [
     'padding:8px 12px;flex-shrink:0;',
-    'background:' + T.bg4 + ';',
+    'background:' + (T.headerBg || T.bg4) + ';',
     'border-bottom:2px solid ' + T.bgEdge + ';',
     'display:flex;justify-content:space-between;align-items:center;',
   ].join('');
   _headerTitle = document.createElement('div');
   _headerTitle.style.cssText = [
     'font-family:' + T.fh + ';font-size:' + T.fsSmall + ';',
-    'color:' + T.textPrimary + ';letter-spacing:0.08em;',
+    'color:' + (T.headerText || T.textPrimary) + ';letter-spacing:0.08em;',
   ].join('');
   _headerTitle.textContent = 'ORDER RECAP';
   var checkWrap = document.createElement('div');
@@ -71,12 +71,12 @@ function _build() {
   _checkIdEl = document.createElement('div');
   _checkIdEl.style.cssText = [
     'font-family:' + T.fb + ';font-size:' + T.fsSmall + ';',
-    'color:' + T.mint + ';white-space:nowrap;',
+    'color:' + (T.headerText || T.mint) + ';white-space:nowrap;',
   ].join('');
   _nameEl = document.createElement('div');
   _nameEl.style.cssText = [
     'font-family:' + T.fb + ';font-size:11px;',
-    'color:' + T.mint + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;',
+    'color:' + (T.headerText || T.mint) + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;',
   ].join('');
   checkWrap.appendChild(_checkIdEl);
   checkWrap.appendChild(_nameEl);

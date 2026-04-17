@@ -65,12 +65,26 @@ function _darken(hex, pct) {
     .map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
 }
 
+// Relative luminance (ITU-R BT.601 weighted) — used to auto-pick a
+// contrast-safe label color for embossed buttons regardless of the
+// face color the user picked.
+function _luminance(hex) {
+  var r = parseInt(hex.slice(1, 3), 16) / 255;
+  var g = parseInt(hex.slice(3, 5), 16) / 255;
+  var b = parseInt(hex.slice(5, 7), 16) / 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+function _readableOn(hex) {
+  return _luminance(hex) > 0.6 ? '#1a1a1a' : '#f5f0e8';
+}
+
 // Expand a 10-slot custom theme into the full token overrides setTheme() consumes.
 export function expandOverrides(slots) {
   var s = Object.assign({}, DEFAULT_SLOTS, slots || {});
+  var bgDark = _darken(s.bg, 0.35);
   return {
     bg:             s.bg,
-    bgDark:         _darken(s.bg, 0.35),
+    bgDark:         bgDark,
     bgLight:        _lighten(s.bg, 0.35),
     bgEdge:         _darken(s.bg, 0.55),
 
@@ -110,6 +124,23 @@ export function expandOverrides(slots) {
     // Transactional frame tracks the primary accent.
     frameTransactional: s.mint,
     frameInterruptCritical: s.red,
+
+    // Embossed button faces — tracked to the curated slots so buttons
+    // repaint when the theme changes. Labels are computed for contrast.
+    embDarkBg:      bgDark,
+    embGhostBg:     _darken(s.bg, 0.55),
+    embMintBg:      s.mint,
+    embMintEdge:    _darken(s.mint, 0.4),
+    embMintLabel:   _readableOn(s.mint),
+    embCyanBg:      s.cyan,
+    embCyanEdge:    _darken(s.cyan, 0.4),
+    embCyanLabel:   _readableOn(s.cyan),
+    embGoldBg:      s.gold,
+    embGoldEdge:    _darken(s.gold, 0.4),
+    embGoldLabel:   _readableOn(s.gold),
+    embVermBg:      s.red,
+    embVermEdge:    _darken(s.red, 0.4),
+    embVermLabel:   _readableOn(s.red),
   };
 }
 

@@ -230,10 +230,10 @@ export function buildExpandedCard(defs, idx, opts) {
     'cursor:pointer;user-select:none;-webkit-user-select:none;',
   ].join('');
   var hTitle = document.createElement('span');
-  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';letter-spacing:1px;';
+  hTitle.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + (T.headerText || T.bgDark) + ';letter-spacing:1px;';
   hTitle.textContent = defs[idx].title;
   var hHint = document.createElement('span');
-  hHint.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + T.bgDark + ';';
+  hHint.style.cssText = 'font-family:' + T.fh + ';font-size:16px;color:' + (T.headerText || T.bgDark) + ';';
   hHint.textContent = '\u25BE';
   hdr.appendChild(hTitle);
   hdr.appendChild(hHint);

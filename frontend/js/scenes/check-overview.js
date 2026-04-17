@@ -243,7 +243,7 @@ defineScene({
 
     var seatsH = document.createElement('div');
     Object.assign(seatsH.style, {
-      background: T.numpadChassis,
+      background: T.headerBg || T.numpadChassis,
       height: '26px',
       display: 'flex',
       alignItems: 'center',
@@ -252,7 +252,7 @@ defineScene({
       fontFamily: T.fh,
       fontSize: '9px',
       letterSpacing: '2px',
-      color: T.bgDark,
+      color: T.headerText || T.bgDark,
       textTransform: 'uppercase',
     });
 
@@ -266,7 +266,7 @@ defineScene({
       fontFamily: T.fh,
       fontSize: '9px',
       letterSpacing: '2px',
-      color: T.bgDark,
+      color: T.headerText || T.bgDark,
       padding: '2px 6px',
       userSelect: 'none',
     });
