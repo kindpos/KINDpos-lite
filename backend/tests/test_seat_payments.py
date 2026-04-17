@@ -439,3 +439,39 @@ class TestSeatPaymentAPI:
         })
         resp = await client.get(f"/api/v1/orders/{oid}")
         assert resp.json()["paid_seats"] == [1, 3]
+
+    @pytest.mark.asyncio
+    async def test_seat_payments_when_cash_discount_disabled(self, client, api_ledger, monkeypatch):
+        """Regression: with cash_discount_rate=0, paying one seat must not
+        apply a discount that zeros the balance and auto-closes the check."""
+        from app.config import settings
+        monkeypatch.setattr(settings, "cash_discount_rate", 0.0)
+
+        resp = await client.post("/api/v1/orders", json={"table": "T-NoDisc"})
+        oid = resp.json()["order_id"]
+
+        for seat, name, price in [(1, "Steak", 30.00), (2, "Pasta", 15.00)]:
+            await client.post(f"/api/v1/orders/{oid}/items", json={
+                "menu_item_id": f"item-{seat}", "name": name,
+                "price": price, "seat_number": seat,
+            })
+
+        # Pay seat 1 only — order must stay open so seat 2 can pay next.
+        r1 = await client.post("/api/v1/payments/cash", json={
+            "order_id": oid, "amount": 30.00, "seat_numbers": [1],
+        })
+        assert r1.status_code == 200
+
+        resp = await client.get(f"/api/v1/orders/{oid}")
+        data = resp.json()
+        assert data["status"] == "open", f"Order should stay open, got {data['status']}"
+        assert data["paid_seats"] == [1]
+
+        # Seat 2 payment must not be rejected by a premature close.
+        r2 = await client.post("/api/v1/payments/cash", json={
+            "order_id": oid, "amount": 15.00, "seat_numbers": [2],
+        })
+        assert r2.status_code == 200, f"Seat 2 payment failed: {r2.text}"
+
+        resp = await client.get(f"/api/v1/orders/{oid}")
+        assert resp.json()["paid_seats"] == [1, 2]
