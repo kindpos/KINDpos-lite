@@ -107,11 +107,20 @@ async def replay_config_events(
                 correlation_id=raw.get("correlation_id"),
                 idempotency_key=idempotency_key,
             )
-            await ledger.append(event)
-            applied += 1
+            # `ledger.append` returns the stored Event on success, or
+            # `None` when the idempotency gate blocks a duplicate.
+            # Previously this branch counted blocked duplicates as
+            # applied because the return value was ignored — sync
+            # replays reported false success on re-posts.
+            stored = await ledger.append(event)
+            if stored is None:
+                skipped += 1
+            else:
+                applied += 1
         except ValueError as e:
-            # Idempotency gate / precision gate triggered — already applied.
-            if "already exists" in str(e) or "precision" in str(e).lower():
+            # Precision gate (non-2dp monetary value) raises ValueError.
+            # Anything else bubbles up so real errors aren't swallowed.
+            if "precision" in str(e).lower():
                 skipped += 1
             else:
                 raise

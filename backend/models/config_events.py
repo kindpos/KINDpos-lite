@@ -104,6 +104,8 @@ class MenuItem(BaseModel):
     print_station: Optional[str] = None
     allergens: List[str] = []
     active: bool = True
+    # Transient stockout flag — toggled by MENU_ITEM_86D / MENU_ITEM_RESTORED.
+    is_86ed: bool = False
 
 class MenuCategory(BaseModel):
     category_id: str

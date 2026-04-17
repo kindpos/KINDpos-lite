@@ -116,6 +116,11 @@ class MenuItem(BaseModel):
     print_station: Optional[str] = None
     allergens: List[str] = []
     active: bool = True
+    # Transient stockout flag. `active` is the permanent soft-delete;
+    # `is_86ed` is the temporary "we ran out of this tonight" toggle
+    # driven by MENU_ITEM_86D / MENU_ITEM_RESTORED events. Order-entry
+    # must refuse to add an is_86ed item.
+    is_86ed: bool = False
     display_order: int = 0
 
     def __init__(self, **data):

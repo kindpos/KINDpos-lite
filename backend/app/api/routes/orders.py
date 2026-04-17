@@ -707,6 +707,31 @@ async def add_item(
             detail=f"Cannot add items to {order.status} order"
         )
 
+    # 86 guard: refuse to add an item that the Overseer has marked out of
+    # stock tonight. The config projection carries `is_86ed` (toggled by
+    # MENU_ITEM_86D / MENU_ITEM_RESTORED events), so this check catches
+    # any frontend that hasn't yet refreshed its menu cache. The lookup
+    # is a no-op when the item isn't in the config projection (e.g. an
+    # ad-hoc manual line item) — we only block when we know it's 86'd.
+    from app.services.overseer_config_service import OverseerConfigService
+    try:
+        menu_items = await OverseerConfigService(ledger).get_menu_items()
+        match = next(
+            (m for m in menu_items if m.item_id == request.menu_item_id),
+            None,
+        )
+        if match is not None and getattr(match, "is_86ed", False):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"'{match.name}' is 86'd (sold out). Remove the 86 to order it.",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        # Config projection unavailable — fail open so a broken config
+        # lookup doesn't block a live service.
+        pass
+
     item_id = f"item_{uuid.uuid4().hex[:8]}"
 
     event = item_added(
