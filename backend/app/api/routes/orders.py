@@ -1724,19 +1724,41 @@ async def split_by_seat(
 
         # Add items to child order
         for item in items:
+            new_item_id = f"item_{uuid.uuid4().hex[:8]}"
+            # item_added's payload doesn't carry modifiers — they live
+            # on separate MODIFIER_APPLIED events. Previously this route
+            # passed `modifiers=item.modifiers` which silently fell into
+            # **kwargs and was dropped, so splitting an order by seat
+            # lost every modifier price (a $10 item + $3 mod became a
+            # $10-only child). Re-emit the modifier events the same
+            # way the merge route does.
             add_evt = item_added(
                 terminal_id=settings.terminal_id,
                 order_id=child_id,
-                item_id=f"item_{uuid.uuid4().hex[:8]}",
+                item_id=new_item_id,
                 menu_item_id=getattr(item, "menu_item_id", ""),
                 name=item.name,
                 price=float(item.price),
                 quantity=item.quantity,
                 category=getattr(item, "category", None),
+                notes=getattr(item, "notes", None),
                 seat_number=seat_num,
-                modifiers=item.modifiers if hasattr(item, "modifiers") else [],
             )
             await ledger.append(add_evt)
+
+            for mod in (getattr(item, "modifiers", None) or []):
+                mod_evt = modifier_applied(
+                    terminal_id=settings.terminal_id,
+                    order_id=child_id,
+                    item_id=new_item_id,
+                    modifier_id=f"mod_{uuid.uuid4().hex[:8]}",
+                    modifier_name=mod.get("name", ""),
+                    modifier_price=mod.get("price", 0.0) or 0.0,
+                    action=mod.get("action", "add"),
+                    prefix=mod.get("prefix"),
+                    half_price=mod.get("half_price"),
+                )
+                await ledger.append(mod_evt)
 
             # Remove from parent order
             remove_evt = item_removed(

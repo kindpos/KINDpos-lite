@@ -100,6 +100,7 @@ def _aggregate_orders(orders, tip_map):
     table_set = set()
     hourly = {}          # hour -> {net, checks, tables, food, drink, other}
     item_revenue = {}    # item_name -> {revenue, category, count}
+    category_totals = {} # category_name -> {revenue, items_sold}
     tip_amounts = []     # list of individual tip values
 
     for order in orders:
@@ -149,6 +150,13 @@ def _aggregate_orders(orders, tip_map):
                 item_revenue[key] = {"revenue": _ZERO, "category": cat, "count": 0}
             item_revenue[key]["revenue"] += item_sub
             item_revenue[key]["count"] += item.quantity
+
+            # Category rollup for the Sales by Category report
+            cat_key = cat or "Uncategorized"
+            if cat_key not in category_totals:
+                category_totals[cat_key] = {"revenue": _ZERO, "items_sold": 0}
+            category_totals[cat_key]["revenue"] += item_sub
+            category_totals[cat_key]["items_sold"] += item.quantity
 
         other_total = order_net - food_total - drink_total
         if other_total < 0:
@@ -206,6 +214,7 @@ def _aggregate_orders(orders, tip_map):
         "table_count": len(table_set),
         "hourly": hourly,
         "item_revenue": item_revenue,
+        "category_totals": category_totals,
         "tip_amounts": tip_amounts,
     }
 
@@ -349,6 +358,22 @@ async def get_sales_summary(
     tax_total_f = money_round(float(agg["tax_total"]))
     tips_total_f = money_round(float(agg["total_tips"]))
 
+    # Category breakdown for the Sales by Category report.
+    # Each entry carries its share of net_sales so the Overseer can
+    # render rows + a live "% of net" without inventing rates.
+    net_sales_f = money_round(net)
+    category_breakdown = []
+    for cname, cdata in agg["category_totals"].items():
+        rev = money_round(float(cdata["revenue"]))
+        pct = round((rev / net_sales_f) * 100, 1) if net_sales_f > 0 else 0.0
+        category_breakdown.append({
+            "category": cname,
+            "net_sales": rev,
+            "items_sold": cdata["items_sold"],
+            "pct": pct,
+        })
+    category_breakdown.sort(key=lambda c: c["net_sales"], reverse=True)
+
     base = {
         "date": date,
         "net_sales": money_round(net),
@@ -371,6 +396,7 @@ async def get_sales_summary(
         "peak_hours": peak_hours,
         "tip_buckets": tip_buckets,
         "tip_avg": tip_avg,
+        "category_breakdown": category_breakdown,
         "daily_check_avg": [],
     }
 
