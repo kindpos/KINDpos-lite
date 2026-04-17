@@ -53,7 +53,10 @@ defineScene({
       state.listeners.push({ el: el, event: event, handler: handler });
     }
 
-    // Deep copy columns so mutations don't affect caller
+    // Deep copy columns so mutations don't affect caller. Preserve item
+    // metadata (item_id, menu_item_id, mods, …) so SPLIT can keep the
+    // original item_id on the first copy and so the caller can PATCH
+    // existing backend items instead of POSTing duplicates.
     state.columns = [];
     var srcCols = params.columns || [];
     for (var ci = 0; ci < srcCols.length; ci++) {
@@ -61,7 +64,16 @@ defineScene({
       var items = [];
       for (var ii = 0; ii < sc.items.length; ii++) {
         var it = sc.items[ii];
-        items.push({ name: it.name, qty: it.qty, price: it.price });
+        items.push({
+          name: it.name,
+          qty: it.qty,
+          price: it.price,
+          item_id: it.item_id,
+          menu_item_id: it.menu_item_id,
+          category: it.category,
+          mods: it.mods,
+          notes: it.notes,
+        });
       }
       state.columns.push({ id: sc.id, label: sc.label, items: items });
     }

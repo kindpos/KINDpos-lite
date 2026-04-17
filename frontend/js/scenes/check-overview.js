@@ -1071,13 +1071,16 @@ defineScene({
         orderId: state.orderId,
         serverId: state.order ? state.order.server_id : null,
         onSave: function(columns) {
-          state.seats = [];
-          for (var ci = 0; ci < columns.length; ci++) {
-            state.seats.push({
-              id: columns[ci].id,
-              label: columns[ci].label,
-              items: columns[ci].items,
-            });
+          // Merge edited columns back into state.seats by id so that
+          // seats the user didn't select for editing are preserved.
+          var editedById = {};
+          for (var ei = 0; ei < columns.length; ei++) editedById[columns[ei].id] = columns[ei];
+          for (var xi = 0; xi < state.seats.length; xi++) {
+            var existing = state.seats[xi];
+            if (editedById[existing.id]) {
+              existing.items = editedById[existing.id].items;
+              if (editedById[existing.id].label) existing.label = editedById[existing.id].label;
+            }
           }
           rebuildSeatGrid();
           selectAll();
@@ -1099,7 +1102,10 @@ defineScene({
                 });
             }
             for (var pi = 0; pi < columns.length; pi++) {
-              var seatNum = pi + 1;
+              // Derive seat number from the seat id ("S-003" → 3) so we
+              // don't collapse non-contiguous or subset-edited seats.
+              var seatNum = parseInt(String(columns[pi].id).replace(/^S-/, ''), 10);
+              if (!seatNum || isNaN(seatNum)) continue;
               var colItems = columns[pi].items;
               for (var qi = 0; qi < colItems.length; qi++) {
                 if (colItems[qi].item_id) {
@@ -1184,11 +1190,20 @@ defineScene({
     var addItemBtn = buildStyledButton({
       label: 'ADD\nITEMS', variant: 'mint', size: 'lg',
       onClick: function() {
+        // Derive seat numbers from the seat id ("S-003" → 3) so that
+        // non-contiguous seat ids don't get renumbered by array index.
+        function _sn(id) { return parseInt(String(id).replace(/^S-/, ''), 10); }
         var allSeatNums = [];
-        for (var aj = 0; aj < state.seats.length; aj++) allSeatNums.push(aj + 1);
+        for (var aj = 0; aj < state.seats.length; aj++) {
+          var _a = _sn(state.seats[aj].id);
+          if (_a && !isNaN(_a)) allSeatNums.push(_a);
+        }
         var selSeatNums = [];
         for (var sj = 0; sj < state.seats.length; sj++) {
-          if (state.selected[state.seats[sj].id]) selSeatNums.push(sj + 1);
+          if (state.selected[state.seats[sj].id]) {
+            var _s = _sn(state.seats[sj].id);
+            if (_s && !isNaN(_s)) selSeatNums.push(_s);
+          }
         }
         SceneManager.mountWorking('order-entry', {
           recallOrderId: state.orderId || undefined,
