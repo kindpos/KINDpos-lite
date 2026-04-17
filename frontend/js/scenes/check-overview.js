@@ -43,12 +43,19 @@ function seatTotal(seat) {
 
 function fmt(n) { return '$' + (n || 0).toFixed(2); }
 
-function collectSummary(seats, selected) {
+function collectSummary(seats, selected, paidSeats) {
   var items = [];
   var subtotal = 0;
   var anySelected = Object.keys(selected).length > 0;
-  var showHeaders = seats.length > 1;
+  // Count non-paid seats for header-visibility — paid seats never show.
+  var visibleSeatCount = 0;
+  for (var s = 0; s < seats.length; s++) {
+    if (paidSeats && paidSeats[seats[s].id]) continue;
+    visibleSeatCount++;
+  }
+  var showHeaders = visibleSeatCount > 1;
   for (var i = 0; i < seats.length; i++) {
+    if (paidSeats && paidSeats[seats[i].id]) continue;
     if (anySelected && !selected[seats[i].id]) continue;
     var seatSub = 0;
     if (showHeaders) {
@@ -337,7 +344,8 @@ defineScene({
     // ── Build a seat button (embossed + chamfered) ──
 
     function seatVariant(seat) {
-      if (state.paidSeats[seat.id]) return 'gold';
+      // Paid seats render as muted (greyed out) dark tiles
+      if (state.paidSeats[seat.id]) return 'dark';
       if (state.selected[seat.id]) return 'mint';
       return 'dark';
     }
@@ -348,9 +356,9 @@ defineScene({
       var total = seatTotal(seat);
       var variant = seatVariant(seat);
 
-      // Paid seats must stay vibrant (gold) and still receive pointer events
-      // so long-press can open the payment summary. Tap is gated inside
-      // toggleSeat() via state.paidSeats.
+      // Paid seats render as greyed-out dark tiles but must still receive
+      // pointer events so long-press can open the payment summary. Tap is
+      // gated inside toggleSeat() via state.paidSeats.
       var btn = buildStyledButton({ variant: variant, disabled: false });
       var wrap = btn.wrap;
       var inner = btn.inner;
@@ -359,6 +367,12 @@ defineScene({
       if (variant === 'mint') {
         wrap.style.background = T.numpadChassis;
         inner.style.color = T.bgDark;
+      }
+
+      // Greyed-out appearance for paid seats
+      if (isPaid) {
+        wrap.style.opacity = '0.55';
+        wrap.style.filter = 'grayscale(0.6)';
       }
 
       // Override border-radius with chamfer
@@ -382,7 +396,7 @@ defineScene({
 
       var totalEl = document.createElement('div');
       totalEl.style.cssText = 'font-size:' + T.fsCon + ';';
-      if (variant === 'dark' && hasItems) {
+      if (variant === 'dark' && hasItems && !isPaid) {
         totalEl.style.color = T.gold;
       }
       totalEl.textContent = hasItems ? fmt(total) : '--';
@@ -614,13 +628,19 @@ defineScene({
     var _summaryItemMap = [];
 
     function updateSummary() {
-      var totals = collectSummary(state.seats, state.selected);
+      var totals = collectSummary(state.seats, state.selected, state.paidSeats);
 
-      // Build index map: flat item index → 'seatIdx:itemIdx' (null for seat headers)
+      // Build index map: flat item index → 'seatIdx:itemIdx' (null for seat headers).
+      // Must mirror collectSummary's filter: paid seats are excluded always.
       _summaryItemMap = [];
       var anySelected = Object.keys(state.selected).length > 0;
-      var showHeaders = state.seats.length > 1;
+      var visibleSeatCount = 0;
+      for (var vs = 0; vs < state.seats.length; vs++) {
+        if (!state.paidSeats[state.seats[vs].id]) visibleSeatCount++;
+      }
+      var showHeaders = visibleSeatCount > 1;
       for (var si = 0; si < state.seats.length; si++) {
+        if (state.paidSeats[state.seats[si].id]) continue;
         if (anySelected && !state.selected[state.seats[si].id]) continue;
         if (showHeaders) _summaryItemMap.push(null); // seat header placeholder
         for (var ii = 0; ii < state.seats[si].items.length; ii++) {
@@ -837,7 +857,7 @@ defineScene({
           SceneManager.interrupt('disc-select', {
             onConfirm: function(opt) {
               var pct = opt === 'Comp (100%)' ? 1.0 : parseFloat(opt) / 100;
-              var totals = collectSummary(state.seats, state.selected);
+              var totals = collectSummary(state.seats, state.selected, state.paidSeats);
               var amount = Math.round(totals.subtotal * pct * 100) / 100;
               var body = { discount_type: opt, amount: amount, approved_by: pin };
               if (itemIds.length > 0) body.item_ids = itemIds;
@@ -953,7 +973,7 @@ defineScene({
 
     function handlePay() {
       if (!state.orderId) { showToast('No check to pay', { bg: T.red }); return; }
-      var totals = collectSummary(state.seats, state.selected);
+      var totals = collectSummary(state.seats, state.selected, state.paidSeats);
       // Stash which seats are part of this payment
       state._payingSeats = [];
       var seatNums = [];
@@ -997,8 +1017,11 @@ defineScene({
     function refreshOrder() {
       if (_refreshInFlight || !state.orderId) return;
       _refreshInFlight = true;
-      fetch('/api/v1/orders/' + state.orderId)
-        .then(function(r) { return r.json(); })
+      fetch('/api/v1/orders/' + state.orderId, { cache: 'no-store' })
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(function(order) {
           if (SceneManager.getActiveWorking() !== 'check-overview') return;
           state.order = order;
@@ -1036,7 +1059,10 @@ defineScene({
             return;
           }
         })
-        .catch(function() { showToast('Refresh failed', { bg: T.red }); })
+        .catch(function(err) {
+          console.error('[check-overview] refreshOrder failed:', err);
+          showToast('Refresh failed', { bg: T.red });
+        })
         .finally(function() { _refreshInFlight = false; });
     }
 
@@ -1465,8 +1491,16 @@ defineScene({
         panel.appendChild(cancelBtn);
         container.appendChild(panel);
 
+        // Tap-outside-to-cancel: only if the gesture STARTED on the
+        // container (prevents the initial pointerup from the long-press
+        // that opened this modal from dismissing it).
+        var _downInside = false;
+        container.addEventListener('pointerdown', function(e) {
+          _downInside = (e.target === container);
+        });
         container.addEventListener('pointerup', function(e) {
-          if (e.target === container) { params.onCancel(); }
+          if (_downInside && e.target === container) { params.onCancel(); }
+          _downInside = false;
         });
       },
       unmount: function() {},
