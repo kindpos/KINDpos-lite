@@ -253,11 +253,21 @@ class PrintContextBuilder:
         voids_total = _ZERO
         comps_total = _ZERO
         discounts_total = _ZERO
+        refunds_total = _ZERO
         tax_collected = _ZERO
         cash_sales = _ZERO
         card_sales = _ZERO
         cc_transactions = []
         open_tip_count = 0
+
+        # Voided orders belonging to this server also flow into the
+        # receipt so the Voids line reflects reality rather than $0.
+        voided_orders = [
+            o for o in all_orders.values()
+            if o.server_id == server_id and o.status == "voided"
+        ]
+        for vo in voided_orders:
+            voids_total += Decimal(str(vo.subtotal or 0))
 
         for order in server_orders:
 
@@ -268,9 +278,13 @@ class PrintContextBuilder:
             gross_sales += order_subtotal
             tax_collected += order_tax
 
-            # Use projection totals for consistent deduction model
+            # Use projection totals for consistent deduction model.
+            # Refunds on closed orders belong in refunds_total, not voids —
+            # previously this line mis-routed refunds into voids_total,
+            # inflating the Voids line on the receipt while the Voids
+            # count stayed at zero and actual refunds were invisible.
             discounts_total += Decimal(str(order.discount_total or 0))
-            voids_total += Decimal(str(order.refund_total or 0))
+            refunds_total += Decimal(str(order.refund_total or 0))
 
             # ── Payment details ───────────────────────────────────────────────
             for p in (order.payments or []):
@@ -302,7 +316,11 @@ class PrintContextBuilder:
                         "tip_open": tip_open,
                     })
 
-        net_sales = money_round(gross_sales - voids_total - comps_total - discounts_total)
+        # Include refunds in the deduction chain so Net matches the
+        # canonical identity. Gross already includes voided subtotals
+        # above; subtract them once here.
+        gross_sales += voids_total
+        net_sales = money_round(gross_sales - voids_total - comps_total - discounts_total - refunds_total)
         cc_tips_total = sum(t["tip"] for t in cc_transactions)
         gross_tips = cc_tips_total + (declared_cash_tips or 0.0)
 
@@ -407,6 +425,7 @@ class PrintContextBuilder:
             "voids_total": money_round(voids_total),
             "comps_total": money_round(comps_total),
             "discounts_total": money_round(discounts_total),
+            "refunds_total": money_round(refunds_total),
             "net_sales": money_round(net_sales),
             "tax_collected": money_round(tax_collected),
             "cash_sales": money_round(cash_sales),
@@ -483,7 +502,20 @@ class PrintContextBuilder:
 
             order = project_order(order_events)
 
-            # Only count closed orders
+            # Voided orders roll into the voids total so the printed
+            # Sales Recap shows the day's actual void count and amount.
+            # Previously voids_total stayed at 0 and the receipt under-
+            # reported activity. Voided subtotals also roll into gross
+            # so Gross − Voids − Discounts − Refunds = Net matches the
+            # API's aggregation.
+            if order.status == "voided":
+                void_sub = Decimal(str(order.subtotal or 0))
+                voids_total += void_sub
+                voids_count += 1
+                gross_sales += void_sub
+                continue
+
+            # Only count closed orders for the rest of the aggregation
             is_closed = any(
                 e.event_type == EventType.ORDER_CLOSED for e in order_events
             )
@@ -536,7 +568,7 @@ class PrintContextBuilder:
                     card_count += 1
                     card_tips += tip
 
-        net_sales = money_round(gross_sales - discounts_total - refunds_total)
+        net_sales = money_round(gross_sales - voids_total - discounts_total - refunds_total)
         total_payments = money_round(cash_sales + card_sales)
         avg_check = money_round(net_sales / total_checks) if total_checks > 0 else 0.0
         per_person_avg = money_round(net_sales / covers) if covers > 0 else 0.0
