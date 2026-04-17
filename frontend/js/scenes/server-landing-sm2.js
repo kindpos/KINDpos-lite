@@ -712,7 +712,7 @@ defineScene({
     'sl-server-picker': {
       render: function(container, params) {
         params = params || {};
-        var excludeId = (params.params || {}).excludeId || null;
+        var excludeId = params.excludeId || null;
 
         container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
 

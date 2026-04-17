@@ -489,17 +489,58 @@ defineScene({
     }
 
     function reopenSeat(seatId) {
-      // Find payment(s) covering this seat
       var seatNum = parseInt(seatId.replace('S-', ''), 10) || 0;
-      var seatPayments = [];
-      if (state.order && state.order.payments) {
-        for (var pi = 0; pi < state.order.payments.length; pi++) {
-          var p = state.order.payments[pi];
-          if (p.status === 'confirmed' && p.seat_numbers && p.seat_numbers.indexOf(seatNum) >= 0) {
-            seatPayments.push(p);
+
+      // Always refetch so we don't rely on a possibly-stale state.order
+      // (e.g. after the user added items via order-entry and came back,
+      // or after a re-open from the landing).
+      fetch('/api/v1/orders/' + state.orderId, { cache: 'no-store' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(order) {
+          if (order) {
+            state.order = order;
+            syncPaidSeats(order);
           }
-        }
-      }
+          var source = (order && order.payments) || (state.order && state.order.payments) || [];
+          var seatPayments = [];
+          // 1) payments that explicitly cover this seat
+          for (var pi = 0; pi < source.length; pi++) {
+            var p = source[pi];
+            if (p.status !== 'confirmed') continue;
+            if (p.seat_numbers && p.seat_numbers.indexOf(seatNum) >= 0) {
+              seatPayments.push(p);
+            }
+          }
+          // 2) fallback: confirmed payments with no seat_numbers assigned
+          //    (legacy whole-check payments) — only if this seat shows paid
+          //    but no seat-scoped match was found, so the user can still
+          //    void the payment that closed their check.
+          if (seatPayments.length === 0 && state.paidSeats[seatId]) {
+            for (var pj = 0; pj < source.length; pj++) {
+              var pp = source[pj];
+              if (pp.status === 'confirmed' && (!pp.seat_numbers || pp.seat_numbers.length === 0)) {
+                seatPayments.push(pp);
+              }
+            }
+          }
+          openSeatPaymentInterrupt(seatId, seatPayments);
+        })
+        .catch(function() {
+          // Network failure — fall back to whatever we already have in memory.
+          var fallback = [];
+          if (state.order && state.order.payments) {
+            for (var fi = 0; fi < state.order.payments.length; fi++) {
+              var fp = state.order.payments[fi];
+              if (fp.status === 'confirmed' && fp.seat_numbers && fp.seat_numbers.indexOf(seatNum) >= 0) {
+                fallback.push(fp);
+              }
+            }
+          }
+          openSeatPaymentInterrupt(seatId, fallback);
+        });
+    }
+
+    function openSeatPaymentInterrupt(seatId, seatPayments) {
       SceneManager.interrupt('seat-payment', {
         params: { seatId: seatId, payments: seatPayments },
         onConfirm: function(paymentId) {
@@ -807,7 +848,7 @@ defineScene({
     }
 
     if (state.orderId) {
-      fetch('/api/v1/orders/' + state.orderId)
+      fetch('/api/v1/orders/' + state.orderId, { cache: 'no-store' })
         .then(function(r) { return r.json(); })
         .then(function(order) {
           if (SceneManager.getActiveWorking() !== 'check-overview') return;
@@ -1229,16 +1270,22 @@ defineScene({
       onClick: function() {
         // Derive seat numbers from the seat id ("S-003" → 3) so that
         // non-contiguous seat ids don't get renumbered by array index.
+        // Paid seats are closed and can't accept new items, so they must
+        // not appear in the seat-assign picker.
         function _sn(id) { return parseInt(String(id).replace(/^S-/, ''), 10); }
         var allSeatNums = [];
         for (var aj = 0; aj < state.seats.length; aj++) {
-          var _a = _sn(state.seats[aj].id);
+          var _seatId = state.seats[aj].id;
+          if (state.paidSeats[_seatId]) continue;
+          var _a = _sn(_seatId);
           if (_a && !isNaN(_a)) allSeatNums.push(_a);
         }
         var selSeatNums = [];
         for (var sj = 0; sj < state.seats.length; sj++) {
-          if (state.selected[state.seats[sj].id]) {
-            var _s = _sn(state.seats[sj].id);
+          var _selSeatId = state.seats[sj].id;
+          if (state.paidSeats[_selSeatId]) continue;
+          if (state.selected[_selSeatId]) {
+            var _s = _sn(_selSeatId);
             if (_s && !isNaN(_s)) selSeatNums.push(_s);
           }
         }
@@ -1305,7 +1352,7 @@ defineScene({
     'server-picker': {
       render: function(container, params) {
         params = params || {};
-        var excludeId = (params.params || {}).excludeId || null;
+        var excludeId = params.excludeId || null;
 
         container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
 
@@ -1434,9 +1481,9 @@ defineScene({
 
     'seat-payment': {
       render: function(container, params) {
-        var inner = params.params || {};
-        var seatId = inner.seatId || '??';
-        var payments = inner.payments || [];
+        params = params || {};
+        var seatId = params.seatId || '??';
+        var payments = params.payments || [];
 
         container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
 
