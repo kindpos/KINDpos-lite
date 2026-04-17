@@ -1,27 +1,35 @@
 // ═══════════════════════════════════════════════════
 //  KINDpos Terminal — Category Grid Component
-//  3-column chamfered-tile nav, drop-in HexNav replacement
+//  Chamfered-tile nav, drop-in HexNav replacement
 //  Nice. Dependable. Yours.
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer } from './tokens.js';
 import { applyCardBevel, hexToRgba } from './theme-manager.js';
 
-// Shrink label font until it fits the tile width, clamped to a
-// minimum floor. Runs after first paint so clientWidth is valid.
+// Shrink label font until it fits the tile. Allows natural multi-word
+// wrapping; shrinks when a single long word overflows width, or when
+// wrapped lines overflow height. Runs after first paint so layout is real.
 function _fitLabel(tile, lbl) {
   requestAnimationFrame(function() {
     var max = 26;
     var min = 12;
     var size = max;
     lbl.style.fontSize = size + 'px';
-    var avail = tile.clientWidth - 20;
-    if (avail <= 0) return;
-    while (size > min && (lbl.scrollWidth > avail || lbl.scrollHeight > tile.clientHeight - 16)) {
+    var availW = tile.clientWidth  - 20;
+    var availH = tile.clientHeight - 16;
+    if (availW <= 0 || availH <= 0) return;
+    while (size > min && (lbl.scrollWidth > availW || lbl.scrollHeight > availH)) {
       size -= 1;
       lbl.style.fontSize = size + 'px';
     }
   });
+}
+
+function _alphaCmp(a, b) {
+  var la = String(a.label || a.name || a).toLowerCase();
+  var lb = String(b.label || b.name || b).toLowerCase();
+  return la < lb ? -1 : la > lb ? 1 : 0;
 }
 
 // ═══════════════════════════════════════════════════
@@ -30,42 +38,87 @@ function _fitLabel(tile, lbl) {
 //    var grid = new CategoryGrid(containerEl, {
 //      data: menuData,            // array of cat objects
 //      onSelect: fn(item, mods),  // called on leaf tap (mods always {})
+//      columns: 3,                // grid columns (default 3)
+//      sort:    'alpha',          // 'alpha' | 'none' | fn(a,b) (default 'alpha')
 //    });
 //    grid.setData(newData);       // swap data, return to State A
+//    grid.setColumns(n);          // re-layout with a new column count
+//    grid.setSort(spec);          // change sort ('alpha' | 'none' | fn)
 //    grid.reset();                // return to State A
 //    grid.destroy();              // remove from DOM
+//
+//  HexNav-compatible stubs so order-entry's combo/modifier paths keep
+//  working without touching hex-nav.js:
+//    grid.getCatId()
+//    grid.lockNav() / grid.unlockNav()
+//    grid.showPickList(label, color, textColor, items)
 // ═══════════════════════════════════════════════════
 
 export function CategoryGrid(container, opts) {
   var o        = opts || {};
   var onSelect = o.onSelect || function() {};
   var data     = o.data    || [];
+  var columns  = o.columns || 3;
+  var sortSpec = o.sort    !== undefined ? o.sort : 'alpha';
 
   // Drill path. Empty = State A (categories). Non-empty = State B
   // with the top of the stack as the parent back tile.
   var path = [];
+  var navLocked = false;
+
+  // Mandatory-modifier picking state. When active, the grid shows the
+  // item's requiredMods groups (and drills into each group's choices)
+  // instead of the cat/subcat nav.
+  var modState = {
+    active:       false,
+    item:         null,
+    groups:       [],    // filtered list of groups with choices
+    selectedMods: [],    // [{ group, label, price }]
+    satisfied:    {},    // { groupId: true }
+    group:        null,  // currently drilled-into group, else null
+  };
+
+  function resetMods() {
+    modState.active = false;
+    modState.item = null;
+    modState.groups = [];
+    modState.selectedMods = [];
+    modState.satisfied = {};
+    modState.group = null;
+  }
 
   // ── Root element ──
   var root = document.createElement('div');
-  root.style.cssText = [
-    'width:100%;height:100%;box-sizing:border-box;',
-    'display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;',
-    'padding:12px;',
-    'background:' + T.bg + ';',
-    'border-radius:0;',
-    'overflow:auto;align-content:start;',
-  ].join('');
+  applyGridStyle();
   container.appendChild(root);
+
+  function applyGridStyle() {
+    root.style.cssText = [
+      'width:100%;height:100%;box-sizing:border-box;',
+      'display:grid;grid-template-columns:repeat(' + columns + ', 1fr);gap:12px;',
+      'padding:12px;',
+      'background:' + T.bg + ';',
+      'border-radius:0;',
+      'overflow:auto;align-content:start;',
+    ].join('');
+  }
+
+  function sortChildren(children) {
+    if (!children || children.length === 0) return children;
+    if (sortSpec === 'none') return children;
+    var cmp = typeof sortSpec === 'function' ? sortSpec : _alphaCmp;
+    return children.slice().sort(cmp);
+  }
 
   // Build a tile element.
   //   mode: 'border' (idle cat/subcat) or 'solid' (parent back tile)
   function buildTile(cfg) {
-    var mode     = cfg.mode || 'border';
-    var color    = cfg.color || T.mint;
-    var label    = cfg.label || '';
-    var price    = cfg.price;
-    var isBack   = !!cfg.back;
-    var onTap    = cfg.onTap;
+    var mode   = cfg.mode || 'border';
+    var color  = cfg.color || T.mint;
+    var label  = cfg.label || '';
+    var price  = cfg.price;
+    var isBack = !!cfg.back;
+    var onTap  = cfg.onTap;
 
     var tile = document.createElement('div');
 
@@ -90,19 +143,18 @@ export function CategoryGrid(container, opts) {
     if (mode === 'border') {
       tile.style.boxShadow = '0 0 8px ' + hexToRgba(color, 0.33);
     } else {
-      // Inner bevel for depth on the solid parent back tile.
       tile.style.boxShadow = 'inset 0 2px 0 ' + hexToRgba(T.bgLight, 0.5)
         + ', inset 0 -2px 0 ' + hexToRgba(T.bgEdge, 0.6);
     }
 
-    // Label
+    // Label — natural wrapping; _fitLabel shrinks font on overflow.
     var lbl = document.createElement('div');
     lbl.style.cssText = [
       'font-family:' + T.fh + ';',
       'font-weight:bold;font-size:26px;line-height:1.1;',
       'color:' + labelClr + ';',
       'text-align:center;pointer-events:none;',
-      'word-break:break-word;max-width:100%;',
+      'max-width:100%;',
     ].join('');
     lbl.textContent = label;
     tile.appendChild(lbl);
@@ -122,7 +174,6 @@ export function CategoryGrid(container, opts) {
       tile.appendChild(p);
     }
 
-    // ← BACK at bottom of solid parent tile
     if (isBack) {
       var back = document.createElement('div');
       back.style.cssText = [
@@ -136,32 +187,22 @@ export function CategoryGrid(container, opts) {
       tile.appendChild(back);
     }
 
-    // Press-and-release tap handling.
-    var pressed = false;
-    tile.addEventListener('pointerdown', function(e) {
-      pressed = true;
+    // Visual press state via pointer events, tap via click event so a
+    // small finger wiggle doesn't cancel the tap (pointerleave would).
+    tile.addEventListener('pointerdown', function() {
       tile.style.transform = 'translate(2px, 3px)';
       tile.style.filter = 'brightness(1.1)';
-      if (tile.setPointerCapture) {
-        try { tile.setPointerCapture(e.pointerId); } catch (_) {}
-      }
     });
-    tile.addEventListener('pointerup', function() {
-      if (!pressed) return;
-      pressed = false;
+    function resetPress() {
       tile.style.transform = '';
       tile.style.filter = '';
+    }
+    tile.addEventListener('pointerup',     resetPress);
+    tile.addEventListener('pointercancel', resetPress);
+    tile.addEventListener('pointerleave',  resetPress);
+    tile.addEventListener('click', function() {
+      if (navLocked) return;
       if (onTap) onTap();
-    });
-    tile.addEventListener('pointercancel', function() {
-      pressed = false;
-      tile.style.transform = '';
-      tile.style.filter = '';
-    });
-    tile.addEventListener('pointerleave', function() {
-      pressed = false;
-      tile.style.transform = '';
-      tile.style.filter = '';
     });
 
     return tile;
@@ -191,12 +232,17 @@ export function CategoryGrid(container, opts) {
   // ── Render ──
   function render() {
     root.innerHTML = '';
+    if (modState.active) {
+      if (modState.group) renderModChoices();
+      else                renderModGroups();
+      return;
+    }
     if (path.length === 0) renderStateA();
     else                    renderStateB();
   }
 
   function renderStateA() {
-    data.forEach(function(cat) {
+    sortChildren(data).forEach(function(cat) {
       root.appendChild(buildTile({
         mode:  'border',
         color: cat.color || T.mint,
@@ -209,9 +255,8 @@ export function CategoryGrid(container, opts) {
   function renderStateB() {
     var parent      = path[path.length - 1];
     var parentColor = parent.color || T.mint;
-    var children    = childrenOf(parent);
+    var children    = sortChildren(childrenOf(parent));
 
-    // Parent tile, solid, top-left slot.
     root.appendChild(buildTile({
       mode:  'solid',
       color: parentColor,
@@ -229,10 +274,129 @@ export function CategoryGrid(container, opts) {
         onTap: function() {
           if (hasChildren(child)) {
             drillInto(child);
+          } else if (child.requiredMods && child.requiredMods.length > 0) {
+            startMods(child);
           } else {
             onSelect(child, {});
           }
         },
+      }));
+    });
+  }
+
+  // ── Modifier flow ──
+  function startMods(item) {
+    var groups = (item.requiredMods || []).filter(function(g) {
+      return g.choices && g.choices.length > 0;
+    });
+    if (groups.length === 0) {
+      onSelect(item, {});
+      return;
+    }
+    modState.active = true;
+    modState.item = item;
+    modState.groups = groups;
+    modState.selectedMods = [];
+    modState.satisfied = {};
+    modState.group = null;
+    render();
+  }
+
+  function pickChoice(group, choice) {
+    // Single-select: replace any prior pick for this group.
+    modState.selectedMods = modState.selectedMods.filter(function(m) {
+      return m.group !== group.id;
+    });
+    modState.selectedMods.push({
+      group: group.id,
+      label: choice.label,
+      price: choice.price || 0,
+    });
+    modState.satisfied[group.id] = true;
+    modState.group = null;
+    render();
+  }
+
+  function finalizeMods() {
+    var result = {};
+    for (var k in modState.item) result[k] = modState.item[k];
+    result.selectedMods = modState.selectedMods.slice();
+    resetMods();
+    onSelect(result, {});
+    // Return to nav so the grid is ready for the next item.
+    render();
+  }
+
+  function cancelMods() {
+    resetMods();
+    render();
+  }
+
+  function renderModGroups() {
+    var item = modState.item;
+    var headColor = item.color || (modState.groups[0] && modState.groups[0].color) || T.mint;
+
+    // Item tile — solid, BACK cancels the mod flow.
+    root.appendChild(buildTile({
+      mode:  'solid',
+      color: headColor,
+      label: item.label || '',
+      price: item.price,
+      back:  true,
+      onTap: function() { cancelMods(); },
+    }));
+
+    modState.groups.forEach(function(g) {
+      var picked = null;
+      modState.selectedMods.forEach(function(m) { if (m.group === g.id) picked = m; });
+      var isDone = !!modState.satisfied[g.id];
+      root.appendChild(buildTile({
+        mode:  isDone ? 'solid' : 'border',
+        color: g.color || T.mint,
+        label: picked ? picked.label : (g.label || ''),
+        onTap: function() {
+          modState.group = g;
+          render();
+        },
+      }));
+    });
+
+    var allDone = modState.groups.length > 0 && modState.groups.every(function(g) {
+      return modState.satisfied[g.id];
+    });
+    if (allDone) {
+      root.appendChild(buildTile({
+        mode:  'solid',
+        color: T.goGreen,
+        label: 'DONE',
+        onTap: function() { finalizeMods(); },
+      }));
+    }
+  }
+
+  function renderModChoices() {
+    var g = modState.group;
+    var color = g.color || T.mint;
+
+    // Group tile — solid, BACK returns to group list.
+    root.appendChild(buildTile({
+      mode:  'solid',
+      color: color,
+      label: g.label || '',
+      back:  true,
+      onTap: function() {
+        modState.group = null;
+        render();
+      },
+    }));
+
+    (g.choices || []).forEach(function(c) {
+      root.appendChild(buildTile({
+        mode:  'border',
+        color: color,
+        label: c.label || '',
+        price: c.price,
+        onTap: function() { pickChoice(g, c); },
       }));
     });
   }
@@ -251,16 +415,51 @@ export function CategoryGrid(container, opts) {
   this.setData = function(newData) {
     data = newData || [];
     path = [];
+    resetMods();
+    render();
+  };
+
+  this.setColumns = function(n) {
+    columns = Math.max(1, n | 0);
+    applyGridStyle();
+    render();
+  };
+
+  this.setSort = function(spec) {
+    sortSpec = spec !== undefined ? spec : 'alpha';
     render();
   };
 
   this.reset = function() {
     path = [];
+    resetMods();
     render();
   };
 
   this.destroy = function() {
     if (root && root.parentNode) root.parentNode.removeChild(root);
+  };
+
+  // ── HexNav-compatible stubs ──
+  // Top-level cat id of the current drill path (null at State A).
+  this.getCatId = function() {
+    return path.length > 0 ? (path[0].id || null) : null;
+  };
+
+  this.lockNav   = function() { navLocked = true;  };
+  this.unlockNav = function() { navLocked = false; };
+
+  // Replace the current view with a custom synthesized parent + items.
+  // Used by the combo flow to prompt for sides / drinks.
+  this.showPickList = function(label, color, textColor, items) {
+    path = [{
+      id:        'pick-' + (label || '').toLowerCase(),
+      label:     label || '',
+      color:     color || T.mint,
+      textColor: textColor,
+      items:     items || [],
+    }];
+    render();
   };
 
   // ── Init ──
