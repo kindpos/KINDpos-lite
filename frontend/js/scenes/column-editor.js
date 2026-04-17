@@ -574,18 +574,47 @@ defineScene({
     }
 
     function doSplit() {
-      if (state.selectedItems.length === 0 || state.splitTargets.length === 0) return;
+      if (state.selectedItems.length === 0) return;
 
-      var items = extractSelectedItems();
-      var targetCount = state.splitTargets.length;
+      // Group selections by source column so splicing doesn't shift indices
+      // within a column. Track each item's source so the split always
+      // includes the seat the item came from — tapping a single target seat
+      // should produce a 2-way split (source + target), not a move.
+      var bySource = {};
+      state.selectedItems.forEach(function(sel) {
+        if (!bySource[sel.colIdx]) bySource[sel.colIdx] = [];
+        bySource[sel.colIdx].push(sel.itemIdx);
+      });
 
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i];
+      var extracted = []; // [{ item, source }]
+      Object.keys(bySource).forEach(function(colIdxStr) {
+        var colIdx = Number(colIdxStr);
+        var idxs = bySource[colIdx].slice().sort(function(a, b) { return b - a; });
+        idxs.forEach(function(itemIdx) {
+          var item = state.columns[colIdx].items[itemIdx];
+          state.columns[colIdx].items.splice(itemIdx, 1);
+          extracted.push({ item: item, source: colIdx });
+        });
+      });
+
+      for (var i = 0; i < extracted.length; i++) {
+        var item = extracted[i].item;
+        var source = extracted[i].source;
+
+        // Destination set = this item's source column ∪ any tapped targets.
+        var destSet = {};
+        destSet[source] = true;
+        for (var tt = 0; tt < state.splitTargets.length; tt++) {
+          destSet[state.splitTargets[tt]] = true;
+        }
+        var targets = Object.keys(destSet).map(Number);
+        var targetCount = targets.length;
+
         var splitPrice = Math.round(item.price / targetCount * 100) / 100;
         var remainder = Math.round((item.price - splitPrice * targetCount) * 100) / 100;
 
         for (var t = 0; t < targetCount; t++) {
-          var tIdx = state.splitTargets[t];
+          var tIdx = targets[t];
           var price = splitPrice;
           if (t === 0) price = splitPrice + remainder; // first target absorbs rounding
           var splitItem = {
