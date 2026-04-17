@@ -18,7 +18,7 @@ try { applyActiveTheme(); } catch (e) { console.warn('[Theme] apply failed', e);
 // Import scenes (self-registering)
 import './scenes/login.js?v=1';
 import './scenes/settings.js?v=1';
-import './scenes/order-entry.js?v=1';
+import './scenes/order-entry.js?v=2';
 import './scenes/payment-console.js?v=1';
 import './scenes/manager-landing-sm2.js?v=1';
 import './scenes/checkout-core.js?v=1';

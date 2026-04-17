@@ -9,7 +9,9 @@ import { T, buildStyledButton, applySunkenStyle, chamfer, bevelEdges } from '../
 import { buildButton, showToast } from '../components.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { OrderSummary } from '../order-summary.js';
-import { HexNav } from '../hex-nav.js';
+// TODO: restore HexNav
+// import { HexNav } from '../hex-nav.js';
+import { CategoryGrid } from '../category-grid.js?v=1';
 import { showKeyboard, hideKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
@@ -715,10 +717,15 @@ function buildMain(parentEl, params) {
   main.appendChild(_bottomBar);
 
   requestAnimationFrame(function() {
-    hexNav = new HexNav(canvas, {
+    // TODO: restore HexNav
+    // hexNav = new HexNav(canvas, {
+    //   data: MENU_DATA,
+    //   onSelect: function(item) { handleItemSelect(item); },
+    //   onToast: function(msg) { showToast(msg, { bg: T.dimText, duration: 2000 }); },
+    // });
+    hexNav = new CategoryGrid(canvas, {
       data: MENU_DATA,
       onSelect: function(item) { handleItemSelect(item); },
-      onToast: function(msg) { showToast(msg, { bg: T.dimText, duration: 2000 }); },
     });
   });
 
