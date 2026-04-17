@@ -98,8 +98,13 @@ export async function loadReportData(date) {
         pct: c.pct || Math.round(((c.net_sales || c.total || 0) / (todayFlash.net_sales || 1)) * 100),
     }));
 
-    const taxRate = 0.07;
-    const taxAmount = fmt$(todayFlash.net_sales * taxRate);
+    // Display the tax actually captured on payments (event-sourced via
+    // the sales-summary endpoint). Previously the Overseer fabricated a
+    // flat 7% × net_sales amount, which contradicted the real tax_collected.
+    const taxCollected = todayFlash.tax_collected || 0;
+    const effectiveTaxRate = todayFlash.net_sales > 0
+        ? (taxCollected / todayFlash.net_sales)
+        : 0;
 
     SAMPLE_DATA = {
         dailyFlash: {
@@ -112,20 +117,20 @@ export async function loadReportData(date) {
         paymentBreakdown: {
             card: {
                 amount: cardTotal,
-                count: today?.card_count || Math.round(todayFlash.orders * 0.7),
+                count: today?.card_count || 0,
                 pct: Math.round((cardTotal / payTotal) * 100),
                 fees: fmt$(cardTotal * 0.029),
             },
             cash: {
                 amount: cashTotal,
-                count: today?.cash_count || Math.round(todayFlash.orders * 0.3),
+                count: today?.cash_count || 0,
                 pct: Math.round((cashTotal / payTotal) * 100),
             },
         },
         dayparts: today?.dayparts || [],
         salesByCategory,
         taxBreakdown: [
-            { type: 'Sales Tax', rate: taxRate * 100, amount: todayFlash.net_sales * taxRate },
+            { type: 'Sales Tax', rate: effectiveTaxRate * 100, amount: taxCollected },
         ],
         tipsByServer: today?.tips_by_server || [],
         adjustmentDetails: {

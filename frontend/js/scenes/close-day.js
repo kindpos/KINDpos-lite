@@ -134,7 +134,7 @@ function getCardDefs(state, opts) {
         el.appendChild(detailRow('Card (' + state.cardCount + ')', fmt(state.cardSales)));
         el.appendChild(detailDivider());
         el.appendChild(detailRow('Total Payments', fmt(state.totalPayments), T.gold));
-        el.appendChild(detailRow('Total Tips (CC)', fmt(state.totalTips)));
+        el.appendChild(detailRow('Total Tips', fmt(state.totalTips)));
         var total = state.cashSales + state.cardSales;
         if (total > 0) {
           var pct = Math.round((state.cardSales / total) * 100);
@@ -199,7 +199,7 @@ function getCardDefs(state, opts) {
       statusColor: null,
       buildShortcuts: opts && opts.buildShortcuts ? function() { return opts.buildShortcuts(state); } : null,
       buildExpanded: function(el) {
-        el.appendChild(detailRow('Total Tips (CC)', fmt(state.totalTips)));
+        el.appendChild(detailRow('Total Tips', fmt(state.totalTips)));
         el.appendChild(detailRow('Total Tip-Out', '\u2212 ' + fmt(state.totalTipOut), RED));
         el.appendChild(detailDivider());
         var net = parseFloat((state.totalTips - state.totalTipOut).toFixed(2));

@@ -90,6 +90,8 @@ def _aggregate_orders(orders, tip_map):
     tax_total = _ZERO
     cash_total = _ZERO
     card_total = _ZERO
+    cash_count = 0
+    card_count = 0
     total_tips = _ZERO
     card_tips = _ZERO
     cash_tips = _ZERO
@@ -177,9 +179,11 @@ def _aggregate_orders(orders, tip_map):
             if p.method == "cash":
                 cash_total += Decimal(str(p.amount))
                 cash_tips += tip
+                cash_count += 1
             else:
                 card_total += Decimal(str(p.amount))
                 card_tips += tip
+                card_count += 1
 
     net_sales = gross_sales - void_total - discount_total - refund_total
 
@@ -193,6 +197,8 @@ def _aggregate_orders(orders, tip_map):
         "total_checks": total_checks,
         "cash_total": cash_total,
         "card_total": card_total,
+        "cash_count": cash_count,
+        "card_count": card_count,
         "total_tips": total_tips,
         "card_tips": card_tips,
         "cash_tips": cash_tips,
@@ -357,6 +363,8 @@ async def get_sales_summary(
         "check_avg": check_avg,
         "cash_total": money_round(float(agg["cash_total"])),
         "card_total": money_round(float(agg["card_total"])),
+        "cash_count": agg["cash_count"],
+        "card_count": agg["card_count"],
         "hourly_sales": hourly_sales,
         "last_week_hourly": last_week_hourly,
         "top_items": top_items,
