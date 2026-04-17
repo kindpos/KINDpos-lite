@@ -179,10 +179,14 @@ defineScene({
       opsBody.appendChild(buildOpBtn(ops[oi]).wrap);
     }
 
-    // Done button (close overlay)
+    // Done button (close overlay). In split mode, DONE first applies
+    // the staged split so the user doesn't need a separate CONFIRM step.
     var doneBtn = buildStyledButton({
       label: 'DONE', variant: 'mint', size: 'sm',
       onClick: function() {
+        if (state.mode === 'split' && state.selectedItems.length > 0 && state.splitTargets.length > 0) {
+          doSplit();
+        }
         if (state.onSave) state.onSave(state.columns);
         SceneManager.closeTransactional('column-editor');
       },
@@ -192,13 +196,13 @@ defineScene({
     opsBody.appendChild(statusEl);
 
     // Rebuild the ops panel for the current mode:
-    //  - split: CANCEL + CONFIRM (explicit confirm after picking targets)
+    //  - split: CANCEL only — tapping DONE applies the split
     //  - move:  CANCEL only (mode persists across moves)
     //  - idle:  the full ops list
     function renderOps() {
       while (opsBody.firstChild) opsBody.removeChild(opsBody.firstChild);
       var list;
-      if (state.mode === 'split') list = ['CANCEL', 'CONFIRM'];
+      if (state.mode === 'split') list = ['CANCEL'];
       else if (state.mode === 'move') list = ['CANCEL'];
       else list = ops;
       for (var ri = 0; ri < list.length; ri++) {
@@ -471,7 +475,7 @@ defineScene({
       state.mode = 'split';
       state.selectedItems = [];
       state.splitTargets = [];
-      setStatus('Select items and destination columns, then tap CONFIRM');
+      setStatus('Select items, tap the checks to split across. Tap DONE when ready.');
       renderOps();
       renderColumns();
     }
@@ -519,11 +523,11 @@ defineScene({
         state.columns.push(newCol);
         clearSelection();
       } else if (state.mode === 'split') {
-        // Add new column as an extra split target; wait for CONFIRM to
-        // actually execute the split.
+        // Add new column as an extra split target; the split executes
+        // when the user taps DONE.
         state.columns.push(newCol);
         state.splitTargets.push(state.columns.length - 1);
-        setStatus('Select items and destination columns, then tap CONFIRM  (' + state.splitTargets.length + ' targets)');
+        setStatus('Select items, tap the checks to split across, then tap DONE  (' + state.splitTargets.length + ' targets)');
         renderColumns();
       } else {
         state.columns.push(newCol);
@@ -566,7 +570,7 @@ defineScene({
         state.splitTargets.push(colIdx);
         if (state.colEls[colIdx]) state.colEls[colIdx].hdr.style.background = T.gold;
       }
-      setStatus('Select items and destination columns, then tap CONFIRM  (' + state.splitTargets.length + ' targets)');
+      setStatus('Select items, tap the checks to split across, then tap DONE  (' + state.splitTargets.length + ' targets)');
     }
 
     function doSplit() {

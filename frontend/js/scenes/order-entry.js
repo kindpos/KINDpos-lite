@@ -565,7 +565,7 @@ defineScene({
 });
 
 // ── TOTALS HELPER ─────────────────────────────────
-function computeTotals() {
+function computeTicketTotals() {
   var subtotal = 0;
   var counts = {};
   var summaryItems = [];  // item summary for ORDER RECAP
@@ -1869,7 +1869,7 @@ function _appendModPreview(list) {
 }
 
 function _updateTicketTotals() {
-  var totals = computeTotals();
+  var totals = computeTicketTotals();
   if (_modPanelItem) {
     var previewMods = (_modPanelItem.mods || []);
     var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
@@ -2599,7 +2599,7 @@ async function handleSend() {
   }
 
   isSending = true;
-  var totals = computeTotals();
+  var totals = computeTicketTotals();
 
   try {
     // Step 1 — create order on first send, reuse on subsequent sends
