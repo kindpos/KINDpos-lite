@@ -124,7 +124,7 @@ function getCardDefs(state, opts) {
     },
     {
       title: 'Payment Breakdown',
-      hero: fmt(state.cardSales),
+      hero: fmt(state.totalPayments),
       heroColor: T.gold,
       subtitle: 'Cash / Card / Tips',
       border: T.border,
@@ -473,7 +473,7 @@ function showSummaryPanel(state) {
     sections: buildSections(state),
     cardSales: state.cardSales,
     tips: state.totalTips,
-    cashExpected: state.cashSales + state.cashTips,
+    cashExpected: state.cashSales - state.cardTips,
   });
 }
 
@@ -483,7 +483,7 @@ function updateSummaryPanel(state) {
     sections: buildSections(state),
     cardSales: state.cardSales,
     tips: state.totalTips,
-    cashExpected: state.cashSales + state.cashTips,
+    cashExpected: state.cashSales - state.cardTips,
   });
 }
 

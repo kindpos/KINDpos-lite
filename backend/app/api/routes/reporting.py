@@ -101,7 +101,12 @@ def _aggregate_orders(orders, tip_map):
 
     for order in orders:
         if order.status == "voided":
+            # Include voided subtotals in gross so that the canonical
+            # P&L identity holds: Net = Gross − Voids − Discounts − Refunds.
+            # Previously gross skipped voided orders, causing net to be
+            # reduced by the void amount a second time.
             void_total += Decimal(str(order.subtotal))
+            gross_sales += Decimal(str(order.subtotal))
             continue
         # Skip open orders from financial totals — they have no
         # confirmed payments yet and would inflate net_sales.

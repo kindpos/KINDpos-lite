@@ -435,7 +435,12 @@ async def get_day_summary(
     for order in orders:
         if order.status == "voided":
             voided_count += 1
+            # Include voided subtotals in gross so that the canonical
+            # P&L identity holds: Net = Gross − Voids − Discounts − Refunds.
+            # Previously gross skipped voided orders, causing net to be
+            # reduced by the void amount a second time.
             void_total += Decimal(str(order.subtotal))
+            gross_sales += Decimal(str(order.subtotal))
             # Add voided orders to checks list for the Void tab
             check_label = order.check_number if order.check_number else order.order_id
             checks_list.append({
