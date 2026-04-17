@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+from decimal import Decimal
 import uuid
 import aiosqlite
 import os
@@ -228,7 +229,43 @@ async def process_sale(
     if order_proj and order_proj.is_fully_paid:
         raise HTTPException(status_code=400, detail="Order is already fully paid")
     order_tax = order_proj.tax if order_proj else 0.0
+
+    # Defense in depth: clamp the sale amount at the order's current
+    # balance_due. Any excess — typically caused by a frontend that
+    # computed its own cardTotal from a stale TAX_RATE and now disagrees
+    # with the backend's `order.total` — is rerouted into `tip_amount`
+    # so the tender identity (Cash+Card = Net+Tax) keeps holding. A
+    # TIP_ADJUSTED event for the excess is emitted after confirmation
+    # so both the projection and the operator's tip report stay honest.
+    _overage_as_tip = 0.0
+    if order_proj is not None:
+        balance = float(order_proj.balance_due)
+        req_amount = float(request.amount)
+        if req_amount > balance + 0.005:
+            _overage_as_tip = money_round(req_amount - balance)
+            import logging
+            logging.getLogger("kindpos.payment").warning(
+                "Payment amount $%.2f exceeded balance_due $%.2f on %s — "
+                "clamping sale to balance_due and routing $%.2f to tip.",
+                req_amount, balance, request.order_id, _overage_as_tip,
+            )
+            request = request.model_copy(update={"amount": Decimal(str(balance))})
+
     result = await manager.initiate_sale(request, tax=order_tax)
+
+    # Emit the overage-as-tip TIP_ADJUSTED only on successful approval.
+    if (
+        _overage_as_tip > 0
+        and hasattr(result, "status")
+        and result.status == TransactionStatus.APPROVED
+    ):
+        tip_evt = tip_adjusted(
+            terminal_id=settings.terminal_id,
+            order_id=request.order_id,
+            payment_id=request.transaction_id,
+            tip_amount=_overage_as_tip,
+        )
+        await ledger.append(tip_evt)
 
     # Return HTTP error if the transaction was not approved
     if hasattr(result, 'status'):
@@ -322,7 +359,26 @@ async def process_cash_payment(
             order = project_order(events)
 
     payment_id = f"pay_{uuid.uuid4().hex[:8]}"
-    sale_amount = money_round(request.amount)
+
+    # Defense in depth: clamp sale_amount at balance_due and route any
+    # excess into the payment's tip. Cash payments are already clamped
+    # client-side by `Math.min(enteredAmount, remaining)`, but `remaining`
+    # relies on the frontend's own tax math — the tender identity stays
+    # safe even when those disagree.
+    balance = float(order.balance_due)
+    req_amount = float(request.amount)
+    overage_as_tip = 0.0
+    if req_amount > balance + 0.005:
+        overage_as_tip = money_round(req_amount - balance)
+        import logging
+        logging.getLogger("kindpos.payment").warning(
+            "Cash amount $%.2f exceeded balance_due $%.2f on %s — "
+            "clamping sale to balance_due and routing $%.2f to tip.",
+            req_amount, balance, request.order_id, overage_as_tip,
+        )
+        sale_amount = money_round(balance)
+    else:
+        sale_amount = money_round(req_amount)
 
     # Emit PAYMENT_INITIATED (sale amount only — tip tracked via TIP_ADJUSTED)
     init_evt = payment_initiated(
@@ -347,13 +403,16 @@ async def process_cash_payment(
     )
     await ledger.append(confirm_evt)
 
-    # Record tip if any
-    if request.tip > 0:
+    # Record tip: request.tip plus any overage we rerouted from the
+    # sale leg. Emit a single TIP_ADJUSTED event so the projection's
+    # last-write-wins semantics remain intact.
+    total_tip = money_round(float(request.tip or 0) + overage_as_tip)
+    if total_tip > 0:
         tip_evt = tip_adjusted(
             terminal_id=settings.terminal_id,
             order_id=request.order_id,
             payment_id=payment_id,
-            tip_amount=money_round(request.tip),
+            tip_amount=total_tip,
         )
         await ledger.append(tip_evt)
 

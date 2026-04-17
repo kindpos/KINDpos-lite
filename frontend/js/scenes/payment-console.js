@@ -90,6 +90,30 @@ defineScene({
 
     container.appendChild(buildCenterColumn(params));
     container.appendChild(buildRightColumn(params));
+
+    // Source-of-truth reconciliation: the upstream scene computes
+    // `cardTotal` client-side from a local TAX_RATE that lags the
+    // backend's `settings.tax_rate`. When the whole order is being
+    // paid (no seat_numbers filter), refresh `baseTotal` from the
+    // backend's authoritative `balance_due` so the operator sees —
+    // and the card reader charges — the correct amount. The backend
+    // also guards against inflated amounts (see payment_routes.py),
+    // but showing the right number at the till is the kinder fix.
+    if (params.orderId && !params.seatNumbers) {
+      fetch('/api/v1/orders/' + encodeURIComponent(params.orderId))
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(order) {
+          if (!order || typeof order.balance_due !== 'number') return;
+          // Only shrink baseTotal — never inflate it. If the upstream
+          // cardTotal was lower (rare), trust the operator's on-screen
+          // total over a re-fetch race.
+          if (order.balance_due < baseTotal) {
+            baseTotal = order.balance_due;
+            updateSplitDisplay();
+          }
+        })
+        .catch(function() { /* network error: keep the passed total */ });
+    }
   },
 
   unmount: function() {
