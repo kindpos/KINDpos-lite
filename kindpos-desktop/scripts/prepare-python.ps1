@@ -55,11 +55,12 @@ if (-not (Test-Path $Requirements)) {
 
 if (Test-Path $Requirements) {
     Write-Host "    Installing requirements from $Requirements"
-    # Install to Lib subfolder so the embedded Python can find them.
-    $LibDir = Join-Path $PythonDir "Lib"
+    # Install to Lib\site-packages so "import site" picks them up.
+    $SitePackages = Join-Path $PythonDir "Lib\site-packages"
+    if (-not (Test-Path $SitePackages)) { New-Item -ItemType Directory -Path $SitePackages -Force | Out-Null }
     & $PythonExe -m pip install `
         --no-warn-script-location `
-        --target $LibDir `
+        --target $SitePackages `
         -r $Requirements
 } else {
     Write-Host "    WARNING: requirements.txt not found - skipping pip install"
