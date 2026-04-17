@@ -1,4 +1,5 @@
 import { pushChanges } from '../services/config-push.js';
+import { ROLES as FALLBACK_ROLES, loadEmployeeData } from '../data/sample-employees.js';
 
 /* ============================================
    KINDpos Overseer — Tipout Rules
@@ -52,7 +53,19 @@ async function _load() {
         fetch('/api/v1/config/menu/categories').catch(() => null),
     ]);
     rules = rulesRes && rulesRes.ok ? await rulesRes.json() : [];
-    roles = rolesRes && rolesRes.ok ? await rolesRes.json() : [];
+    const apiRoles = rolesRes && rolesRes.ok ? await rolesRes.json() : [];
+    // The backend only returns roles that have been created via explicit
+    // EMPLOYEE_ROLE_CREATED events, which is empty on fresh installs. Fall
+    // back to the shared ROLES list (the same defaults the Employees
+    // section uses) so the rule form always has selectable options.
+    if (Array.isArray(apiRoles) && apiRoles.length > 0) {
+        roles = apiRoles;
+    } else {
+        // Make sure FALLBACK_ROLES is populated via loadEmployeeData (no-op if
+        // already loaded, falls back to DEFAULT_ROLES if the API is unreachable).
+        await loadEmployeeData().catch(() => {});
+        roles = (FALLBACK_ROLES || []).map(r => ({ role_id: r.id, name: r.label }));
+    }
     categories = catsRes && catsRes.ok ? await catsRes.json() : [];
 }
 
