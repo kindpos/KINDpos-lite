@@ -475,3 +475,75 @@ class TestSeatPaymentAPI:
 
         resp = await client.get(f"/api/v1/orders/{oid}")
         assert resp.json()["paid_seats"] == [1, 2]
+
+    @pytest.mark.asyncio
+    async def test_void_payment_reopens_closed_order(self, client, api_ledger, monkeypatch):
+        """Voiding the last payment on a fully-paid (closed) check must
+        reopen the order so the seat can be re-paid."""
+        from app.config import settings
+        monkeypatch.setattr(settings, "cash_discount_rate", 0.0)
+
+        resp = await client.post("/api/v1/orders", json={"table": "T-Reopen"})
+        oid = resp.json()["order_id"]
+
+        await client.post(f"/api/v1/orders/{oid}/items", json={
+            "menu_item_id": "i1", "name": "Burger", "price": 10.00,
+            "seat_number": 1,
+        })
+
+        pay = await client.post("/api/v1/payments/cash", json={
+            "order_id": oid, "amount": 10.70, "seat_numbers": [1],
+        })
+        assert pay.status_code == 200
+        pid = pay.json()["payment_id"]
+
+        # Order auto-closed (fully paid) — voiding must still succeed and reopen it
+        resp = await client.get(f"/api/v1/orders/{oid}")
+        assert resp.json()["status"] == "closed"
+
+        void = await client.post(
+            f"/api/v1/orders/{oid}/payments/{pid}/void",
+            json={"reason": "test reopen", "approved_by": "mgr-1"},
+        )
+        assert void.status_code == 200, f"Void failed: {void.text}"
+
+        data = void.json()
+        assert data["status"] == "open"
+        assert data["paid_seats"] == []
+
+        # Seat 1 can now be re-paid
+        repay = await client.post("/api/v1/payments/cash", json={
+            "order_id": oid, "amount": 10.70, "seat_numbers": [1],
+        })
+        assert repay.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_void_payment_accepts_json_body(self, client, api_ledger, monkeypatch):
+        """The void endpoint must accept reason/approved_by via JSON body."""
+        from app.config import settings
+        monkeypatch.setattr(settings, "cash_discount_rate", 0.0)
+
+        resp = await client.post("/api/v1/orders", json={"table": "T-Body"})
+        oid = resp.json()["order_id"]
+        for seat, price in [(1, 10.0), (2, 5.0)]:
+            await client.post(f"/api/v1/orders/{oid}/items", json={
+                "menu_item_id": f"i{seat}", "name": f"item{seat}",
+                "price": price, "seat_number": seat,
+            })
+
+        pay = await client.post("/api/v1/payments/cash", json={
+            "order_id": oid, "amount": 10.0, "seat_numbers": [1],
+        })
+        pid = pay.json()["payment_id"]
+
+        void = await client.post(
+            f"/api/v1/orders/{oid}/payments/{pid}/void",
+            json={"reason": "customer changed mind", "approved_by": "mgr-42"},
+        )
+        assert void.status_code == 200
+
+        events = await api_ledger.get_events_by_correlation(oid)
+        cancelled = [e for e in events if e.event_type == EventType.PAYMENT_CANCELLED]
+        assert len(cancelled) == 1
+        assert cancelled[0].payload["error"] == "customer changed mind"
+        assert cancelled[0].payload["approved_by"] == "mgr-42"

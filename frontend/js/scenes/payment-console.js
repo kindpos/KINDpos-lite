@@ -689,6 +689,20 @@ function queueReceipt(copyType) {
 function activateResult(change) {
   var lastPayment = payments[payments.length - 1] || {};
   var isCash = lastPayment.method === 'cash';
+
+  // If this payment came from the check-overview (per-seat / split-check
+  // flow), skip the logout/new-order interrupt and return directly. The
+  // freshly paid seat(s) will render gold; remaining seats stay tappable.
+  var activeScene = SceneManager.getActiveWorking && SceneManager.getActiveWorking();
+  if (activeScene === 'check-overview') {
+    SceneManager.closeAllTransactional();
+    SceneManager.emit('payment:complete');
+    if (isCash && change > 0) {
+      showToast('Change: $' + change.toFixed(2), { bg: T.gold, duration: 3000 });
+    }
+    return;
+  }
+
   SceneManager.openTransactional('pc-change-due', {
     paymentMode: isCash ? 'cash' : 'card',
     change:      change,
