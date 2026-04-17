@@ -220,6 +220,11 @@ function openTransactional(sceneName, params) {
   // Fire transition hooks
   _transitionHooks.forEach(function(fn) { fn(); });
 
+  // Snapshot the parent's header so it can be restored when this
+  // transactional closes. Emitted before mount so the listener runs
+  // before the scene's render() overwrites the header.
+  _emit('transactional:opening', { sceneName: sceneName });
+
   // Build scrim — 60% dim, bgDark
   var scrim = document.createElement('div');
   scrim.className = 'layer-scrim layer-scrim-transactional';
@@ -300,6 +305,7 @@ function closeAllTransactional() {
     if (typeof entry.cleanup === 'function') entry.cleanup();
     entry.frame.remove();
     entry.scrim.remove();
+    _emit('transactional:closed', { sceneName: entry.name });
   }
 
   _layerTransactional.style.pointerEvents = 'none';

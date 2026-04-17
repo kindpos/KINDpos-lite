@@ -23,13 +23,40 @@ import './scenes/clock-in.js?v=1';
 
 // ── Header state ──────────────────────────────────
 let _sceneName = null;
+let _currentHeaderArgs = { back: false, x: false, onBack: null, onClose: null };
+const _headerStack = [];
 
 export function setSceneName(name) {
   _sceneName = name;
   updateClock();
 }
 
-export function setHeaderBack({ back = false, x = false, onBack = null, onClose = null } = {}) {
+export function setHeaderBack(args = {}) {
+  _currentHeaderArgs = {
+    back: !!args.back,
+    x: !!args.x,
+    onBack: args.onBack || null,
+    onClose: args.onClose || null,
+  };
+  _applyHeaderBack(_currentHeaderArgs);
+}
+
+// Save the current header so a transactional can temporarily override it
+// and restoreHeaderSnapshot() brings it back on close. Prevents stale
+// back-button closures pointing at already-closed transactionals.
+export function pushHeaderSnapshot() {
+  _headerStack.push({ ..._currentHeaderArgs });
+}
+
+export function popHeaderSnapshot() {
+  const prev = _headerStack.pop();
+  if (prev !== undefined) {
+    _currentHeaderArgs = prev;
+    _applyHeaderBack(_currentHeaderArgs);
+  }
+}
+
+function _applyHeaderBack({ back = false, x = false, onBack = null, onClose = null } = {}) {
   const nav = document.getElementById('header-nav');
   const logout = document.getElementById('header-logout');
   if (nav) nav.innerHTML = '';
@@ -76,6 +103,9 @@ export function setHeaderBack({ back = false, x = false, onBack = null, onClose 
 document.addEventListener('DOMContentLoaded', () => {
   SceneManager.init();
   SceneManager.onBeforeTransition(hideKeyboard);
+
+  SceneManager.on('transactional:opening', pushHeaderSnapshot);
+  SceneManager.on('transactional:closed', popHeaderSnapshot);
 
   // Open login gate on boot
   SceneManager.openGate('login');
