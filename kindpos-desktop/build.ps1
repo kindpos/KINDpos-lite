@@ -85,6 +85,17 @@ if ($Dev) {
         Copy-Item $MainExe (Join-Path $DistDir "KINDpos.exe")
         Copy-Item $MainExe (Join-Path $DistDir "KINDpos-Overseer.exe")
 
+        # Copy the resources directory (Python, backend, frontend, overseer)
+        $ResSource = Join-Path $ReleaseDir "resources"
+        if (Test-Path $ResSource) {
+            Write-Host "    Copying resources into dist package..."
+            Copy-Item -Recurse $ResSource (Join-Path $DistDir "resources")
+        } else {
+            Write-Host "    WARNING: resources/ not found at $ResSource"
+            Write-Host "    Copying from src-tauri/resources/ instead..."
+            Copy-Item -Recurse "src-tauri\resources" (Join-Path $DistDir "resources")
+        }
+
         # Copy icons for shortcuts
         $IconsDir = Join-Path $DistDir "icons"
         New-Item -ItemType Directory -Path $IconsDir | Out-Null
@@ -109,6 +120,7 @@ copy /Y "KINDpos.exe" "%INSTALL_DIR%\"
 copy /Y "KINDpos-Overseer.exe" "%INSTALL_DIR%\"
 copy /Y "icons\KINDpos.ico" "%INSTALL_DIR%\icons\"
 copy /Y "icons\Overseer.ico" "%INSTALL_DIR%\icons\"
+xcopy /E /I /Y "resources" "%INSTALL_DIR%\resources"
 
 :: Create desktop shortcuts
 powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DESKTOP%\KINDpos Terminal.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\KINDpos.ico'; $s.Save()"
@@ -131,6 +143,7 @@ pause
 @echo off
 echo Uninstalling KINDpos...
 rmdir /S /Q "%ProgramFiles%\KINDpos" 2>nul
+rmdir /S /Q "%LOCALAPPDATA%\KINDpos" 2>nul
 del "%USERPROFILE%\Desktop\KINDpos Terminal.lnk" 2>nul
 del "%USERPROFILE%\Desktop\KINDpos Overseer.lnk" 2>nul
 rmdir /S /Q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\KINDpos" 2>nul
