@@ -457,8 +457,59 @@ defineScene({
           target.items.push(state.columns[ci].items[ii]);
         }
       }
+      // Recombine lines that were previously split. Two lines with the
+      // same menu_item_id / name / modifier signature / notes are treated
+      // as one — prices sum and we keep the first one's item_id (the
+      // other's backend item gets DELETEd by check-overview's onSave).
+      target.items = _collapseDuplicates(target.items);
       state.columns = [target];
       clearMode();
+    }
+
+    // Build a signature that's stable across split copies so MERGE can
+    // collapse them. Mods and notes are included so "Burger extra cheese"
+    // and "Burger no cheese" stay distinct.
+    function _itemSignature(it) {
+      var menuId = it.menu_item_id || '';
+      var name = it.name || '';
+      var notes = it.notes || '';
+      var modSig = '';
+      if (Array.isArray(it.mods) && it.mods.length) {
+        modSig = it.mods.map(function(m) {
+          return (m.prefix || '') + '|' + (m.name || '') + '|' + (m.price || 0);
+        }).sort().join(';');
+      }
+      return menuId + '::' + name + '::' + modSig + '::' + notes;
+    }
+
+    function _collapseDuplicates(items) {
+      var out = [];
+      var indexBySig = {};
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var sig = _itemSignature(it);
+        if (indexBySig[sig] !== undefined) {
+          var target = out[indexBySig[sig]];
+          target.price = Math.round((target.price + (it.price || 0)) * 100) / 100;
+          // Prefer an existing backend item_id so we PATCH instead of
+          // POST + orphan the old record.
+          if (!target.item_id && it.item_id) target.item_id = it.item_id;
+        } else {
+          indexBySig[sig] = out.length;
+          // Shallow clone so we don't mutate the caller's item
+          out.push({
+            name: it.name,
+            qty: it.qty,
+            price: it.price,
+            item_id: it.item_id,
+            menu_item_id: it.menu_item_id,
+            category: it.category,
+            mods: it.mods,
+            notes: it.notes,
+          });
+        }
+      }
+      return out;
     }
 
     // ── MOVE ──
@@ -621,6 +672,13 @@ defineScene({
             name: item.name,
             qty: item.qty,
             price: price,
+            // Preserve catalog metadata so onSave's POST has the
+            // backend-required menu_item_id (and modifiers/notes
+            // survive to the new line).
+            menu_item_id: item.menu_item_id,
+            category: item.category,
+            mods: item.mods,
+            notes: item.notes,
           };
           // First copy keeps original item_id so the backend item
           // gets its price PATCHed; extra copies are POSTed as new items.

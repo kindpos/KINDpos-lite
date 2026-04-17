@@ -613,7 +613,9 @@ defineScene({
         else parent.appendChild(freshBtn);
       }
       // EDIT SEATS only visible when seats are selected
-      if (editSeatsBtn) editSeatsBtn.wrap.style.display = anySelected ? '' : 'none';
+      if (typeof editSeatsBtn1 !== 'undefined' && editSeatsBtn1) {
+        editSeatsBtn1.wrap.style.display = anySelected ? '' : 'none';
+      }
     }
 
     function toggleItem(key) {
@@ -1132,6 +1134,16 @@ defineScene({
         if (state.selected[state.seats[si].id]) selectedSeats.push(state.seats[si]);
       }
       if (selectedSeats.length === 0) selectedSeats = state.seats.slice();
+      // Snapshot original item_ids so onSave can DELETE any that
+      // disappeared (e.g. merged duplicates that collapsed into one).
+      var originalItemIds = {};
+      for (var osi = 0; osi < selectedSeats.length; osi++) {
+        var srcItems = selectedSeats[osi].items || [];
+        for (var oi = 0; oi < srcItems.length; oi++) {
+          if (srcItems[oi].item_id) originalItemIds[srcItems[oi].item_id] = true;
+        }
+      }
+
       SceneManager.openTransactional('column-editor', {
         columns: selectedSeats.map(function(s) {
           return { id: s.id, label: s.id, items: s.items.slice() };
@@ -1165,11 +1177,31 @@ defineScene({
                   if (--_cePending === 0) {
                     if (_ceFailed > 0) {
                       showToast(_ceFailed + ' seat edit(s) failed to save', { bg: T.red });
-                      refreshOrder();
                     }
+                    // Always refresh so the UI reflects the backend truth
+                    // (prices, deleted items, etc.).
+                    refreshOrder();
                   }
                 });
             }
+
+            // Build the set of item_ids still present after editing so we
+            // can DELETE anything that was removed or merged into another.
+            var finalItemIds = {};
+            for (var fci = 0; fci < columns.length; fci++) {
+              var fcItems = columns[fci].items || [];
+              for (var fii = 0; fii < fcItems.length; fii++) {
+                if (fcItems[fii].item_id) finalItemIds[fcItems[fii].item_id] = true;
+              }
+            }
+            Object.keys(originalItemIds).forEach(function(iid) {
+              if (!finalItemIds[iid]) {
+                _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + iid, {
+                  method: 'DELETE',
+                }));
+              }
+            });
+
             for (var pi = 0; pi < columns.length; pi++) {
               // Derive seat number from the seat id ("S-003" → 3) so we
               // don't collapse non-contiguous or subset-edited seats.
@@ -1177,20 +1209,26 @@ defineScene({
               if (!seatNum || isNaN(seatNum)) continue;
               var colItems = columns[pi].items;
               for (var qi = 0; qi < colItems.length; qi++) {
-                if (colItems[qi].item_id) {
-                  _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + colItems[qi].item_id, {
+                var it = colItems[qi];
+                if (it.item_id) {
+                  _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items/' + it.item_id, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seat_number: seatNum, price: colItems[qi].price }),
+                    body: JSON.stringify({ seat_number: seatNum, price: it.price }),
                   }));
                 } else {
+                  // POST new item — include menu_item_id (backend requires it).
+                  // Empty string is accepted; the 86-guard just becomes a no-op.
                   _ceTrack(fetch('/api/v1/orders/' + state.orderId + '/items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      name: colItems[qi].name,
-                      price: colItems[qi].price,
-                      quantity: colItems[qi].qty || 1,
+                      menu_item_id: it.menu_item_id || '',
+                      name: it.name,
+                      price: it.price,
+                      quantity: it.qty || 1,
+                      category: it.category || null,
+                      notes: it.notes || null,
                       seat_number: seatNum,
                     }),
                   }));
