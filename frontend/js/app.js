@@ -8,6 +8,12 @@ import { T, buildStyledButton } from './tokens.js';
 import { hideKeyboard } from './keyboard.js';
 import { showToast } from './components.js';
 import { OrderSummary } from './order-summary.js';
+import { applyActiveTheme } from './themes/index.js';
+
+// Apply the saved active theme as early as possible so scenes mount
+// against the right token values. Failing to apply just leaves
+// Terminal Glow in place.
+try { applyActiveTheme(); } catch (e) { console.warn('[Theme] apply failed', e); }
 
 // Import scenes (self-registering)
 import './scenes/login.js?v=1';

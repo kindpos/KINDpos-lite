@@ -5,8 +5,19 @@
 
 import { SceneManager }              from './components/scene-manager.js';
 import { T }                          from './components/tokens.js';
-import { initThemeBridge, applyTheme, getCurrentThemeId, getThemeCatalog }
-                                      from './theme-bridge.js';
+import {
+    initThemeBridge,
+    THEME_SLOTS,
+    DEFAULT_SLOTS,
+    expandOverrides,
+    listCustomThemes,
+    getActiveThemeId,
+    getCustomTheme,
+    saveCustomTheme,
+    deleteCustomTheme,
+    setActiveTheme,
+    newThemeId,
+}                                      from './theme-bridge.js';
 import { loadEmployeeData }           from './data/sample-employees.js';
 import { loadReportData }             from './data/sample-reports.js';
 import { loadTimeData }               from './data/sample-timedata.js';
@@ -343,67 +354,415 @@ function registerSystemAppearance() {
 }
 
 /* ------------------------------------------
-   THEME PICKER SCENE
+   THEME EDITOR SCENE
+   Library of saved custom themes + editor with
+   live preview of the terminal surface.
 ------------------------------------------ */
 function mountThemePicker(container) {
-    const themes = getThemeCatalog();
-    const activeId = getCurrentThemeId();
+    const state = {
+        editingId: null,      // null = no editor open; otherwise a theme id
+        draft: null,          // { id, label, slots }
+    };
 
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'max-width:900px;margin:0 auto;padding:30px 24px;';
-
+    wrapper.style.cssText = 'max-width:1100px;margin:0 auto;padding:30px 24px;';
     wrapper.innerHTML = `
         <div style="font-family:var(--font-heading);font-size:44px;color:var(--color-gold);margin-bottom:4px;">
             Appearance
         </div>
         <div style="font-size:20px;color:rgba(var(--color-mint-rgb),0.4);margin-bottom:24px;">
-            Select a theme — applies instantly across the Overseer.
+            Build and save your own terminal themes.
         </div>
-        <div id="theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
+        <div id="theme-library" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;"></div>
+        <div id="theme-editor"></div>
     `;
     container.appendChild(wrapper);
 
-    const grid = wrapper.querySelector('#theme-grid');
+    const libEl = wrapper.querySelector('#theme-library');
+    const editorEl = wrapper.querySelector('#theme-editor');
 
-    themes.forEach(entry => {
-        const isActive = entry.id === activeId;
-        const card = document.createElement('button');
-        card.dataset.themeId = entry.id;
-        card.style.cssText = `
-            display:flex;flex-direction:column;align-items:center;gap:8px;
-            padding:16px;background:${isActive ? 'rgba(var(--color-mint-rgb),0.12)' : 'rgba(var(--color-mint-rgb),0.04)'};
-            border:2px solid ${isActive ? 'var(--color-mint)' : 'rgba(var(--color-mint-rgb),0.1)'};
-            border-radius:6px;cursor:pointer;transition:all 0.2s ease;
-            font-family:var(--font-body);color:var(--color-mint);font-size:20px;
-        `;
-        card.innerHTML = `
-            <span style="font-size:24px;font-family:var(--font-heading);color:${isActive ? 'var(--color-gold)' : 'var(--color-mint)'};">
-                ${entry.label}
-            </span>
-            <span style="font-size:14px;color:rgba(var(--color-mint-rgb),0.35);text-transform:uppercase;letter-spacing:1px;">
-                ${isActive ? 'Active' : 'Click to apply'}
-            </span>
-        `;
-        card.addEventListener('mouseenter', () => {
-            if (entry.id !== getCurrentThemeId()) {
-                card.style.background = 'rgba(var(--color-mint-rgb),0.1)';
-                card.style.borderColor = 'rgba(var(--color-mint-rgb),0.3)';
-            }
-        });
-        card.addEventListener('mouseleave', () => {
-            if (entry.id !== getCurrentThemeId()) {
-                card.style.background = 'rgba(var(--color-mint-rgb),0.04)';
-                card.style.borderColor = 'rgba(var(--color-mint-rgb),0.1)';
-            }
-        });
-        card.addEventListener('click', async () => {
-            await applyTheme(entry.id);
-            // Re-render to update active state
-            container.innerHTML = '';
-            mountThemePicker(container);
-        });
-        grid.appendChild(card);
+    function render() {
+        renderLibrary(libEl, state, render);
+        renderEditor(editorEl, state, render);
+    }
+    render();
+}
+
+function renderLibrary(libEl, state, render) {
+    libEl.innerHTML = '';
+    const activeId = getActiveThemeId();
+    const saved = listCustomThemes();
+
+    const entries = [
+        { id: 'terminal-glow', label: 'Terminal Glow', builtin: true },
+        ...saved,
+    ];
+
+    entries.forEach(entry => {
+        libEl.appendChild(buildLibraryCard(entry, activeId, state, render));
     });
+
+    // "New theme" action card
+    const add = document.createElement('button');
+    add.style.cssText = `
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+        padding:18px;background:rgba(var(--color-mint-rgb),0.04);
+        border:2px dashed rgba(var(--color-mint-rgb),0.3);
+        border-radius:6px;cursor:pointer;
+        font-family:var(--font-body);color:var(--color-mint);
+        min-height:110px;
+    `;
+    add.innerHTML = `
+        <span style="font-size:28px;font-family:var(--font-heading);color:var(--color-gold);">+ New theme</span>
+        <span style="font-size:13px;color:rgba(var(--color-mint-rgb),0.4);text-transform:uppercase;letter-spacing:1px;">Start from defaults</span>
+    `;
+    add.addEventListener('click', () => {
+        const id = newThemeId();
+        state.editingId = id;
+        state.draft = {
+            id,
+            label: 'Untitled theme',
+            slots: { ...DEFAULT_SLOTS },
+            isNew: true,
+        };
+        render();
+    });
+    libEl.appendChild(add);
+}
+
+function buildLibraryCard(entry, activeId, state, render) {
+    const isActive = entry.id === activeId;
+    const isEditing = entry.id === state.editingId;
+    const slots = entry.builtin ? DEFAULT_SLOTS : (entry.slots || DEFAULT_SLOTS);
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+        display:flex;flex-direction:column;gap:8px;padding:14px;
+        background:${isActive ? 'rgba(var(--color-mint-rgb),0.12)' : 'rgba(var(--color-mint-rgb),0.04)'};
+        border:2px solid ${isEditing ? 'var(--color-gold)' : isActive ? 'var(--color-mint)' : 'rgba(var(--color-mint-rgb),0.1)'};
+        border-radius:6px;font-family:var(--font-body);color:var(--color-mint);
+    `;
+
+    // Swatch row
+    const swatches = document.createElement('div');
+    swatches.style.cssText = 'display:flex;gap:4px;';
+    ['bg', 'numpadChassis', 'gold', 'mint', 'textPrimary'].forEach(k => {
+        const s = document.createElement('div');
+        s.style.cssText = `width:22px;height:22px;border-radius:3px;background:${slots[k] || DEFAULT_SLOTS[k]};border:1px solid rgba(0,0,0,0.4);`;
+        swatches.appendChild(s);
+    });
+    card.appendChild(swatches);
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:20px;font-family:var(--font-heading);color:var(--color-gold);';
+    title.textContent = entry.label;
+    card.appendChild(title);
+
+    const status = document.createElement('div');
+    status.style.cssText = 'font-size:12px;color:rgba(var(--color-mint-rgb),0.5);text-transform:uppercase;letter-spacing:1px;';
+    status.textContent = isActive ? 'Active' : (entry.builtin ? 'Built-in default' : 'Saved');
+    card.appendChild(status);
+
+    // Action row
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;margin-top:4px;';
+    actions.appendChild(buildMiniButton('Apply', isActive, () => {
+        setActiveTheme(entry.id);
+        render();
+    }));
+    if (!entry.builtin) {
+        actions.appendChild(buildMiniButton('Edit', false, () => {
+            state.editingId = entry.id;
+            state.draft = {
+                id: entry.id,
+                label: entry.label,
+                slots: { ...DEFAULT_SLOTS, ...entry.slots },
+                isNew: false,
+            };
+            render();
+        }));
+        actions.appendChild(buildMiniButton('Delete', false, () => {
+            if (!confirm(`Delete theme "${entry.label}"?`)) return;
+            deleteCustomTheme(entry.id);
+            if (state.editingId === entry.id) { state.editingId = null; state.draft = null; }
+            render();
+        }, true));
+    }
+    card.appendChild(actions);
+
+    return card;
+}
+
+function buildMiniButton(label, active, onClick, destructive) {
+    const btn = document.createElement('button');
+    const border = destructive ? 'var(--color-vermillion)' : (active ? 'var(--color-gold)' : 'rgba(var(--color-mint-rgb),0.3)');
+    const fg = destructive ? 'var(--color-vermillion)' : (active ? 'var(--color-gold)' : 'var(--color-mint)');
+    btn.style.cssText = `
+        flex:1;padding:6px 10px;background:transparent;border:1px solid ${border};
+        color:${fg};font-family:var(--font-body);font-size:13px;
+        text-transform:uppercase;letter-spacing:1px;border-radius:3px;cursor:pointer;
+    `;
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    return btn;
+}
+
+function renderEditor(editorEl, state, render) {
+    editorEl.innerHTML = '';
+    if (!state.editingId || !state.draft) {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'padding:16px;color:rgba(var(--color-mint-rgb),0.4);font-family:var(--font-body);font-size:15px;';
+        hint.textContent = 'Select a saved theme to edit or create a new one.';
+        editorEl.appendChild(hint);
+        return;
+    }
+
+    const layout = document.createElement('div');
+    layout.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:24px;';
+
+    layout.appendChild(buildEditorControls(state, render));
+    layout.appendChild(buildPreview(state.draft.slots));
+
+    editorEl.appendChild(layout);
+
+    // Save / cancel row (full width)
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:12px;justify-content:flex-end;margin-top:16px;';
+
+    const cancel = document.createElement('button');
+    cancel.textContent = state.draft.isNew ? 'Discard' : 'Cancel';
+    cancel.style.cssText = `
+        padding:10px 20px;background:transparent;border:1px solid rgba(var(--color-mint-rgb),0.3);
+        color:var(--color-mint);font-family:var(--font-body);font-size:14px;text-transform:uppercase;
+        letter-spacing:1.5px;border-radius:3px;cursor:pointer;
+    `;
+    cancel.addEventListener('click', () => {
+        state.editingId = null;
+        state.draft = null;
+        render();
+    });
+
+    const save = document.createElement('button');
+    save.textContent = 'Save theme';
+    save.style.cssText = `
+        padding:10px 20px;background:var(--color-gold);border:1px solid var(--color-gold);
+        color:#1a1a1a;font-family:var(--font-body);font-size:14px;font-weight:bold;
+        text-transform:uppercase;letter-spacing:1.5px;border-radius:3px;cursor:pointer;
+    `;
+    save.addEventListener('click', () => {
+        const label = (state.draft.label || '').trim() || 'Untitled theme';
+        saveCustomTheme({
+            id: state.draft.id,
+            label,
+            slots: state.draft.slots,
+        });
+        state.editingId = null;
+        state.draft = null;
+        render();
+    });
+
+    actions.appendChild(cancel);
+    actions.appendChild(save);
+    editorEl.appendChild(actions);
+}
+
+function buildEditorControls(state, render) {
+    const col = document.createElement('div');
+    col.style.cssText = 'display:flex;flex-direction:column;gap:16px;';
+
+    // Name field
+    const nameLabel = document.createElement('div');
+    nameLabel.style.cssText = 'font-size:12px;color:rgba(var(--color-mint-rgb),0.5);text-transform:uppercase;letter-spacing:1.5px;';
+    nameLabel.textContent = 'Theme name';
+    col.appendChild(nameLabel);
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = state.draft.label;
+    nameInput.style.cssText = `
+        padding:10px 12px;background:var(--color-bg-dark);
+        border:1px solid rgba(var(--color-mint-rgb),0.2);color:var(--color-mint);
+        font-family:var(--font-body);font-size:16px;border-radius:3px;
+    `;
+    nameInput.addEventListener('input', (e) => { state.draft.label = e.target.value; });
+    col.appendChild(nameInput);
+
+    // Group slots by their `group` attribute
+    const groups = {};
+    THEME_SLOTS.forEach(slot => {
+        (groups[slot.group] = groups[slot.group] || []).push(slot);
+    });
+
+    Object.keys(groups).forEach(groupName => {
+        const header = document.createElement('div');
+        header.style.cssText = 'font-size:13px;color:var(--color-gold);text-transform:uppercase;letter-spacing:2px;margin-top:4px;';
+        header.textContent = groupName;
+        col.appendChild(header);
+
+        groups[groupName].forEach(slot => {
+            col.appendChild(buildSlotRow(slot, state, render));
+        });
+    });
+
+    return col;
+}
+
+function buildSlotRow(slot, state, render) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:6px 0;';
+
+    const color = document.createElement('input');
+    color.type = 'color';
+    color.value = state.draft.slots[slot.key] || DEFAULT_SLOTS[slot.key];
+    color.style.cssText = 'width:44px;height:32px;border:none;background:transparent;cursor:pointer;padding:0;';
+
+    const hex = document.createElement('input');
+    hex.type = 'text';
+    hex.value = color.value;
+    hex.maxLength = 7;
+    hex.style.cssText = `
+        width:90px;padding:6px 8px;background:var(--color-bg-dark);
+        border:1px solid rgba(var(--color-mint-rgb),0.15);color:var(--color-mint);
+        font-family:var(--font-mono);font-size:13px;border-radius:3px;
+    `;
+
+    color.addEventListener('input', (e) => {
+        state.draft.slots[slot.key] = e.target.value;
+        hex.value = e.target.value;
+        refreshPreview(state.draft.slots);
+    });
+    hex.addEventListener('input', (e) => {
+        const v = e.target.value.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+            color.value = v;
+            state.draft.slots[slot.key] = v;
+            refreshPreview(state.draft.slots);
+        }
+    });
+
+    const text = document.createElement('div');
+    text.style.cssText = 'flex:1;display:flex;flex-direction:column;';
+    text.innerHTML = `
+        <div style="font-size:15px;color:var(--color-mint);font-family:var(--font-body);">${slot.label}</div>
+        <div style="font-size:12px;color:rgba(var(--color-mint-rgb),0.4);">${slot.hint}</div>
+    `;
+
+    row.appendChild(color);
+    row.appendChild(hex);
+    row.appendChild(text);
+    return row;
+}
+
+function refreshPreview(slots) {
+    const old = document.querySelector('#theme-preview-pane');
+    if (!old) return;
+    const fresh = buildPreview(slots);
+    old.parentElement.replaceChild(fresh, old);
+}
+
+function buildPreview(slots) {
+    // Expand the 10 slots into the full token set so the mocked card
+    // matches how the terminal will render.
+    const full = expandOverrides(slots);
+
+    const pane = document.createElement('div');
+    pane.id = 'theme-preview-pane';
+    pane.style.cssText = 'position:sticky;top:20px;';
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:13px;color:var(--color-gold);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;';
+    label.textContent = 'Preview';
+    pane.appendChild(label);
+
+    // Scene-background frame
+    const scene = document.createElement('div');
+    scene.id = 'theme-preview-inner';
+    scene.style.cssText = `
+        background:${full.bg};padding:20px;border-radius:4px;
+        min-height:360px;font-family:var(--font-body);
+    `;
+
+    // Header row
+    const header = document.createElement('div');
+    header.style.cssText = `
+        display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;
+        color:${full.gold};font-family:var(--font-heading);font-size:24px;
+    `;
+    header.innerHTML = `<span>Order #1042</span><span style="color:${full.mutedText};font-size:13px;">Table 7 · 9:42 PM</span>`;
+    scene.appendChild(header);
+
+    // Beveled card
+    const cardWrap = document.createElement('div');
+    cardWrap.style.cssText = `
+        background:${full.bgDark};
+        border-top:7px solid ${full.numpadChassisL};
+        border-left:7px solid ${full.numpadChassisL};
+        border-bottom:7px solid ${full.numpadChassisD};
+        border-right:7px solid ${full.numpadChassisD};
+        padding:18px;clip-path:polygon(10px 0%, calc(100% - 10px) 0%, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);
+    `;
+
+    // Title / subtitle
+    const title = document.createElement('div');
+    title.style.cssText = `color:${full.textPrimary};font-size:22px;font-family:var(--font-heading);margin-bottom:2px;`;
+    title.textContent = 'Margherita Pizza';
+    cardWrap.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.style.cssText = `color:${full.textSecondary};font-size:14px;margin-bottom:14px;`;
+    sub.textContent = 'Large · Extra basil · No garlic';
+    cardWrap.appendChild(sub);
+
+    // Data rows
+    const rowStyle = (colorFg) => `display:flex;justify-content:space-between;padding:4px 0;font-size:15px;color:${colorFg};`;
+    const row = (l, r, fg) => {
+        const d = document.createElement('div');
+        d.style.cssText = rowStyle(fg);
+        d.innerHTML = `<span>${l}</span><span>${r}</span>`;
+        return d;
+    };
+    cardWrap.appendChild(row('Subtotal', '$18.00', full.textPrimary));
+    cardWrap.appendChild(row('Tax', '$1.48', full.mutedText));
+    const totalRow = row('Total', '$19.48', full.goGreen);
+    totalRow.style.cssText += 'font-family:var(--font-heading);font-size:20px;margin-top:6px;';
+    cardWrap.appendChild(totalRow);
+
+    // Warning line
+    const warn = document.createElement('div');
+    warn.style.cssText = `color:${full.red};font-size:13px;margin-top:10px;text-transform:uppercase;letter-spacing:1px;`;
+    warn.textContent = '⚠ Void requires manager';
+    cardWrap.appendChild(warn);
+
+    scene.appendChild(cardWrap);
+
+    // Accent swatches
+    const accents = document.createElement('div');
+    accents.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
+    [
+        { c: full.mint, lbl: 'Primary' },
+        { c: full.cyan, lbl: 'Secondary' },
+        { c: full.gold, lbl: 'Header' },
+    ].forEach(a => {
+        const chip = document.createElement('div');
+        chip.style.cssText = `
+            flex:1;padding:8px 10px;background:${a.c};color:${full.bg};
+            font-family:var(--font-heading);font-size:13px;text-align:center;
+            text-transform:uppercase;letter-spacing:1.5px;border-radius:3px;
+        `;
+        chip.textContent = a.lbl;
+        accents.appendChild(chip);
+    });
+    scene.appendChild(accents);
+
+    pane.appendChild(scene);
+
+    // Active-theme note
+    const note = document.createElement('div');
+    note.style.cssText = 'margin-top:10px;font-size:12px;color:rgba(var(--color-mint-rgb),0.4);';
+    note.textContent = 'Preview reflects the terminal surface. Save and apply to push it live.';
+    pane.appendChild(note);
+
+    return pane;
 }
 
 /* ------------------------------------------
