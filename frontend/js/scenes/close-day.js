@@ -609,6 +609,12 @@ defineScene({
 defineScene({
   name: 'batch-settlement',
   render: function(container, params) {
+    setHeaderBack({
+      back: true,
+      onBack: function() { SceneManager.closeTransactional('batch-settlement'); },
+      x: true,
+    });
+
     var batchPanel = document.createElement('div');
     batchPanel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';padding:' + T.scenePad + 'px;min-width:300px;';
 

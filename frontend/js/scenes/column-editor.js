@@ -13,6 +13,7 @@
 import { SceneManager, defineScene } from '../scene-manager.js';
 import { T, chamfer, bevelEdges, buildStyledButton } from '../tokens.js';
 import { showToast } from '../components.js';
+import { setHeaderBack } from '../app.js';
 
 // ── Inject invisible scrollbar styles ──
 (function() {
@@ -78,6 +79,15 @@ defineScene({
       state.columns.push({ id: sc.id, label: sc.label, items: items });
     }
     state.onSave = params.onSave || null;
+
+    setHeaderBack({
+      back: true,
+      onBack: function() {
+        if (state.onSave) state.onSave(state.columns);
+        SceneManager.closeTransactional('column-editor');
+      },
+      x: true,
+    });
 
     var mintEdges = bevelEdges(T.mint);
 

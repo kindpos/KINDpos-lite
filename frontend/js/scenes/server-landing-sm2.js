@@ -775,6 +775,12 @@ defineScene({
   transactionals: {
     'sl-internal-transfer': {
       render: function(container, params) {
+        setHeaderBack({
+          back: true,
+          onBack: function() { SceneManager.closeTransactional('sl-internal-transfer'); },
+          x: true,
+        });
+
         container.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;padding:' + T.scenePad + 'px;box-sizing:border-box;';
         container.appendChild(buildCardHeader('INTERNAL TRANSFER'));
 
