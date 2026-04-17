@@ -31,7 +31,7 @@ if (Test-Path $PythonDir) { Remove-Item -Recurse -Force $PythonDir }
 New-Item -ItemType Directory -Path $PythonDir | Out-Null
 Expand-Archive -Path $ZipPath -DestinationPath $PythonDir
 
-# 3. Enable pip — uncomment the "import site" line in python312._pth
+# 3. Enable pip - uncomment the "import site" line in python312._pth
 $PthFile = Get-ChildItem -Path $PythonDir -Filter "python*._pth" | Select-Object -First 1
 if ($PthFile) {
     $content = Get-Content $PthFile.FullName
@@ -62,7 +62,7 @@ if (Test-Path $Requirements) {
         --target $LibDir `
         -r $Requirements
 } else {
-    Write-Host "    WARNING: requirements.txt not found — skipping pip install"
+    Write-Host "    WARNING: requirements.txt not found - skipping pip install"
 }
 
 # 6. Clean up pip cache and installer to reduce bundle size.
