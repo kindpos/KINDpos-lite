@@ -3,22 +3,26 @@ import { pushChanges } from '../services/config-push.js';
    KINDpos Overseer — Payroll & Tips
 
    View Stack:
-     payroll-summary → tip-pool-config
+     payroll-summary
 
    Features:
      - Pay period selector
      - Labor summary dashboard with cost %
      - Employee breakdown table (sortable)
      - One-click export (ADP/Gusto/Paychex/QB/CSV)
-     - Tip pooling configuration
      - Labor cost % benchmarks
+
+   Tipout rules are configured in the dedicated
+   Employees → Tipout Rules scene and are the
+   source of truth for server-level tip-out math
+   (see tipout-rules.js / TipoutRule backend model).
 
    "Nice. Dependable. Yours."
    ============================================ */
 
 import {
     PAY_PERIODS, PAY_SCHEDULE, PAYROLL_SUMMARY,
-    TIP_POOL_CONFIG, EXPORT_FORMATS, LABOR_BENCHMARKS,
+    EXPORT_FORMATS, LABOR_BENCHMARKS,
     loadPayrollData,
 } from '../data/sample-payroll.js';
 import { buildDateRangePicker } from '../components/date-picker.js';
@@ -49,13 +53,11 @@ const C = {
 ------------------------------------------ */
 let viewHistory = [];
 let currentContainer = null;
-let tipPoolConfig = null; // mutable working copy
 let sortField = 'totalComp';
 let sortDir = 'desc';
 
 const VIEW_REGISTRY = {
     'payroll-summary': buildPayrollSummary,
-    'tip-pool-config': buildTipPoolConfig,
 };
 
 /* ------------------------------------------
@@ -244,7 +246,6 @@ function buildPayrollSummary(wrapper) {
     tabs.style.cssText = 'display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;';
 
     tabs.appendChild(buildTab('Payroll Summary', true));
-    tabs.appendChild(buildTab('Tip Pool Config', false, () => pushView('tip-pool-config')));
 
     // Export button (special styling)
     const exportBtn = document.createElement('button');
@@ -322,51 +323,6 @@ function buildPayrollSummary(wrapper) {
     cards.appendChild(buildSummaryCard('Total Tips', fmt$(lab.totalTips), C.yellow));
     cards.appendChild(buildSummaryCard('Overtime', fmtHrs(lab.overtimeHours), lab.overtimeHours > 0 ? C.orange : C.green));
     wrapper.appendChild(cards);
-
-    // ── Tip Pool Status Card ──
-    if (tipPoolConfig.enabled) {
-        const poolCard = document.createElement('div');
-        poolCard.style.cssText = `
-            background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
-            border-radius: 10px; padding: 20px; margin-bottom: 20px;
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-        `;
-
-        const poolRulesHTML = tipPoolConfig.rules
-            .filter(r => r.poolPct > 0)
-            .map(r => `<span style="color: ${C.mint};">${getRoleLabel(r.role)}: ${r.poolPct}% to pool</span>`)
-            .join(' · ');
-
-        poolCard.innerHTML = `
-            <div>
-                <div style="font-size: 22px; color: ${C.green}; margin-bottom: 6px;">
-                    ✓ Tip Pooling Active
-                </div>
-                <div style="font-size: 20px; color: ${C.grey};">
-                    ${poolRulesHTML}
-                </div>
-                <div style="font-size: 18px; color: rgba(var(--color-mint-rgb), 0.4); margin-top: 4px;">
-                    Enforcement: ${tipPoolConfig.enforcementMode === 'required' ? 'Required at checkout' : 'Suggested'}
-                    · Method: ${tipPoolConfig.calculationMethod}
-                </div>
-            </div>
-        `;
-
-        const configBtn = document.createElement('button');
-        configBtn.textContent = 'Configure →';
-        configBtn.style.cssText = `
-            background: transparent; color: ${C.mint}; border: 1px solid ${C.mintBorder};
-            padding: 10px 20px; border-radius: 8px; font-size: 22px; cursor: pointer;
-            font-family: var(--font-body, 'Sevastopol Interface', Arial, sans-serif);
-            transition: all 0.2s ease;
-        `;
-        configBtn.addEventListener('mouseenter', () => { configBtn.style.background = C.mint; configBtn.style.color = C.dark; });
-        configBtn.addEventListener('mouseleave', () => { configBtn.style.background = 'transparent'; configBtn.style.color = C.mint; });
-        configBtn.addEventListener('click', () => pushView('tip-pool-config'));
-        poolCard.appendChild(configBtn);
-
-        wrapper.appendChild(poolCard);
-    }
 
     // ── Employee Breakdown Table ──
     const tableSection = document.createElement('div');
@@ -499,244 +455,6 @@ function buildEmployeeTable(wrapper) {
     wrapper.appendChild(table);
 }
 
-/* ==========================================
-   VIEW 2: TIP POOL CONFIGURATION
-   ========================================== */
-function buildTipPoolConfig(wrapper) {
-    wrapper.style.cssText = 'padding: 0 8px; max-width: 900px; margin: 0 auto;';
-
-    buildBackButton(wrapper, 'Payroll Summary');
-
-    // ── Header ──
-    const header = document.createElement('div');
-    header.style.cssText = 'margin-bottom: 24px;';
-    header.innerHTML = `
-        <div style="font-family: var(--font-display, 'Alien Encounters', monospace);
-                    font-size: 36px; color: ${C.yellow}; margin-bottom: 4px;">
-            Tip Pool Configuration
-        </div>
-        <div style="font-size: 25px; color: rgba(var(--color-mint-rgb), 0.5);">
-            Set how tips are distributed among your team
-        </div>
-    `;
-    wrapper.appendChild(header);
-
-    // ── Enable/Disable Toggle ──
-    const toggleSection = document.createElement('div');
-    toggleSection.style.cssText = `
-        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
-        border-radius: 10px; padding: 24px; margin-bottom: 20px;
-        display: flex; justify-content: space-between; align-items: center;
-    `;
-    toggleSection.innerHTML = `
-        <div>
-            <div style="font-size: 25px; color: ${C.white}; margin-bottom: 4px;">Tip Pooling</div>
-            <div style="font-size: 20px; color: ${C.grey};">
-                Automatically calculate and enforce tip distribution at checkout
-            </div>
-        </div>
-    `;
-
-    const toggle = document.createElement('button');
-    toggle.id = 'tp-toggle';
-    toggle.style.cssText = `
-        width: 80px; height: 40px; border-radius: 20px; border: none; cursor: pointer;
-        background: ${tipPoolConfig.enabled ? C.green : C.grey};
-        position: relative; transition: background 0.3s ease;
-    `;
-    toggle.innerHTML = `
-        <span style="width: 32px; height: 32px; background: white; border-radius: 50%;
-                     position: absolute; top: 4px;
-                     ${tipPoolConfig.enabled ? 'right: 4px;' : 'left: 4px;'}
-                     transition: all 0.3s ease;"></span>
-    `;
-    toggle.addEventListener('click', () => {
-        tipPoolConfig.enabled = !tipPoolConfig.enabled;
-        emitEvent('TIP_POOL_CONFIG_UPDATED', { enabled: tipPoolConfig.enabled });
-        showToast(tipPoolConfig.enabled ? 'Tip pooling enabled' : 'Tip pooling disabled', 'info');
-        // Re-render
-        const ptWrapper = currentContainer.querySelector('#pt-view-wrapper');
-        if (ptWrapper) { ptWrapper.innerHTML = ''; buildTipPoolConfig(ptWrapper); viewHistory.push({ name: 'tip-pool-config' }); }
-    });
-    toggleSection.appendChild(toggle);
-    wrapper.appendChild(toggleSection);
-
-    if (!tipPoolConfig.enabled) {
-        const disabled = document.createElement('div');
-        disabled.style.cssText = `
-            text-align: center; padding: 60px 20px; color: ${C.grey}; font-size: 25px;
-        `;
-        disabled.textContent = 'Tip pooling is disabled. Enable it above to configure distribution rules.';
-        wrapper.appendChild(disabled);
-        return;
-    }
-
-    // ── Calculation Method ──
-    const methodSection = document.createElement('div');
-    methodSection.style.cssText = `
-        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
-        border-radius: 10px; padding: 24px; margin-bottom: 20px;
-    `;
-    methodSection.innerHTML = `
-        <div style="font-family: var(--font-display, 'Alien Encounters', monospace);
-                    font-size: 26px; color: ${C.mint}; letter-spacing: 1px; margin-bottom: 16px;">
-            CALCULATION METHOD
-        </div>
-    `;
-
-    const methods = [
-        { id: 'percentage', label: 'Percentage', desc: 'Each role contributes/receives a % of tips' },
-        { id: 'points',     label: 'Point System', desc: 'Roles assigned point values, tips split by points' },
-        { id: 'hours',      label: 'Hours Worked', desc: 'Pool distributed proportional to hours worked' },
-    ];
-
-    const methodGrid = document.createElement('div');
-    methodGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: wrap;';
-
-    methods.forEach(m => {
-        const card = document.createElement('button');
-        const isActive = tipPoolConfig.calculationMethod === m.id;
-        card.style.cssText = `
-            flex: 1; min-width: 200px; padding: 16px 20px; border-radius: 10px; cursor: pointer;
-            text-align: left; transition: all 0.2s ease;
-            background: ${isActive ? 'rgba(var(--color-mint-rgb), 0.12)' : 'transparent'};
-            border: 2px solid ${isActive ? C.mint : C.mintBorder};
-            color: ${C.mint};
-        `;
-        card.innerHTML = `
-            <div style="font-size: 22px; color: ${isActive ? C.mint : C.white}; margin-bottom: 6px;
-                        font-weight: ${isActive ? 'bold' : 'normal'};">${m.label}</div>
-            <div style="font-size: 18px; color: ${C.grey};">${m.desc}</div>
-        `;
-        card.addEventListener('click', () => {
-            tipPoolConfig.calculationMethod = m.id;
-            emitEvent('TIP_POOL_CONFIG_UPDATED', { calculationMethod: m.id });
-            const ptWrapper = currentContainer.querySelector('#pt-view-wrapper');
-            if (ptWrapper) { ptWrapper.innerHTML = ''; buildTipPoolConfig(ptWrapper); viewHistory.push({ name: 'tip-pool-config' }); }
-        });
-        methodGrid.appendChild(card);
-    });
-    methodSection.appendChild(methodGrid);
-    wrapper.appendChild(methodSection);
-
-    // ── Role Distribution Rules ──
-    const rulesSection = document.createElement('div');
-    rulesSection.style.cssText = `
-        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
-        border-radius: 10px; overflow: hidden; margin-bottom: 20px;
-    `;
-
-    const rulesHeader = document.createElement('div');
-    rulesHeader.style.cssText = `
-        padding: 16px 20px; border-bottom: 1px solid ${C.mintBorder};
-        font-family: var(--font-display, 'Alien Encounters', monospace);
-        font-size: 26px; color: ${C.mint}; letter-spacing: 1px;
-    `;
-    rulesHeader.textContent = 'ROLE DISTRIBUTION RULES';
-    rulesSection.appendChild(rulesHeader);
-
-    // Table header
-    const ruleColHeader = document.createElement('div');
-    ruleColHeader.style.cssText = `
-        display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
-        padding: 14px 20px; gap: 8px;
-        background: rgba(var(--color-mint-rgb), 0.08);
-        border-bottom: 1px solid ${C.mintBorder};
-        font-size: 20px; color: ${C.mintFaded};
-        text-transform: uppercase; letter-spacing: 1px;
-    `;
-    ['Role', 'Keeps', 'Contributes', 'From Pool'].forEach(label => {
-        const cell = document.createElement('div');
-        cell.textContent = label;
-        ruleColHeader.appendChild(cell);
-    });
-    rulesSection.appendChild(ruleColHeader);
-
-    // Rule rows
-    tipPoolConfig.rules.forEach((rule, i) => {
-        const stripeBg = i % 2 === 0 ? 'transparent' : 'rgba(var(--color-mint-rgb), 0.03)';
-        const ruleRow = document.createElement('div');
-        ruleRow.style.cssText = `
-            display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
-            padding: 16px 20px; gap: 8px; align-items: center;
-            border-bottom: 1px solid rgba(var(--color-mint-rgb), 0.08);
-            background: ${stripeBg};
-        `;
-
-        const receivesText = rule.receivesFromPool
-            ? `<span style="color: ${C.green};">✓ Receives ${rule.poolSharePct}%</span>`
-            : `<span style="color: ${C.grey};">—</span>`;
-
-        ruleRow.innerHTML = `
-            <div style="color: ${C.white}; font-size: 25px;">${getRoleLabel(rule.role)}</div>
-            <div style="color: ${C.mint}; font-size: 25px;">${rule.keepPct}%</div>
-            <div style="color: ${rule.poolPct > 0 ? C.yellow : C.grey}; font-size: 25px;">
-                ${rule.poolPct > 0 ? rule.poolPct + '%' : '—'}
-            </div>
-            <div style="font-size: 22px;">${receivesText}</div>
-        `;
-        rulesSection.appendChild(ruleRow);
-    });
-    wrapper.appendChild(rulesSection);
-
-    // ── Enforcement Mode ──
-    const enforceSection = document.createElement('div');
-    enforceSection.style.cssText = `
-        background: rgba(var(--color-mint-rgb), 0.04); border: 1px solid ${C.mintBorder};
-        border-radius: 10px; padding: 24px; margin-bottom: 20px;
-    `;
-    enforceSection.innerHTML = `
-        <div style="font-family: var(--font-display, 'Alien Encounters', monospace);
-                    font-size: 26px; color: ${C.mint}; letter-spacing: 1px; margin-bottom: 16px;">
-            ENFORCEMENT
-        </div>
-    `;
-
-    const enforceGrid = document.createElement('div');
-    enforceGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: wrap;';
-
-    const enforceModes = [
-        { id: 'required',  label: 'Required',  desc: 'Cannot close shift without completing tip-out' },
-        { id: 'suggested', label: 'Suggested',  desc: 'Shows tip-out at checkout but can be skipped' },
-        { id: 'off',       label: 'Manual',     desc: 'No automatic tip-out — manager handles manually' },
-    ];
-
-    enforceModes.forEach(m => {
-        const card = document.createElement('button');
-        const isActive = tipPoolConfig.enforcementMode === m.id;
-        card.style.cssText = `
-            flex: 1; min-width: 200px; padding: 16px 20px; border-radius: 10px; cursor: pointer;
-            text-align: left; transition: all 0.2s ease;
-            background: ${isActive ? 'rgba(var(--color-mint-rgb), 0.12)' : 'transparent'};
-            border: 2px solid ${isActive ? C.mint : C.mintBorder};
-        `;
-        card.innerHTML = `
-            <div style="font-size: 22px; color: ${isActive ? C.mint : C.white}; margin-bottom: 6px;
-                        font-weight: ${isActive ? 'bold' : 'normal'};">${m.label}</div>
-            <div style="font-size: 18px; color: ${C.grey};">${m.desc}</div>
-        `;
-        card.addEventListener('click', () => {
-            tipPoolConfig.enforcementMode = m.id;
-            emitEvent('TIP_POOL_CONFIG_UPDATED', { enforcementMode: m.id });
-            showToast(`Enforcement set to: ${m.label}`, 'success');
-            const ptWrapper = currentContainer.querySelector('#pt-view-wrapper');
-            if (ptWrapper) { ptWrapper.innerHTML = ''; buildTipPoolConfig(ptWrapper); viewHistory.push({ name: 'tip-pool-config' }); }
-        });
-        enforceGrid.appendChild(card);
-    });
-    enforceSection.appendChild(enforceGrid);
-    wrapper.appendChild(enforceSection);
-
-    // ── Audit Notice ──
-    const notice = document.createElement('div');
-    notice.style.cssText = `
-        padding: 16px 20px; background: rgba(var(--color-mint-rgb), 0.06);
-        border: 1px solid ${C.mintBorder}; border-radius: 10px;
-        color: ${C.grey}; font-size: 20px; line-height: 1.5;
-    `;
-    notice.innerHTML = `🔒 Every tip pool configuration change creates a permanent <span style="color: ${C.mint};">TIP_POOL_CONFIG_UPDATED</span> event. All tip distributions are tracked via <span style="color: ${C.mint};">TIP_OUT_COMPLETED</span> events with full audit trail.`;
-    wrapper.appendChild(notice);
-}
 
 /* ==========================================
    EXPORT MODAL
@@ -940,9 +658,6 @@ export function buildPayrollTipsScene(container) {
     sortField = 'totalComp';
     sortDir = 'desc';
 
-    // Clone tip pool config for mutable editing
-    tipPoolConfig = JSON.parse(JSON.stringify(TIP_POOL_CONFIG));
-
     // Date range picker
     const toolbar = document.createElement('div');
     toolbar.style.cssText = 'padding: 12px 20px 0 20px; max-width: 1100px; margin: 0 auto;';
@@ -969,5 +684,4 @@ export function cleanupPayrollTips(container) {
     if (container) container.innerHTML = '';
     viewHistory = [];
     currentContainer = null;
-    tipPoolConfig = null;
 }

@@ -37,6 +37,7 @@ import { buildFloorPlanScene,    cleanupFloorPlan    } from './sections/floor-pl
 import { buildPayrollTipsScene,    cleanupPayrollTips    } from './sections/payroll-tips.js';
 import { buildTimeAttendanceScene, cleanupTimeAttendance } from './sections/time-attendance.js';
 import { buildShiftConfigScene,    cleanupShiftConfig    } from './sections/shift-config.js';
+import { buildTipoutRulesScene,    cleanupTipoutRules    } from './sections/tipout-rules.js';
 
 /* ------------------------------------------
    NAVIGATION STRUCTURE
@@ -70,6 +71,7 @@ const NAV = [
             { id: 'employee-management', label: 'Staff List'     },
             { id: 'time-attendance',  label: 'Time & Attendance' },
             { id: 'payroll-tips',     label: 'Payroll & Tips'    },
+            { id: 'tipout-rules',     label: 'Tipout Rules'      },
             { id: 'shift-config',     label: 'Shift Config'      },
         ]
     },
@@ -279,6 +281,11 @@ function registerAllSections() {
         name: 'shift-config',
         mount: (container) => buildShiftConfigScene(container),
         unmount: () => cleanupShiftConfig(),
+    });
+    SceneManager.register({
+        name: 'tipout-rules',
+        mount: (container) => buildTipoutRulesScene(container),
+        unmount: () => cleanupTipoutRules(),
     });
     SceneManager.register({
         name: 'store-info',

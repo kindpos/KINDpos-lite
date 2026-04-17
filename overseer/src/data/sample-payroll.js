@@ -17,15 +17,6 @@ export let PAYROLL_SUMMARY = {
     employees: [],
 };
 
-export let TIP_POOL_CONFIG = {
-    enabled: false,
-    calculationMethod: 'hours_worked',
-    enforcementMode: 'suggested',
-    eligibleRoles: ['server', 'bartender'],
-    excludedRoles: ['manager'],
-    rules: [],
-};
-
 export const EXPORT_FORMATS = [
     { id: 'csv',  label: 'CSV Spreadsheet', icon: '📊', ext: '.csv'  },
     { id: 'pdf',  label: 'PDF Report',      icon: '📄', ext: '.pdf'  },
