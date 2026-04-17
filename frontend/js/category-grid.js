@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════
 
 import { T, chamfer } from './tokens.js';
+import { applyCardBevel, hexToRgba } from './theme-manager.js';
 
 // ═══════════════════════════════════════════════════
 //  CategoryGrid
@@ -51,9 +52,8 @@ export function CategoryGrid(container, opts) {
 
     var tile = document.createElement('div');
 
-    var baseBg    = mode === 'solid' ? color    : T.bgDark;
-    var labelClr  = mode === 'solid' ? T.bgDark : color;
-    var bevelW    = 7;
+    var baseBg   = mode === 'solid' ? color    : T.bgDark;
+    var labelClr = mode === 'solid' ? T.bgDark : color;
 
     tile.style.cssText = [
       'position:relative;box-sizing:border-box;',
@@ -62,21 +62,20 @@ export function CategoryGrid(container, opts) {
       'background:' + baseBg + ';',
       'border-radius:0;',
       'clip-path:' + chamfer(8) + ';',
-      'border-top:'    + bevelW + 'px solid ' + T.bgLight + ';',
-      'border-left:'   + bevelW + 'px solid ' + T.bgLight + ';',
-      'border-right:'  + bevelW + 'px solid ' + T.bgEdge  + ';',
-      'border-bottom:' + bevelW + 'px solid ' + T.bgEdge  + ';',
       'cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;',
       'transition:transform 60ms, filter 60ms;',
     ].join('');
 
+    // Style D bevel: chassis edges for idle tiles, color-derived for solid parent.
+    applyCardBevel(tile, mode === 'solid' ? color : undefined, 7);
+
     if (mode === 'border') {
-      // Category stroke + glow. Outline inset sits under the bevel so it
-      // reads as a color stroke inside the chassis frame.
-      tile.style.boxShadow = '0 0 8px ' + color + '55, inset 0 0 0 2px ' + color;
+      // Category stroke + glow — outline inset sits inside the bevel frame.
+      tile.style.boxShadow = '0 0 8px ' + hexToRgba(color, 0.33) + ', inset 0 0 0 2px ' + color;
     } else {
-      // Solid parent: inner bevel for depth.
-      tile.style.boxShadow = 'inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.35)';
+      // Inner bevel for depth on the solid parent back tile.
+      tile.style.boxShadow = 'inset 0 2px 0 ' + hexToRgba(T.bgLight, 0.5)
+        + ', inset 0 -2px 0 ' + hexToRgba(T.bgEdge, 0.6);
     }
 
     // Label
