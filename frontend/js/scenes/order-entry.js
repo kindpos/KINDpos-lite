@@ -11,7 +11,7 @@ import { setSceneName, setHeaderBack } from '../app.js';
 import { OrderSummary } from '../order-summary.js';
 // TODO: restore HexNav
 // import { HexNav } from '../hex-nav.js';
-import { CategoryGrid } from '../category-grid.js?v=2';
+import { CategoryGrid } from '../category-grid.js?v=3';
 import { showKeyboard, hideKeyboard } from '../keyboard.js';
 import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';

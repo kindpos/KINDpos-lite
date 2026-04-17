@@ -285,6 +285,16 @@ export function CategoryGrid(container, opts) {
   }
 
   // ── Modifier flow ──
+  // Backend payloads sometimes use `name`/`modifier_id` instead of the
+  // `label`/`id` documented in hex-nav. Normalize both shapes so tiles
+  // always show a human name.
+  function _label(o) {
+    return (o && (o.label || o.name)) || '';
+  }
+  function _id(o) {
+    return (o && (o.id || o.group_id || o.modifier_id)) || '';
+  }
+
   function startMods(item) {
     var groups = (item.requiredMods || []).filter(function(g) {
       return g.choices && g.choices.length > 0;
@@ -303,16 +313,17 @@ export function CategoryGrid(container, opts) {
   }
 
   function pickChoice(group, choice) {
+    var gid = _id(group);
     // Single-select: replace any prior pick for this group.
     modState.selectedMods = modState.selectedMods.filter(function(m) {
-      return m.group !== group.id;
+      return m.group !== gid;
     });
     modState.selectedMods.push({
-      group: group.id,
-      label: choice.label,
+      group: gid,
+      label: _label(choice),
       price: choice.price || 0,
     });
-    modState.satisfied[group.id] = true;
+    modState.satisfied[gid] = true;
     modState.group = null;
     render();
   }
@@ -323,7 +334,6 @@ export function CategoryGrid(container, opts) {
     result.selectedMods = modState.selectedMods.slice();
     resetMods();
     onSelect(result, {});
-    // Return to nav so the grid is ready for the next item.
     render();
   }
 
@@ -336,24 +346,24 @@ export function CategoryGrid(container, opts) {
     var item = modState.item;
     var headColor = item.color || (modState.groups[0] && modState.groups[0].color) || T.mint;
 
-    // Item tile — solid, BACK cancels the mod flow.
     root.appendChild(buildTile({
       mode:  'solid',
       color: headColor,
-      label: item.label || '',
+      label: _label(item),
       price: item.price,
       back:  true,
       onTap: function() { cancelMods(); },
     }));
 
     modState.groups.forEach(function(g) {
+      var gid    = _id(g);
       var picked = null;
-      modState.selectedMods.forEach(function(m) { if (m.group === g.id) picked = m; });
-      var isDone = !!modState.satisfied[g.id];
+      modState.selectedMods.forEach(function(m) { if (m.group === gid) picked = m; });
+      var isDone = !!modState.satisfied[gid];
       root.appendChild(buildTile({
         mode:  isDone ? 'solid' : 'border',
         color: g.color || T.mint,
-        label: picked ? picked.label : (g.label || ''),
+        label: picked ? picked.label : _label(g),
         onTap: function() {
           modState.group = g;
           render();
@@ -362,7 +372,7 @@ export function CategoryGrid(container, opts) {
     });
 
     var allDone = modState.groups.length > 0 && modState.groups.every(function(g) {
-      return modState.satisfied[g.id];
+      return modState.satisfied[_id(g)];
     });
     if (allDone) {
       root.appendChild(buildTile({
@@ -378,11 +388,10 @@ export function CategoryGrid(container, opts) {
     var g = modState.group;
     var color = g.color || T.mint;
 
-    // Group tile — solid, BACK returns to group list.
     root.appendChild(buildTile({
       mode:  'solid',
       color: color,
-      label: g.label || '',
+      label: _label(g),
       back:  true,
       onTap: function() {
         modState.group = null;
@@ -394,7 +403,7 @@ export function CategoryGrid(container, opts) {
       root.appendChild(buildTile({
         mode:  'border',
         color: color,
-        label: c.label || '',
+        label: _label(c),
         price: c.price,
         onTap: function() { pickChoice(g, c); },
       }));
