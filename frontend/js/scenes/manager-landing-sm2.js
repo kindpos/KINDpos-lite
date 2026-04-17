@@ -807,9 +807,33 @@ function showDrillDown(state, cardName, extra) {
   }
 
   overlay.appendChild(content);
+  addExpandedCloseX(overlay, function() { hideDrillDown(state); });
   state.el.style.position = 'relative';
   state.el.appendChild(overlay);
   state.drillEl = overlay;
+}
+
+// Corner close button — sits in the top-right of every expanded-card
+// overlay so the user has an obvious dismiss affordance regardless of
+// where they scrolled to.
+function addExpandedCloseX(overlay, onClose) {
+  var btn = document.createElement('div');
+  btn.style.cssText = [
+    'position:absolute;top:6px;right:6px;z-index:10;',
+    'width:32px;height:32px;',
+    'display:flex;align-items:center;justify-content:center;',
+    'background:' + T.vermillion + ';',
+    'color:' + T.bgDark + ';',
+    'font-family:' + T.fh + ';font-size:' + T.fsBtnSm + ';font-weight:bold;',
+    'cursor:pointer;user-select:none;',
+    'clip-path:' + chamfer(4) + ';',
+  ].join('');
+  btn.textContent = 'X';
+  btn.addEventListener('pointerup', function(e) {
+    e.stopPropagation();
+    onClose();
+  });
+  overlay.appendChild(btn);
 }
 
 function hideDrillDown(state) {

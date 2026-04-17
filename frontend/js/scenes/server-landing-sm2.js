@@ -1668,6 +1668,7 @@ function showDrillDown(state, cardName) {
   }
 
   overlay.appendChild(content);
+  addExpandedCloseX(overlay, function() { hideDrillDown(state); });
   state.el.style.position = 'relative';
   state.el.appendChild(overlay);
   state.drillEl = overlay;
@@ -1678,6 +1679,29 @@ function hideDrillDown(state) {
     state.drillEl.remove();
     state.drillEl = null;
   }
+}
+
+// Corner close button — always visible in the top-right of an expanded
+// card overlay so the user has an obvious dismiss affordance even when
+// the content scrolls off the card header.
+function addExpandedCloseX(overlay, onClose) {
+  var btn = document.createElement('div');
+  btn.style.cssText = [
+    'position:absolute;top:6px;right:6px;z-index:10;',
+    'width:32px;height:32px;',
+    'display:flex;align-items:center;justify-content:center;',
+    'background:' + T.vermillion + ';',
+    'color:' + T.bgDark + ';',
+    'font-family:' + T.fh + ';font-size:' + T.fsBtnSm + ';font-weight:bold;',
+    'cursor:pointer;user-select:none;',
+    'clip-path:' + chamfer(4) + ';',
+  ].join('');
+  btn.textContent = 'X';
+  btn.addEventListener('pointerup', function(e) {
+    e.stopPropagation();
+    onClose();
+  });
+  overlay.appendChild(btn);
 }
 
 // ── Sales Drill-Down ────────────────────────────
