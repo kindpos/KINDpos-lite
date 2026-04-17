@@ -12,17 +12,10 @@ import { buildNumpad } from '../numpad.js';
 import { showToast } from '../components.js';
 import { setSceneName, setHeaderBack } from '../app.js';
 import { showKeyboard, hideKeyboard } from '../keyboard.js';
+import { computeTotals, getTaxRate, getCashDiscount } from '../pricing.js';
 import './column-editor.js';
 
 // TODO: No font-size token exists for 26px card header labels — using inline '9px'.
-
-// ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
-var TAX_RATE = 0.07;
-var CASH_DISCOUNT = 0.04;
-fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
-  if (d.tax_rate != null)           TAX_RATE      = d.tax_rate;
-  if (d.cash_discount_rate != null) CASH_DISCOUNT = d.cash_discount_rate;
-}).catch(function() { /* keep defaults on network error */ });
 
 var _refreshInFlight = false;
 
@@ -69,10 +62,8 @@ function collectSummary(seats, selected, paidSeats) {
       subtotal += it.qty * ep;
     }
   }
-  var tax = Math.round(subtotal * TAX_RATE * 100) / 100;
-  var cardTotal = Math.round((subtotal + tax) * 100) / 100;
-  var cashPrice = Math.round(cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
-  return { items: items, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
+  var totals = computeTotals(subtotal);
+  return { items: items, subtotal: totals.subtotal, tax: totals.tax, cardTotal: totals.cardTotal, cashPrice: totals.cashPrice };
 }
 
 // Group order items by seat_number into seats array

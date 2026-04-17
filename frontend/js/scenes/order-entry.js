@@ -15,6 +15,7 @@ import { showHalfPlacementOverlay } from '../half-placement-overlay.js';
 import { showPizzaBuilderOverlay } from '../pizza-builder-overlay.js';
 import { PREFIXES as UNI_PREFIXES, getModHexData, hasPizzaCategory, PIZZA_PLACEMENTS, MOD_COLORS } from '../menu-data/universal-modifiers.js';
 import { ModifierPanel } from '../modifier-panel.js';
+import { computeTotals } from '../pricing.js';
 
 // ── Beveled depth card helpers (match clock-in card pattern) ──
 function _lightenHex(hex, pct) {
@@ -50,14 +51,9 @@ var GAP      = 16;
 var BTN_H    = 50;
 var OVERLAP  = 18;
 
-// ── Pricing constants (defaults, overwritten by /api/v1/config/pricing) ──
-var TAX_RATE      = 0.07;
-var CASH_DISCOUNT = 0.04;
-// Fetch canonical rates from backend so FE/BE always agree
-fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
-  if (d.tax_rate != null)           TAX_RATE      = d.tax_rate;
-  if (d.cash_discount_rate != null) CASH_DISCOUNT = d.cash_discount_rate;
-}).catch(function() { /* keep defaults on network error */ });
+// Pricing rates come from frontend/js/pricing.js — one source of truth
+// for TAX_RATE / CASH_DISCOUNT across every scene, so a stale copy can't
+// leak into a payment amount.
 
 // ── API ───────────────────────────────────────────
 var API = '/api/v1';
@@ -587,10 +583,8 @@ function computeTotals() {
       mods: inst.mods.filter(function(m) { return m.charged || m.name; }),
     });
   });
-  var tax       = Math.round(subtotal * TAX_RATE * 100) / 100;
-  var cardTotal = Math.round((subtotal + tax) * 100) / 100;
-  var cashPrice = Math.round(cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
-  return { counts: counts, summaryItems: summaryItems, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
+  var t = computeTotals(subtotal);
+  return { counts: counts, summaryItems: summaryItems, subtotal: t.subtotal, tax: t.tax, cardTotal: t.cardTotal, cashPrice: t.cashPrice };
 }
 
 
@@ -1881,9 +1875,10 @@ function _updateTicketTotals() {
     var previewModTotal = previewMods.reduce(function(s, m) { return s + m.price; }, 0);
     var previewPrice = _modPanelItem.basePrice + previewModTotal;
     totals.subtotal += previewPrice;
-    totals.tax = Math.round(totals.subtotal * TAX_RATE * 100) / 100;
-    totals.cardTotal = Math.round((totals.subtotal + totals.tax) * 100) / 100;
-    totals.cashPrice = Math.round(totals.cardTotal * (1 - CASH_DISCOUNT) * 100) / 100;
+    var _t = computeTotals(totals.subtotal);
+    totals.tax = _t.tax;
+    totals.cardTotal = _t.cardTotal;
+    totals.cashPrice = _t.cashPrice;
   }
   OrderSummary.update({
     checkId: currentCheckNumber || '',

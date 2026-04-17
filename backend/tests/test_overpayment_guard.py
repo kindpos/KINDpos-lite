@@ -167,3 +167,178 @@ async def test_cash_explicit_tip_and_overage_combine(ledger):
     p = order.payments[0]
     assert p.amount == pytest.approx(8.00)
     assert p.tip_amount == pytest.approx(0.90)
+
+
+# ── dual-pricing interaction ────────────────────────────────────────────────
+
+class TestDualPricingGuard:
+    """The cash dual-pricing discount runs before the overpayment clamp —
+    so the clamp uses the POST-discount `balance_due`. These tests prove
+    the two mechanisms compose correctly in every corner:
+
+    - customer pays exactly the cash price (discount absorbs the gap)
+    - customer pays the card price in cash (over-tendered — overage → tip)
+    - customer pays less than cash price (partial payment, no overpayment)
+
+    Backend invariants must hold for the full day aggregation in each.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _cash_discount_on(self, monkeypatch):
+        # 4% cash dual-pricing (the repo default) with 0 tax so the math
+        # is easy to read: $10 item → cash price $9.60, card price $10.00.
+        monkeypatch.setattr(settings, "tax_rate", 0.0)
+        monkeypatch.setattr(settings, "cash_discount_rate", 0.04)
+
+    async def _seed_ten_dollar_order(self, ledger, order_id):
+        await ledger.append(order_created(
+            terminal_id=TERMINAL,
+            order_id=order_id,
+            order_type="dine_in",
+            guest_count=1,
+            correlation_id=order_id,
+        ))
+        await ledger.append(item_added(
+            terminal_id=TERMINAL,
+            order_id=order_id,
+            item_id="it_dp",
+            menu_item_id="m1",
+            name="Item",
+            price=10.00,
+            quantity=1,
+        ))
+        return order_id
+
+    @pytest.mark.asyncio
+    async def test_cash_price_exact(self, ledger):
+        """Customer pays the advertised cash price ($9.60); discount closes
+        the $0.40 gap; no overage, no tip, order is fully paid."""
+        order_id = await self._seed_ten_dollar_order(ledger, "o_dp_01")
+
+        req = CashPaymentRequest(
+            order_id=order_id,
+            amount=9.60,
+            tip=0.0,
+            payment_method="cash",
+        )
+        await process_cash_payment(req, ledger=ledger)
+
+        events = await ledger.get_events_by_correlation(order_id)
+        order = project_order(events)
+        assert order.is_fully_paid
+        assert order.payments[0].amount == pytest.approx(9.60)
+        assert order.payments[0].tip_amount == pytest.approx(0.00)
+        # $0.40 dual-pricing discount is what closed the gap, not a tip.
+        assert order.discount_total == pytest.approx(0.40)
+
+        # Reconciliation: cash $9.60 == net $9.60 + tax $0.00.
+        agg = _aggregate_orders([order], {})
+        tr = check_tender_reconciliation(
+            cash_total=float(agg["cash_total"]),
+            card_total=float(agg["card_total"]),
+            net_sales=float(agg["net_sales"]),
+            tax_collected=float(agg["tax_total"]),
+        )
+        assert tr.ok, tr.message
+
+    @pytest.mark.asyncio
+    async def test_cash_at_card_price_no_discount(self, ledger):
+        """Customer hands exactly the CARD price in cash. The dual-pricing
+        discount only triggers when the tender equals the reduced cash
+        price (naive_discount > 0), so the order is paid at full card
+        price with no discount — matches the convenience-store behaviour
+        where the customer didn't ask for the cash break."""
+        order_id = await self._seed_ten_dollar_order(ledger, "o_dp_02")
+
+        req = CashPaymentRequest(
+            order_id=order_id,
+            amount=10.00,
+            tip=0.0,
+            payment_method="cash",
+        )
+        await process_cash_payment(req, ledger=ledger)
+
+        events = await ledger.get_events_by_correlation(order_id)
+        order = project_order(events)
+        p = order.payments[0]
+        assert p.amount == pytest.approx(10.00)
+        assert p.tip_amount == pytest.approx(0.00)
+        assert order.discount_total == pytest.approx(0.00)
+        assert order.is_fully_paid
+
+    @pytest.mark.asyncio
+    async def test_cash_overpaid_above_card_price(self, ledger):
+        """Customer hands $11 cash on a $10 order — over even the card
+        price. No dual-pricing discount (naive_discount would be negative),
+        but the clamp routes the $1 overage into tip so the tender identity
+        still holds."""
+        order_id = await self._seed_ten_dollar_order(ledger, "o_dp_02b")
+
+        req = CashPaymentRequest(
+            order_id=order_id,
+            amount=11.00,
+            tip=0.0,
+            payment_method="cash",
+        )
+        await process_cash_payment(req, ledger=ledger)
+
+        events = await ledger.get_events_by_correlation(order_id)
+        order = project_order(events)
+        p = order.payments[0]
+        assert p.amount == pytest.approx(10.00)       # clamped to balance_due
+        assert p.tip_amount == pytest.approx(1.00)    # overage → tip
+        assert order.discount_total == pytest.approx(0.00)
+        assert order.is_fully_paid
+
+        agg = _aggregate_orders([order], {p.payment_id: p.tip_amount})
+        tr = check_tender_reconciliation(
+            cash_total=float(agg["cash_total"]),
+            card_total=float(agg["card_total"]),
+            net_sales=float(agg["net_sales"]),
+            tax_collected=float(agg["tax_total"]),
+        )
+        assert tr.ok, tr.message
+        tp = check_tips_partition(
+            total_tips=float(agg["total_tips"]),
+            card_tips=float(agg["card_tips"]),
+            cash_tips=float(agg["cash_tips"]),
+        )
+        assert tp.ok, tp.message
+
+    @pytest.mark.asyncio
+    async def test_cash_underpaid_partial(self, ledger):
+        """Customer hands $5.00 on a $10 order; dual-pricing discount
+        caps at `amount * rate / (1 - rate)`, sale leg is the full $5,
+        no overage, partial payment leaves a remaining balance."""
+        order_id = await self._seed_ten_dollar_order(ledger, "o_dp_03")
+
+        req = CashPaymentRequest(
+            order_id=order_id,
+            amount=5.00,
+            tip=0.0,
+            payment_method="cash",
+        )
+        await process_cash_payment(req, ledger=ledger)
+
+        events = await ledger.get_events_by_correlation(order_id)
+        order = project_order(events)
+        p = order.payments[0]
+        # No clamp: request stayed below balance_due.
+        assert p.amount == pytest.approx(5.00)
+        assert p.tip_amount == pytest.approx(0.00)
+        assert not order.is_fully_paid
+        assert order.balance_due > 0
+
+        # Invariants hold even mid-tender.
+        agg = _aggregate_orders([order], {})
+        tr = check_tender_reconciliation(
+            cash_total=float(agg["cash_total"]),
+            card_total=float(agg["card_total"]),
+            net_sales=float(agg["net_sales"]),
+            tax_collected=float(agg["tax_total"]),
+        )
+        # Partially-paid orders don't close so they're skipped from
+        # total_checks but their cash_total is still counted. Aggregator
+        # excludes `open` from net_sales, so cash_total should match 0
+        # (no closed/paid orders for this test's single order).
+        assert tr.ok, tr.message

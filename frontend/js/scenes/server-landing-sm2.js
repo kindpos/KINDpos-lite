@@ -15,6 +15,7 @@ import { createSVG, svgEl, CHART } from '../chart-helpers.js';
 import './check-overview.js';
 import { injectChartDefs, PAT } from '../chart-patterns.js';
 import { DATA } from '../chart-colors.js';
+import { computeTotals } from '../pricing.js';
 
 // ── Constants ────────────────────────────────────
 var CHROME = T.numpadChassis;
@@ -38,15 +39,7 @@ function itemCount(order) {
   return total;
 }
 
-var SL_TAX_RATE = 0.07;
-var SL_CASH_DISCOUNT = 0.04;
-
-// Fetch canonical rates from backend so FE/BE always agree
-fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
-  if (d.tax_rate != null)           SL_TAX_RATE      = d.tax_rate;
-  if (d.cash_discount_rate != null) SL_CASH_DISCOUNT = d.cash_discount_rate;
-}).catch(function() { /* keep defaults on network error */ });
-
+// Pricing rates come from frontend/js/pricing.js — one source of truth.
 function orderTotals(order) {
   var items = order.items || [];
   var subtotal = 0;
@@ -58,10 +51,8 @@ function orderTotals(order) {
     subtotal += qty * price;
     itemList.push({ name: it.name, qty: qty, unitPrice: price });
   }
-  var tax = Math.round(subtotal * SL_TAX_RATE * 100) / 100;
-  var cardTotal = Math.round((subtotal + tax) * 100) / 100;
-  var cashPrice = Math.round(cardTotal * (1 - SL_CASH_DISCOUNT) * 100) / 100;
-  return { items: itemList, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
+  var t = computeTotals(subtotal);
+  return { items: itemList, subtotal: t.subtotal, tax: t.tax, cardTotal: t.cardTotal, cashPrice: t.cashPrice };
 }
 
 function fmtClockIn(clockedInAt) {

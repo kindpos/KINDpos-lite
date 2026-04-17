@@ -12,6 +12,7 @@ import { setSceneName, setHeaderBack } from '../app.js';
 import './check-overview.js';
 import { showKeyboard, hideKeyboard } from '../keyboard.js';
 import { createSVG, drawTrendLine, drawStackedAreaMulti } from '../chart-helpers.js';
+import { computeTotals } from '../pricing.js';
 
 // ── Constants (immutable) ────────────────────────
 
@@ -44,15 +45,7 @@ function srvColor(map, id) {
   return map[id] || SERVER_PALETTE[0];
 }
 
-var ML_TAX_RATE = 0.07;
-var ML_CASH_DISCOUNT = 0.04;
-
-// Fetch canonical rates from backend so FE/BE always agree
-fetch('/api/v1/config/pricing').then(function(r) { return r.json(); }).then(function(d) {
-  if (d.tax_rate != null)           ML_TAX_RATE      = d.tax_rate;
-  if (d.cash_discount_rate != null) ML_CASH_DISCOUNT = d.cash_discount_rate;
-}).catch(function() { /* keep defaults on network error */ });
-
+// Pricing rates come from frontend/js/pricing.js — one source of truth.
 function orderTotals(order) {
   var items = order.items || [];
   var subtotal = 0;
@@ -64,10 +57,8 @@ function orderTotals(order) {
     subtotal += qty * price;
     itemList.push({ name: it.name, qty: qty, unitPrice: price });
   }
-  var tax = Math.round(subtotal * ML_TAX_RATE * 100) / 100;
-  var cardTotal = Math.round((subtotal + tax) * 100) / 100;
-  var cashPrice = Math.round(cardTotal * (1 - ML_CASH_DISCOUNT) * 100) / 100;
-  return { items: itemList, subtotal: subtotal, tax: tax, cardTotal: cardTotal, cashPrice: cashPrice };
+  var t = computeTotals(subtotal);
+  return { items: itemList, subtotal: t.subtotal, tax: t.tax, cardTotal: t.cardTotal, cashPrice: t.cashPrice };
 }
 
 function checkNum(order) {
