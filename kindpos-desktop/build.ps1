@@ -104,6 +104,7 @@ if ($Dev) {
             # Create install script
             $installScript = @"
 @echo off
+cd /d "%~dp0"
 echo Installing KINDpos $AppName...
 set "INSTALL_DIR=%ProgramFiles%\KINDpos-$AppName"
 set "DESKTOP=%USERPROFILE%\Desktop"
@@ -112,9 +113,9 @@ set "START_MENU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\KINDpos"
 mkdir "%INSTALL_DIR%" 2>nul
 mkdir "%START_MENU%" 2>nul
 
-copy /Y "$ExeName" "%INSTALL_DIR%\"
-copy /Y "app.ico" "%INSTALL_DIR%\"
-xcopy /E /I /Y "resources" "%INSTALL_DIR%\resources"
+copy /Y "%~dp0$ExeName" "%INSTALL_DIR%\"
+copy /Y "%~dp0app.ico" "%INSTALL_DIR%\"
+xcopy /E /I /Y "%~dp0resources" "%INSTALL_DIR%\resources"
 
 powershell -Command "`$ws = New-Object -ComObject WScript.Shell; `$s = `$ws.CreateShortcut('%DESKTOP%\$ShortcutName.lnk'); `$s.TargetPath = '%INSTALL_DIR%\$ExeName'; `$s.IconLocation = '%INSTALL_DIR%\app.ico'; `$s.Save()"
 powershell -Command "`$ws = New-Object -ComObject WScript.Shell; `$s = `$ws.CreateShortcut('%START_MENU%\$ShortcutName.lnk'); `$s.TargetPath = '%INSTALL_DIR%\$ExeName'; `$s.IconLocation = '%INSTALL_DIR%\app.ico'; `$s.Save()"
