@@ -41,8 +41,9 @@ impl ServerManager {
     /// Spawn uvicorn with the best available Python interpreter.
     ///
     /// `app_dir` is the root extraction directory (e.g. `%APPDATA%/KINDpos`).
-    /// Environment variables expected by the backend are set before spawning.
-    pub fn start(app_dir: &Path, port: u16) -> Result<Self, String> {
+    /// `bind_host` is "127.0.0.1" for Terminals (loopback only) or "0.0.0.0"
+    /// for the Overseer (reachable by Terminals on the LAN).
+    pub fn start(app_dir: &Path, port: u16, bind_host: &str) -> Result<Self, String> {
         let python = find_python(app_dir)?;
 
         let backend_dir = app_dir.join("backend");
@@ -55,7 +56,7 @@ impl ServerManager {
                 "uvicorn",
                 "app.main:app",
                 "--host",
-                "127.0.0.1",
+                bind_host,
                 "--port",
                 &port.to_string(),
             ])
@@ -63,7 +64,7 @@ impl ServerManager {
             .env("KINDPOS_STORE_MODE", env::var("KINDPOS_STORE_MODE").unwrap_or_else(|_| "production".into()))
             .env("KINDPOS_DATABASE_PATH", &db_path)
             .env("KINDPOS_HARDWARE_DB_PATH", &hw_db_path)
-            .env("KINDPOS_HOST", "127.0.0.1")
+            .env("KINDPOS_HOST", bind_host)
             .env("KINDPOS_PORT", port.to_string())
             .env("KINDPOS_DEBUG", env::var("KINDPOS_DEBUG").unwrap_or_else(|_| "false".into()))
             .spawn()

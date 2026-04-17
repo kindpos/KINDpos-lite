@@ -141,7 +141,7 @@ pause
             Set-Content -Path (Join-Path $DistDir "uninstall.bat") -Value $uninstallScript
 
             # Create ZIP
-            $ZipPath = Join-Path $ReleaseDir "KINDpos-$AppName-1.2.0.zip"
+            $ZipPath = Join-Path $ReleaseDir "KINDpos-$AppName-1.3.0.zip"
             if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
             Compress-Archive -Path "$DistDir\*" -DestinationPath $ZipPath
             return $ZipPath

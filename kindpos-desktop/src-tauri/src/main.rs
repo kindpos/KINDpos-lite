@@ -3,6 +3,7 @@
 
 mod port;
 mod server;
+mod sync;
 
 use server::ServerManager;
 use std::fs;
@@ -68,11 +69,9 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::
 
 /// Detect whether we're running as the Overseer app.
 fn is_overseer_mode() -> bool {
-    // Check CLI args first.
     if std::env::args().any(|a| a == "--overseer") {
         return true;
     }
-    // Check executable name (for the renamed copy).
     if let Some(exe) = std::env::current_exe().ok().and_then(|p| {
         p.file_stem().map(|s| s.to_string_lossy().to_lowercase())
     }) {
@@ -95,8 +94,23 @@ fn main() {
     fs::create_dir_all(app_dir.join("data"))
         .expect("Failed to create KINDpos data directory");
 
-    let port = port::find_available_port(8000, 8099)
-        .expect("No available port in range 8000-8099");
+    // Fixed port for Overseer (so terminals can find it), auto-detect for Terminal.
+    let port = if overseer {
+        // Prefer 8765 — if it's already taken, fall back to the scan range.
+        if port::is_port_available(8765) {
+            8765
+        } else {
+            port::find_available_port(8000, 8099)
+                .expect("No available port in range 8000-8099")
+        }
+    } else {
+        port::find_available_port(8000, 8099)
+            .expect("No available port in range 8000-8099")
+    };
+
+    // Overseer binds to 0.0.0.0 so terminals on the LAN can reach it;
+    // Terminal binds to loopback only.
+    let bind_host = if overseer { "0.0.0.0" } else { "127.0.0.1" };
 
     let url_path = if overseer { "/overseer" } else { "/" };
 
@@ -112,7 +126,6 @@ fn main() {
 
             let window = app.get_window("main").expect("No main window");
 
-            // Overseer runs windowed; POS runs fullscreen kiosk.
             if overseer {
                 window.set_title("KINDpos Overseer").ok();
                 window.set_fullscreen(false).ok();
@@ -122,7 +135,7 @@ fn main() {
                 window.center().ok();
             }
 
-            let srv = match ServerManager::start(&app_dir, port) {
+            let srv = match ServerManager::start(&app_dir, port, bind_host) {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("KINDpos startup error: {e}");
@@ -137,6 +150,20 @@ fn main() {
                     eprintln!("KINDpos health-check error: {e}");
                     show_error(app, &e);
                     return Ok(());
+                }
+            }
+
+            // Terminals: pull the latest config snapshot from the Overseer
+            // before the webview loads, so the UI sees up-to-date rules.
+            // Silently skipped if no Overseer URL is configured or reachable.
+            if !overseer {
+                if let Some(overseer_url) = sync::load_overseer_url(&app_dir) {
+                    let local_url = format!("http://127.0.0.1:{port}");
+                    match sync::pull_config_from_overseer(&app_dir, &overseer_url, &local_url) {
+                        Ok(n) if n > 0 => eprintln!("Sync: applied {n} config events from {overseer_url}"),
+                        Ok(_) => eprintln!("Sync: up to date with {overseer_url}"),
+                        Err(e) => eprintln!("Sync: offline or unreachable ({e}) — using local config"),
+                    }
                 }
             }
 

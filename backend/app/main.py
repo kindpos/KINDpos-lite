@@ -30,6 +30,7 @@ from app.api.routes import staff
 from app.api.routes import reporting
 from app.api.routes import server_shift
 from app.api.routes import auth
+from app.api.routes import sync
 from app.api.routes.printing import print_queue
 
 
@@ -140,6 +141,7 @@ app.include_router(staff.router, prefix="/api/v1")
 app.include_router(reporting.router, prefix="/api/v1")
 app.include_router(server_shift.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(sync.router, prefix="/api/v1")
 
 
 # Serve frontend

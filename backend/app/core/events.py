@@ -228,6 +228,29 @@ def parse_event_type(raw: str) -> EventType:
         raise
 
 
+# Config event prefixes: these events represent rules authored by the Overseer
+# and replicated read-only to Terminals via LAN sync.
+CONFIG_EVENT_PREFIXES: tuple[str, ...] = (
+    "store.",
+    "employee.",
+    "tipout.",
+    "menu.",
+    "modifier.",
+    "restaurant.",
+    "tax_rules.",
+    "categories.",
+    "items.",
+    "floorplan.",
+    "terminal.",
+    "routing.",
+)
+
+
+def is_config_event(event_type: str) -> bool:
+    """True if `event_type` represents a configuration event (Overseer-authored)."""
+    return any(event_type.startswith(p) for p in CONFIG_EVENT_PREFIXES)
+
+
 class Event(BaseModel):
     """
     Immutable event record.
