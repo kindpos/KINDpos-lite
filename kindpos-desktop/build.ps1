@@ -71,102 +71,95 @@ if ($Dev) {
     Write-Host "==> Building Tauri release"
     npx tauri build
 
-    # --- 4. Create distributable package with both exes ---
+    # --- 4. Create two distributable packages (Terminal + Overseer) ---
     $ReleaseDir = "src-tauri\target\release"
     $MainExe = Join-Path $ReleaseDir "KINDpos.exe"
-    $DistDir = Join-Path $ReleaseDir "KINDpos-dist"
 
     if (Test-Path $MainExe) {
-        # Create clean dist folder
-        if (Test-Path $DistDir) { Remove-Item -Recurse -Force $DistDir }
-        New-Item -ItemType Directory -Path $DistDir | Out-Null
-
-        # Copy both executables
-        Copy-Item $MainExe (Join-Path $DistDir "KINDpos.exe")
-        Copy-Item $MainExe (Join-Path $DistDir "KINDpos-Overseer.exe")
-
-        # Copy the resources directory (Python, backend, frontend, overseer)
         $ResSource = Join-Path $ReleaseDir "resources"
-        if (Test-Path $ResSource) {
-            Write-Host "    Copying resources into dist package..."
+        if (-not (Test-Path $ResSource)) { $ResSource = "src-tauri\resources" }
+
+        function Build-Package {
+            param(
+                [string]$AppName,      # "Terminal" or "Overseer"
+                [string]$ExeName,      # "KINDpos.exe" or "KINDpos-Overseer.exe"
+                [string]$ShortcutName, # "KINDpos Terminal" or "KINDpos Overseer"
+                [string]$IconSrc       # source .ico path
+            )
+            $DistDir = Join-Path $ReleaseDir "KINDpos-$AppName-dist"
+            if (Test-Path $DistDir) { Remove-Item -Recurse -Force $DistDir }
+            New-Item -ItemType Directory -Path $DistDir | Out-Null
+
+            # Copy single exe
+            Copy-Item $MainExe (Join-Path $DistDir $ExeName)
+
+            # Copy resources
+            Write-Host "    Copying resources for $AppName..."
             Copy-Item -Recurse $ResSource (Join-Path $DistDir "resources")
-        } else {
-            Write-Host "    WARNING: resources/ not found at $ResSource"
-            Write-Host "    Copying from src-tauri/resources/ instead..."
-            Copy-Item -Recurse "src-tauri\resources" (Join-Path $DistDir "resources")
-        }
 
-        # Copy icons for shortcuts
-        $IconsDir = Join-Path $DistDir "icons"
-        New-Item -ItemType Directory -Path $IconsDir | Out-Null
-        Copy-Item "src-tauri\icons\icon.ico" (Join-Path $IconsDir "KINDpos.ico") -ErrorAction SilentlyContinue
-        Copy-Item "src-tauri\icons\overseer-icon.ico" (Join-Path $IconsDir "Overseer.ico") -ErrorAction SilentlyContinue
+            # Copy icon
+            $IconDst = Join-Path $DistDir "app.ico"
+            Copy-Item $IconSrc $IconDst -ErrorAction SilentlyContinue
 
-        # Create install script
-        $installScript = @'
+            # Create install script
+            $installScript = @"
 @echo off
-echo Installing KINDpos...
-set "INSTALL_DIR=%ProgramFiles%\KINDpos"
+echo Installing KINDpos $AppName...
+set "INSTALL_DIR=%ProgramFiles%\KINDpos-$AppName"
 set "DESKTOP=%USERPROFILE%\Desktop"
 set "START_MENU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\KINDpos"
 
-:: Create install directory
 mkdir "%INSTALL_DIR%" 2>nul
-mkdir "%INSTALL_DIR%\icons" 2>nul
 mkdir "%START_MENU%" 2>nul
 
-:: Copy files
-copy /Y "KINDpos.exe" "%INSTALL_DIR%\"
-copy /Y "KINDpos-Overseer.exe" "%INSTALL_DIR%\"
-copy /Y "icons\KINDpos.ico" "%INSTALL_DIR%\icons\"
-copy /Y "icons\Overseer.ico" "%INSTALL_DIR%\icons\"
+copy /Y "$ExeName" "%INSTALL_DIR%\"
+copy /Y "app.ico" "%INSTALL_DIR%\"
 xcopy /E /I /Y "resources" "%INSTALL_DIR%\resources"
 
-:: Create desktop shortcuts
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DESKTOP%\KINDpos Terminal.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\KINDpos.ico'; $s.Save()"
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DESKTOP%\KINDpos Overseer.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos-Overseer.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\Overseer.ico'; $s.Save()"
-
-:: Create Start Menu shortcuts
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%START_MENU%\KINDpos Terminal.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\KINDpos.ico'; $s.Save()"
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%START_MENU%\KINDpos Overseer.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos-Overseer.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\Overseer.ico'; $s.Save()"
+powershell -Command "`$ws = New-Object -ComObject WScript.Shell; `$s = `$ws.CreateShortcut('%DESKTOP%\$ShortcutName.lnk'); `$s.TargetPath = '%INSTALL_DIR%\$ExeName'; `$s.IconLocation = '%INSTALL_DIR%\app.ico'; `$s.Save()"
+powershell -Command "`$ws = New-Object -ComObject WScript.Shell; `$s = `$ws.CreateShortcut('%START_MENU%\$ShortcutName.lnk'); `$s.TargetPath = '%INSTALL_DIR%\$ExeName'; `$s.IconLocation = '%INSTALL_DIR%\app.ico'; `$s.Save()"
 
 echo.
-echo KINDpos installed successfully!
-echo Shortcuts created on Desktop and Start Menu.
+echo KINDpos $AppName installed successfully!
+echo Shortcut created on Desktop and Start Menu.
 echo.
 pause
-'@
-        Set-Content -Path (Join-Path $DistDir "install.bat") -Value $installScript
+"@
+            Set-Content -Path (Join-Path $DistDir "install.bat") -Value $installScript
 
-        # Create uninstall script
-        $uninstallScript = @'
+            # Create uninstall script
+            $uninstallScript = @"
 @echo off
-echo Uninstalling KINDpos...
-rmdir /S /Q "%ProgramFiles%\KINDpos" 2>nul
-rmdir /S /Q "%LOCALAPPDATA%\KINDpos" 2>nul
-del "%USERPROFILE%\Desktop\KINDpos Terminal.lnk" 2>nul
-del "%USERPROFILE%\Desktop\KINDpos Overseer.lnk" 2>nul
-rmdir /S /Q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\KINDpos" 2>nul
+echo Uninstalling KINDpos $AppName...
+rmdir /S /Q "%ProgramFiles%\KINDpos-$AppName" 2>nul
+del "%USERPROFILE%\Desktop\$ShortcutName.lnk" 2>nul
+del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\KINDpos\$ShortcutName.lnk" 2>nul
 rmdir /S /Q "%APPDATA%\KINDpos" 2>nul
-echo KINDpos uninstalled.
+echo KINDpos $AppName uninstalled.
 pause
-'@
-        Set-Content -Path (Join-Path $DistDir "uninstall.bat") -Value $uninstallScript
+"@
+            Set-Content -Path (Join-Path $DistDir "uninstall.bat") -Value $uninstallScript
 
-        # Create ZIP
-        $ZipPath = Join-Path $ReleaseDir "KINDpos-1.2.0-setup.zip"
-        if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
-        Compress-Archive -Path "$DistDir\*" -DestinationPath $ZipPath
+            # Create ZIP
+            $ZipPath = Join-Path $ReleaseDir "KINDpos-$AppName-1.2.0.zip"
+            if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
+            Compress-Archive -Path "$DistDir\*" -DestinationPath $ZipPath
+            return $ZipPath
+        }
+
+        $TerminalZip = Build-Package -AppName "Terminal" -ExeName "KINDpos.exe" `
+            -ShortcutName "KINDpos Terminal" -IconSrc "src-tauri\icons\icon.ico"
+
+        $OverseerZip = Build-Package -AppName "Overseer" -ExeName "KINDpos-Overseer.exe" `
+            -ShortcutName "KINDpos Overseer" -IconSrc "src-tauri\icons\overseer-icon.ico"
 
         Write-Host ""
         Write-Host "==> Build complete!"
-        Write-Host "    KINDpos.exe          - POS Terminal (fullscreen kiosk)"
-        Write-Host "    KINDpos-Overseer.exe - Admin Dashboard (windowed)"
         Write-Host ""
-        Write-Host "    Distributable:"
-        Write-Host "    $ZipPath"
+        Write-Host "    Two separate distributables:"
+        Write-Host "      $TerminalZip"
+        Write-Host "      $OverseerZip"
         Write-Host ""
-        Write-Host "    Share the ZIP. Recipient extracts and right-clicks"
-        Write-Host "    install.bat -> Run as administrator."
+        Write-Host "    Each ZIP: extract, right-click install.bat -> Run as administrator."
     }
 }
