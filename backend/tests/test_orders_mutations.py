@@ -552,3 +552,143 @@ class TestVoidOrder:
                 ledger=ledger,
             )
         assert exc.value.status_code == 403
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 86 GUARD on add_item
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestAdd86Guard:
+    """add_item refuses to ring up an item the Overseer has 86'd. The
+    guard reads MenuItem.is_86ed from the config projection — a frontend
+    with a stale menu cache can't sneak a sold-out item onto a check."""
+
+    async def _seed_menu_item(
+        self, ledger, *, item_id: str, name: str, price: str,
+        is_86ed: bool = False,
+    ):
+        """Write CREATED, then optionally an 86D event."""
+        from app.core.events import EventType, create_event
+
+        await ledger.append(create_event(
+            event_type=EventType.MENU_ITEM_CREATED,
+            terminal_id="OVERSEER",
+            payload={
+                "item_id": item_id,
+                "name": name,
+                "price": price,
+                "category_id": "c_food",
+            },
+        ))
+        if is_86ed:
+            await ledger.append(create_event(
+                event_type=EventType.MENU_ITEM_86D,
+                terminal_id="OVERSEER",
+                payload={"item_id": item_id},
+            ))
+
+    async def _open_order(self, ledger, order_id: str = "o86"):
+        """Create a bare open order so add_item has somewhere to land."""
+        from app.core.events import order_created
+        await ledger.append(order_created(
+            terminal_id=TERMINAL,
+            order_id=order_id,
+            order_type="dine_in",
+            guest_count=1,
+            correlation_id=order_id,
+        ))
+
+    @pytest.mark.asyncio
+    async def test_adding_86d_item_returns_409(self, ledger):
+        await self._seed_menu_item(ledger, item_id="m86",
+                                    name="Burger", price="12.00",
+                                    is_86ed=True)
+        await self._open_order(ledger)
+
+        with pytest.raises(HTTPException) as exc:
+            await orders_mod.add_item(
+                "o86",
+                orders_mod.AddItemRequest(
+                    menu_item_id="m86",
+                    name="Burger",
+                    price=12.00,
+                    quantity=1,
+                ),
+                http_request=None,
+                ledger=ledger,
+            )
+        assert exc.value.status_code == 409
+        assert "86" in exc.value.detail
+        # Nothing ended up on the order
+        from app.core.projections import project_order
+        events = await ledger.get_events_by_correlation("o86")
+        order = project_order(events)
+        assert order.items == []
+
+    @pytest.mark.asyncio
+    async def test_adding_restored_item_succeeds(self, ledger):
+        """86 → RESTORE flips is_86ed back off; add_item works again."""
+        from app.core.events import EventType, create_event
+        await self._seed_menu_item(ledger, item_id="mR",
+                                    name="Fries", price="4.00",
+                                    is_86ed=True)
+        await ledger.append(create_event(
+            event_type=EventType.MENU_ITEM_RESTORED,
+            terminal_id="OVERSEER",
+            payload={"item_id": "mR"},
+        ))
+        await self._open_order(ledger, order_id="oR")
+
+        res = await orders_mod.add_item(
+            "oR",
+            orders_mod.AddItemRequest(
+                menu_item_id="mR",
+                name="Fries",
+                price=4.00,
+                quantity=1,
+            ),
+            http_request=None,
+            ledger=ledger,
+        )
+        assert res.subtotal == pytest.approx(4.00)
+
+    @pytest.mark.asyncio
+    async def test_ad_hoc_item_not_in_menu_still_added(self, ledger):
+        """An item whose menu_item_id isn't in the config projection
+        (e.g. a manual `$0.50` correction line) sails through — the
+        guard only blocks items the Overseer explicitly marked 86'd."""
+        await self._open_order(ledger, order_id="oAdHoc")
+        res = await orders_mod.add_item(
+            "oAdHoc",
+            orders_mod.AddItemRequest(
+                menu_item_id="m_not_in_config",
+                name="Manual line",
+                price=0.50,
+                quantity=1,
+            ),
+            http_request=None,
+            ledger=ledger,
+        )
+        assert res.subtotal == pytest.approx(0.50)
+
+    @pytest.mark.asyncio
+    async def test_available_item_still_added_normally(self, ledger):
+        """Control: an item that exists in config but isn't 86'd adds as
+        before. Pinning so the guard doesn't become an over-aggressive
+        roadblock if the menu projection wobbles."""
+        await self._seed_menu_item(ledger, item_id="mOK",
+                                    name="Pizza", price="15.00",
+                                    is_86ed=False)
+        await self._open_order(ledger, order_id="oOK")
+        res = await orders_mod.add_item(
+            "oOK",
+            orders_mod.AddItemRequest(
+                menu_item_id="mOK",
+                name="Pizza",
+                price=15.00,
+                quantity=1,
+            ),
+            http_request=None,
+            ledger=ledger,
+        )
+        assert res.subtotal == pytest.approx(15.00)
