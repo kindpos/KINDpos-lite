@@ -151,11 +151,22 @@ class PaymentManager:
             return obj
 
         serialized = serialize(payload)
+        # payment_manager only ever handles card-terminal flows, so stamp
+        # `method: "card"` on every event it emits. Without this, the
+        # projection falls back to `payment_type` (the string "SALE") and
+        # every downstream consumer that classifies with `== "card"` or
+        # `== "cash"` — manager-landing's unadjusted-tip counter, the
+        # receipt builder's cash/card split, server-checkout tallies —
+        # silently misses the payment. The tip-adjustment UI then shows
+        # these checks as "already adjusted" and the sales split shows
+        # them as neither cash nor card.
+        if isinstance(serialized, dict):
+            serialized.setdefault("method", "card")
         return create_event(
             event_type=event_type,
             terminal_id=self._terminal_id,
             payload=serialized,
-            correlation_id=serialized.get("order_id"),
+            correlation_id=serialized.get("order_id") if isinstance(serialized, dict) else None,
         )
 
     def _error_result(self, tx_id: str, cat: PaymentErrorCategory, code: str, msg: str) -> TransactionResult:
