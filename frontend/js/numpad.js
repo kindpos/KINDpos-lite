@@ -154,17 +154,24 @@ export function buildNumpad(opts) {
     { label: submitLabel, type: 'submit' },
   ];
 
+  // Numpad key face is themable independently of the global darkBtn
+  // so changing "Numpad buttons" in the editor doesn't recolor every
+  // back / X / dark button across the app.
+  var keyFace      = o.keyFace      || T.numpadKeyFace || T.darkBtn;
+  var keyFaceLight = T.numpadKeyFaceL || null;
+  var keyFaceDark  = T.numpadKeyFaceD || null;
+
   layout.forEach(function(key) {
-    var fill, textColor, fontSize, fontFamily;
+    var textColor, fontSize, fontFamily;
     if (key.type === 'clear') {
-      fill = T.darkBtn; textColor = clearColor; fontSize = '60px'; fontFamily = T.fb;
+      textColor = clearColor; fontSize = '60px'; fontFamily = T.fb;
     } else if (key.type === 'submit') {
-      fill = T.darkBtn; textColor = submitColor; fontSize = '60px'; fontFamily = T.fb;
+      textColor = submitColor; fontSize = '60px'; fontFamily = T.fb;
     } else {
-      fill = T.darkBtn; textColor = digitColor; fontSize = '60px'; fontFamily = digitFont;
+      textColor = digitColor; fontSize = '60px'; fontFamily = digitFont;
     }
 
-    var pair = buildStyledButton(fill);
+    var pair = buildStyledButton(keyFace);
     pair.wrap.style.width = PAD.keyW + 'px';
     pair.wrap.style.height = keyH + 'px';
     pair.inner.style.fontFamily = fontFamily;
@@ -173,8 +180,17 @@ export function buildNumpad(opts) {
     pair.inner.style.lineHeight = '1';
     pair.inner.textContent = key.label;
 
-    // Apply numpad-specific bevel/chamfer overrides
-    if (keyBevel != null) {
+    // buildStyledButton bevels using bevelEdges(fillColor) — when the
+    // user picks an arbitrary numpad key face that isn't a known token,
+    // its edges fall back to neutral grey. Re-derive from our own
+    // numpadKeyFaceL/D so the bevel matches the picked color.
+    if (keyFaceLight && keyFaceDark) {
+      var _b = (keyBevel != null ? keyBevel : T.bevel);
+      pair.inner.style.borderTop    = _b + 'px solid ' + keyFaceLight;
+      pair.inner.style.borderLeft   = _b + 'px solid ' + keyFaceLight;
+      pair.inner.style.borderBottom = _b + 'px solid ' + keyFaceDark;
+      pair.inner.style.borderRight  = _b + 'px solid ' + keyFaceDark;
+    } else if (keyBevel != null) {
       var _kEdges = pair.wrap._edges;
       pair.wrap._bevel = keyBevel;
       pair.inner.style.borderTop    = keyBevel + 'px solid ' + _kEdges.light;

@@ -811,6 +811,34 @@ function buildPreview(slots) {
     });
     body.appendChild(accents);
 
+    // Mini numpad mock — 5 keys, just enough to preview the colors.
+    const padWrap = tag(document.createElement('div'), 'numpadChassis');
+    padWrap.style.cssText = `
+        display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px;
+        padding:8px;background:${full.numpadChassis};
+        border-top:4px solid ${full.numpadChassisL};border-left:4px solid ${full.numpadChassisL};
+        border-bottom:4px solid ${full.numpadChassisD};border-right:4px solid ${full.numpadChassisD};
+    `;
+    const mkKey = (label, color, slot) => {
+        const k = tag(document.createElement('div'), slot);
+        k.style.cssText = `
+            background:${full.numpadKeyFace};
+            border-top:3px solid ${full.numpadKeyFaceL};border-left:3px solid ${full.numpadKeyFaceL};
+            border-bottom:3px solid ${full.numpadKeyFaceD};border-right:3px solid ${full.numpadKeyFaceD};
+            color:${color};font-family:var(--font-mono);font-size:22px;
+            display:flex;align-items:center;justify-content:center;padding:6px 0;
+        `;
+        k.textContent = label;
+        return k;
+    };
+    padWrap.appendChild(mkKey('1',   full.numpadDigit, 'numpadDigit'));
+    padWrap.appendChild(mkKey('2',   full.numpadDigit, 'numpadDigit'));
+    padWrap.appendChild(mkKey('3',   full.numpadDigit, 'numpadDigit'));
+    padWrap.appendChild(mkKey('clr', full.red,         'red'));
+    padWrap.appendChild(mkKey('0',   full.numpadDigit, 'numpadKeyFace'));
+    padWrap.appendChild(mkKey('>>>', full.goGreen,     'goGreen'));
+    body.appendChild(padWrap);
+
     scene.appendChild(body);
     pane.appendChild(scene);
 

@@ -62,6 +62,12 @@ export const T = {
   numpadChassis: '#87f79c',
   numpadChassisL:'#b8ffd0',
   numpadChassisD:'#2e8040',
+  // Numpad key face — themable independently of darkBtn so the editor
+  // can recolor the keys without affecting back/close/dark buttons.
+  numpadKeyFace: '#3a3632',
+  numpadKeyFaceL:'#564f48',
+  numpadKeyFaceD:'#1e1b18',
+  numpadDigit:   '#fbb03b',
   // Header chrome — main shell header + card header strips
   headerBg:     '#87f79c',
   headerBgL:    '#b8ffd0',

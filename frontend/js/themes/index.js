@@ -19,6 +19,8 @@ export const THEME_SLOTS = [
   { key: 'gold',          group: 'Cards & Background', label: 'Highlight',         hint: 'Prices, titles, and important labels.' },
   { key: 'headerBg',      group: 'Headers',            label: 'Header bar',        hint: 'The strip at the top of the screen and on each card.' },
   { key: 'headerText',    group: 'Headers',            label: 'Header text',       hint: 'Text inside those strips.' },
+  { key: 'numpadKeyFace', group: 'Numpad',             label: 'Numpad buttons',    hint: 'The face color of every number, clear, and submit key.' },
+  { key: 'numpadDigit',   group: 'Numpad',             label: 'Numpad digits',     hint: 'Color of the numbers printed on the keys.' },
   { key: 'mint',          group: 'Accents',            label: 'Main accent',       hint: 'Confirm buttons and structural highlights.' },
   { key: 'cyan',          group: 'Accents',            label: 'Secondary accent',  hint: 'A cooler secondary tone.' },
   { key: 'textPrimary',   group: 'Text',               label: 'Body text',         hint: 'Item names, descriptions, numbers.' },
@@ -36,6 +38,8 @@ export const DEFAULT_SLOTS = {
   gold:          '#fcbe40',
   headerBg:      '#87f79c',
   headerText:    '#1a1a1a',
+  numpadKeyFace: '#3a3632',
+  numpadDigit:   '#fbb03b',
   mint:          '#C6FFBB',
   cyan:          '#33ffff',
   textPrimary:   '#f5f0e8',
@@ -120,6 +124,19 @@ export function expandOverrides(slots) {
     textPrimary:    s.textPrimary,
     textSecondary:  s.textSecondary,
     mutedText:      s.mutedText,
+
+    // Numpad key face + digits — scoped to the numpad component
+    // (read directly by numpad.js, NOT routed through T.darkBtn).
+    // Clear and submit text track the warning + money slots so
+    // the colors stay consistent across the whole theme.
+    numpadKeyFace:  s.numpadKeyFace,
+    numpadKeyFaceL: _lighten(s.numpadKeyFace, 0.2),
+    numpadKeyFaceD: _darken(s.numpadKeyFace, 0.3),
+    digitColor:     s.numpadDigit,
+    numpadDigit:    s.numpadDigit,
+    clrColor:       s.red,
+    submitColor:    s.goGreen,
+    pinDot:         s.numpadDigit,
 
     // Transactional frame tracks the primary accent.
     frameTransactional: s.mint,
