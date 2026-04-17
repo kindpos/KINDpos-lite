@@ -148,6 +148,72 @@ async def test_close_batch(client):
     assert data["order_count"] >= 2
 
 
+# ─── Merge tests ────────────────────────────────────────────────────────────
+
+async def _add_item(client, order_id, name="Burger", price=10.00):
+    resp = await client.post(f"/api/v1/orders/{order_id}/items", json={
+        "menu_item_id": "item-" + name.lower(),
+        "name": name,
+        "price": price,
+        "quantity": 1,
+        "category": "Entrees",
+    })
+    assert resp.status_code == 200
+
+
+async def test_merge_orders_moves_items_and_voids_sources(client):
+    target = await create_order(client, "M-1")
+    source_a = await create_order(client, "M-2")
+    source_b = await create_order(client, "M-3")
+
+    await _add_item(client, target, "Burger", 10.00)
+    await _add_item(client, source_a, "Fries", 4.00)
+    await _add_item(client, source_b, "Soda", 3.00)
+
+    resp = await client.post(f"/api/v1/orders/{target}/merge", json={
+        "source_ids": [source_a, source_b],
+        "approved_by": "mgr-01",
+    })
+    assert resp.status_code == 200
+    merged = resp.json()
+    item_names = sorted(i["name"] for i in merged["items"])
+    assert item_names == ["Burger", "Fries", "Soda"]
+    assert merged["status"] == "open"
+
+    for sid in (source_a, source_b):
+        resp = await client.get(f"/api/v1/orders/{sid}")
+        assert resp.json()["status"] == "voided"
+
+
+async def test_merge_requires_approved_by(client):
+    target = await create_order(client, "M-4")
+    source = await create_order(client, "M-5")
+    resp = await client.post(f"/api/v1/orders/{target}/merge", json={
+        "source_ids": [source],
+    })
+    assert resp.status_code == 403
+
+
+async def test_merge_rejects_self(client):
+    target = await create_order(client, "M-6")
+    resp = await client.post(f"/api/v1/orders/{target}/merge", json={
+        "source_ids": [target],
+        "approved_by": "mgr-01",
+    })
+    assert resp.status_code == 400
+
+
+async def test_merge_rejects_non_open_source(client):
+    target = await create_order(client, "M-7")
+    closed = await create_and_pay_order(client, "M-8")
+
+    resp = await client.post(f"/api/v1/orders/{target}/merge", json={
+        "source_ids": [closed],
+        "approved_by": "mgr-01",
+    })
+    assert resp.status_code == 400
+
+
 async def test_get_day_history(client):
     """After close-day, GET /api/v1/orders/day-history returns the summary."""
     await create_and_pay_order(client, "E-1")

@@ -1145,6 +1145,105 @@ async def void_order(
 
 
 # =============================================================================
+# MERGE
+# =============================================================================
+
+class MergeOrderRequest(BaseModel):
+    """Merge items from `source_ids` into the target order, then void the sources."""
+    source_ids: list[str] = Field(..., min_length=1)
+    approved_by: Optional[str] = None
+
+
+@router.post("/{order_id}/merge", response_model=OrderResponse)
+async def merge_orders(
+        order_id: str,
+        request: MergeOrderRequest,
+        ledger: EventLedger = Depends(get_ledger),
+):
+    """Merge items from source orders into this target order, then void the sources.
+
+    All sources must be open and free of confirmed payments.
+    """
+    if not request.approved_by or not request.approved_by.strip():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manager approval required to merge orders",
+        )
+
+    target = await get_order_or_404(ledger, order_id)
+    if target.status != "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot merge into {target.status} order",
+        )
+
+    sources = []
+    seen = set()
+    for sid in request.source_ids:
+        if sid == order_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot merge an order into itself",
+            )
+        if sid in seen:
+            continue
+        seen.add(sid)
+        src = await get_order_or_404(ledger, sid)
+        if src.status != "open":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Source {sid} is {src.status}; only open orders can be merged",
+            )
+        if any(p.status == "confirmed" for p in src.payments):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Source {sid} has confirmed payments; void or refund first",
+            )
+        sources.append(src)
+
+    for src in sources:
+        for item in src.items:
+            new_item_id = f"item_{uuid.uuid4().hex[:8]}"
+            evt = item_added(
+                terminal_id=settings.terminal_id,
+                order_id=order_id,
+                item_id=new_item_id,
+                menu_item_id=item.menu_item_id,
+                name=item.name,
+                price=item.price,
+                quantity=item.quantity,
+                category=item.category,
+                notes=item.notes,
+                seat_number=item.seat_number,
+            )
+            await ledger.append(evt)
+            for mod in item.modifiers or []:
+                mod_evt = modifier_applied(
+                    terminal_id=settings.terminal_id,
+                    order_id=order_id,
+                    item_id=new_item_id,
+                    modifier_id=f"mod_{uuid.uuid4().hex[:8]}",
+                    modifier_name=mod.get("name", ""),
+                    modifier_price=mod.get("price", 0.0) or 0.0,
+                    action="add",
+                    prefix=mod.get("prefix"),
+                    half_price=mod.get("half_price"),
+                )
+                await ledger.append(mod_evt)
+
+        void_evt = order_voided(
+            terminal_id=settings.terminal_id,
+            order_id=src.order_id,
+            reason=f"Merged into {order_id}",
+            approved_by=request.approved_by,
+        )
+        await ledger.append(void_evt)
+
+    target = await get_order_or_404(ledger, order_id)
+    return OrderResponse.from_order(target)
+
+
+# =============================================================================
 # DISCOUNT
 # =============================================================================
 
