@@ -1,0 +1,12 @@
+# Rust / Tauri build output
+src-tauri/target/
+
+# Node
+node_modules/
+
+# Downloaded Python embeddable zip (cached, not committed)
+src-tauri/resources/python-*.zip
+
+# Extracted Python runtime (downloaded at build time)
+src-tauri/resources/python/*
+!src-tauri/resources/python/.gitkeep

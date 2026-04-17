@@ -1,0 +1,14 @@
+{
+  "name": "kindpos-desktop",
+  "version": "1.2.0",
+  "private": true,
+  "description": "KINDpos POS — Tauri desktop wrapper",
+  "scripts": {
+    "tauri": "tauri",
+    "build": "tauri build",
+    "dev": "tauri dev"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1"
+  }
+}

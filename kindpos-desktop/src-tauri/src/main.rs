@@ -1,0 +1,165 @@
+// Prevents an extra console window on Windows in release builds.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod port;
+mod server;
+
+use server::ServerManager;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::Mutex;
+use std::time::Duration;
+use tauri::Manager;
+
+/// Return the application data directory: `<data_dir>/KINDpos/`
+fn app_data_dir() -> PathBuf {
+    dirs::data_dir()
+        .expect("Could not determine OS data directory")
+        .join("KINDpos")
+}
+
+/// On first run (or after a version bump), copy embedded resources into the
+/// application data directory so the Python backend can be launched from there.
+fn ensure_resources_extracted(app_dir: &PathBuf, resource_dir: &PathBuf) {
+    let marker = app_dir.join(".version");
+    let current_version = env!("CARGO_PKG_VERSION");
+
+    let needs_extract = if marker.exists() {
+        let installed = fs::read_to_string(&marker).unwrap_or_default();
+        installed.trim() != current_version
+    } else {
+        true
+    };
+
+    if !needs_extract {
+        return;
+    }
+
+    for dir_name in &["python", "backend", "frontend", "overseer"] {
+        let src = resource_dir.join(dir_name);
+        let dst = app_dir.join(dir_name);
+        if src.exists() {
+            if dst.exists() {
+                let _ = fs::remove_dir_all(&dst);
+            }
+            copy_dir_recursive(&src, &dst)
+                .unwrap_or_else(|e| panic!("Failed to extract {dir_name}: {e}"));
+        }
+    }
+
+    fs::write(&marker, current_version).ok();
+}
+
+/// Recursively copy a directory tree.
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
+/// Detect whether we're running as the Overseer app.
+fn is_overseer_mode() -> bool {
+    // Check CLI args first.
+    if std::env::args().any(|a| a == "--overseer") {
+        return true;
+    }
+    // Check executable name (for the renamed copy).
+    if let Some(exe) = std::env::current_exe().ok().and_then(|p| {
+        p.file_stem().map(|s| s.to_string_lossy().to_lowercase())
+    }) {
+        return exe.contains("overseer");
+    }
+    false
+}
+
+fn show_error(app: &tauri::App, msg: &str) {
+    let window = app.get_window("main").expect("No main window");
+    window.eval(&format!(
+        "document.body.innerHTML = '<div style=\"padding:2rem;font-family:sans-serif;color:#ff6b6b\"><h1>Startup Error</h1><p>{}</p></div>'",
+        msg.replace('\'', "\\'")
+    )).ok();
+}
+
+fn main() {
+    let overseer = is_overseer_mode();
+    let app_dir = app_data_dir();
+    fs::create_dir_all(app_dir.join("data"))
+        .expect("Failed to create KINDpos data directory");
+
+    let port = port::find_available_port(8000, 8099)
+        .expect("No available port in range 8000-8099");
+
+    let url_path = if overseer { "/overseer" } else { "/" };
+
+    tauri::Builder::default()
+        .manage(Mutex::new(Option::<ServerManager>::None))
+        .setup(move |app| {
+            let resource_dir = app
+                .path_resolver()
+                .resolve_resource("resources")
+                .expect("Failed to resolve bundled resources directory");
+
+            ensure_resources_extracted(&app_dir, &resource_dir);
+
+            let window = app.get_window("main").expect("No main window");
+
+            // Overseer runs windowed; POS runs fullscreen kiosk.
+            if overseer {
+                window.set_title("KINDpos Overseer").ok();
+                window.set_fullscreen(false).ok();
+                window.set_decorations(true).ok();
+                window.set_resizable(true).ok();
+                let _ = window.set_size(tauri::LogicalSize::new(1280.0, 800.0));
+                window.center().ok();
+            }
+
+            let srv = match ServerManager::start(&app_dir, port) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("KINDpos startup error: {e}");
+                    show_error(app, &e);
+                    return Ok(());
+                }
+            };
+
+            match srv.wait_for_health(Duration::from_secs(30)) {
+                Ok(()) => {}
+                Err(e) => {
+                    eprintln!("KINDpos health-check error: {e}");
+                    show_error(app, &e);
+                    return Ok(());
+                }
+            }
+
+            let state = app.state::<Mutex<Option<ServerManager>>>();
+            *state.lock().unwrap() = Some(srv);
+
+            window
+                .eval(&format!(
+                    "window.location.replace('http://127.0.0.1:{port}{url_path}')"
+                ))
+                .ok();
+
+            Ok(())
+        })
+        .on_window_event(|event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
+                let state = event.window().state::<Mutex<Option<ServerManager>>>();
+                let mut guard = state.lock().unwrap();
+                if let Some(srv) = guard.as_mut() {
+                    srv.stop();
+                }
+            }
+        })
+        .run(tauri::generate_context!())
+        .expect("Error while running KINDpos");
+}
