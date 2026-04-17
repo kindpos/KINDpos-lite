@@ -581,8 +581,72 @@ defineScene({
       },
       unmount: function() { hideKeyboard(); },
     },
+
+    'ml-merge-target': {
+      render: function(container, params) {
+        renderPickerInterrupt(container, params, {
+          title: '// MERGE INTO //',
+          options: (params.options || []).map(function(o) {
+            return {
+              value: o.order_id,
+              label: (o.label || checkNum(o)) + '  ' + fmt(o.total || 0),
+            };
+          }),
+        });
+      },
+      unmount: function() {},
+    },
+
+    'ml-transfer-target': {
+      render: function(container, params) {
+        renderPickerInterrupt(container, params, {
+          title: '// TRANSFER TO //',
+          options: (params.options || []).map(function(s) {
+            return { value: s.id, label: (s.name || '').toUpperCase(), meta: s };
+          }),
+          emptyText: 'No other servers clocked in',
+        });
+      },
+      unmount: function() {},
+    },
   },
 });
+
+// Shared picker UI for the MERGE and TRANSFER interrupts.
+function renderPickerInterrupt(container, params, cfg) {
+  container.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+  var panel = document.createElement('div');
+  panel.style.cssText = 'display:flex;flex-direction:column;align-items:stretch;gap:10px;background:' + T.bgDark + ';border:4px solid ' + T.gold + ';clip-path:polygon(5px 0%,calc(100% - 5px) 0%,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0% calc(100% - 5px),0% 5px);padding:20px;min-width:280px;max-height:80%;overflow-y:auto;';
+
+  var lbl = document.createElement('div');
+  lbl.style.cssText = 'font-family:' + T.fb + ';font-size:13px;color:' + T.gold + ';letter-spacing:2px;margin-bottom:4px;text-align:center;';
+  lbl.textContent = cfg.title;
+  panel.appendChild(lbl);
+
+  if (!cfg.options.length) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'font-family:' + T.fb + ';font-size:18px;color:' + T.mutedText + ';text-align:center;padding:12px 8px;';
+    empty.textContent = cfg.emptyText || 'No options available';
+    panel.appendChild(empty);
+  } else {
+    cfg.options.forEach(function(opt) {
+      var btn = buildButton(opt.label, {
+        fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 44,
+        onTap: function() { params.onConfirm(opt.value, opt.meta); },
+      });
+      btn.style.width = '260px';
+      panel.appendChild(btn);
+    });
+  }
+
+  var cancelBtn = buildButton('CANCEL', {
+    fill: T.darkBtn, color: T.mint, fontSize: '22px', height: 40,
+    onTap: function() { params.onCancel(); },
+  });
+  cancelBtn.style.width = '260px';
+  panel.appendChild(cancelBtn);
+  container.appendChild(panel);
+}
 
 // ═══════════════════════════════════════════════════
 //  LAYOUT
@@ -1937,7 +2001,32 @@ function renderOpsPanel(state) {
     }})));
   } else {
     grid.appendChild(buildButton('MERGE', Object.assign({}, btnStyle, { onTap: function() {
-      showToast('Merge — not yet wired', { bg: T.gold });
+      var selectedOrders = ids.map(function(id) { return state.selected[id]; });
+      SceneManager.interrupt('ml-merge-target', {
+        options: selectedOrders,
+        onConfirm: function(targetId) {
+          var sources = selectedOrders
+            .filter(function(o) { return o.order_id !== targetId; })
+            .map(function(o) { return o.order_id; });
+          if (!sources.length) { showToast('Pick a different target', { bg: T.gold }); return; }
+          fetch('/api/v1/orders/' + targetId + '/merge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_ids: sources, approved_by: emp.id || 'manager' }),
+          }).then(function(r) { return r.json().then(function(b) { return { ok: r.ok, body: b }; }); })
+            .then(function(res) {
+              if (res.ok) {
+                showToast('Merged ' + sources.length + ' into ' + checkNum({ order_id: targetId, check_number: (res.body || {}).check_number }), { bg: T.goGreen });
+                state.selected = {};
+                refreshData(state);
+              } else {
+                showToast((res.body && res.body.detail) || 'Merge failed', { bg: T.red });
+              }
+            })
+            .catch(function() { showToast('Merge failed', { bg: T.red }); });
+        },
+        onCancel: function() {},
+      });
     }})));
   }
 
@@ -1952,8 +2041,8 @@ function renderOpsPanel(state) {
   }})));
 
   // Row 2: PAY | DISC | VOID
-  grid.appendChild(buildButton('PAY', Object.assign({}, btnStyle, { onTap: function() {
-    if (ids.length > 1) { showToast('Select one check to pay', { bg: T.gold }); return; }
+  var payBtn = buildButton('PAY', Object.assign({}, btnStyle, { onTap: function() {
+    if (!isSingle) return;
     var payOrder = state.selected[ids[0]];
     var totals = orderTotals(payOrder);
     SceneManager.openTransactional('payment-console', {
@@ -1967,7 +2056,13 @@ function renderOpsPanel(state) {
       discount: 0,
       returnScene: 'manager-landing',
     });
-  }})));
+  }}));
+  if (!isSingle) {
+    payBtn.style.opacity = '0.35';
+    payBtn.style.pointerEvents = 'none';
+    payBtn.title = 'Select one check to pay';
+  }
+  grid.appendChild(payBtn);
 
   grid.appendChild(buildButton('DISC', Object.assign({}, btnStyle, { onTap: function() {
     SceneManager.interrupt('disc-pin', {
@@ -2009,32 +2104,38 @@ function renderOpsPanel(state) {
       : 'Void ' + ids.length + ' checks? This is destructive.';
     SceneManager.interrupt('sl-void-gate', {
       onConfirm: function() {
-        if (isSingle) {
-          // Manager can void directly without PIN gate
-          var ordId = ids[0];
-          fetch('/api/v1/orders/' + ordId + '/void', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason: 'Voided by manager', approved_by: emp.id || 'manager' }),
-          }).then(function(r) {
-            if (r.ok) { showToast('Check voided', { bg: T.goGreen }); state.selected = {}; refreshData(state); }
-            else { showToast('Void failed', { bg: T.red }); }
-          }).catch(function() { showToast('Void failed', { bg: T.red }); });
-        } else {
-          Promise.all(ids.map(function(id) {
-            return fetch('/api/v1/orders/' + id + '/void', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: emp.id || 'manager' }),
-            }).then(function(r) { return { id: id, ok: r.ok }; })
-              .catch(function() { return { id: id, ok: false }; });
-          })).then(function(results) {
-            var ok = results.filter(function(r) { return r.ok; }).length;
-            var fail = results.length - ok;
-            if (fail === 0) { showToast(ok + ' checks voided', { bg: T.goGreen }); }
-            else { showToast(ok + ' voided, ' + fail + ' failed', { bg: fail === results.length ? T.red : T.gold }); }
-            state.selected = {};
-            refreshData(state);
-          });
-        }
+        // PIN re-challenge — verifies manager role and returns employee_id for audit.
+        SceneManager.interrupt('disc-pin', {
+          onConfirm: function(approver) {
+            var approvedBy = approver || emp.id || 'manager';
+            if (isSingle) {
+              var ordId = ids[0];
+              fetch('/api/v1/orders/' + ordId + '/void', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: 'Voided by manager', approved_by: approvedBy }),
+              }).then(function(r) {
+                if (r.ok) { showToast('Check voided', { bg: T.goGreen }); state.selected = {}; refreshData(state); }
+                else { showToast('Void failed', { bg: T.red }); }
+              }).catch(function() { showToast('Void failed', { bg: T.red }); });
+            } else {
+              Promise.all(ids.map(function(id) {
+                return fetch('/api/v1/orders/' + id + '/void', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ reason: 'Batch voided by manager', approved_by: approvedBy }),
+                }).then(function(r) { return { id: id, ok: r.ok }; })
+                  .catch(function() { return { id: id, ok: false }; });
+              })).then(function(results) {
+                var ok = results.filter(function(r) { return r.ok; }).length;
+                var fail = results.length - ok;
+                if (fail === 0) { showToast(ok + ' checks voided', { bg: T.goGreen }); }
+                else { showToast(ok + ' voided, ' + fail + ' failed', { bg: fail === results.length ? T.red : T.gold }); }
+                state.selected = {};
+                refreshData(state);
+              });
+            }
+          },
+          onCancel: function() {},
+        });
       },
       onCancel: function() {},
       params: { message: voidMsg },
@@ -2068,9 +2169,36 @@ function renderOpsPanel(state) {
     }})));
   }
 
-  grid.appendChild(buildButton('TRANSFER', Object.assign({}, btnStyle, { onTap: function() {
-    showToast('Transfer — not yet wired', { bg: T.gold });
-  }})));
+  var transferBtn = buildButton('TRANSFER', Object.assign({}, btnStyle, { onTap: function() {
+    if (!isSingle) return;
+    var xferOrder = state.selected[ids[0]];
+    var servers = ((state.staffData || {}).servers || []).filter(function(s) {
+      return s.id && s.id !== xferOrder.server_id;
+    });
+    SceneManager.interrupt('ml-transfer-target', {
+      options: servers,
+      onConfirm: function(newServerId, srvMeta) {
+        fetch('/api/v1/orders/' + xferOrder.order_id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ server_id: newServerId, server_name: (srvMeta && srvMeta.name) || '' }),
+        }).then(function(r) {
+          if (r.ok) {
+            showToast('Transferred to ' + ((srvMeta && srvMeta.name) || 'server'), { bg: T.goGreen });
+            state.selected = {};
+            refreshData(state);
+          } else { showToast('Transfer failed', { bg: T.red }); }
+        }).catch(function() { showToast('Transfer failed', { bg: T.red }); });
+      },
+      onCancel: function() {},
+    });
+  }}));
+  if (!isSingle) {
+    transferBtn.style.opacity = '0.35';
+    transferBtn.style.pointerEvents = 'none';
+    transferBtn.title = 'Select one check to transfer';
+  }
+  grid.appendChild(transferBtn);
 
   state.opsPanel.appendChild(grid);
 }
