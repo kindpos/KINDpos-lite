@@ -71,21 +71,89 @@ if ($Dev) {
     Write-Host "==> Building Tauri release"
     npx tauri build
 
-    # --- 4. Create Overseer copy ---
+    # --- 4. Create distributable package with both exes ---
     $ReleaseDir = "src-tauri\target\release"
     $MainExe = Join-Path $ReleaseDir "KINDpos.exe"
-    $OverseerExe = Join-Path $ReleaseDir "KINDpos-Overseer.exe"
+    $DistDir = Join-Path $ReleaseDir "KINDpos-dist"
 
     if (Test-Path $MainExe) {
-        Copy-Item $MainExe $OverseerExe -Force
+        # Create clean dist folder
+        if (Test-Path $DistDir) { Remove-Item -Recurse -Force $DistDir }
+        New-Item -ItemType Directory -Path $DistDir | Out-Null
+
+        # Copy both executables
+        Copy-Item $MainExe (Join-Path $DistDir "KINDpos.exe")
+        Copy-Item $MainExe (Join-Path $DistDir "KINDpos-Overseer.exe")
+
+        # Copy icons for shortcuts
+        $IconsDir = Join-Path $DistDir "icons"
+        New-Item -ItemType Directory -Path $IconsDir | Out-Null
+        Copy-Item "src-tauri\icons\icon.ico" (Join-Path $IconsDir "KINDpos.ico") -ErrorAction SilentlyContinue
+        Copy-Item "src-tauri\icons\overseer-icon.ico" (Join-Path $IconsDir "Overseer.ico") -ErrorAction SilentlyContinue
+
+        # Create install script
+        $installScript = @'
+@echo off
+echo Installing KINDpos...
+set "INSTALL_DIR=%ProgramFiles%\KINDpos"
+set "DESKTOP=%USERPROFILE%\Desktop"
+set "START_MENU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\KINDpos"
+
+:: Create install directory
+mkdir "%INSTALL_DIR%" 2>nul
+mkdir "%INSTALL_DIR%\icons" 2>nul
+mkdir "%START_MENU%" 2>nul
+
+:: Copy files
+copy /Y "KINDpos.exe" "%INSTALL_DIR%\"
+copy /Y "KINDpos-Overseer.exe" "%INSTALL_DIR%\"
+copy /Y "icons\KINDpos.ico" "%INSTALL_DIR%\icons\"
+copy /Y "icons\Overseer.ico" "%INSTALL_DIR%\icons\"
+
+:: Create desktop shortcuts
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DESKTOP%\KINDpos Terminal.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\KINDpos.ico'; $s.Save()"
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DESKTOP%\KINDpos Overseer.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos-Overseer.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\Overseer.ico'; $s.Save()"
+
+:: Create Start Menu shortcuts
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%START_MENU%\KINDpos Terminal.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\KINDpos.ico'; $s.Save()"
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%START_MENU%\KINDpos Overseer.lnk'); $s.TargetPath = '%INSTALL_DIR%\KINDpos-Overseer.exe'; $s.IconLocation = '%INSTALL_DIR%\icons\Overseer.ico'; $s.Save()"
+
+echo.
+echo KINDpos installed successfully!
+echo Shortcuts created on Desktop and Start Menu.
+echo.
+pause
+'@
+        Set-Content -Path (Join-Path $DistDir "install.bat") -Value $installScript
+
+        # Create uninstall script
+        $uninstallScript = @'
+@echo off
+echo Uninstalling KINDpos...
+rmdir /S /Q "%ProgramFiles%\KINDpos" 2>nul
+del "%USERPROFILE%\Desktop\KINDpos Terminal.lnk" 2>nul
+del "%USERPROFILE%\Desktop\KINDpos Overseer.lnk" 2>nul
+rmdir /S /Q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\KINDpos" 2>nul
+rmdir /S /Q "%APPDATA%\KINDpos" 2>nul
+echo KINDpos uninstalled.
+pause
+'@
+        Set-Content -Path (Join-Path $DistDir "uninstall.bat") -Value $uninstallScript
+
+        # Create ZIP
+        $ZipPath = Join-Path $ReleaseDir "KINDpos-1.2.0-setup.zip"
+        if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
+        Compress-Archive -Path "$DistDir\*" -DestinationPath $ZipPath
+
         Write-Host ""
         Write-Host "==> Build complete!"
         Write-Host "    KINDpos.exe          - POS Terminal (fullscreen kiosk)"
         Write-Host "    KINDpos-Overseer.exe - Admin Dashboard (windowed)"
         Write-Host ""
-        Write-Host "    Installers:"
-        Get-ChildItem -Recurse -Path "src-tauri\target\release\bundle" -Include "*.exe","*.msi" | ForEach-Object {
-            Write-Host "    $($_.FullName)"
-        }
+        Write-Host "    Distributable:"
+        Write-Host "    $ZipPath"
+        Write-Host ""
+        Write-Host "    Share the ZIP. Recipient extracts and right-clicks"
+        Write-Host "    install.bat -> Run as administrator."
     }
 }
