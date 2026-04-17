@@ -342,13 +342,22 @@ export function CategoryGrid(container, opts) {
     render();
   }
 
+  // Mod-flow tiles always inherit the drilled-into category color so
+  // groups, choices, and the item back tile read as one family. Falls
+  // back to the item's own color (pick-list flows) or mint.
+  function _modColor() {
+    return (path[0] && path[0].color)
+        || (modState.item && modState.item.color)
+        || T.mint;
+  }
+
   function renderModGroups() {
-    var item = modState.item;
-    var headColor = item.color || (modState.groups[0] && modState.groups[0].color) || T.mint;
+    var item     = modState.item;
+    var catColor = _modColor();
 
     root.appendChild(buildTile({
       mode:  'solid',
-      color: headColor,
+      color: catColor,
       label: _label(item),
       price: item.price,
       back:  true,
@@ -362,7 +371,7 @@ export function CategoryGrid(container, opts) {
       var isDone = !!modState.satisfied[gid];
       root.appendChild(buildTile({
         mode:  isDone ? 'solid' : 'border',
-        color: g.color || T.mint,
+        color: catColor,
         label: picked ? picked.label : _label(g),
         onTap: function() {
           modState.group = g;
@@ -385,12 +394,12 @@ export function CategoryGrid(container, opts) {
   }
 
   function renderModChoices() {
-    var g = modState.group;
-    var color = g.color || T.mint;
+    var g        = modState.group;
+    var catColor = _modColor();
 
     root.appendChild(buildTile({
       mode:  'solid',
-      color: color,
+      color: catColor,
       label: _label(g),
       back:  true,
       onTap: function() {
@@ -402,7 +411,7 @@ export function CategoryGrid(container, opts) {
     (g.choices || []).forEach(function(c) {
       root.appendChild(buildTile({
         mode:  'border',
-        color: color,
+        color: catColor,
         label: _label(c),
         price: c.price,
         onTap: function() { pickChoice(g, c); },
