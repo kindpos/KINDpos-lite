@@ -497,7 +497,7 @@ function showAddEditModal(container, employee) {
     const modal = document.createElement('div');
     modal.style.cssText = `
         background: ${C.dark}; border: 1px solid ${C.mintBorder};
-        border-radius: 12px; padding: 0; width: 480px; max-width: 95vw;
+        border-radius: 12px; padding: 0; width: 720px; max-width: 95vw;
         max-height: 90vh; overflow-y: auto;
         animation: modalSlideIn 0.25s ease-out;
     `;
