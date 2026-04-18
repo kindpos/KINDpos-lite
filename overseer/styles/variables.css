@@ -48,12 +48,12 @@
     --font-mono:    'B612 Mono', 'Courier New', monospace;
 
     /* Font Sizes */
-    --text-title:    36px;
-    --text-subtitle: 20px;
-    --text-body:     14px;
-    --text-label:    12px;
-    --text-badge:    11px;
-    --text-stamp:     9px;
+    --text-title:    30px;
+    --text-subtitle: 17px;
+    --text-body:     12px;
+    --text-label:    11px;
+    --text-badge:    10px;
+    --text-stamp:     8px;
 
     /* Layout */
     --viewport-width:  1280px;

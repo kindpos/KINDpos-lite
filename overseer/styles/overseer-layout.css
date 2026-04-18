@@ -47,13 +47,13 @@ html, body {
 }
 .header-wordmark {
     font-family: var(--font-heading);
-    font-size: 18px;
+    font-size: 15px;
     color: var(--color-gold);
     letter-spacing: 2px;
 }
 .header-product {
     font-family: var(--font-heading);
-    font-size: 13px;
+    font-size: 11px;
     color: var(--color-mint);
     letter-spacing: 4px;
     opacity: 0.8;
@@ -105,10 +105,10 @@ html, body {
 }
 .nav-section-header {
     font-family: var(--font-heading);
-    font-size: 11px;
+    font-size: 10px;
     color: var(--color-mint);
     letter-spacing: 3px;
-    padding: 10px 16px 8px;
+    padding: 8px 16px 6px;
     cursor: pointer;
     opacity: 0.5;
     transition: opacity var(--transition-fast);
@@ -135,7 +135,7 @@ html, body {
     font-size: var(--text-label);
     color: var(--color-mint);
     opacity: 0.55;
-    padding: 7px 16px 7px 24px;
+    padding: 5px 16px 5px 24px;
     cursor: pointer;
     transition: opacity var(--transition-fast), background var(--transition-fast);
     border-left: 3px solid transparent;
