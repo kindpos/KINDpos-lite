@@ -494,8 +494,8 @@ function showSummaryPanel(state) {
     title: 'CLOSE DAY',
     label: state.date,
     sections: buildSections(state),
-    cardSales: state.cardSales,
-    tips: state.totalTips,
+    cashSales: state.cashSales,
+    tips: state.cardTips,
     cashExpected: state.cashSales - state.cardTips,
   });
 }
@@ -504,8 +504,8 @@ function updateSummaryPanel(state) {
   OrderSummary.updateCheckout({
     label: state.date,
     sections: buildSections(state),
-    cardSales: state.cardSales,
-    tips: state.totalTips,
+    cashSales: state.cashSales,
+    tips: state.cardTips,
     cashExpected: state.cashSales - state.cardTips,
   });
 }

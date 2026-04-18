@@ -512,8 +512,8 @@ function showSummaryPanel(state) {
     title: 'CHECKOUT RECAP',
     label: state.employeeName || state.date,
     sections: buildSections(state),
-    cardSales: state.cardSales,
-    tips: state.cardTips + state.cashTips,
+    cashSales: state.cashSales,
+    tips: state.cardTips,
     cashExpected: state.cashExpected,
   });
 }
@@ -522,8 +522,8 @@ function updateSummaryPanel(state) {
   OrderSummary.updateCheckout({
     label: state.employeeName || state.date,
     sections: buildSections(state),
-    cardSales: state.cardSales,
-    tips: state.cardTips + state.cashTips,
+    cashSales: state.cashSales,
+    tips: state.cardTips,
     cashExpected: state.cashExpected,
   });
 }

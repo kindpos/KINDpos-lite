@@ -477,7 +477,7 @@ function _renderCheckoutBreakdown(params) {
 function _renderCheckoutSummary(params) {
   if (!_summaryBox) return;
   _summaryBox.innerHTML = '';
-  _summaryBox.appendChild(_summaryRow('CC Sales:', '$' + (params.cardSales || 0).toFixed(2), T.mint));
+  _summaryBox.appendChild(_summaryRow('Cash Sales:', '$' + (params.cashSales || 0).toFixed(2), T.mint));
   _summaryBox.appendChild(_summaryRow('Tips:', '$' + (params.tips || 0).toFixed(2), T.mint));
   applyCardBevel(_summaryBox, T.numpadChassis, 5);
   _summaryBox.style.clipPath = chamfer();
