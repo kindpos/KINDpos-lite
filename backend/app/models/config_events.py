@@ -18,6 +18,11 @@ class StoreBranding(BaseModel):
     logo_url: Optional[str] = None
     logo_mime_type: Optional[str] = None
 
+class StoreTheme(BaseModel):
+    id: str
+    label: str
+    slots: Dict[str, str]
+
 class CCProcessingRate(BaseModel):
     rate_percent: float = 2.9
     per_transaction_fee: Decimal = Decimal("0.30")
@@ -49,6 +54,8 @@ class StoreAutoGratuity(BaseModel):
 class StoreConfigBundle(BaseModel):
     info: StoreInfo
     branding: StoreBranding = StoreBranding()
+    themes: List[StoreTheme] = []
+    active_theme_id: str = "terminal-glow"
     tax_rules: List[TaxRule]
     cc_processing: CCProcessingRate
     operating_hours: Dict[str, OperatingHours]

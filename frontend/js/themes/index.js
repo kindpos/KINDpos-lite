@@ -165,11 +165,12 @@ export function expandOverrides(slots) {
   };
 }
 
-// ── LocalStorage schema ─────────────────────────────
-// {
-//   activeId: 'terminal-glow' | '<uuid>',
-//   themes:   { '<uuid>': { id, label, slots: {...} } }
-// }
+// ── Storage ─────────────────────────────────────────
+// Server (event ledger) is the source of truth so themes sync across the
+// Overseer and every terminal. localStorage mirrors it as an offline cache
+// — the terminal paints instantly on boot from the cache, then
+// `syncThemesFromServer()` refreshes it.
+// Schema: { activeId: 'terminal-glow' | '<uuid>', themes: {<uuid>: {...}} }
 
 function _readStore() {
   try {
@@ -185,7 +186,39 @@ function _readStore() {
 }
 
 function _writeStore(store) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+  catch (e) { /* private-mode / quota — in-memory only, resync later */ }
+}
+
+function _pushEvent(event_type, payload) {
+  return fetch('/api/v1/config/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify([{ event_type: event_type, payload: payload }]),
+  }).then(function(r) {
+    if (!r.ok) throw new Error('push failed: ' + r.status);
+    return r.json();
+  });
+}
+
+// Fetch the authoritative theme state from the server and rewrite the
+// localStorage cache. Returns true when the cache changed.
+export function syncThemesFromServer() {
+  return fetch('/api/v1/config/store').then(function(r) {
+    if (!r.ok) throw new Error('bundle fetch failed: ' + r.status);
+    return r.json();
+  }).then(function(bundle) {
+    var themes = {};
+    (bundle.themes || []).forEach(function(t) {
+      if (t && t.id) themes[t.id] = { id: t.id, label: t.label, slots: t.slots || {} };
+    });
+    var store = { activeId: bundle.active_theme_id || 'terminal-glow', themes: themes };
+    _writeStore(store);
+    return store;
+  }).catch(function(e) {
+    console.warn('[Theme] sync from server failed', e);
+    return null;
+  });
 }
 
 export function listCustomThemes() {
@@ -201,30 +234,40 @@ export function getCustomTheme(id) {
   return _readStore().themes[id] || null;
 }
 
+// Save a custom theme. Writes to the ledger so every terminal picks it up
+// on next boot/sync, then updates the local cache. Returns a Promise.
 export function saveCustomTheme(theme) {
   if (!theme || !theme.id || !theme.label) throw new Error('theme requires id and label');
-  var store = _readStore();
-  store.themes[theme.id] = {
+  var merged = {
     id: theme.id,
     label: theme.label,
     slots: Object.assign({}, DEFAULT_SLOTS, theme.slots || {}),
   };
-  _writeStore(store);
+  return _pushEvent('store.theme_saved', merged).then(function() {
+    var store = _readStore();
+    store.themes[merged.id] = merged;
+    _writeStore(store);
+    return merged;
+  });
 }
 
 export function deleteCustomTheme(id) {
-  var store = _readStore();
-  delete store.themes[id];
-  if (store.activeId === id) store.activeId = 'terminal-glow';
-  _writeStore(store);
+  return _pushEvent('store.theme_deleted', { id: id }).then(function() {
+    var store = _readStore();
+    delete store.themes[id];
+    if (store.activeId === id) store.activeId = 'terminal-glow';
+    _writeStore(store);
+  });
 }
 
 export function setActiveTheme(id) {
-  var store = _readStore();
-  if (id === 'terminal-glow' || store.themes[id]) {
-    store.activeId = id;
-    _writeStore(store);
-  }
+  return _pushEvent('store.active_theme_set', { theme_id: id }).then(function() {
+    var store = _readStore();
+    if (id === 'terminal-glow' || store.themes[id]) {
+      store.activeId = id;
+      _writeStore(store);
+    }
+  });
 }
 
 // Mirror the subset of T that stylesheets (base.css) read via

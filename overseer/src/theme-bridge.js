@@ -17,6 +17,7 @@ import {
   deleteCustomTheme,
   setActiveTheme,
   newThemeId,
+  syncThemesFromServer,
 } from '../../js/themes/index.js';
 
 export {
@@ -30,6 +31,7 @@ export {
   deleteCustomTheme,
   setActiveTheme,
   newThemeId,
+  syncThemesFromServer,
 };
 
 // Kept for backwards compatibility with app.js boot — no-op now

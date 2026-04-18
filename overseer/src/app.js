@@ -17,6 +17,7 @@ import {
     deleteCustomTheme,
     setActiveTheme,
     newThemeId,
+    syncThemesFromServer,
 }                                      from './theme-bridge.js';
 import { loadEmployeeData }           from './data/sample-employees.js';
 import { loadReportData }             from './data/sample-reports.js';
@@ -386,6 +387,10 @@ function mountThemePicker(container) {
         renderEditor(editorEl, state, render);
     }
     render();
+
+    // Pull the authoritative theme list from the server so the library
+    // shows themes saved on other devices. Re-render once it resolves.
+    syncThemesFromServer().then(() => render());
 }
 
 function renderLibrary(libEl, state, render) {
@@ -466,8 +471,9 @@ function buildLibraryCard(entry, activeId, state, render) {
     // Action row
     const actions = document.createElement('div');
     actions.style.cssText = 'display:flex;gap:6px;margin-top:4px;';
-    actions.appendChild(buildMiniButton('Apply', isActive, () => {
-        setActiveTheme(entry.id);
+    actions.appendChild(buildMiniButton('Apply', isActive, async () => {
+        try { await setActiveTheme(entry.id); }
+        catch (e) { alert('Could not apply theme: ' + e.message); return; }
         render();
     }));
     if (!entry.builtin) {
@@ -481,9 +487,10 @@ function buildLibraryCard(entry, activeId, state, render) {
             };
             render();
         }));
-        actions.appendChild(buildMiniButton('Delete', false, () => {
+        actions.appendChild(buildMiniButton('Delete', false, async () => {
             if (!confirm(`Delete theme "${entry.label}"?`)) return;
-            deleteCustomTheme(entry.id);
+            try { await deleteCustomTheme(entry.id); }
+            catch (e) { alert('Could not delete theme: ' + e.message); return; }
             if (state.editingId === entry.id) { state.editingId = null; state.draft = null; }
             render();
         }, true));
@@ -549,13 +556,23 @@ function renderEditor(editorEl, state, render) {
         color:#1a1a1a;font-family:var(--font-body);font-size:14px;font-weight:bold;
         text-transform:uppercase;letter-spacing:1.5px;border-radius:3px;cursor:pointer;
     `;
-    save.addEventListener('click', () => {
+    save.addEventListener('click', async () => {
         const label = (state.draft.label || '').trim() || 'Untitled theme';
-        saveCustomTheme({
-            id: state.draft.id,
-            label,
-            slots: state.draft.slots,
-        });
+        save.disabled = true;
+        const prev = save.textContent;
+        save.textContent = 'Saving...';
+        try {
+            await saveCustomTheme({
+                id: state.draft.id,
+                label,
+                slots: state.draft.slots,
+            });
+        } catch (e) {
+            save.disabled = false;
+            save.textContent = prev;
+            alert('Could not save theme: ' + e.message);
+            return;
+        }
         state.editingId = null;
         state.draft = null;
         render();

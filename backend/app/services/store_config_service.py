@@ -19,6 +19,9 @@ class StoreConfigService:
         store_event_types = [
             EventType.STORE_INFO_UPDATED,
             EventType.STORE_BRANDING_UPDATED,
+            EventType.STORE_THEME_SAVED,
+            EventType.STORE_THEME_DELETED,
+            EventType.STORE_ACTIVE_THEME_SET,
             EventType.STORE_CC_PROCESSING_RATE_UPDATED,
             EventType.STORE_TAX_RULE_CREATED,
             EventType.STORE_TAX_RULE_UPDATED,
@@ -57,6 +60,8 @@ class StoreConfigService:
                 "logo_url": None,
                 "logo_mime_type": None,
             },
+            "themes": {},
+            "active_theme_id": "terminal-glow",
             "tax_rules": {},
             "cc_processing": {
                 "rate_percent": 2.9,
@@ -80,6 +85,24 @@ class StoreConfigService:
                 config["info"].update(info)
             elif etype == EventType.STORE_BRANDING_UPDATED:
                 config["branding"].update(dict(payload))
+            elif etype == EventType.STORE_THEME_SAVED:
+                tid = payload.get("id")
+                if tid:
+                    config["themes"][tid] = {
+                        "id": tid,
+                        "label": payload.get("label", "Untitled theme"),
+                        "slots": payload.get("slots", {}) or {},
+                    }
+            elif etype == EventType.STORE_THEME_DELETED:
+                tid = payload.get("id")
+                if tid:
+                    config["themes"].pop(tid, None)
+                    if config["active_theme_id"] == tid:
+                        config["active_theme_id"] = "terminal-glow"
+            elif etype == EventType.STORE_ACTIVE_THEME_SET:
+                tid = payload.get("theme_id") or payload.get("id")
+                if tid:
+                    config["active_theme_id"] = tid
             elif etype == EventType.STORE_TAX_RULE_CREATED:
                 rid = payload["tax_rule_id"]
                 config["tax_rules"][rid] = payload
@@ -98,7 +121,8 @@ class StoreConfigService:
             elif etype == EventType.STORE_AUTO_GRATUITY_UPDATED:
                 config["auto_gratuity"] = payload
 
-        # Format tax_rules as list
+        # Format tax_rules + themes as lists for the bundle contract.
         config["tax_rules"] = list(config["tax_rules"].values())
-        
+        config["themes"] = list(config["themes"].values())
+
         return StoreConfigBundle(**config)

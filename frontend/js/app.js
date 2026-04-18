@@ -8,12 +8,15 @@ import { T, buildStyledButton } from './tokens.js';
 import { hideKeyboard } from './keyboard.js';
 import { showToast } from './components.js';
 import { OrderSummary } from './order-summary.js';
-import { applyActiveTheme } from './themes/index.js';
+import { applyActiveTheme, syncThemesFromServer } from './themes/index.js';
 
-// Apply the saved active theme as early as possible so scenes mount
-// against the right token values. Failing to apply just leaves
-// Terminal Glow in place.
+// Paint instantly from the cached theme so the boot frame is styled, then
+// pull the authoritative theme state from the server and reapply. The
+// server copy is the source of truth — every terminal converges here.
 try { applyActiveTheme(); } catch (e) { console.warn('[Theme] apply failed', e); }
+syncThemesFromServer().then(function(store) {
+  if (store) { try { applyActiveTheme(); } catch (e) { console.warn('[Theme] reapply failed', e); } }
+});
 
 // Import scenes (self-registering)
 import './scenes/login.js?v=1';

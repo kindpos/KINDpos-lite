@@ -109,6 +109,9 @@ class EventType(str, Enum):
     # ── Store Configuration (LEDGER_OPERATIONAL) ─────────────────────
     STORE_INFO_UPDATED = "store.info_updated"
     STORE_BRANDING_UPDATED = "store.branding_updated"
+    STORE_THEME_SAVED = "store.theme_saved"
+    STORE_THEME_DELETED = "store.theme_deleted"
+    STORE_ACTIVE_THEME_SET = "store.active_theme_set"
     STORE_CC_PROCESSING_RATE_UPDATED = "store.cc_processing_rate_updated"
     STORE_TAX_RULE_CREATED = "store.tax_rule_created"
     STORE_TAX_RULE_UPDATED = "store.tax_rule_updated"
