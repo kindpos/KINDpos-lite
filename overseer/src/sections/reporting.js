@@ -11,20 +11,38 @@ import { buildDatePicker, buildDateRangePicker } from '../components/date-picker
 
 /* ------------------------------------------
    CHART COLOR PALETTE (Retro 80s)
+
+   Chart.js draws on <canvas>, which cannot parse CSS `var(--foo)`
+   references — it silently falls back to black. We resolve the
+   variables to concrete values at module load so charts render
+   in the actual theme colors.
 ------------------------------------------ */
+function _cssVar(name, fallback) {
+    try {
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return v || fallback;
+    } catch (_) { return fallback; }
+}
+function _rgba(rgbVarName, alpha, fallbackRgb) {
+    const rgb = _cssVar(rgbVarName, fallbackRgb);
+    return `rgba(${rgb}, ${alpha})`;
+}
+
 const COLORS = {
-    mint:       'var(--color-mint)',
-    mintFaded:  'rgba(var(--color-mint-rgb), 0.8)',
-    mintGhost:  'rgba(var(--color-mint-rgb), 0.4)',
-    yellow:     'var(--color-gold)',
-    yellowFaded:'rgba(var(--color-gold-rgb), 0.4)',
-    red:        'var(--color-vermillion)',
-    redFaded:   'rgba(var(--color-vermillion-rgb), 0.3)',
-    dark:       'var(--color-bg)',
-    white:      '#FFFFFF',
+    mint:        _cssVar('--color-mint',       '#C6FFBB'),
+    mintFaded:   _rgba('--color-mint-rgb',       0.8, '198, 255, 187'),
+    mintGhost:   _rgba('--color-mint-rgb',       0.4, '198, 255, 187'),
+    yellow:      _cssVar('--color-gold',       '#fcbe40'),
+    yellowFaded: _rgba('--color-gold-rgb',       0.4, '252, 190, 64'),
+    red:         _cssVar('--color-vermillion', '#ff4422'),
+    redFaded:    _rgba('--color-vermillion-rgb', 0.3, '255, 68, 34'),
+    dark:        _cssVar('--color-bg',         '#333333'),
+    white:       '#FFFFFF',
     // Donut segments
     segments: [
-        'var(--color-mint)', 'var(--color-gold)', 'var(--color-vermillion)',
+        _cssVar('--color-mint',       '#C6FFBB'),
+        _cssVar('--color-gold',       '#fcbe40'),
+        _cssVar('--color-vermillion', '#ff4422'),
         '#66DDAA', '#FFB347', '#77BBFF',
         '#E8A0BF', '#95E1D3',
     ],
