@@ -49,6 +49,47 @@ const COLORS = {
 };
 
 /* ------------------------------------------
+   CATEGORY COLOR MAP
+
+   The "Sales by Category" chart keys its bars off the hex_color the
+   operator chose on the Menu Categories page. We prefetch the
+   categories on module load so the map is ready by the time anyone
+   drills into the chart; callers can also `await` the promise.
+------------------------------------------ */
+let _categoryColorMap = null;
+let _categoryColorPromise = null;
+
+function _normalizeName(s) { return (s || '').toString().trim().toLowerCase(); }
+
+function ensureCategoryColors() {
+    if (_categoryColorPromise) return _categoryColorPromise;
+    _categoryColorPromise = fetch('/api/v1/config/menu/categories')
+        .then(r => r.ok ? r.json() : [])
+        .then(list => {
+            const map = {};
+            (list || []).forEach(c => {
+                if (!c) return;
+                const hex = c.hex_color || c.color;
+                if (!hex) return;
+                if (c.name)       map[_normalizeName(c.name)]       = hex;
+                if (c.category_id) map[_normalizeName(c.category_id)] = hex;
+            });
+            _categoryColorMap = map;
+            return map;
+        })
+        .catch(() => { _categoryColorMap = {}; return {}; });
+    return _categoryColorPromise;
+}
+
+function categoryColor(name, fallback) {
+    if (!_categoryColorMap) return fallback;
+    return _categoryColorMap[_normalizeName(name)] || fallback;
+}
+
+// Kick off the fetch as soon as reporting.js loads.
+ensureCategoryColors();
+
+/* ------------------------------------------
    CHART.JS GLOBAL DEFAULTS
 ------------------------------------------ */
 function applyChartDefaults() {
@@ -309,22 +350,29 @@ function buildSalesByCategory(wrapper) {
     chartWrap.appendChild(canvas);
     wrapper.appendChild(chartWrap);
 
-    if (typeof Chart !== 'undefined') {
-        // Sort descending by net_sales for the chart
-        const sorted = [...data].sort((a, b) => b.net_sales - a.net_sales);
+    // Rank-based fallback used until the category color map resolves
+    // (or for categories that don't have a hex_color set).
+    function rankFallback(i) {
+        return i === 0 ? COLORS.yellow :
+               i === 1 ? COLORS.mint   :
+                         COLORS.mintFaded;
+    }
 
-        new Chart(canvas, {
+    let chart = null;
+    function drawChart() {
+        if (typeof Chart === 'undefined') return;
+        const sorted = [...data].sort((a, b) => b.net_sales - a.net_sales);
+        const bgs = sorted.map((d, i) => categoryColor(d.category, rankFallback(i)));
+        if (chart) { chart.data.datasets[0].backgroundColor = bgs; chart.update(); return; }
+
+        chart = new Chart(canvas, {
             type: 'bar',
             data: {
                 labels: sorted.map(d => d.category),
                 datasets: [{
                     label: 'Net Sales',
                     data: sorted.map(d => d.net_sales),
-                    backgroundColor: sorted.map((_, i) =>
-                        i === 0 ? COLORS.yellow :
-                        i === 1 ? COLORS.mint :
-                        COLORS.mintFaded
-                    ),
+                    backgroundColor: bgs,
                     borderColor: 'transparent',
                     borderRadius: 2,
                     barThickness: 28,
@@ -365,6 +413,12 @@ function buildSalesByCategory(wrapper) {
             },
         });
     }
+
+    // Draw once with whatever's in the cache now, then refresh with
+    // the category colors from the API when the fetch resolves. Both
+    // paths are cheap — Chart.js updates in place on the second call.
+    drawChart();
+    ensureCategoryColors().then(() => drawChart());
 
     // --- Tappable Data Table ---
     const table = document.createElement('div');
