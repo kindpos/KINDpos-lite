@@ -181,17 +181,14 @@ function getCardDefs(state, opts) {
     },
     {
       title: 'Tip Summary',
-      hero: fmt(state.cardTips + state.cashTips),
+      hero: fmt(state.cardTips),
       heroColor: T.gold,
-      subtitle: 'card tips \u2022 cash tips',
+      subtitle: 'card tips \u2022 cash claimed at clock-out',
       border: T.border,
       statusColor: state.unadjustedTips > 0 ? T.yellow : null,
       buildShortcuts: opts && opts.buildShortcuts ? function() { return opts.buildShortcuts(state); } : null,
       buildExpanded: function(el) {
-        el.appendChild(detailRow('Card Tips',    fmt(state.cardTips)));
-        el.appendChild(detailRow('Cash Tips',    fmt(state.cashTips)));
-        el.appendChild(detailDivider());
-        el.appendChild(detailRow('Total Tips',   fmt(state.cardTips + state.cashTips), T.gold));
+        el.appendChild(detailRow('Card Tips', fmt(state.cardTips), T.gold));
         if (state.unadjustedTips > 0) {
           el.appendChild(detailRow('Unadjusted', String(state.unadjustedTips), T.yellow));
         }
@@ -411,25 +408,9 @@ function completeFinalizeAfterTips(state) {
     });
 }
 
+// Cash tips are declared on clock-out (see scenes/clock-in.js), not here.
 function doFinalize(state) {
-  SceneManager.interrupt('cash-tip-declare', {
-    onConfirm: function(amount) {
-      if (amount != null && amount > 0) {
-        fetch('/api/v1/servers/declare-cash-tips', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ server_id: state.employeeId, amount: amount }),
-        }).then(function() { completeFinalizeAfterTips(state); })
-          .catch(function() { completeFinalizeAfterTips(state); });
-      } else {
-        completeFinalizeAfterTips(state);
-      }
-    },
-    onCancel: function() {
-      completeFinalizeAfterTips(state);
-    },
-    params: {},
-  });
+  completeFinalizeAfterTips(state);
 }
 
 // ─────────────────────────────────────────────────
@@ -471,8 +452,6 @@ function buildSections(state) {
       title: 'TIPS',
       rows: [
         { label: 'Card Tips', value: fmt(state.cardTips) },
-        { label: 'Cash Tips', value: fmt(state.cashTips) },
-        { label: 'Total Tips', value: fmt(state.cardTips + state.cashTips) },
       ],
     },
     {

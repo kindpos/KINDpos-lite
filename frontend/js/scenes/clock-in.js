@@ -208,9 +208,7 @@ defineScene({
     });
 
     // ── Clock-out action ────────────────────
-    clockOutBtn.addEventListener('pointerup', function() {
-      clockOutBtn.setDisabled(true);
-
+    function performClockOut() {
       fetch(API + '/servers/clock-out', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,6 +230,29 @@ defineScene({
       .catch(function(err) {
         showToast(err.message || 'Clock-out failed', { bg: T.red, duration: 4000 });
         clockOutBtn.setDisabled(false);
+      });
+    }
+
+    // Cash tips are claimed at clock-out. The declare interrupt POSTs to
+    // /servers/declare-cash-tips; we then clock out regardless of whether
+    // they declared an amount or skipped (skip = $0 declared, but we
+    // don't send the event so auto-tracked stays untouched).
+    clockOutBtn.addEventListener('pointerup', function() {
+      clockOutBtn.setDisabled(true);
+      SceneManager.interrupt('cash-tip-declare', {
+        onConfirm: function(amount) {
+          var chain = Promise.resolve();
+          if (amount != null && amount >= 0) {
+            chain = fetch(API + '/servers/declare-cash-tips', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ server_id: emp.id, amount: amount }),
+            }).catch(function() { /* keep clocking out even if declare fails */ });
+          }
+          chain.then(performClockOut);
+        },
+        onCancel: performClockOut,
+        params: {},
       });
     });
 
