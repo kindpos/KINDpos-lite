@@ -64,13 +64,22 @@ defineScene({
 
     var storeName = document.createElement('div');
     storeName.style.cssText = 'font-family:' + T.fhr + ';font-size:32px;color:' + T.textPrimary + ';text-align:center;text-transform:uppercase;letter-spacing:2px;line-height:1.2;max-width:180px;word-wrap:break-word;';
-    storeName.textContent = 'KINDpos';
+    storeName.textContent = '';
     brandCenter.appendChild(storeName);
 
-    // Fetch store name from API
+    // Pull store name + branding from API. Bundle shape is { info, branding, ... }.
     fetch('/api/v1/config/store').then(function(r) { return r.json(); }).then(function(data) {
-      var name = (data.store && data.store.info && data.store.info.restaurant_name) || 'KINDpos';
-      storeName.textContent = name;
+      var info = (data && data.info) || {};
+      var branding = (data && data.branding) || {};
+      if (info.restaurant_name) storeName.textContent = info.restaurant_name;
+      if (branding.logo_url) {
+        // Cache-bust on every load so a freshly-uploaded logo replaces the cached one.
+        var sep = branding.logo_url.indexOf('?') === -1 ? '?' : '&';
+        var bustUrl = branding.logo_url + sep + 'v=' + Date.now();
+        var probe = new Image();
+        probe.onload = function() { logo.src = bustUrl; };
+        probe.src = bustUrl;
+      }
     }).catch(function() {});
 
     leftCol.appendChild(brandCenter);

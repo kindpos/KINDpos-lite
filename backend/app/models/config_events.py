@@ -14,6 +14,10 @@ class StoreInfo(BaseModel):
     email: Optional[str] = None
     website: Optional[str] = None
 
+class StoreBranding(BaseModel):
+    logo_url: Optional[str] = None
+    logo_mime_type: Optional[str] = None
+
 class CCProcessingRate(BaseModel):
     rate_percent: float = 2.9
     per_transaction_fee: Decimal = Decimal("0.30")
@@ -44,6 +48,7 @@ class StoreAutoGratuity(BaseModel):
 
 class StoreConfigBundle(BaseModel):
     info: StoreInfo
+    branding: StoreBranding = StoreBranding()
     tax_rules: List[TaxRule]
     cc_processing: CCProcessingRate
     operating_hours: Dict[str, OperatingHours]

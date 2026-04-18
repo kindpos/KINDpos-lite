@@ -12,12 +12,12 @@ let storeInfo = null;
 async function loadStoreInfo() {
     try {
         const res = await fetch('/api/v1/config/store');
-        if (!res.ok) return {};
+        if (!res.ok) return { info: {}, branding: {} };
         const bundle = await res.json();
-        return bundle.info || {};
+        return { info: bundle.info || {}, branding: bundle.branding || {} };
     } catch (e) {
         console.warn('[StoreInfo] Load failed:', e);
-        return {};
+        return { info: {}, branding: {} };
     }
 }
 
@@ -65,9 +65,116 @@ function row(...children) {
     return r;
 }
 
+async function uploadLogo(file) {
+    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.type)) {
+        showToast('Logo must be PNG, JPG, WEBP, or GIF', 'error');
+        return null;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('Logo must be under 2 MB', 'error');
+        return null;
+    }
+    // Read as base64 (strip the data: prefix the FileReader prepends).
+    const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const s = reader.result || '';
+            const idx = s.indexOf(',');
+            resolve(idx === -1 ? s : s.slice(idx + 1));
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+    });
+    const res = await fetch('/api/v1/config/store/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            filename: file.name,
+            mime_type: file.type,
+            content_base64: base64,
+        }),
+    });
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        showToast('Logo upload failed' + (text ? `: ${text}` : ''), 'error');
+        return null;
+    }
+    return await res.json();
+}
+
+function brandingSection(branding) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin: 8px 0 24px; padding: 16px; border: 1px solid rgba(var(--color-mint-rgb), 0.15); border-radius: 8px;';
+
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-family:var(--font-heading);font-size:22px;color:var(--color-mint);margin-bottom:12px;';
+    hdr.textContent = 'BRANDING';
+    wrap.appendChild(hdr);
+
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:14px;color:rgba(var(--color-mint-rgb),0.5);margin-bottom:14px;';
+    sub.textContent = 'Logo shown on the terminal login screen. PNG/JPG/WEBP/GIF, under 2 MB.';
+    wrap.appendChild(sub);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:20px;';
+
+    const preview = document.createElement('img');
+    preview.alt = 'Current store logo';
+    preview.style.cssText = 'width:120px;height:120px;object-fit:contain;background:var(--color-bg-dark);border:1px solid rgba(var(--color-mint-rgb),0.2);border-radius:6px;';
+    if (branding && branding.logo_url) {
+        preview.src = branding.logo_url + (branding.logo_url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+    } else {
+        preview.src = '/assets/images/palm.jpg';
+    }
+    row.appendChild(preview);
+
+    const controls = document.createElement('div');
+    controls.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:10px;';
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    fileInput.style.cssText = 'color:var(--color-mint);font-family:var(--font-body);font-size:16px;';
+    controls.appendChild(fileInput);
+
+    const uploadBtn = document.createElement('button');
+    uploadBtn.type = 'button';
+    uploadBtn.textContent = 'Upload Logo';
+    uploadBtn.style.cssText = `
+        align-self: flex-start;
+        background: var(--color-mint); color: var(--color-bg);
+        border: none; border-radius: 6px; padding: 10px 22px;
+        font-family: var(--font-body); font-size: 16px; font-weight: bold;
+        cursor: pointer;
+    `;
+    uploadBtn.addEventListener('click', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) { showToast('Pick a file first', 'error'); return; }
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Uploading...';
+        const result = await uploadLogo(file);
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload Logo';
+        if (result && result.logo_url) {
+            preview.src = result.logo_url;
+            fileInput.value = '';
+            showToast('Logo updated');
+        }
+    });
+    controls.appendChild(uploadBtn);
+
+    row.appendChild(controls);
+    wrap.appendChild(row);
+    return wrap;
+}
+
 async function mount(container) {
     currentContainer = container;
-    storeInfo = await loadStoreInfo();
+    const loaded = await loadStoreInfo();
+    storeInfo = loaded.info;
+    const branding = loaded.branding;
 
     container.innerHTML = '';
     const wrapper = document.createElement('div');
@@ -87,6 +194,8 @@ async function mount(container) {
     const legalField = field('Legal Entity', 'si-legal', storeInfo.legal_entity_name, 'Legal business name (optional)');
     wrapper.appendChild(nameField.wrap);
     wrapper.appendChild(legalField.wrap);
+
+    wrapper.appendChild(brandingSection(branding));
 
     // Address section
     const addrHdr = document.createElement('div');

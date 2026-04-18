@@ -15,6 +15,7 @@ export const STORAGE_KEY = 'kindpos-custom-themes';
 // (e.g. numpadChassisL/D) are derived at apply time.
 export const THEME_SLOTS = [
   { key: 'bg',            group: 'Cards & Background', label: 'Screen background', hint: 'The color behind everything on screen.' },
+  { key: 'cardBg',        group: 'Cards & Background', label: 'Card background',   hint: 'The fill color inside cards and panels.' },
   { key: 'numpadChassis', group: 'Cards & Background', label: 'Card border',       hint: 'The frame around each card.' },
   { key: 'gold',          group: 'Cards & Background', label: 'Highlight',         hint: 'Prices, titles, and important labels.' },
   { key: 'headerBg',      group: 'Headers',            label: 'Header bar',        hint: 'The strip at the top of the screen and on each card.' },
@@ -34,6 +35,7 @@ export const THEME_SLOTS = [
 // (mirrors Terminal Glow defaults from tokens.js).
 export const DEFAULT_SLOTS = {
   bg:            '#333333',
+  cardBg:        '#1a1a1a',
   numpadChassis: '#87f79c',
   gold:          '#fcbe40',
   headerBg:      '#87f79c',
@@ -85,7 +87,9 @@ function _readableOn(hex) {
 // Expand a 10-slot custom theme into the full token overrides setTheme() consumes.
 export function expandOverrides(slots) {
   var s = Object.assign({}, DEFAULT_SLOTS, slots || {});
-  var bgDark = _darken(s.bg, 0.35);
+  // bgDark is the card-fill token throughout the terminal; let an explicit
+  // cardBg slot override the auto-derived value.
+  var bgDark = s.cardBg || _darken(s.bg, 0.35);
   return {
     bg:             s.bg,
     bgDark:         bgDark,

@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 from app.core.event_ledger import EventLedger
 from app.core.events import EventType, Event
 from app.models.config_events import (
-    StoreConfigBundle, StoreInfo, TaxRule, CCProcessingRate, 
+    StoreConfigBundle, StoreInfo, StoreBranding, TaxRule, CCProcessingRate,
     OperatingHours, StoreOrderTypes, StoreAutoGratuity
 )
 
@@ -18,6 +18,7 @@ class StoreConfigService:
         # We need to find all STORE_* event types
         store_event_types = [
             EventType.STORE_INFO_UPDATED,
+            EventType.STORE_BRANDING_UPDATED,
             EventType.STORE_CC_PROCESSING_RATE_UPDATED,
             EventType.STORE_TAX_RULE_CREATED,
             EventType.STORE_TAX_RULE_UPDATED,
@@ -52,6 +53,10 @@ class StoreConfigService:
                 "zip": "",
                 "phone": ""
             },
+            "branding": {
+                "logo_url": None,
+                "logo_mime_type": None,
+            },
             "tax_rules": {},
             "cc_processing": {
                 "rate_percent": 2.9,
@@ -73,6 +78,8 @@ class StoreConfigService:
                 if "name" in info and "restaurant_name" not in info:
                     info["restaurant_name"] = info.pop("name")
                 config["info"].update(info)
+            elif etype == EventType.STORE_BRANDING_UPDATED:
+                config["branding"].update(dict(payload))
             elif etype == EventType.STORE_TAX_RULE_CREATED:
                 rid = payload["tax_rule_id"]
                 config["tax_rules"][rid] = payload

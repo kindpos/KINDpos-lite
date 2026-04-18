@@ -1,5 +1,9 @@
+import base64
+import os
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from typing import List, Dict, Any
+from fastapi.responses import Response
+from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
 from app.api.dependencies import get_ledger
 from app.core.event_ledger import EventLedger
 from app.core.events import EventType, Event, create_event, parse_event_type
@@ -12,6 +16,23 @@ from app.models.config_events import (
 from app.config import settings
 from app.services.store_config_service import StoreConfigService
 from app.services.overseer_config_service import OverseerConfigService
+
+# Allow-list of mime types we'll accept for the store logo. Keep this tight —
+# rendering anything else risks XSS via SVG or unbounded payloads.
+_ALLOWED_LOGO_MIMES = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+_LOGO_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+
+def _logo_storage_path() -> str:
+    """Single fixed path for the store logo, sibling to the event ledger."""
+    data_dir = os.path.dirname(os.path.abspath(settings.database_path))
+    os.makedirs(data_dir, exist_ok=True)
+    return os.path.join(data_dir, "store_logo.bin")
+
+
+class LogoUploadRequest(BaseModel):
+    filename: Optional[str] = None
+    mime_type: str
+    content_base64: str
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -112,6 +133,67 @@ async def get_terminals(ledger: EventLedger = Depends(get_ledger)):
 async def get_routing(ledger: EventLedger = Depends(get_ledger)):
     service = OverseerConfigService(ledger)
     return await service.get_routing_matrix()
+
+@router.post("/store/logo")
+async def upload_store_logo(
+    req: LogoUploadRequest,
+    background_tasks: BackgroundTasks,
+    ledger: EventLedger = Depends(get_ledger),
+):
+    """Save an uploaded image as the store logo and emit a branding event.
+
+    Body is JSON {mime_type, content_base64} — base64 keeps us free of
+    python-multipart and works fine for the small images we expect here.
+    """
+    if req.mime_type not in _ALLOWED_LOGO_MIMES:
+        raise HTTPException(status_code=400, detail=f"Unsupported mime type: {req.mime_type}")
+    try:
+        raw = base64.b64decode(req.content_base64, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="content_base64 is not valid base64")
+    if len(raw) == 0:
+        raise HTTPException(status_code=400, detail="empty image")
+    if len(raw) > _LOGO_MAX_BYTES:
+        raise HTTPException(status_code=413, detail=f"image exceeds {_LOGO_MAX_BYTES} bytes")
+
+    path = _logo_storage_path()
+    with open(path, "wb") as fh:
+        fh.write(raw)
+
+    event = create_event(
+        event_type=EventType.STORE_BRANDING_UPDATED,
+        terminal_id="OVERSEER",
+        payload={
+            "logo_url": "/api/v1/config/store/logo",
+            "logo_mime_type": req.mime_type,
+        },
+    )
+    await ledger.append(event)
+    background_tasks.add_task(broadcast_config_update, ["store"])
+    # Echo a cache-buster the client can use to refresh the <img> src.
+    return {"status": "ok", "event_id": event.sequence_number, "logo_url": f"/api/v1/config/store/logo?v={event.sequence_number}"}
+
+
+@router.get("/store/logo")
+async def get_store_logo(ledger: EventLedger = Depends(get_ledger)):
+    """Stream the most recently uploaded store logo, if any."""
+    events = await ledger.get_events_by_type(EventType.STORE_BRANDING_UPDATED, limit=200)
+    events.sort(key=lambda e: e.sequence_number or 0)
+    mime_type = None
+    for e in events:
+        payload = e.payload or {}
+        if payload.get("logo_mime_type"):
+            mime_type = payload["logo_mime_type"]
+    if not mime_type:
+        raise HTTPException(status_code=404, detail="no logo uploaded")
+
+    path = _logo_storage_path()
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="logo file missing")
+    with open(path, "rb") as fh:
+        data = fh.read()
+    return Response(content=data, media_type=mime_type)
+
 
 @router.post("/store/info")
 async def update_store_info(info: StoreInfo, background_tasks: BackgroundTasks, ledger: EventLedger = Depends(get_ledger)):
